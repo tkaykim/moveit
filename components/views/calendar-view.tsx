@@ -333,7 +333,7 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
                       {classInfo.status === 'FULL' ? '마감' : classInfo.status === 'ALMOST_FULL' ? '임박' : '예약 가능'}
                     </span>
                   </div>
-                  {classInfo.price > 0 && (
+                  {classInfo.price !== undefined && classInfo.price > 0 && (
                     <p className="text-sm font-bold text-black dark:text-white mt-2">
                       {classInfo.price.toLocaleString()}원
                     </p>

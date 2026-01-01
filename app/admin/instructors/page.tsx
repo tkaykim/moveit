@@ -36,7 +36,7 @@ export default function InstructorsPage() {
     }
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('instructors')
         .select('*')
         .order('created_at', { ascending: false });

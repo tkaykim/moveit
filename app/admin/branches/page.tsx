@@ -19,6 +19,7 @@ export default function BranchesPage() {
     address_primary: '',
     address_detail: '',
     contact_number: '',
+    image_url: '',
     is_active: true,
   });
 
@@ -70,6 +71,7 @@ export default function BranchesPage() {
         address_primary: formData.address_primary,
         address_detail: formData.address_detail || null,
         contact_number: formData.contact_number || null,
+        image_url: formData.image_url || null,
         is_active: formData.is_active,
       };
 
@@ -97,6 +99,7 @@ export default function BranchesPage() {
         address_primary: '',
         address_detail: '',
         contact_number: '',
+        image_url: '',
         is_active: true,
       });
     } catch (error) {
@@ -113,6 +116,7 @@ export default function BranchesPage() {
       address_primary: branch.address_primary,
       address_detail: branch.address_detail || '',
       contact_number: branch.contact_number || '',
+      image_url: (branch as any).image_url || '',
       is_active: branch.is_active,
     });
     setShowForm(true);
@@ -248,6 +252,17 @@ export default function BranchesPage() {
                 type="tel"
                 value={formData.contact_number}
                 onChange={(e) => setFormData({ ...formData, contact_number: e.target.value })}
+                className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-black dark:text-white mb-2">
+                이미지 URL
+              </label>
+              <input
+                type="text"
+                value={formData.image_url}
+                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                 className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
               />
             </div>

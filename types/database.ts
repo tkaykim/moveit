@@ -53,6 +53,7 @@ export interface Database {
           address_detail: string | null
           contact_number: string | null
           is_active: boolean
+          image_url: string | null
           created_at: string
         }
         Insert: {
@@ -63,6 +64,7 @@ export interface Database {
           address_detail?: string | null
           contact_number?: string | null
           is_active?: boolean
+          image_url?: string | null
           created_at?: string
         }
         Update: {
@@ -73,6 +75,7 @@ export interface Database {
           address_detail?: string | null
           contact_number?: string | null
           is_active?: boolean
+          image_url?: string | null
           created_at?: string
         }
       }
