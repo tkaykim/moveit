@@ -28,7 +28,7 @@ export default function BranchesPage() {
   }, []);
 
   const loadData = async () => {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) {
       setLoading(false);
       return;
@@ -61,7 +61,7 @@ export default function BranchesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) return;
 
     try {
@@ -76,14 +76,14 @@ export default function BranchesPage() {
       };
 
       if (editingId) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('branches')
           .update(submitData)
           .eq('id', editingId);
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('branches')
           .insert([submitData as Database['public']['Tables']['branches']['Insert']]);
 
@@ -125,7 +125,7 @@ export default function BranchesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('정말 삭제하시겠습니까?')) return;
 
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) return;
 
     try {

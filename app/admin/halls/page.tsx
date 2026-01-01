@@ -20,7 +20,7 @@ export default function HallsPage() {
   });
 
   const loadData = useCallback(async () => {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) {
       setLoading(false);
       return;
@@ -57,7 +57,7 @@ export default function HallsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) return;
 
     try {
@@ -111,7 +111,7 @@ export default function HallsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('정말 삭제하시겠습니까?')) return;
 
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) return;
 
     try {

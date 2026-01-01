@@ -35,7 +35,7 @@ export default function SchedulesPage() {
   });
 
   const loadData = useCallback(async () => {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) {
       setLoading(false);
       return;
@@ -79,7 +79,7 @@ export default function SchedulesPage() {
   }, []);
 
   const loadHalls = useCallback(async (branchId: string) => {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) return;
 
     try {
@@ -110,7 +110,7 @@ export default function SchedulesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) return;
 
     try {
@@ -121,14 +121,14 @@ export default function SchedulesPage() {
       };
 
       if (editingId) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('schedules')
           .update(submitData)
           .eq('id', editingId);
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('schedules')
           .insert([submitData]);
 
@@ -176,7 +176,7 @@ export default function SchedulesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('정말 삭제하시겠습니까?')) return;
 
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) return;
 
     try {

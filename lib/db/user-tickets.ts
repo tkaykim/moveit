@@ -3,7 +3,7 @@ import { UserTicket } from '@/lib/supabase/types';
 import { Database } from '@/types/database';
 
 export async function getUserTickets(userId: string) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('user_tickets')
     .select(`
@@ -19,7 +19,7 @@ export async function getUserTickets(userId: string) {
 }
 
 export async function getUserTicketById(id: string) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('user_tickets')
     .select(`
@@ -34,7 +34,7 @@ export async function getUserTicketById(id: string) {
 }
 
 export async function createUserTicket(userTicket: Database['public']['Tables']['user_tickets']['Insert']) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('user_tickets')
     .insert(userTicket)
@@ -46,7 +46,7 @@ export async function createUserTicket(userTicket: Database['public']['Tables'][
 }
 
 export async function updateUserTicket(id: string, updates: Database['public']['Tables']['user_tickets']['Update']) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('user_tickets')
     .update(updates)

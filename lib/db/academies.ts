@@ -3,7 +3,7 @@ import { Academy } from '@/lib/supabase/types';
 import { Database } from '@/types/database';
 
 export async function getAcademies() {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('academies')
     .select(`
@@ -18,7 +18,7 @@ export async function getAcademies() {
 }
 
 export async function getAcademyById(id: string) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('academies')
     .select('*')
@@ -30,7 +30,7 @@ export async function getAcademyById(id: string) {
 }
 
 export async function createAcademy(academy: Database['public']['Tables']['academies']['Insert']) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('academies')
     .insert(academy)
@@ -42,7 +42,7 @@ export async function createAcademy(academy: Database['public']['Tables']['acade
 }
 
 export async function updateAcademy(id: string, updates: Database['public']['Tables']['academies']['Update']) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('academies')
     .update(updates)
@@ -55,7 +55,7 @@ export async function updateAcademy(id: string, updates: Database['public']['Tab
 }
 
 export async function deleteAcademy(id: string) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { error } = await supabase
     .from('academies')
     .delete()

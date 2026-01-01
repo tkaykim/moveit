@@ -3,7 +3,7 @@ import { Class } from '@/lib/supabase/types';
 import { Database } from '@/types/database';
 
 export async function getClasses(academyId?: string) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   let query = supabase
     .from('classes')
     .select('*')
@@ -19,7 +19,7 @@ export async function getClasses(academyId?: string) {
 }
 
 export async function getClassById(id: string) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('classes')
     .select('*')
@@ -31,7 +31,7 @@ export async function getClassById(id: string) {
 }
 
 export async function createClass(classData: Database['public']['Tables']['classes']['Insert']) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('classes')
     .insert(classData)
@@ -43,7 +43,7 @@ export async function createClass(classData: Database['public']['Tables']['class
 }
 
 export async function updateClass(id: string, updates: Database['public']['Tables']['classes']['Update']) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('classes')
     .update(updates)

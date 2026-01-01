@@ -32,7 +32,7 @@ export default function InstructorsPage() {
     }
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('instructors')
         .select('*')
         .order('created_at', { ascending: false });
@@ -53,7 +53,7 @@ export default function InstructorsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) return;
 
     try {
@@ -95,7 +95,7 @@ export default function InstructorsPage() {
       if (editingId) {
         // 기존 이미지 삭제 (새 파일이 업로드된 경우에만, URL 변경은 Storage에서 삭제하지 않음)
         if (formData.profileImageFile) {
-          const { data: existingInstructor } = await supabase
+          const { data: existingInstructor } = await (supabase as any)
             .from('instructors')
             .select('profile_image_url')
             .eq('id', editingId)
@@ -118,14 +118,14 @@ export default function InstructorsPage() {
           }
         }
 
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('instructors')
           .update(submitData)
           .eq('id', editingId);
 
         if (error) throw error;
       } else {
-        const { data: newInstructor, error } = await supabase
+        const { data: newInstructor, error } = await (supabase as any)
           .from('instructors')
           .insert([submitData])
           .select()
@@ -174,11 +174,11 @@ export default function InstructorsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('정말 삭제하시겠습니까?')) return;
 
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('instructors')
         .delete()
         .eq('id', id);

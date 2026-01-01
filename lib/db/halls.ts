@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Hall } from '@/lib/supabase/types';
 
 export async function getHalls(branchId?: string) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   let query = supabase
     .from('halls')
     .select('*')
@@ -23,7 +23,7 @@ export async function createHall(hall: {
   capacity?: number;
   floor_info?: string;
 }) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await (supabase as any)
     .from('halls')
     .insert(hall)

@@ -8,7 +8,7 @@ export interface SearchResult {
 }
 
 export async function searchAll(query: string): Promise<SearchResult> {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabaseClient() as any;
   if (!supabase || !query.trim()) {
     return { academies: [], instructors: [], genres: [] };
   }
@@ -134,7 +134,7 @@ export async function searchAll(query: string): Promise<SearchResult> {
 }
 
 export async function searchByGenre(genre: string): Promise<SearchResult> {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabaseClient() as any;
   if (!supabase || !genre) {
     return { academies: [], instructors: [], genres: [] };
   }

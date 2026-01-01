@@ -9,7 +9,7 @@ export async function getSchedules(filters?: {
   start_date?: string;
   end_date?: string;
 }) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   let query = supabase
     .from('schedules')
     .select(`
@@ -44,7 +44,7 @@ export async function getSchedules(filters?: {
 }
 
 export async function getScheduleById(id: string) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('schedules')
     .select(`
@@ -62,7 +62,7 @@ export async function getScheduleById(id: string) {
 }
 
 export async function createSchedule(schedule: Database['public']['Tables']['schedules']['Insert']) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('schedules')
     .insert(schedule)
@@ -74,7 +74,7 @@ export async function createSchedule(schedule: Database['public']['Tables']['sch
 }
 
 export async function updateSchedule(id: string, updates: Database['public']['Tables']['schedules']['Update']) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('schedules')
     .update(updates)

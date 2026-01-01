@@ -58,7 +58,7 @@ export default function AcademiesPage() {
 
     try {
       console.log('Loading academies from database...');
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('academies')
         .select('*')
         .order('created_at', { ascending: false });
@@ -83,7 +83,7 @@ export default function AcademiesPage() {
     const supabaseClient = getSupabaseClient();
     if (!supabaseClient) return;
     // TypeScript 타입 추론을 위한 타입 단언
-    const supabase = supabaseClient as SupabaseClient<Database>;
+    const supabase = supabaseClient as any;
 
     try {
       let academyId: string;
@@ -99,7 +99,7 @@ export default function AcademiesPage() {
           logo_url: formData.logo_url || null,
         };
 
-        const { data, error } = await supabase
+        const { error } = await (supabase as any)
           .from('academies')
           .update(submitData)
           .eq('id', editingId);
@@ -121,7 +121,7 @@ export default function AcademiesPage() {
           owner_id: 'system',
         };
 
-        const { data: newAcademy, error } = await supabase
+        const { data: newAcademy, error } = await (supabase as any)
           .from('academies')
           .insert([submitData])
           .select()
@@ -152,7 +152,7 @@ export default function AcademiesPage() {
       // 3. 수정 모드일 때만: 지점 삭제 처리
       if (editingId) {
         // DB에서 기존 지점들 모두 가져오기
-        const { data: existingBranches, error: loadError } = await supabase
+        const { data: existingBranches, error: loadError } = await (supabase as any)
           .from('branches')
           .select('id, image_url')
           .eq('academy_id', academyId);
@@ -185,7 +185,7 @@ export default function AcademiesPage() {
           for (const branchId of deletedBranchIds) {
             try {
               // 1. 해당 지점의 모든 홀 삭제
-              const { error: hallsDeleteError } = await supabase
+              const { error: hallsDeleteError } = await (supabase as any)
                 .from('halls')
                 .delete()
                 .eq('branch_id', branchId);
@@ -248,7 +248,7 @@ export default function AcademiesPage() {
       
       // 삭제 후 다시 DB 상태 확인 (중복 생성 방지)
       if (editingId) {
-        const { data: currentBranches } = await supabase
+        const { data: currentBranches } = await (supabase as any)
           .from('branches')
           .select('id')
           .eq('academy_id', academyId);
@@ -495,7 +495,7 @@ export default function AcademiesPage() {
   const handleEdit = async (academy: Academy) => {
     const supabaseClient = getSupabaseClient();
     if (!supabaseClient) return;
-    const supabase = supabaseClient as SupabaseClient<Database>;
+    const supabase = supabaseClient as any;
 
     try {
       // 1. 지점 데이터 먼저 로드
@@ -604,7 +604,7 @@ export default function AcademiesPage() {
 
     const supabaseClient = getSupabaseClient();
     if (!supabaseClient) return;
-    const supabase = supabaseClient as SupabaseClient<Database>;
+    const supabase = supabaseClient as any;
 
     try {
       // 관련 데이터 확인
@@ -627,7 +627,7 @@ export default function AcademiesPage() {
 
       // 관련 데이터 삭제 (CASCADE 대신 수동 삭제)
       // 1. 클래스 관련 삭제 (schedules -> bookings -> classes)
-      const { data: classes } = await supabase
+      const { data: classes } = await (supabase as any)
         .from('classes')
         .select('id')
         .eq('academy_id', id);
@@ -636,7 +636,7 @@ export default function AcademiesPage() {
         const classIds = classes.map((c: any) => c.id);
         
         // 각 클래스의 schedules 찾기
-        const { data: schedules } = await supabase
+        const { data: schedules } = await (supabase as any)
         .from('schedules')
           .select('id')
           .in('class_id', classIds);
@@ -645,14 +645,14 @@ export default function AcademiesPage() {
           const scheduleIds = schedules.map((s: any) => s.id);
           
           // bookings 삭제
-          await supabase
+          await (supabase as any)
         .from('bookings')
             .delete()
             .in('schedule_id', scheduleIds);
         }
 
         // schedules 삭제
-        await supabase
+        await (supabase as any)
         .from('schedules')
           .delete()
           .in('class_id', classIds);
@@ -674,26 +674,26 @@ export default function AcademiesPage() {
         const branchIds = branches.map((b: any) => b.id);
         
         // halls 삭제
-        await supabase
+        await (supabase as any)
           .from('halls')
           .delete()
           .in('branch_id', branchIds);
 
         // branches 삭제
-        await supabase
+        await (supabase as any)
           .from('branches')
           .delete()
           .eq('academy_id', id);
       }
 
       // 3. academy_instructors 삭제
-      await supabase
+      await (supabase as any)
         .from('academy_instructors')
         .delete()
         .eq('academy_id', id);
 
       // 4. 학원 삭제
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('academies')
         .delete()
         .eq('id', id);

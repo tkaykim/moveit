@@ -3,7 +3,7 @@ import { Branch } from '@/lib/supabase/types';
 import { Database } from '@/types/database';
 
 export async function getBranches(academyId?: string) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   let query = supabase
     .from('branches')
     .select('*')
@@ -19,7 +19,7 @@ export async function getBranches(academyId?: string) {
 }
 
 export async function getBranchById(id: string) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('branches')
     .select('*')
@@ -31,7 +31,7 @@ export async function getBranchById(id: string) {
 }
 
 export async function createBranch(branch: Database['public']['Tables']['branches']['Insert']) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('branches')
     .insert(branch)
@@ -43,7 +43,7 @@ export async function createBranch(branch: Database['public']['Tables']['branche
 }
 
 export async function updateBranch(id: string, updates: Database['public']['Tables']['branches']['Update']) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('branches')
     .update(updates)

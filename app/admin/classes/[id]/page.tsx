@@ -38,7 +38,7 @@ export default function ClassDetailPage() {
   const [loading, setLoading] = useState(true);
 
   const loadClassData = useCallback(async () => {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) {
       setLoading(false);
       return;

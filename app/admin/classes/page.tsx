@@ -83,7 +83,7 @@ export default function ClassesPage() {
   }, [formData.hall_id, halls]);
 
   const loadData = async () => {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) {
       setLoading(false);
       return;
@@ -135,7 +135,7 @@ export default function ClassesPage() {
   };
 
   const loadBranches = async (academyId: string) => {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) return;
 
     try {
@@ -154,7 +154,7 @@ export default function ClassesPage() {
   };
 
   const loadHalls = async (branchId: string) => {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) return;
 
     try {
@@ -173,7 +173,7 @@ export default function ClassesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) return;
 
     try {
@@ -200,7 +200,7 @@ export default function ClassesPage() {
 
       if (editingId) {
         // 수정 모드: 클래스만 업데이트
-        const { error: classError } = await supabase
+        const { error: classError } = await (supabase as any)
           .from('classes')
           .update(classData)
           .eq('id', editingId);
@@ -208,7 +208,7 @@ export default function ClassesPage() {
         if (classError) throw classError;
       } else {
         // 생성 모드: 클래스와 시간표를 동시에 생성
-        const { data: newClass, error: classError } = await supabase
+        const { data: newClass, error: classError } = await (supabase as any)
           .from('classes')
           .insert([classData])
           .select()
@@ -229,7 +229,7 @@ export default function ClassesPage() {
           is_canceled: false,
         };
 
-        const { error: scheduleError } = await supabase
+        const { error: scheduleError } = await (supabase as any)
           .from('schedules')
           .insert([scheduleData]);
 
@@ -304,7 +304,7 @@ export default function ClassesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('정말 삭제하시겠습니까? 관련된 시간표와 예약도 함께 삭제됩니다.')) return;
 
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) return;
 
     try {

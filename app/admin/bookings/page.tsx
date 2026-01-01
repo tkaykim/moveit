@@ -17,7 +17,7 @@ export default function BookingsPage() {
   const [filter, setFilter] = useState<string>('ALL');
 
   const loadBookings = useCallback(async () => {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     if (!supabase) {
       setLoading(false);
       return;

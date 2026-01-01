@@ -6,7 +6,7 @@ import type { Database } from '@/types/database';
  * 안전하게 Supabase 클라이언트를 생성합니다.
  * 환경 변수가 없을 경우 null을 반환합니다.
  */
-export function getSupabaseClient(): SupabaseClient<Database> | null {
+export function getSupabaseClient(): any {
   try {
     // 클라이언트 사이드에서 환경 변수 확인
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

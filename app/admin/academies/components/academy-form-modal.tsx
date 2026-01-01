@@ -171,7 +171,7 @@ export function AcademyFormModal({
         return;
       }
 
-      const supabase = getSupabaseClient();
+      const supabase = getSupabaseClient() as any;
       if (!supabase) {
         alert('데이터베이스 연결에 실패했습니다.');
         return;

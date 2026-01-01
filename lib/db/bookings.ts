@@ -3,7 +3,7 @@ import { Booking } from '@/lib/supabase/types';
 import { Database } from '@/types/database';
 
 export async function getBookings(userId?: string) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   let query = supabase
     .from('bookings')
     .select(`
@@ -30,7 +30,7 @@ export async function getBookings(userId?: string) {
 }
 
 export async function getBookingById(id: string) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('bookings')
     .select(`
@@ -53,7 +53,7 @@ export async function getBookingById(id: string) {
 }
 
 export async function createBooking(booking: Database['public']['Tables']['bookings']['Insert']) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('bookings')
     .insert(booking)
@@ -65,7 +65,7 @@ export async function createBooking(booking: Database['public']['Tables']['booki
 }
 
 export async function updateBooking(id: string, updates: Database['public']['Tables']['bookings']['Update']) {
-  const supabase = await createClient();
+  const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('bookings')
     .update(updates)
