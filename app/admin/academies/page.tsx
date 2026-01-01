@@ -150,7 +150,7 @@ export default function AcademiesPage() {
       // 3. 수정 모드일 때만: 지점 삭제 처리
       if (editingId) {
         // DB에서 기존 지점들 모두 가져오기
-        const { data: existingBranches, error: loadError } = await supabase
+        const { data: existingBranches, error: loadError } = await (supabase as any)
           .from('branches')
           .select('id, image_url')
           .eq('academy_id', academyId);
@@ -183,7 +183,7 @@ export default function AcademiesPage() {
           for (const branchId of deletedBranchIds) {
             try {
               // 1. 해당 지점의 모든 홀 삭제
-              const { error: hallsDeleteError } = await supabase
+              const { error: hallsDeleteError } = await (supabase as any)
                 .from('halls')
                 .delete()
                 .eq('branch_id', branchId);
@@ -211,7 +211,7 @@ export default function AcademiesPage() {
               }
 
               // 3. 지점 삭제
-              const { error: branchDeleteError } = await supabase
+              const { error: branchDeleteError } = await (supabase as any)
                 .from('branches')
                 .delete()
                 .eq('id', branchId);
@@ -231,7 +231,7 @@ export default function AcademiesPage() {
           console.log(`${deletedBranchIds.length}개 지점이 모두 삭제되었습니다.`);
           
           // 삭제 후 DB 상태 확인
-          const { data: verifyBranches } = await supabase
+          const { data: verifyBranches } = await (supabase as any)
             .from('branches')
             .select('id')
             .eq('academy_id', academyId);
@@ -246,7 +246,7 @@ export default function AcademiesPage() {
       
       // 삭제 후 다시 DB 상태 확인 (중복 생성 방지)
       if (editingId) {
-        const { data: currentBranches } = await supabase
+        const { data: currentBranches } = await (supabase as any)
           .from('branches')
           .select('id')
           .eq('academy_id', academyId);
@@ -274,7 +274,7 @@ export default function AcademiesPage() {
           try {
             // 기존 지점이고 기존 이미지가 있으면 삭제
             if (branch.id && editingId) {
-              const { data: existingBranch } = await supabase
+              const { data: existingBranch } = await (supabase as any)
                 .from('branches')
                 .select('image_url')
                 .eq('id', branch.id)
@@ -303,7 +303,7 @@ export default function AcademiesPage() {
           }
         } else if (branch.id && editingId) {
           // 기존 지점이고 새 파일이 없는 경우: 기존 이미지 URL 유지
-          const { data: existingBranch } = await supabase
+          const { data: existingBranch } = await (supabase as any)
             .from('branches')
             .select('image_url')
             .eq('id', branch.id)
@@ -318,7 +318,7 @@ export default function AcademiesPage() {
         if (branch.id && editingId) {
           // 기존 지점 업데이트 (id가 있고 수정 모드인 경우만)
           // 먼저 DB에 해당 지점이 실제로 존재하는지 확인
-          const { data: checkBranch } = await supabase
+          const { data: checkBranch } = await (supabase as any)
             .from('branches')
             .select('id')
             .eq('id', branch.id)
@@ -353,7 +353,7 @@ export default function AcademiesPage() {
           console.log('지점 업데이트 완료:', branch.id);
 
           // 기존 홀 정보 로드
-          const { data: existingHalls } = await supabase
+          const { data: existingHalls } = await (supabase as any)
             .from('halls')
             .select('id')
             .eq('branch_id', branch.id);
@@ -369,7 +369,7 @@ export default function AcademiesPage() {
           );
 
           if (deletedHallIds.length > 0) {
-            const { error: deleteHallsError } = await supabase
+            const { error: deleteHallsError } = await (supabase as any)
               .from('halls')
               .delete()
               .in('id', deletedHallIds);
