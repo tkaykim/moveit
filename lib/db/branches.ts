@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { Branch } from '@/lib/supabase/types';
+import { Database } from '@/types/database';
 
 export async function getBranches(academyId?: string) {
   const supabase = await createClient();
@@ -29,16 +30,9 @@ export async function getBranchById(id: string) {
   return data;
 }
 
-export async function createBranch(branch: {
-  academy_id: string;
-  name: string;
-  address_primary: string;
-  address_detail?: string;
-  contact_number?: string;
-  is_active?: boolean;
-}) {
+export async function createBranch(branch: Database['public']['Tables']['branches']['Insert']) {
   const supabase = await createClient();
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('branches')
     .insert(branch)
     .select()
@@ -48,9 +42,9 @@ export async function createBranch(branch: {
   return data;
 }
 
-export async function updateBranch(id: string, updates: Partial<Branch>) {
+export async function updateBranch(id: string, updates: Database['public']['Tables']['branches']['Update']) {
   const supabase = await createClient();
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('branches')
     .update(updates)
     .eq('id', id)

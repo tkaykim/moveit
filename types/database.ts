@@ -12,204 +12,207 @@ export interface Database {
       academies: {
         Row: {
           id: string
-          name: string
+          owner_id: string | null
+          business_registration_number: string | null
+          logo_url: string | null
+          created_at: string | null
           name_kr: string | null
           name_en: string | null
           tags: string | null
-          owner_id: string
-          business_registration_number: string | null
-          logo_url: string | null
-          created_at: string
         }
         Insert: {
           id?: string
-          name?: string
+          owner_id?: string | null
+          business_registration_number?: string | null
+          logo_url?: string | null
+          created_at?: string | null
           name_kr?: string | null
           name_en?: string | null
           tags?: string | null
-          owner_id?: string
-          business_registration_number?: string | null
-          logo_url?: string | null
-          created_at?: string
         }
         Update: {
           id?: string
-          name?: string
+          owner_id?: string | null
+          business_registration_number?: string | null
+          logo_url?: string | null
+          created_at?: string | null
           name_kr?: string | null
           name_en?: string | null
           tags?: string | null
-          owner_id?: string
-          business_registration_number?: string | null
-          logo_url?: string | null
-          created_at?: string
         }
       }
       branches: {
         Row: {
           id: string
-          academy_id: string
-          name: string
-          address_primary: string
+          academy_id: string | null
+          name: string | null
+          address_primary: string | null
           address_detail: string | null
           contact_number: string | null
-          is_active: boolean
+          is_active: boolean | null
+          created_at: string | null
           image_url: string | null
-          created_at: string
         }
         Insert: {
           id?: string
-          academy_id: string
-          name: string
-          address_primary: string
+          academy_id?: string | null
+          name?: string | null
+          address_primary?: string | null
           address_detail?: string | null
           contact_number?: string | null
-          is_active?: boolean
+          is_active?: boolean | null
+          created_at?: string | null
           image_url?: string | null
-          created_at?: string
         }
         Update: {
           id?: string
-          academy_id?: string
-          name?: string
-          address_primary?: string
+          academy_id?: string | null
+          name?: string | null
+          address_primary?: string | null
           address_detail?: string | null
           contact_number?: string | null
-          is_active?: boolean
+          is_active?: boolean | null
+          created_at?: string | null
           image_url?: string | null
-          created_at?: string
         }
       }
       instructors: {
         Row: {
           id: string
           user_id: string | null
-          stage_name: string
           bio: string | null
           instagram_url: string | null
           specialties: string | null
-          created_at: string
+          created_at: string | null
+          name_kr: string | null
+          name_en: string | null
+          profile_image_url: string | null
         }
         Insert: {
           id?: string
           user_id?: string | null
-          stage_name: string
           bio?: string | null
           instagram_url?: string | null
           specialties?: string | null
-          created_at?: string
+          created_at?: string | null
+          name_kr?: string | null
+          name_en?: string | null
+          profile_image_url?: string | null
         }
         Update: {
           id?: string
           user_id?: string | null
-          stage_name?: string
           bio?: string | null
           instagram_url?: string | null
           specialties?: string | null
-          created_at?: string
+          created_at?: string | null
+          name_kr?: string | null
+          name_en?: string | null
+          profile_image_url?: string | null
         }
       }
       classes: {
         Row: {
           id: string
-          academy_id: string
-          instructor_id: string | null
-          title: string
+          academy_id: string | null
+          title: string | null
           description: string | null
           difficulty_level: string | null
           genre: string | null
-          class_type: string
+          class_type: string | null
           thumbnail_url: string | null
-          price: number
-          created_at: string
+          created_at: string | null
+          price: number | null
+          instructor_id: string | null
         }
         Insert: {
           id?: string
-          academy_id: string
-          instructor_id?: string | null
-          title: string
+          academy_id?: string | null
+          title?: string | null
           description?: string | null
           difficulty_level?: string | null
           genre?: string | null
-          class_type: string
+          class_type?: string | null
           thumbnail_url?: string | null
-          price?: number
-          created_at?: string
+          created_at?: string | null
+          price?: number | null
+          instructor_id?: string | null
         }
         Update: {
           id?: string
-          academy_id?: string
-          instructor_id?: string | null
-          title?: string
+          academy_id?: string | null
+          title?: string | null
           description?: string | null
           difficulty_level?: string | null
           genre?: string | null
-          class_type?: string
+          class_type?: string | null
           thumbnail_url?: string | null
-          price?: number
-          created_at?: string
+          created_at?: string | null
+          price?: number | null
+          instructor_id?: string | null
         }
       }
       schedules: {
         Row: {
           id: string
-          class_id: string
-          branch_id: string
-          hall_id: string
-          instructor_id: string
-          start_time: string
-          end_time: string
-          max_students: number
-          current_students: number
-          is_canceled: boolean
-          created_at: string
+          class_id: string | null
+          branch_id: string | null
+          hall_id: string | null
+          instructor_id: string | null
+          start_time: string | null
+          end_time: string | null
+          max_students: number | null
+          current_students: number | null
+          is_canceled: boolean | null
+          created_at: string | null
         }
         Insert: {
           id?: string
-          class_id: string
-          branch_id: string
-          hall_id: string
-          instructor_id: string
-          start_time: string
-          end_time: string
-          max_students: number
-          current_students?: number
-          is_canceled?: boolean
-          created_at?: string
+          class_id?: string | null
+          branch_id?: string | null
+          hall_id?: string | null
+          instructor_id?: string | null
+          start_time?: string | null
+          end_time?: string | null
+          max_students?: number | null
+          current_students?: number | null
+          is_canceled?: boolean | null
+          created_at?: string | null
         }
         Update: {
           id?: string
-          class_id?: string
-          branch_id?: string
-          hall_id?: string
-          instructor_id?: string
-          start_time?: string
-          end_time?: string
-          max_students?: number
-          current_students?: number
-          is_canceled?: boolean
-          created_at?: string
+          class_id?: string | null
+          branch_id?: string | null
+          hall_id?: string | null
+          instructor_id?: string | null
+          start_time?: string | null
+          end_time?: string | null
+          max_students?: number | null
+          current_students?: number | null
+          is_canceled?: boolean | null
+          created_at?: string | null
         }
       }
       halls: {
         Row: {
           id: string
-          branch_id: string
-          name: string
-          capacity: number
+          branch_id: string | null
+          name: string | null
+          capacity: number | null
           floor_info: string | null
         }
         Insert: {
           id?: string
-          branch_id: string
-          name: string
-          capacity?: number
+          branch_id?: string | null
+          name?: string | null
+          capacity?: number | null
           floor_info?: string | null
         }
         Update: {
           id?: string
-          branch_id?: string
-          name?: string
-          capacity?: number
+          branch_id?: string | null
+          name?: string | null
+          capacity?: number | null
           floor_info?: string | null
         }
       }
@@ -218,150 +221,150 @@ export interface Database {
           academy_id: string
           instructor_id: string
           memo: string | null
-          is_active: boolean
-          created_at: string
+          is_active: boolean | null
+          created_at: string | null
         }
         Insert: {
           academy_id: string
           instructor_id: string
           memo?: string | null
-          is_active?: boolean
-          created_at?: string
+          is_active?: boolean | null
+          created_at?: string | null
         }
         Update: {
           academy_id?: string
           instructor_id?: string
           memo?: string | null
-          is_active?: boolean
-          created_at?: string
+          is_active?: boolean | null
+          created_at?: string | null
         }
       }
       users: {
         Row: {
           id: string
-          email: string
-          name: string
+          email: string | null
+          name: string | null
           nickname: string | null
           phone: string | null
           profile_image: string | null
-          created_at: string
-          updated_at: string
+          created_at: string | null
+          updated_at: string | null
         }
         Insert: {
           id?: string
-          email: string
-          name: string
+          email?: string | null
+          name?: string | null
           nickname?: string | null
           phone?: string | null
           profile_image?: string | null
-          created_at?: string
-          updated_at?: string
+          created_at?: string | null
+          updated_at?: string | null
         }
         Update: {
           id?: string
-          email?: string
-          name?: string
+          email?: string | null
+          name?: string | null
           nickname?: string | null
           phone?: string | null
           profile_image?: string | null
-          created_at?: string
-          updated_at?: string
+          created_at?: string | null
+          updated_at?: string | null
         }
       }
       tickets: {
         Row: {
           id: string
-          academy_id: string
-          name: string
-          price: number
-          ticket_type: string
+          academy_id: string | null
+          name: string | null
+          price: number | null
+          ticket_type: string | null
           total_count: number | null
           valid_days: number | null
           target_class_id: string | null
-          is_on_sale: boolean
-          created_at: string
+          is_on_sale: boolean | null
+          created_at: string | null
         }
         Insert: {
           id?: string
-          academy_id: string
-          name: string
-          price?: number
-          ticket_type: string
+          academy_id?: string | null
+          name?: string | null
+          price?: number | null
+          ticket_type?: string | null
           total_count?: number | null
           valid_days?: number | null
           target_class_id?: string | null
-          is_on_sale?: boolean
-          created_at?: string
+          is_on_sale?: boolean | null
+          created_at?: string | null
         }
         Update: {
           id?: string
-          academy_id?: string
-          name?: string
-          price?: number
-          ticket_type?: string
+          academy_id?: string | null
+          name?: string | null
+          price?: number | null
+          ticket_type?: string | null
           total_count?: number | null
           valid_days?: number | null
           target_class_id?: string | null
-          is_on_sale?: boolean
-          created_at?: string
+          is_on_sale?: boolean | null
+          created_at?: string | null
         }
       }
       user_tickets: {
         Row: {
           id: string
-          user_id: string
-          ticket_id: string
+          user_id: string | null
+          ticket_id: string | null
           remaining_count: number | null
           start_date: string | null
           expiry_date: string | null
-          status: string
-          created_at: string
+          status: string | null
+          created_at: string | null
         }
         Insert: {
           id?: string
-          user_id: string
-          ticket_id: string
+          user_id?: string | null
+          ticket_id?: string | null
           remaining_count?: number | null
           start_date?: string | null
           expiry_date?: string | null
-          status?: string
-          created_at?: string
+          status?: string | null
+          created_at?: string | null
         }
         Update: {
           id?: string
-          user_id?: string
-          ticket_id?: string
+          user_id?: string | null
+          ticket_id?: string | null
           remaining_count?: number | null
           start_date?: string | null
           expiry_date?: string | null
-          status?: string
-          created_at?: string
+          status?: string | null
+          created_at?: string | null
         }
       }
       bookings: {
         Row: {
           id: string
-          user_id: string
-          schedule_id: string
-          user_ticket_id: string
-          status: string
-          created_at: string
+          user_id: string | null
+          schedule_id: string | null
+          user_ticket_id: string | null
+          status: string | null
+          created_at: string | null
         }
         Insert: {
           id?: string
-          user_id: string
-          schedule_id: string
-          user_ticket_id: string
-          status?: string
-          created_at?: string
+          user_id?: string | null
+          schedule_id?: string | null
+          user_ticket_id?: string | null
+          status?: string | null
+          created_at?: string | null
         }
         Update: {
           id?: string
-          user_id?: string
-          schedule_id?: string
-          user_ticket_id?: string
-          status?: string
-          created_at?: string
+          user_id?: string | null
+          schedule_id?: string | null
+          user_ticket_id?: string | null
+          status?: string | null
+          created_at?: string | null
         }
       }
     }
@@ -376,4 +379,3 @@ export interface Database {
     }
   }
 }
-

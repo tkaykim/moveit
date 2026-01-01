@@ -58,9 +58,16 @@ export interface ClassInfo {
   time?: string;
   price?: number;
   startTime?: string;
-  class_title?: string;
-  branch_name?: string;
-  hall_name?: string;
+  endTime?: string;
+  class_title?: string | null;
+  branch_name?: string | null;
+  hall_name?: string | null;
+  academy?: {
+    id: string;
+    name: string;
+  };
+  maxStudents?: number;
+  currentStudents?: number;
 }
 
 // HistoryLog 타입: Booking 기반

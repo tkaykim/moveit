@@ -43,7 +43,7 @@ export default function BranchesPage() {
         supabase
           .from('academies')
           .select('*')
-          .order('name', { ascending: true }),
+          .order('name_kr', { ascending: true }),
       ]);
 
       if (branchesRes.error) throw branchesRes.error;
@@ -76,14 +76,14 @@ export default function BranchesPage() {
       };
 
       if (editingId) {
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from('branches')
           .update(submitData)
           .eq('id', editingId);
 
         if (error) throw error;
       } else {
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from('branches')
           .insert([submitData as Database['public']['Tables']['branches']['Insert']]);
 
@@ -116,7 +116,7 @@ export default function BranchesPage() {
       address_primary: branch.address_primary,
       address_detail: branch.address_detail || '',
       contact_number: branch.contact_number || '',
-      image_url: (branch as any).image_url || '',
+      image_url: branch.image_url || '',
       is_active: branch.is_active,
     });
     setShowForm(true);
@@ -196,9 +196,8 @@ export default function BranchesPage() {
               >
                 <option value="">학원 선택</option>
                 {academies.map((academy) => {
-                  const academyAny = academy as any;
-                  const nameKr = academyAny.name_kr;
-                  const nameEn = academyAny.name_en;
+                  const nameKr = academy.name_kr;
+                  const nameEn = academy.name_en;
                   const displayName = nameKr && nameEn 
                     ? `${nameKr} (${nameEn})` 
                     : nameKr || nameEn || '-';
@@ -325,9 +324,8 @@ export default function BranchesPage() {
                       {(() => {
                         const academy = branch.academies as Academy | null;
                         if (!academy) return '-';
-                        const academyAny = academy as any;
-                        const nameKr = academyAny.name_kr;
-                        const nameEn = academyAny.name_en;
+                        const nameKr = academy.name_kr;
+                        const nameEn = academy.name_en;
                         if (nameKr && nameEn) return `${nameKr} (${nameEn})`;
                         return nameKr || nameEn || '-';
                       })()}

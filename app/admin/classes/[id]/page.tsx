@@ -46,7 +46,7 @@ export default function ClassDetailPage() {
 
     try {
       // 클래스 정보 로드
-      const { data: classRes, error: classError } = await (supabase as any)
+      const { data: classRes, error: classError } = await supabase
         .from('classes')
         .select(`
           *,
@@ -70,7 +70,7 @@ export default function ClassDetailPage() {
 
       if (scheduleIds.length > 0) {
         // 예약 정보 로드 (user_tickets와 tickets 정보 포함)
-        const { data: bookingsRes, error: bookingsError } = await (supabase as any)
+        const { data: bookingsRes, error: bookingsError } = await supabase
           .from('bookings')
           .select(`
             *,
@@ -193,10 +193,9 @@ export default function ClassDetailPage() {
   }
 
   const academy = classData.academies as Academy | null;
-  const academyAny = academy as any;
-  const academyName = academyAny?.name_kr && academyAny?.name_en
-    ? `${academyAny.name_kr} (${academyAny.name_en})`
-    : academyAny?.name_kr || academyAny?.name_en || '-';
+  const academyName = academy?.name_kr && academy?.name_en
+    ? `${academy.name_kr} (${academy.name_en})`
+    : academy?.name_kr || academy?.name_en || '-';
 
   return (
     <div>
@@ -244,7 +243,7 @@ export default function ClassDetailPage() {
           <div>
             <span className="text-sm text-neutral-600 dark:text-neutral-400">가격</span>
             <p className="text-sm font-medium text-black dark:text-white mt-1">
-              {(classData as any).price ? `${((classData as any).price).toLocaleString()}원` : '-'}
+              {classData.price ? `${(classData.price).toLocaleString()}원` : '-'}
             </p>
           </div>
           <div>

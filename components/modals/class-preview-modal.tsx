@@ -35,9 +35,9 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
             <p className="text-neutral-600 dark:text-neutral-400 text-sm font-medium">
               {classInfo.class_title || `${classInfo.genre} Class`}
             </p>
-            {(classInfo as any).academy && (
+            {classInfo.academy && (
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                {(classInfo as any).academy?.name || '학원 정보 없음'}
+                {classInfo.academy.name || '학원 정보 없음'}
                 {classInfo.branch_name && ` • ${classInfo.branch_name}`}
               </p>
             )}
@@ -45,17 +45,17 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
               <Clock size={12} />
               <span>
                 {classInfo.time}
-                {(classInfo as any).endTime && (
+                {classInfo.endTime && (
                   <>
                     {' ~ '}
-                    {new Date((classInfo as any).endTime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                    {new Date(classInfo.endTime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}
                   </>
                 )}
               </span>
             </div>
-            {((classInfo as any).maxStudents !== undefined && (classInfo as any).currentStudents !== undefined) && (
+            {(classInfo.maxStudents !== undefined && classInfo.currentStudents !== undefined) && (
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                정원: {(classInfo as any).currentStudents}/{(classInfo as any).maxStudents}
+                정원: {classInfo.currentStudents}/{classInfo.maxStudents}
               </p>
             )}
           </div>

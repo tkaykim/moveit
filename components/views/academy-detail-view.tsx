@@ -22,8 +22,8 @@ function transformSchedule(schedule: any): ClassInfo {
   const classData = schedule.classes || {};
   const genre = classData.genre || 'ALL';
   const level = classData.difficulty_level || 'All Level';
-  const isFull = schedule.current_students >= schedule.max_students;
-  const isAlmostFull = schedule.current_students >= schedule.max_students * 0.8;
+  const isFull = schedule.current_students >= (schedule.max_students || 0);
+  const isAlmostFull = schedule.current_students >= (schedule.max_students || 0) * 0.8;
   const status = isFull ? 'FULL' : isAlmostFull ? 'ALMOST_FULL' : 'AVAILABLE';
 
   return {
@@ -37,6 +37,13 @@ function transformSchedule(schedule: any): ClassInfo {
     class_title: classData.title,
     branch_name: schedule.branches?.name,
     hall_name: schedule.halls?.name,
+    academy: {
+      id: schedule.branches?.academy_id || '',
+      name: schedule.branches?.academies?.name_kr || schedule.branches?.academies?.name_en || '',
+    },
+    maxStudents: schedule.max_students,
+    currentStudents: schedule.current_students,
+    endTime: schedule.end_time,
   };
 }
 
@@ -139,19 +146,19 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
         const academyId = (academy as any).academyId || academy.id.split('-')[0];
         
         // academy의 branches 가져오기
-        const { data: branches, error: branchesError } = await (supabase as any)
+        const { data: branches, error: branchesError } = await supabase
           .from('branches')
           .select('*')
           .eq('academy_id', academyId);
 
         if (branchesError) throw branchesError;
         
-        const branchIds = ((branches || []) as any[]).map((b: any) => b.id);
+        const branchIds = (branches || []).map((b) => b.id);
 
         // 각 branch의 schedules 가져오기
         const allSchedules: any[] = [];
         for (const branchId of branchIds) {
-          const { data: branchSchedules, error: schedulesError } = await (supabase as any)
+          const { data: branchSchedules, error: schedulesError } = await supabase
             .from('schedules')
             .select(`
               *,

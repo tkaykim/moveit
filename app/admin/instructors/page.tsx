@@ -32,7 +32,7 @@ export default function InstructorsPage() {
     }
 
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('instructors')
         .select('*')
         .order('created_at', { ascending: false });
@@ -118,14 +118,14 @@ export default function InstructorsPage() {
           }
         }
 
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from('instructors')
           .update(submitData)
           .eq('id', editingId);
 
         if (error) throw error;
       } else {
-        const { data: newInstructor, error } = await (supabase as any)
+        const { data: newInstructor, error } = await supabase
           .from('instructors')
           .insert([submitData])
           .select()
@@ -158,15 +158,15 @@ export default function InstructorsPage() {
       ? instructor.specialties.split(',').map(g => g.trim()).filter(g => GENRES.includes(g as typeof GENRES[number]))
       : [];
     
-    const instructorAny = instructor as any;
+    const instructorAny = instructor;
     setFormData({
-      name_kr: instructorAny.name_kr || '',
-      name_en: instructorAny.name_en || '',
+      name_kr: instructor.name_kr || '',
+      name_en: instructor.name_en || '',
       bio: instructor.bio || '',
       instagram_url: instructor.instagram_url || '',
       selectedGenres: genres,
       profileImageFile: null,
-      profileImageUrl: instructorAny.profile_image_url || null,
+      profileImageUrl: instructor.profile_image_url || null,
     });
     setShowForm(true);
   };
@@ -404,9 +404,8 @@ export default function InstructorsPage() {
               ) : (
                 instructors.map((instructor) => {
                   const genres = getGenresFromSpecialties(instructor.specialties);
-                  const instructorAny = instructor as any;
-                  const nameKr = instructorAny.name_kr;
-                  const nameEn = instructorAny.name_en;
+                  const nameKr = instructor.name_kr;
+                  const nameEn = instructor.name_en;
                   const displayName = nameKr && nameEn 
                     ? `${nameKr} (${nameEn})` 
                     : nameKr || nameEn || '-';

@@ -183,9 +183,8 @@ export default function ClassesPage() {
         title: formData.title || (() => {
           const instructor = instructors.find(i => i.id === formData.instructor_id);
           if (instructor) {
-            const instructorAny = instructor as any;
-            const nameKr = instructorAny.name_kr;
-            const nameEn = instructorAny.name_en;
+            const nameKr = instructor.name_kr;
+            const nameEn = instructor.name_en;
             const instructorName = nameKr || nameEn || '';
             return `${instructorName} ${formData.selectedGenres.join(', ')}`;
           }
@@ -201,7 +200,7 @@ export default function ClassesPage() {
 
       if (editingId) {
         // 수정 모드: 클래스만 업데이트
-        const { error: classError } = await (supabase as any)
+        const { error: classError } = await supabase
           .from('classes')
           .update(classData)
           .eq('id', editingId);
@@ -209,7 +208,7 @@ export default function ClassesPage() {
         if (classError) throw classError;
       } else {
         // 생성 모드: 클래스와 시간표를 동시에 생성
-        const { data: newClass, error: classError } = await (supabase as any)
+        const { data: newClass, error: classError } = await supabase
           .from('classes')
           .insert([classData])
           .select()
@@ -230,7 +229,7 @@ export default function ClassesPage() {
           is_canceled: false,
         };
 
-        const { error: scheduleError } = await (supabase as any)
+        const { error: scheduleError } = await supabase
           .from('schedules')
           .insert([scheduleData]);
 
@@ -283,7 +282,7 @@ export default function ClassesPage() {
       difficulty_level: classItem.difficulty_level || '',
       selectedGenres: genres,
       class_type: classItem.class_type,
-      price: (classItem as any).price || 0,
+      price: classItem.price || 0,
       title: classItem.title,
       description: classItem.description || '',
       thumbnail_url: classItem.thumbnail_url || '',
@@ -438,9 +437,8 @@ export default function ClassesPage() {
               >
                 <option value="">학원 선택</option>
                 {academies.map((academy) => {
-                  const academyAny = academy as any;
-                  const nameKr = academyAny.name_kr;
-                  const nameEn = academyAny.name_en;
+                  const nameKr = academy.name_kr;
+                  const nameEn = academy.name_en;
                   const displayName = nameKr && nameEn 
                     ? `${nameKr} (${nameEn})` 
                     : nameKr || nameEn || '-';
@@ -525,9 +523,8 @@ export default function ClassesPage() {
               >
                 <option value="">강사 선택</option>
                 {instructors.map((instructor) => {
-                  const instructorAny = instructor as any;
-                  const nameKr = instructorAny.name_kr;
-                  const nameEn = instructorAny.name_en;
+                  const nameKr = instructor.name_kr;
+                  const nameEn = instructor.name_en;
                   const displayName = nameKr && nameEn 
                     ? `${nameKr} (${nameEn})` 
                     : nameKr || nameEn || '-';
@@ -874,9 +871,8 @@ export default function ClassesPage() {
                         {(() => {
                           const academy = classItem.academies as Academy | null;
                           if (!academy) return '-';
-                          const academyAny = academy as any;
-                          const nameKr = academyAny.name_kr;
-                          const nameEn = academyAny.name_en;
+                          const nameKr = academy.name_kr;
+                          const nameEn = academy.name_en;
                           if (nameKr && nameEn) return `${nameKr} (${nameEn})`;
                           return nameKr || nameEn || '-';
                         })()}
@@ -886,9 +882,8 @@ export default function ClassesPage() {
                           const instructor = (classItem.instructors as Instructor | null) || 
                             (schedule?.instructors as Instructor | null);
                           if (!instructor) return '-';
-                          const instructorAny = instructor as any;
-                          const nameKr = instructorAny.name_kr;
-                          const nameEn = instructorAny.name_en;
+                          const nameKr = instructor.name_kr;
+                          const nameEn = instructor.name_en;
                           if (nameKr && nameEn) return `${nameKr} (${nameEn})`;
                           return nameKr || nameEn || '-';
                         })()}

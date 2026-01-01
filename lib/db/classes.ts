@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { Class } from '@/lib/supabase/types';
+import { Database } from '@/types/database';
 
 export async function getClasses(academyId?: string) {
   const supabase = await createClient();
@@ -29,17 +30,9 @@ export async function getClassById(id: string) {
   return data;
 }
 
-export async function createClass(classData: {
-  academy_id: string;
-  title: string;
-  description?: string;
-  difficulty_level?: string;
-  genre?: string;
-  class_type: string;
-  thumbnail_url?: string;
-}) {
+export async function createClass(classData: Database['public']['Tables']['classes']['Insert']) {
   const supabase = await createClient();
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('classes')
     .insert(classData)
     .select()
@@ -49,9 +42,9 @@ export async function createClass(classData: {
   return data;
 }
 
-export async function updateClass(id: string, updates: Partial<Class>) {
+export async function updateClass(id: string, updates: Database['public']['Tables']['classes']['Update']) {
   const supabase = await createClient();
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('classes')
     .update(updates)
     .eq('id', id)

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { Instructor } from '@/lib/supabase/types';
+import { Database } from '@/types/database';
 
 export async function getInstructors() {
   const supabase = await createClient();
@@ -27,17 +28,9 @@ export async function getInstructorById(id: string) {
   return data;
 }
 
-export async function createInstructor(instructor: {
-  user_id?: string;
-  name_kr: string;
-  name_en?: string;
-  bio?: string;
-  instagram_url?: string;
-  specialties?: string;
-  profile_image_url?: string;
-}) {
+export async function createInstructor(instructor: Database['public']['Tables']['instructors']['Insert']) {
   const supabase = await createClient();
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('instructors')
     .insert(instructor)
     .select()
@@ -47,9 +40,9 @@ export async function createInstructor(instructor: {
   return data;
 }
 
-export async function updateInstructor(id: string, updates: Partial<Instructor>) {
+export async function updateInstructor(id: string, updates: Database['public']['Tables']['instructors']['Update']) {
   const supabase = await createClient();
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('instructors')
     .update(updates)
     .eq('id', id)

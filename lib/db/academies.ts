@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { Academy } from '@/lib/supabase/types';
+import { Database } from '@/types/database';
 
 export async function getAcademies() {
   const supabase = await createClient();
@@ -28,16 +29,9 @@ export async function getAcademyById(id: string) {
   return data;
 }
 
-export async function createAcademy(academy: {
-  name_kr: string;
-  name_en?: string;
-  owner_id: string;
-  business_registration_number?: string;
-  logo_url?: string;
-  tags?: string;
-}) {
+export async function createAcademy(academy: Database['public']['Tables']['academies']['Insert']) {
   const supabase = await createClient();
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('academies')
     .insert(academy)
     .select()
@@ -47,9 +41,9 @@ export async function createAcademy(academy: {
   return data;
 }
 
-export async function updateAcademy(id: string, updates: Partial<Academy>) {
+export async function updateAcademy(id: string, updates: Database['public']['Tables']['academies']['Update']) {
   const supabase = await createClient();
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('academies')
     .update(updates)
     .eq('id', id)

@@ -121,14 +121,14 @@ export default function SchedulesPage() {
       };
 
       if (editingId) {
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from('schedules')
           .update(submitData)
           .eq('id', editingId);
 
         if (error) throw error;
       } else {
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from('schedules')
           .insert([submitData]);
 
@@ -323,9 +323,8 @@ export default function SchedulesPage() {
                 >
                   <option value="">강사 선택</option>
                   {instructors.map((instructor) => {
-                    const instructorAny = instructor as any;
-                    const nameKr = instructorAny.name_kr;
-                    const nameEn = instructorAny.name_en;
+                    const nameKr = instructor.name_kr;
+                    const nameEn = instructor.name_en;
                     const displayName = nameKr && nameEn 
                       ? `${nameKr} (${nameEn})` 
                       : nameKr || nameEn || '-';
@@ -462,9 +461,8 @@ export default function SchedulesPage() {
                         {(() => {
                           const instructor = schedule.instructors as Instructor | null;
                           if (!instructor) return '-';
-                          const instructorAny = instructor as any;
-                          const nameKr = instructorAny.name_kr;
-                          const nameEn = instructorAny.name_en;
+                          const nameKr = instructor.name_kr;
+                          const nameEn = instructor.name_en;
                           if (nameKr && nameEn) return `${nameKr} (${nameEn})`;
                           return nameKr || nameEn || '-';
                         })()}

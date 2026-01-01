@@ -99,7 +99,7 @@ export default function AcademiesPage() {
           logo_url: formData.logo_url || null,
         };
 
-        const { error } = await (supabase as any)
+        const { data, error } = await supabase
           .from('academies')
           .update(submitData)
           .eq('id', editingId);
@@ -121,7 +121,7 @@ export default function AcademiesPage() {
           owner_id: 'system',
         };
 
-        const { data: newAcademy, error } = await (supabase as any)
+        const { data: newAcademy, error } = await supabase
           .from('academies')
           .insert([submitData])
           .select()
@@ -152,7 +152,7 @@ export default function AcademiesPage() {
       // 3. 수정 모드일 때만: 지점 삭제 처리
       if (editingId) {
         // DB에서 기존 지점들 모두 가져오기
-        const { data: existingBranches, error: loadError } = await (supabase as any)
+        const { data: existingBranches, error: loadError } = await supabase
           .from('branches')
           .select('id, image_url')
           .eq('academy_id', academyId);
@@ -185,7 +185,7 @@ export default function AcademiesPage() {
           for (const branchId of deletedBranchIds) {
             try {
               // 1. 해당 지점의 모든 홀 삭제
-              const { error: hallsDeleteError } = await (supabase as any)
+              const { error: hallsDeleteError } = await supabase
                 .from('halls')
                 .delete()
                 .eq('branch_id', branchId);
@@ -196,9 +196,9 @@ export default function AcademiesPage() {
               }
 
               // 2. 이미지 삭제
-              const branchToDelete = existingBranches?.find((b: any) => b.id === branchId);
-              if (branchToDelete && (branchToDelete as any).image_url) {
-                const existingUrl = (branchToDelete as any).image_url;
+              const branchToDelete = existingBranches?.find((b) => b.id === branchId);
+              if (branchToDelete && branchToDelete.image_url) {
+                const existingUrl = branchToDelete.image_url;
                 if (existingUrl && existingUrl.includes('supabase.co/storage')) {
                   try {
                     const filePath = extractFilePathFromUrl(existingUrl);
@@ -248,7 +248,7 @@ export default function AcademiesPage() {
       
       // 삭제 후 다시 DB 상태 확인 (중복 생성 방지)
       if (editingId) {
-        const { data: currentBranches } = await (supabase as any)
+        const { data: currentBranches } = await supabase
           .from('branches')
           .select('id')
           .eq('academy_id', academyId);
@@ -578,13 +578,13 @@ export default function AcademiesPage() {
         }
       }
 
-      const tags = (academy as any).tags
-        ? ((academy as any).tags as string).split(',').map((t: any) => t.trim()).filter((t: any) => t)
+      const tags = academy.tags
+        ? (academy.tags as string).split(',').map((t: string) => t.trim()).filter((t: string) => t)
         : [];
 
       setEditingData({
-        name_kr: (academy as any).name_kr || '',
-        name_en: (academy as any).name_en || '',
+        name_kr: academy.name_kr || '',
+        name_en: academy.name_en || '',
         tags,
         business_registration_number: academy.business_registration_number || '',
         logo_url: academy.logo_url || '',
@@ -627,7 +627,7 @@ export default function AcademiesPage() {
 
       // 관련 데이터 삭제 (CASCADE 대신 수동 삭제)
       // 1. 클래스 관련 삭제 (schedules -> bookings -> classes)
-      const { data: classes } = await (supabase as any)
+      const { data: classes } = await supabase
         .from('classes')
         .select('id')
         .eq('academy_id', id);
@@ -636,8 +636,8 @@ export default function AcademiesPage() {
         const classIds = classes.map((c: any) => c.id);
         
         // 각 클래스의 schedules 찾기
-        const { data: schedules } = await (supabase as any)
-          .from('schedules')
+        const { data: schedules } = await supabase
+        .from('schedules')
           .select('id')
           .in('class_id', classIds);
 
@@ -645,15 +645,15 @@ export default function AcademiesPage() {
           const scheduleIds = schedules.map((s: any) => s.id);
           
           // bookings 삭제
-          await (supabase as any)
-            .from('bookings')
+          await supabase
+        .from('bookings')
             .delete()
             .in('schedule_id', scheduleIds);
         }
 
         // schedules 삭제
-        await (supabase as any)
-          .from('schedules')
+        await supabase
+        .from('schedules')
           .delete()
           .in('class_id', classIds);
 
@@ -674,26 +674,26 @@ export default function AcademiesPage() {
         const branchIds = branches.map((b: any) => b.id);
         
         // halls 삭제
-        await (supabase as any)
+        await supabase
           .from('halls')
           .delete()
           .in('branch_id', branchIds);
 
         // branches 삭제
-        await (supabase as any)
+        await supabase
           .from('branches')
           .delete()
           .eq('academy_id', id);
       }
 
       // 3. academy_instructors 삭제
-      await (supabase as any)
+      await supabase
         .from('academy_instructors')
         .delete()
         .eq('academy_id', id);
 
       // 4. 학원 삭제
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('academies')
         .delete()
         .eq('id', id);
@@ -712,8 +712,8 @@ export default function AcademiesPage() {
   };
 
   const getDisplayName = (academy: Academy) => {
-    const nameKr = (academy as any).name_kr;
-    const nameEn = (academy as any).name_en;
+    const nameKr = academy.name_kr;
+    const nameEn = academy.name_en;
     if (nameKr && nameEn) {
       return `${nameKr} (${nameEn})`;
     }
@@ -721,9 +721,9 @@ export default function AcademiesPage() {
   };
 
   const getTags = (academy: Academy) => {
-    const tags = (academy as any).tags;
+    const tags = academy.tags;
     if (!tags) return [];
-    return (tags as string).split(',').map((t: any) => t.trim()).filter((t: any) => t);
+    return tags.split(',').map((t: string) => t.trim()).filter((t: string) => t);
   };
 
   if (loading) {

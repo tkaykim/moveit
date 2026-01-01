@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { Booking } from '@/lib/supabase/types';
+import { Database } from '@/types/database';
 
 export async function getBookings(userId?: string) {
   const supabase = await createClient();
@@ -51,14 +52,9 @@ export async function getBookingById(id: string) {
   return data;
 }
 
-export async function createBooking(booking: {
-  user_id: string;
-  schedule_id: string;
-  user_ticket_id: string;
-  status?: string;
-}) {
+export async function createBooking(booking: Database['public']['Tables']['bookings']['Insert']) {
   const supabase = await createClient();
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('bookings')
     .insert(booking)
     .select()
@@ -68,9 +64,9 @@ export async function createBooking(booking: {
   return data;
 }
 
-export async function updateBooking(id: string, updates: Partial<Booking>) {
+export async function updateBooking(id: string, updates: Database['public']['Tables']['bookings']['Update']) {
   const supabase = await createClient();
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('bookings')
     .update(updates)
     .eq('id', id)

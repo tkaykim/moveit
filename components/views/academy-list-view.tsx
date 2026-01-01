@@ -13,7 +13,6 @@ interface AcademyListViewProps {
 // DB 데이터를 UI 타입으로 변환 - 각 지점을 별도 항목으로
 function transformAcademyWithBranches(dbAcademy: any): Academy[] {
   const name = dbAcademy.name_kr || dbAcademy.name_en || '이름 없음';
-  const tags = dbAcademy.tags ? dbAcademy.tags.split(',').map((t: string) => t.trim()) : [];
   const branches = dbAcademy.branches || [];
   const classes = dbAcademy.classes || [];
   const minPrice = classes.length > 0 
@@ -36,7 +35,7 @@ function transformAcademyWithBranches(dbAcademy: any): Academy[] {
       badges: [],
       img: dbAcademy.logo_url || undefined,
       academyId: dbAcademy.id,
-    } as any];
+    }];
   }
 
   // 각 지점을 별도 항목으로 변환
@@ -56,7 +55,7 @@ function transformAcademyWithBranches(dbAcademy: any): Academy[] {
     // 원본 데이터 저장 (필요시 사용)
     academyId: dbAcademy.id,
     branchId: branch.id,
-  } as any));
+  }));
 }
 
 export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
@@ -72,7 +71,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
           return;
         }
 
-        const { data, error } = await (supabase as any)
+        const { data, error } = await supabase
           .from('academies')
           .select(`
             *,

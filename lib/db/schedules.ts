@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { Schedule } from '@/lib/supabase/types';
+import { Database } from '@/types/database';
 
 export async function getSchedules(filters?: {
   class_id?: string;
@@ -60,19 +61,9 @@ export async function getScheduleById(id: string) {
   return data;
 }
 
-export async function createSchedule(schedule: {
-  class_id: string;
-  branch_id: string;
-  hall_id: string;
-  instructor_id: string;
-  start_time: string;
-  end_time: string;
-  max_students: number;
-  current_students?: number;
-  is_canceled?: boolean;
-}) {
+export async function createSchedule(schedule: Database['public']['Tables']['schedules']['Insert']) {
   const supabase = await createClient();
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('schedules')
     .insert(schedule)
     .select()
@@ -82,9 +73,9 @@ export async function createSchedule(schedule: {
   return data;
 }
 
-export async function updateSchedule(id: string, updates: Partial<Schedule>) {
+export async function updateSchedule(id: string, updates: Database['public']['Tables']['schedules']['Update']) {
   const supabase = await createClient();
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('schedules')
     .update(updates)
     .eq('id', id)

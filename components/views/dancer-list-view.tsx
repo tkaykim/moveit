@@ -70,7 +70,7 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
         }
 
         // 스케줄을 통해 강사와 클래스, 지점 정보를 가져옴
-        const { data: schedulesData, error: schedulesError } = await (supabase as any)
+        const { data: schedulesData, error: schedulesError } = await supabase
           .from('schedules')
           .select(`
             *,
@@ -102,8 +102,8 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
           if (schedule.classes) {
             entry.classes.push(schedule.classes);
           }
-          if (schedule.branches && (schedule.branches as any).address_primary) {
-            entry.branches.add((schedule.branches as any).address_primary);
+          if (schedule.branches && schedule.branches.address_primary) {
+            entry.branches.add(schedule.branches.address_primary);
           }
         });
 
