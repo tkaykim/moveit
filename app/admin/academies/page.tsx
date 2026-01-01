@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import type { Database } from '@/types/database';
 import { Academy, Branch, Hall } from '@/lib/supabase/types';
 import { AcademyFormModal } from './components/academy-form-modal';
 import { uploadFile, deleteFile, extractFilePathFromUrl } from '@/lib/utils/storage';
