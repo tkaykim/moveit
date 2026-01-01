@@ -74,14 +74,14 @@ export default function BranchesPage() {
       };
 
       if (editingId) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('branches')
           .update(submitData)
           .eq('id', editingId);
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('branches')
           .insert([submitData as Database['public']['Tables']['branches']['Insert']]);
 
