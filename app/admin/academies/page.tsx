@@ -251,7 +251,7 @@ export default function AcademiesPage() {
           .select('id')
           .eq('academy_id', academyId);
         
-        const currentBranchIds = (currentBranches || []).map(b => b.id);
+        const currentBranchIds = (currentBranches || []).map((b: any) => b.id);
         console.log('저장 전 DB에 있는 지점 IDs:', currentBranchIds);
         
         // formData에 있는 지점 중 DB에 없는 것만 새로 생성
