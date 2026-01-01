@@ -25,11 +25,11 @@ interface BranchData {
 }
 
 interface AcademyFormData {
-  name_kr: string;
-  name_en: string;
+  name_kr: string | null;
+  name_en: string | null;
   tags: string[];
-  business_registration_number: string;
-  logo_url: string;
+  business_registration_number: string | null;
+  logo_url: string | null;
   branches: BranchData[];
 }
 
