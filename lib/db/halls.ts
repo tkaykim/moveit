@@ -24,7 +24,7 @@ export async function createHall(hall: {
   floor_info?: string;
 }) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('halls')
     .insert(hall)
     .select()

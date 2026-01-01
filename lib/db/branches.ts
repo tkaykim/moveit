@@ -38,7 +38,7 @@ export async function createBranch(branch: {
   is_active?: boolean;
 }) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('branches')
     .insert(branch)
     .select()
@@ -50,7 +50,7 @@ export async function createBranch(branch: {
 
 export async function updateBranch(id: string, updates: Partial<Branch>) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('branches')
     .update(updates)
     .eq('id', id)

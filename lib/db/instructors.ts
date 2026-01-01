@@ -29,13 +29,15 @@ export async function getInstructorById(id: string) {
 
 export async function createInstructor(instructor: {
   user_id?: string;
-  stage_name: string;
+  name_kr: string;
+  name_en?: string;
   bio?: string;
   instagram_url?: string;
   specialties?: string;
+  profile_image_url?: string;
 }) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('instructors')
     .insert(instructor)
     .select()
@@ -47,7 +49,7 @@ export async function createInstructor(instructor: {
 
 export async function updateInstructor(id: string, updates: Partial<Instructor>) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('instructors')
     .update(updates)
     .eq('id', id)

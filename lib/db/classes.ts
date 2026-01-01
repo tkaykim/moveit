@@ -39,7 +39,7 @@ export async function createClass(classData: {
   thumbnail_url?: string;
 }) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('classes')
     .insert(classData)
     .select()
@@ -51,7 +51,7 @@ export async function createClass(classData: {
 
 export async function updateClass(id: string, updates: Partial<Class>) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('classes')
     .update(updates)
     .eq('id', id)

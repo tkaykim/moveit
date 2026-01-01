@@ -41,7 +41,7 @@ export async function createUserTicket(userTicket: {
   status?: string;
 }) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('user_tickets')
     .insert(userTicket)
     .select()
@@ -53,7 +53,7 @@ export async function createUserTicket(userTicket: {
 
 export async function updateUserTicket(id: string, updates: Partial<UserTicket>) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('user_tickets')
     .update(updates)
     .eq('id', id)

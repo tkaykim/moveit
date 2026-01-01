@@ -72,7 +72,7 @@ export async function createSchedule(schedule: {
   is_canceled?: boolean;
 }) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('schedules')
     .insert(schedule)
     .select()
@@ -84,7 +84,7 @@ export async function createSchedule(schedule: {
 
 export async function updateSchedule(id: string, updates: Partial<Schedule>) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('schedules')
     .update(updates)
     .eq('id', id)

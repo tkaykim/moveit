@@ -29,13 +29,15 @@ export async function getAcademyById(id: string) {
 }
 
 export async function createAcademy(academy: {
-  name: string;
+  name_kr: string;
+  name_en?: string;
   owner_id: string;
   business_registration_number?: string;
   logo_url?: string;
+  tags?: string;
 }) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('academies')
     .insert(academy)
     .select()
@@ -47,7 +49,7 @@ export async function createAcademy(academy: {
 
 export async function updateAcademy(id: string, updates: Partial<Academy>) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('academies')
     .update(updates)
     .eq('id', id)

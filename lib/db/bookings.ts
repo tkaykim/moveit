@@ -58,7 +58,7 @@ export async function createBooking(booking: {
   status?: string;
 }) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('bookings')
     .insert(booking)
     .select()
@@ -70,7 +70,7 @@ export async function createBooking(booking: {
 
 export async function updateBooking(id: string, updates: Partial<Booking>) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('bookings')
     .update(updates)
     .eq('id', id)
