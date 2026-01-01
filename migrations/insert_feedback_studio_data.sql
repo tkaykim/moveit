@@ -213,7 +213,8 @@ SELECT
   (SELECT id FROM instructors WHERE name_en = 'MOOREUPSTAGE' LIMIT 1),
   '2026-01-02 20:40:00+09'::timestamptz,
   '2026-01-02 21:40:00+09'::timestamptz,
-  20, 0, false, CURRENT_TIMESTAMP;
+  20, 0, false, CURRENT_TIMESTAMP
+ON CONFLICT DO NOTHING;
 
 -- 1월 3일 (금요일)
 INSERT INTO "public"."schedules" ("id", "class_id", "branch_id", "hall_id", "instructor_id", "start_time", "end_time", "max_students", "current_students", "is_canceled", "created_at")
@@ -235,7 +236,8 @@ SELECT
   (SELECT id FROM instructors WHERE name_en = 'ROODY' LIMIT 1),
   '2026-01-03 20:00:00+09'::timestamptz,
   '2026-01-03 21:00:00+09'::timestamptz,
-  20, 0, false, CURRENT_TIMESTAMP;
+  20, 0, false, CURRENT_TIMESTAMP
+ON CONFLICT DO NOTHING;
 
 -- 1월 5일 (일요일)
 INSERT INTO "public"."schedules" ("id", "class_id", "branch_id", "hall_id", "instructor_id", "start_time", "end_time", "max_students", "current_students", "is_canceled", "created_at")
@@ -307,7 +309,8 @@ SELECT
   (SELECT id FROM instructors WHERE name_en = 'JUHASTAGE' LIMIT 1),
   '2026-01-05 20:40:00+09'::timestamptz,
   '2026-01-05 21:40:00+09'::timestamptz,
-  20, 0, false, CURRENT_TIMESTAMP;
+  20, 0, false, CURRENT_TIMESTAMP
+ON CONFLICT DO NOTHING;
 
 -- 1월 6일 (월요일)
 INSERT INTO "public"."schedules" ("id", "class_id", "branch_id", "hall_id", "instructor_id", "start_time", "end_time", "max_students", "current_students", "is_canceled", "created_at")
@@ -389,7 +392,8 @@ SELECT
   (SELECT id FROM instructors WHERE name_en = 'HWI' LIMIT 1),
   '2026-01-06 21:10:00+09'::timestamptz,
   '2026-01-06 22:10:00+09'::timestamptz,
-  20, 0, false, CURRENT_TIMESTAMP;
+  20, 0, false, CURRENT_TIMESTAMP
+ON CONFLICT DO NOTHING;
 
 -- 1월 7일 (화요일)
 INSERT INTO "public"."schedules" ("id", "class_id", "branch_id", "hall_id", "instructor_id", "start_time", "end_time", "max_students", "current_students", "is_canceled", "created_at")
@@ -471,7 +475,8 @@ SELECT
   (SELECT id FROM instructors WHERE name_en = 'HASH' LIMIT 1),
   '2026-01-07 21:10:00+09'::timestamptz,
   '2026-01-07 22:10:00+09'::timestamptz,
-  20, 0, false, CURRENT_TIMESTAMP;
+  20, 0, false, CURRENT_TIMESTAMP
+ON CONFLICT DO NOTHING;
 
 -- 1월 8일 (수요일)
 INSERT INTO "public"."schedules" ("id", "class_id", "branch_id", "hall_id", "instructor_id", "start_time", "end_time", "max_students", "current_students", "is_canceled", "created_at")
@@ -553,7 +558,8 @@ SELECT
   (SELECT id FROM instructors WHERE name_en = 'JUNAH' LIMIT 1),
   '2026-01-08 20:40:00+09'::timestamptz,
   '2026-01-08 21:40:00+09'::timestamptz,
-  20, 0, false, CURRENT_TIMESTAMP;
+  20, 0, false, CURRENT_TIMESTAMP
+ON CONFLICT DO NOTHING;
 
 -- 1월 9일 (목요일) - 이미 추가됨, 패턴 확인용으로 주석 처리
 -- 1월 10일 (금요일) - 이미 추가됨
@@ -649,7 +655,8 @@ SELECT
   (SELECT id FROM instructors WHERE name_en = 'JUHASTAGE' LIMIT 1),
   '2026-01-12 20:40:00+09'::timestamptz,
   '2026-01-12 21:40:00+09'::timestamptz,
-  20, 0, false, CURRENT_TIMESTAMP;
+  20, 0, false, CURRENT_TIMESTAMP
+ON CONFLICT DO NOTHING;
 
 -- 1월 13일 (월요일)
 INSERT INTO "public"."schedules" ("id", "class_id", "branch_id", "hall_id", "instructor_id", "start_time", "end_time", "max_students", "current_students", "is_canceled", "created_at")
