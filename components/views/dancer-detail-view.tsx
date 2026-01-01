@@ -37,7 +37,7 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
         }
 
         // 강사의 스케줄 가져오기
-        const { data: instructorSchedules, error } = await supabase
+        const { data: instructorSchedules, error } = await (supabase as any)
           .from('schedules')
           .select(`
             *,

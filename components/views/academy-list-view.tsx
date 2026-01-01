@@ -72,7 +72,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
           return;
         }
 
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('academies')
           .select(`
             *,
@@ -137,7 +137,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
               >
                 <div className="h-40 relative overflow-hidden">
                   <Image 
-                    src={academy.logo_url || academy.branches?.[0]?.image_url || `https://picsum.photos/seed/academy${academy.id}/400/160`}
+                    src={academy.logo_url || `https://picsum.photos/seed/academy${academy.id}/400/160`}
                     alt={academy.name}
                     fill
                     className="object-cover"

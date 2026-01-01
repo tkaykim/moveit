@@ -126,7 +126,7 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
         }
 
         // 모든 스케줄 가져오기
-        const { data: allSchedules, error: schedulesError } = await supabase
+        const { data: allSchedules, error: schedulesError } = await (supabase as any)
           .from('schedules')
           .select(`
             *,

@@ -44,7 +44,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
         const supabase = getSupabaseClient();
         if (!supabase) return;
 
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('academies')
           .select(`
             *,
@@ -116,7 +116,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
         if (!supabase) return;
 
         // 모든 강사와 찜 개수를 가져옴
-        const { data: instructorsData, error: instructorsError } = await supabase
+        const { data: instructorsData, error: instructorsError } = await (supabase as any)
           .from('instructors')
           .select(`
             *,
@@ -161,7 +161,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
         // 클래스 정보를 가져와서 가격 정보 추가
         const instructorIds = sorted.map(i => i.id);
         if (instructorIds.length > 0) {
-          const { data: classesData } = await supabase
+          const { data: classesData } = await (supabase as any)
             .from('classes')
             .select('instructor_id, price')
             .in('instructor_id', instructorIds)

@@ -66,7 +66,7 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
         }
 
         // 사용자 프로필 가져오기
-        const { data: userProfile } = await supabase
+        const { data: userProfile } = await (supabase as any)
           .from('users')
           .select('*')
           .eq('id', user.id)
@@ -89,7 +89,7 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
         setFavorites(0);
 
         // 수강권 정보 가져오기
-        const { data: userTickets } = await supabase
+        const { data: userTickets } = await (supabase as any)
           .from('user_tickets')
           .select('*, tickets(*)')
           .eq('user_id', user.id)
@@ -101,7 +101,7 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
         setRemainingTickets(total);
 
         // 예약 내역 가져오기
-        const { data: bookings } = await supabase
+        const { data: bookings } = await (supabase as any)
           .from('bookings')
           .select(`
             *,
@@ -118,17 +118,17 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
         
-        const logs = (bookings || []).map(transformBooking);
+        const logs = ((bookings || []) as any[]).map(transformBooking);
         setHistoryLogs(logs);
 
         // 이번 달 출석 수 계산
         const now = new Date();
         const thisMonth = now.getMonth();
         const thisYear = now.getFullYear();
-        const thisMonthBookings = bookings.filter(b => {
+        const thisMonthBookings = ((bookings || []) as any[]).filter((b: any) => {
           const bookingDate = new Date(b.created_at);
           return bookingDate.getMonth() === thisMonth && 
-                 bookingDate.getFullYear() === thisYear &&
+                 bookingDate.getFullYear() === thisYear && 
                  b.status === 'CONFIRMED';
         });
         setAttendanceCount(thisMonthBookings.length);
