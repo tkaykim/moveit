@@ -28,11 +28,11 @@ interface BranchData {
 }
 
 interface AcademyFormData {
-  name_kr: string;
-  name_en: string;
+  name_kr: string | null;
+  name_en: string | null;
   tags: string[];
-  business_registration_number: string;
-  logo_url: string;
+  business_registration_number: string | null;
+  logo_url: string | null;
   branches: BranchData[];
 }
 
@@ -146,8 +146,8 @@ export default function AcademiesPage() {
 
       // 디버깅: 유효한 지점 정보 로그
       console.log('유효한 지점 개수:', validBranches.length);
-      console.log('기존 지점 (id 있음):', validBranches.filter(b => b.id).map(b => b.id));
-      console.log('새 지점 (id 없음):', validBranches.filter(b => !b.id).length);
+      console.log('기존 지점 (id 있음):', validBranches.filter((b: any) => b.id).map((b: any) => b.id));
+      console.log('새 지점 (id 없음):', validBranches.filter((b: any) => !b.id).length);
 
       // 3. 수정 모드일 때만: 지점 삭제 처리
       if (editingId) {
@@ -164,8 +164,8 @@ export default function AcademiesPage() {
 
         const existingBranchIds = (existingBranches || []).map((b: any) => b.id);
         const formBranchIds = validBranches
-          .filter(b => b.id && b.name && b.address_primary) // 유효하고 id가 있는 지점만
-          .map(b => b.id!);
+          .filter((b: any) => b.id && b.name && b.address_primary) // 유효하고 id가 있는 지점만
+          .map((b: any) => b.id!);
 
         console.log('DB에 있는 지점 IDs:', existingBranchIds);
         console.log('폼에 있는 지점 IDs:', formBranchIds);
@@ -360,14 +360,14 @@ export default function AcademiesPage() {
             .select('id')
             .eq('branch_id', branch.id);
 
-          const existingHallIds = (existingHalls || []).map(h => h.id);
+          const existingHallIds = (existingHalls || []).map((h: any) => h.id);
           const formHallIds = branch.halls
-            .filter(h => h.id)
-            .map(h => h.id!);
+            .filter((h: any) => h.id)
+            .map((h: any) => h.id!);
 
           // 삭제된 홀 삭제
           const deletedHallIds = existingHallIds.filter(
-            id => !formHallIds.includes(id)
+            (id: any) => !formHallIds.includes(id)
           );
 
           if (deletedHallIds.length > 0) {
@@ -513,7 +513,7 @@ export default function AcademiesPage() {
       const branchData: BranchData[] = [];
       
       if (branches && branches.length > 0) {
-        const branchIds = branches.filter(b => b.id).map(b => b.id!);
+        const branchIds = branches.filter((b: any) => b.id).map((b: any) => b.id!);
         
         // 홀 로드 (배치 처리, 최대 100개씩 처리)
         const hallsByBranchId = new Map<string, Hall[]>();
@@ -578,7 +578,7 @@ export default function AcademiesPage() {
       }
 
       const tags = (academy as any).tags
-        ? ((academy as any).tags as string).split(',').map(t => t.trim()).filter(t => t)
+        ? ((academy as any).tags as string).split(',').map((t: any) => t.trim()).filter((t: any) => t)
         : [];
 
       setEditingData({
@@ -631,7 +631,7 @@ export default function AcademiesPage() {
         .eq('academy_id', id);
 
       if (classes && classes.length > 0) {
-        const classIds = classes.map(c => c.id);
+        const classIds = classes.map((c: any) => c.id);
         
         // 각 클래스의 schedules 찾기
         const { data: schedules } = await supabase
@@ -640,7 +640,7 @@ export default function AcademiesPage() {
           .in('class_id', classIds);
 
         if (schedules && schedules.length > 0) {
-          const scheduleIds = schedules.map(s => s.id);
+          const scheduleIds = schedules.map((s: any) => s.id);
           
           // bookings 삭제
           await supabase
@@ -669,7 +669,7 @@ export default function AcademiesPage() {
         .eq('academy_id', id);
 
       if (branches && branches.length > 0) {
-        const branchIds = branches.map(b => b.id);
+        const branchIds = branches.map((b: any) => b.id);
         
         // halls 삭제
         await supabase
@@ -721,7 +721,7 @@ export default function AcademiesPage() {
   const getTags = (academy: Academy) => {
     const tags = (academy as any).tags;
     if (!tags) return [];
-    return (tags as string).split(',').map(t => t.trim()).filter(t => t);
+    return (tags as string).split(',').map((t: any) => t.trim()).filter((t: any) => t);
   };
 
   if (loading) {
