@@ -85,7 +85,7 @@ export default function AcademiesPage() {
       // 1. 학원 정보 저장/업데이트
       if (editingId) {
         // 수정 모드: 학원 정보 업데이트
-        const submitData: Partial<Academy> = {
+        const submitData = {
           name_kr: formData.name_kr || null,
           name_en: formData.name_en || null,
           tags: formData.tags.length > 0 ? formData.tags.join(', ') : null,
@@ -106,7 +106,7 @@ export default function AcademiesPage() {
         academyId = editingId;
       } else {
         // 생성 모드: 새 학원 생성
-        const submitData: Partial<Academy> = {
+        const submitData = {
           name_kr: formData.name_kr || null,
           name_en: formData.name_en || null,
           tags: formData.tags.length > 0 ? formData.tags.join(', ') : null,
@@ -327,7 +327,7 @@ export default function AcademiesPage() {
 
           console.log('기존 지점 업데이트:', branch.id, branch.name);
           
-          const branchData: Partial<Branch> = {
+          const branchData = {
             name: branch.name,
             address_primary: branch.address_primary,
             address_detail: branch.address_detail || null,
@@ -382,7 +382,7 @@ export default function AcademiesPage() {
               continue;
             }
 
-            const hallData: Partial<Hall> = {
+            const hallData = {
               branch_id: branch.id,
               name: hall.name,
               capacity: hall.capacity,
@@ -423,7 +423,7 @@ export default function AcademiesPage() {
           
           console.log('새 지점 생성:', branch.name, editingId ? '(수정 모드)' : '(생성 모드)');
 
-          const branchData: Partial<Branch> = {
+          const branchData = {
             academy_id: academyId,
             name: branch.name,
             address_primary: branch.address_primary,
@@ -450,7 +450,7 @@ export default function AcademiesPage() {
               continue;
             }
 
-            const hallData: Partial<Hall> = {
+            const hallData = {
               branch_id: newBranch.id,
               name: hall.name,
               capacity: hall.capacity,
