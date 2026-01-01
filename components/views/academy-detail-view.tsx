@@ -139,19 +139,19 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
         const academyId = (academy as any).academyId || academy.id.split('-')[0];
         
         // academy의 branches 가져오기
-        const { data: branches, error: branchesError } = await supabase
+        const { data: branches, error: branchesError } = await (supabase as any)
           .from('branches')
           .select('*')
           .eq('academy_id', academyId);
 
         if (branchesError) throw branchesError;
         
-        const branchIds = (branches || []).map(b => b.id);
+        const branchIds = ((branches || []) as any[]).map((b: any) => b.id);
 
         // 각 branch의 schedules 가져오기
         const allSchedules: any[] = [];
         for (const branchId of branchIds) {
-          const { data: branchSchedules, error: schedulesError } = await supabase
+          const { data: branchSchedules, error: schedulesError } = await (supabase as any)
             .from('schedules')
             .select(`
               *,
