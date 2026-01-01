@@ -154,7 +154,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
         });
 
         // 찜 개수로 정렬하고 상위 10명만 선택
-        const sorted = instructorsWithFavorites
+        const sorted = (instructorsWithFavorites as InstructorWithFavorites[])
           .sort((a, b) => b.favoriteCount - a.favoriteCount)
           .slice(0, 10);
 
