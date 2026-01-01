@@ -73,3 +73,12 @@ export interface HistoryLog {
   status: 'ATTENDED' | 'ABSENT' | 'CONFIRMED';
 }
 
+// User 타입: Mock 데이터 및 UI용
+export interface User {
+  name: string;
+  level: string;
+  tickets: number;
+  savedAcademies: string[];
+  savedDancers: string[];
+}
+
