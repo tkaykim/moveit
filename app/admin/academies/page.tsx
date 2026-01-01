@@ -95,7 +95,7 @@ export default function AcademiesPage() {
 
         const { error } = await supabase
           .from('academies')
-          .update(submitData)
+          .update(submitData as any)
           .eq('id', editingId);
 
         if (error) {
@@ -117,7 +117,7 @@ export default function AcademiesPage() {
 
         const { data: newAcademy, error } = await supabase
           .from('academies')
-          .insert([submitData])
+          .insert([submitData as any])
           .select()
           .single();
 
@@ -338,7 +338,7 @@ export default function AcademiesPage() {
 
           const { error: branchUpdateError } = await supabase
             .from('branches')
-            .update(branchData)
+            .update(branchData as any)
             .eq('id', branch.id);
 
           if (branchUpdateError) {
@@ -393,7 +393,7 @@ export default function AcademiesPage() {
               // 기존 홀 업데이트
               const { error: hallUpdateError } = await supabase
                 .from('halls')
-                .update(hallData)
+                .update(hallData as any)
                 .eq('id', hall.id);
 
               if (hallUpdateError) {
@@ -404,7 +404,7 @@ export default function AcademiesPage() {
               // 새 홀 생성
               const { error: hallInsertError } = await supabase
                 .from('halls')
-                .insert([hallData]);
+                .insert([hallData as any]);
 
               if (hallInsertError) {
                 console.error('Hall insert error:', hallInsertError);
@@ -435,7 +435,7 @@ export default function AcademiesPage() {
 
           const { data: newBranch, error: branchInsertError } = await supabase
             .from('branches')
-            .insert([branchData])
+            .insert([branchData as any])
             .select()
             .single();
 
@@ -459,7 +459,7 @@ export default function AcademiesPage() {
 
             const { error: hallInsertError } = await supabase
               .from('halls')
-              .insert([hallData]);
+              .insert([hallData as any]);
 
             if (hallInsertError) {
               console.error('Hall insert error:', hallInsertError);
