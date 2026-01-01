@@ -3,9 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
-import { createClient } from '@/lib/supabase/client';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@/types/database';
 import { Academy, Branch, Hall } from '@/lib/supabase/types';
 import { AcademyFormModal } from './components/academy-form-modal';
 import { uploadFile, deleteFile, extractFilePathFromUrl } from '@/lib/utils/storage';
@@ -79,9 +76,8 @@ export default function AcademiesPage() {
   };
 
   const handleSubmit = async (formData: AcademyFormData) => {
-    const supabaseClient = getSupabaseClient();
-    if (!supabaseClient) return;
-    const supabase: SupabaseClient<Database> = supabaseClient as SupabaseClient<Database>;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
 
     try {
       let academyId: string;
@@ -97,9 +93,9 @@ export default function AcademiesPage() {
           logo_url: formData.logo_url || null,
         };
 
-        const { error } = await (supabase as SupabaseClient<Database>)
+        const { error } = await supabase
           .from('academies')
-          .update(submitData)
+          .update(submitData as any)
           .eq('id', editingId);
 
         if (error) {
@@ -119,9 +115,9 @@ export default function AcademiesPage() {
           owner_id: 'system',
         };
 
-        const { data: newAcademy, error } = await (supabase as SupabaseClient<Database>)
+        const { data: newAcademy, error } = await supabase
           .from('academies')
-          .insert([submitData])
+          .insert([submitData as any])
           .select()
           .single();
 
@@ -340,9 +336,9 @@ export default function AcademiesPage() {
             is_active: true,
           };
 
-          const { error: branchUpdateError } = await (supabase as SupabaseClient<Database>)
+          const { error: branchUpdateError } = await supabase
             .from('branches')
-            .update(branchData)
+            .update(branchData as any)
             .eq('id', branch.id);
 
           if (branchUpdateError) {
@@ -395,9 +391,9 @@ export default function AcademiesPage() {
 
             if (hall.id) {
               // 기존 홀 업데이트
-              const { error: hallUpdateError } = await (supabase as SupabaseClient<Database>)
+              const { error: hallUpdateError } = await supabase
                 .from('halls')
-                .update(hallData)
+                .update(hallData as any)
                 .eq('id', hall.id);
 
               if (hallUpdateError) {
@@ -412,9 +408,9 @@ export default function AcademiesPage() {
                 capacity: hall.capacity,
                 floor_info: hall.floor_info || null,
               };
-              const { error: hallInsertError } = await (supabase as SupabaseClient<Database>)
+              const { error: hallInsertError } = await supabase
                 .from('halls')
-                .insert([hallInsertData]);
+                .insert([hallInsertData as any]);
 
               if (hallInsertError) {
                 console.error('Hall insert error:', hallInsertError);
@@ -443,9 +439,9 @@ export default function AcademiesPage() {
             is_active: true,
           };
 
-          const { data: newBranch, error: branchInsertError } = await (supabase as SupabaseClient<Database>)
+          const { data: newBranch, error: branchInsertError } = await supabase
             .from('branches')
-            .insert([branchData])
+            .insert([branchData as any])
             .select()
             .single();
 
@@ -467,9 +463,9 @@ export default function AcademiesPage() {
               floor_info: hall.floor_info || null,
             };
 
-            const { error: hallInsertError } = await (supabase as SupabaseClient<Database>)
+            const { error: hallInsertError } = await supabase
               .from('halls')
-              .insert([hallData]);
+              .insert([hallData as any]);
 
             if (hallInsertError) {
               console.error('Hall insert error:', hallInsertError);
