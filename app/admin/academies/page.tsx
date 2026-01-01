@@ -23,6 +23,8 @@ interface BranchData {
   address_detail: string;
   contact_number: string;
   halls: HallData[];
+  imageFile?: File;
+  image_url?: string | null;
 }
 
 interface AcademyFormData {
