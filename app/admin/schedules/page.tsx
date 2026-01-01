@@ -121,14 +121,14 @@ export default function SchedulesPage() {
       };
 
       if (editingId) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('schedules')
           .update(submitData)
           .eq('id', editingId);
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('schedules')
           .insert([submitData]);
 

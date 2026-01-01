@@ -118,14 +118,14 @@ export default function InstructorsPage() {
           }
         }
 
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('instructors')
           .update(submitData)
           .eq('id', editingId);
 
         if (error) throw error;
       } else {
-        const { data: newInstructor, error } = await supabase
+        const { data: newInstructor, error } = await (supabase as any)
           .from('instructors')
           .insert([submitData])
           .select()

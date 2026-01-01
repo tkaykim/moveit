@@ -68,14 +68,14 @@ export default function HallsPage() {
       };
 
       if (editingId) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('halls')
           .update(submitData)
           .eq('id', editingId);
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('halls')
           .insert([submitData]);
 

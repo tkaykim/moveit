@@ -201,7 +201,7 @@ export default function ClassesPage() {
 
       if (editingId) {
         // 수정 모드: 클래스만 업데이트
-        const { error: classError } = await supabase
+        const { error: classError } = await (supabase as any)
           .from('classes')
           .update(classData)
           .eq('id', editingId);
@@ -209,7 +209,7 @@ export default function ClassesPage() {
         if (classError) throw classError;
       } else {
         // 생성 모드: 클래스와 시간표를 동시에 생성
-        const { data: newClass, error: classError } = await supabase
+        const { data: newClass, error: classError } = await (supabase as any)
           .from('classes')
           .insert([classData])
           .select()
@@ -230,7 +230,7 @@ export default function ClassesPage() {
           is_canceled: false,
         };
 
-        const { error: scheduleError } = await supabase
+        const { error: scheduleError } = await (supabase as any)
           .from('schedules')
           .insert([scheduleData]);
 

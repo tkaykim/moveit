@@ -5,6 +5,7 @@ import { Plus, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Branch, Academy } from '@/lib/supabase/types';
+import type { Database } from '@/types/database';
 
 export default function BranchesPage() {
   const [branches, setBranches] = useState<(Branch & { academies: Academy | null })[]>([]);
@@ -63,10 +64,13 @@ export default function BranchesPage() {
     if (!supabase) return;
 
     try {
-      const submitData = {
-        ...formData,
+      const submitData: Database['public']['Tables']['branches']['Update'] = {
+        academy_id: formData.academy_id,
+        name: formData.name,
+        address_primary: formData.address_primary,
         address_detail: formData.address_detail || null,
         contact_number: formData.contact_number || null,
+        is_active: formData.is_active,
       };
 
       if (editingId) {
@@ -79,7 +83,7 @@ export default function BranchesPage() {
       } else {
         const { error } = await supabase
           .from('branches')
-          .insert([submitData]);
+          .insert([submitData as Database['public']['Tables']['branches']['Insert']]);
 
         if (error) throw error;
       }
