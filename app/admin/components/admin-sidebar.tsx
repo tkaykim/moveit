@@ -7,12 +7,13 @@ import {
   User,
   BookOpen,
   ChevronRight,
+  type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
 
 interface MenuItem {
   title: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   href?: string;
   children?: MenuItem[];
 }
