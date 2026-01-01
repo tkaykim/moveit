@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import { createClient } from '@/lib/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database';
 import { Academy, Branch, Hall } from '@/lib/supabase/types';
 import { AcademyFormModal } from './components/academy-form-modal';
 import { uploadFile, deleteFile, extractFilePathFromUrl } from '@/lib/utils/storage';
@@ -76,7 +79,7 @@ export default function AcademiesPage() {
   };
 
   const handleSubmit = async (formData: AcademyFormData) => {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as SupabaseClient<Database> | null;
     if (!supabase) return;
 
     try {
@@ -85,7 +88,7 @@ export default function AcademiesPage() {
       // 1. 학원 정보 저장/업데이트
       if (editingId) {
         // 수정 모드: 학원 정보 업데이트
-        const submitData = {
+        const submitData: Database['public']['Tables']['academies']['Update'] = {
           name_kr: formData.name_kr || null,
           name_en: formData.name_en || null,
           tags: formData.tags.length > 0 ? formData.tags.join(', ') : null,
@@ -95,7 +98,7 @@ export default function AcademiesPage() {
 
         const { error } = await supabase
           .from('academies')
-          .update(submitData as any)
+          .update(submitData)
           .eq('id', editingId);
 
         if (error) {
@@ -106,7 +109,7 @@ export default function AcademiesPage() {
         academyId = editingId;
       } else {
         // 생성 모드: 새 학원 생성
-        const submitData = {
+        const submitData: Database['public']['Tables']['academies']['Insert'] = {
           name_kr: formData.name_kr || null,
           name_en: formData.name_en || null,
           tags: formData.tags.length > 0 ? formData.tags.join(', ') : null,
@@ -117,7 +120,7 @@ export default function AcademiesPage() {
 
         const { data: newAcademy, error } = await supabase
           .from('academies')
-          .insert([submitData as any])
+          .insert([submitData])
           .select()
           .single();
 
@@ -327,7 +330,7 @@ export default function AcademiesPage() {
 
           console.log('기존 지점 업데이트:', branch.id, branch.name);
           
-          const branchData = {
+          const branchData: Database['public']['Tables']['branches']['Update'] & { image_url?: string | null } = {
             name: branch.name,
             address_primary: branch.address_primary,
             address_detail: branch.address_detail || null,
@@ -338,7 +341,7 @@ export default function AcademiesPage() {
 
           const { error: branchUpdateError } = await supabase
             .from('branches')
-            .update(branchData as any)
+            .update(branchData)
             .eq('id', branch.id);
 
           if (branchUpdateError) {
@@ -382,7 +385,7 @@ export default function AcademiesPage() {
               continue;
             }
 
-            const hallData = {
+            const hallData: Database['public']['Tables']['halls']['Update'] = {
               branch_id: branch.id,
               name: hall.name,
               capacity: hall.capacity,
@@ -393,7 +396,7 @@ export default function AcademiesPage() {
               // 기존 홀 업데이트
               const { error: hallUpdateError } = await supabase
                 .from('halls')
-                .update(hallData as any)
+                .update(hallData)
                 .eq('id', hall.id);
 
               if (hallUpdateError) {
@@ -402,9 +405,15 @@ export default function AcademiesPage() {
               }
             } else {
               // 새 홀 생성
+              const hallInsertData: Database['public']['Tables']['halls']['Insert'] = {
+                branch_id: branch.id,
+                name: hall.name,
+                capacity: hall.capacity,
+                floor_info: hall.floor_info || null,
+              };
               const { error: hallInsertError } = await supabase
                 .from('halls')
-                .insert([hallData as any]);
+                .insert([hallInsertData]);
 
               if (hallInsertError) {
                 console.error('Hall insert error:', hallInsertError);
@@ -423,7 +432,7 @@ export default function AcademiesPage() {
           
           console.log('새 지점 생성:', branch.name, editingId ? '(수정 모드)' : '(생성 모드)');
 
-          const branchData = {
+          const branchData: Database['public']['Tables']['branches']['Insert'] & { image_url?: string | null } = {
             academy_id: academyId,
             name: branch.name,
             address_primary: branch.address_primary,
@@ -435,7 +444,7 @@ export default function AcademiesPage() {
 
           const { data: newBranch, error: branchInsertError } = await supabase
             .from('branches')
-            .insert([branchData as any])
+            .insert([branchData])
             .select()
             .single();
 
@@ -450,7 +459,7 @@ export default function AcademiesPage() {
               continue;
             }
 
-            const hallData = {
+            const hallData: Database['public']['Tables']['halls']['Insert'] = {
               branch_id: newBranch.id,
               name: hall.name,
               capacity: hall.capacity,
@@ -459,7 +468,7 @@ export default function AcademiesPage() {
 
             const { error: hallInsertError } = await supabase
               .from('halls')
-              .insert([hallData as any]);
+              .insert([hallData]);
 
             if (hallInsertError) {
               console.error('Hall insert error:', hallInsertError);
