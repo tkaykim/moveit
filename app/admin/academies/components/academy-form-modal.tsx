@@ -383,7 +383,7 @@ export function AcademyFormModal({
                   </label>
                   <input
                     type="text"
-                    value={formData.name_kr}
+                    value={formData.name_kr || ''}
                     onChange={(e) => setFormData({ ...formData, name_kr: e.target.value })}
                     placeholder="예: 댄스 아카데미"
                     className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
@@ -399,7 +399,7 @@ export function AcademyFormModal({
                   </label>
                   <input
                     type="text"
-                    value={formData.name_en}
+                    value={formData.name_en || ''}
                     onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
                     placeholder="예: Dance Academy"
                     className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
@@ -459,7 +459,7 @@ export function AcademyFormModal({
                   </label>
                   <input
                     type="text"
-                    value={formData.business_registration_number}
+                    value={formData.business_registration_number || ''}
                     onChange={(e) => setFormData({ ...formData, business_registration_number: e.target.value })}
                     className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
                   />
@@ -471,7 +471,7 @@ export function AcademyFormModal({
                   </label>
                   <input
                     type="url"
-                    value={formData.logo_url}
+                    value={formData.logo_url || ''}
                     onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
                     className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
                   />
