@@ -194,7 +194,7 @@ export default function AcademiesPage() {
               }
 
               // 2. 이미지 삭제
-              const branchToDelete = existingBranches?.find(b => b.id === branchId);
+              const branchToDelete = existingBranches?.find((b: any) => b.id === branchId);
               if (branchToDelete && (branchToDelete as any).image_url) {
                 const existingUrl = (branchToDelete as any).image_url;
                 if (existingUrl && existingUrl.includes('supabase.co/storage')) {
