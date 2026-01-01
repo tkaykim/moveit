@@ -1,9 +1,16 @@
--- WARNING: This schema is for context only and is not meant to be run.
+-- ⚠️ WARNING: DO NOT RUN THIS FILE! ⚠️
+-- 
+-- This schema is for REFERENCE ONLY and is NOT meant to be executed.
+-- Running this file will cause errors like "relation already exists".
+-- 
+-- If you need to modify the database schema, use migration scripts in the /migrations folder instead.
+-- For removing NOT NULL constraints, use: migrations/allow_null_for_all_columns.sql
+-- 
 -- Table order and constraints may not be valid for execution.
 
 CREATE TABLE public.academies (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  owner_id character varying NOT NULL,
+  owner_id character varying,
   business_registration_number character varying,
   logo_url text,
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
@@ -13,8 +20,8 @@ CREATE TABLE public.academies (
   CONSTRAINT academies_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.academy_instructors (
-  academy_id uuid NOT NULL,
-  instructor_id uuid NOT NULL,
+  academy_id uuid,
+  instructor_id uuid,
   memo text,
   is_active boolean DEFAULT true,
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
@@ -24,9 +31,9 @@ CREATE TABLE public.academy_instructors (
 );
 CREATE TABLE public.bookings (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  user_id uuid NOT NULL,
-  schedule_id uuid NOT NULL,
-  user_ticket_id uuid NOT NULL,
+  user_id uuid,
+  schedule_id uuid,
+  user_ticket_id uuid,
   status character varying DEFAULT 'CONFIRMED'::character varying,
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT bookings_pkey PRIMARY KEY (id),
@@ -36,9 +43,9 @@ CREATE TABLE public.bookings (
 );
 CREATE TABLE public.branches (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  academy_id uuid NOT NULL,
-  name character varying NOT NULL,
-  address_primary character varying NOT NULL,
+  academy_id uuid,
+  name character varying,
+  address_primary character varying,
   address_detail character varying,
   contact_number character varying,
   is_active boolean DEFAULT true,
@@ -49,12 +56,12 @@ CREATE TABLE public.branches (
 );
 CREATE TABLE public.classes (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  academy_id uuid NOT NULL,
-  title character varying NOT NULL,
+  academy_id uuid,
+  title character varying,
   description text,
   difficulty_level character varying,
   genre character varying,
-  class_type character varying NOT NULL,
+  class_type character varying,
   thumbnail_url text,
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   price integer DEFAULT 0,
@@ -65,8 +72,8 @@ CREATE TABLE public.classes (
 );
 CREATE TABLE public.halls (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  branch_id uuid NOT NULL,
-  name character varying NOT NULL,
+  branch_id uuid,
+  name character varying,
   capacity integer DEFAULT 0,
   floor_info character varying,
   CONSTRAINT halls_pkey PRIMARY KEY (id),
@@ -87,13 +94,13 @@ CREATE TABLE public.instructors (
 );
 CREATE TABLE public.schedules (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  class_id uuid NOT NULL,
-  branch_id uuid NOT NULL,
-  hall_id uuid NOT NULL,
-  instructor_id uuid NOT NULL,
-  start_time timestamp with time zone NOT NULL,
-  end_time timestamp with time zone NOT NULL,
-  max_students integer NOT NULL,
+  class_id uuid,
+  branch_id uuid,
+  hall_id uuid,
+  instructor_id uuid,
+  start_time timestamp with time zone,
+  end_time timestamp with time zone,
+  max_students integer,
   current_students integer DEFAULT 0,
   is_canceled boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
@@ -105,10 +112,10 @@ CREATE TABLE public.schedules (
 );
 CREATE TABLE public.tickets (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  academy_id uuid NOT NULL,
-  name character varying NOT NULL,
-  price integer NOT NULL DEFAULT 0,
-  ticket_type character varying NOT NULL,
+  academy_id uuid,
+  name character varying,
+  price integer DEFAULT 0,
+  ticket_type character varying,
   total_count integer,
   valid_days integer,
   target_class_id uuid,
@@ -120,8 +127,8 @@ CREATE TABLE public.tickets (
 );
 CREATE TABLE public.user_tickets (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  user_id uuid NOT NULL,
-  ticket_id uuid NOT NULL,
+  user_id uuid,
+  ticket_id uuid,
   remaining_count integer,
   start_date date,
   expiry_date date,
@@ -133,8 +140,8 @@ CREATE TABLE public.user_tickets (
 );
 CREATE TABLE public.users (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  email character varying NOT NULL UNIQUE,
-  name character varying NOT NULL,
+  email character varying UNIQUE,
+  name character varying,
   nickname character varying,
   phone character varying,
   profile_image text,
