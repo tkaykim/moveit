@@ -23,7 +23,7 @@ interface BranchData {
   address_detail: string;
   contact_number: string;
   halls: HallData[];
-  imageFile?: File;
+  imageFile?: File | null;
   image_url?: string | null;
 }
 
