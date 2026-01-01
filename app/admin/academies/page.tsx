@@ -97,7 +97,7 @@ export default function AcademiesPage() {
           logo_url: formData.logo_url || null,
         };
 
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('academies')
           .update(submitData)
           .eq('id', editingId);
@@ -119,7 +119,7 @@ export default function AcademiesPage() {
           owner_id: 'system',
         };
 
-        const { data: newAcademy, error } = await supabase
+        const { data: newAcademy, error } = await (supabase as any)
           .from('academies')
           .insert([submitData])
           .select()
@@ -340,7 +340,7 @@ export default function AcademiesPage() {
             is_active: true,
           };
 
-          const { error: branchUpdateError } = await supabase
+          const { error: branchUpdateError } = await (supabase as any)
             .from('branches')
             .update(branchData)
             .eq('id', branch.id);
@@ -395,7 +395,7 @@ export default function AcademiesPage() {
 
             if (hall.id) {
               // 기존 홀 업데이트
-              const { error: hallUpdateError } = await supabase
+              const { error: hallUpdateError } = await (supabase as any)
                 .from('halls')
                 .update(hallData)
                 .eq('id', hall.id);
@@ -412,7 +412,7 @@ export default function AcademiesPage() {
                 capacity: hall.capacity,
                 floor_info: hall.floor_info || null,
               };
-              const { error: hallInsertError } = await supabase
+              const { error: hallInsertError } = await (supabase as any)
                 .from('halls')
                 .insert([hallInsertData]);
 
@@ -443,7 +443,7 @@ export default function AcademiesPage() {
             is_active: true,
           };
 
-          const { data: newBranch, error: branchInsertError } = await supabase
+          const { data: newBranch, error: branchInsertError } = await (supabase as any)
             .from('branches')
             .insert([branchData])
             .select()
@@ -467,7 +467,7 @@ export default function AcademiesPage() {
               floor_info: hall.floor_info || null,
             };
 
-            const { error: hallInsertError } = await supabase
+            const { error: hallInsertError } = await (supabase as any)
               .from('halls')
               .insert([hallData]);
 

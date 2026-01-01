@@ -43,6 +43,7 @@ CREATE TABLE public.branches (
   contact_number character varying,
   is_active boolean DEFAULT true,
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  image_url text,
   CONSTRAINT branches_pkey PRIMARY KEY (id),
   CONSTRAINT branches_academy_id_fkey FOREIGN KEY (academy_id) REFERENCES public.academies(id)
 );
@@ -80,6 +81,7 @@ CREATE TABLE public.instructors (
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   name_kr character varying,
   name_en character varying,
+  profile_image_url text,
   CONSTRAINT instructors_pkey PRIMARY KEY (id),
   CONSTRAINT instructors_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
