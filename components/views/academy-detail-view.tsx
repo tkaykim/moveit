@@ -53,7 +53,7 @@ function buildScheduleGrid(schedules: any[]) {
     MON: [], TUE: [], WED: [], THU: [], FRI: [], SAT: [], SUN: []
   };
 
-  schedules.forEach(schedule => {
+  schedules.forEach((schedule: any) => {
     const startTime = new Date(schedule.start_time);
     const dayIndex = (startTime.getDay() + 6) % 7; // 월요일을 0으로
     const day = DAYS[dayIndex];
@@ -66,7 +66,7 @@ function buildScheduleGrid(schedules: any[]) {
   });
 
   // 시간순으로 정렬
-  Object.keys(grid).forEach(day => {
+  Object.keys(grid).forEach((day: string) => {
     grid[day].sort((a, b) => {
       const timeA = a.time || '00:00';
       const timeB = b.time || '00:00';
@@ -153,7 +153,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
 
         if (branchesError) throw branchesError;
         
-        const branchIds = (branches || []).map((b) => b.id);
+        const branchIds = (branches || []).map((b: any) => b.id);
 
         // 각 branch의 schedules 가져오기
         const allSchedules: any[] = [];
@@ -209,7 +209,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
 
   // 시간대 추출 (모든 스케줄에서)
   const timeSlots = Array.from(new Set(
-    schedules.map(s => {
+    schedules.map((s: any) => {
       const time = new Date(s.start_time);
       return time.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
     })
@@ -217,11 +217,11 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
 
   // 각 요일별로 시간대별로 그룹화된 스케줄 생성
   const scheduleByTimeAndDay: Record<string, Record<string, ClassInfo>> = {};
-  timeSlots.forEach(time => {
+  timeSlots.forEach((time: string) => {
     scheduleByTimeAndDay[time] = {};
-    DAYS.forEach(day => {
+    DAYS.forEach((day: string) => {
       const daySchedules = scheduleGrid[day] || [];
-      const schedule = daySchedules.find(s => s.time === time);
+      const schedule = daySchedules.find((s: ClassInfo) => s.time === time);
       if (schedule) {
         scheduleByTimeAndDay[time][day] = schedule;
       }
@@ -320,7 +320,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
             <div className="overflow-hidden">
               <div className="flex mb-2">
                 <div className="w-12 flex-shrink-0"></div>
-                {DAYS.map(day => (
+                {DAYS.map((day: string) => (
                   <div key={day} className="flex-1 text-center text-xs font-bold text-neutral-500 dark:text-neutral-500 py-2 min-w-0">
                     {day}
                   </div>
@@ -329,12 +329,12 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
               {timeSlots.length === 0 ? (
                 <div className="text-center py-12 text-neutral-500">이번 주 스케줄이 없습니다.</div>
               ) : (
-                timeSlots.map((time) => (
+                timeSlots.map((time: string) => (
                   <div key={time} className="flex mb-2">
                     <div className="w-12 flex-shrink-0 flex flex-col items-center justify-center text-[10px] font-bold text-neutral-600 dark:text-neutral-400 bg-neutral-100/50 dark:bg-neutral-900/50 rounded-l-lg border-y border-l border-neutral-200 dark:border-neutral-800">
                       {time}
                     </div>
-                    {DAYS.map(day => {
+                    {DAYS.map((day: string) => {
                       const classInfo = scheduleByTimeAndDay[time]?.[day];
                       const isEmpty = !classInfo || classInfo.status === 'NONE';
                       const isFull = classInfo?.status === 'FULL';

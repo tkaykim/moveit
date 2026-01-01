@@ -68,7 +68,7 @@ function buildScheduleGrid(schedules: any[]) {
     MON: [], TUE: [], WED: [], THU: [], FRI: [], SAT: [], SUN: []
   };
 
-  schedules.forEach(schedule => {
+  schedules.forEach((schedule: any) => {
     const startTime = new Date(schedule.start_time);
     const dayIndex = (startTime.getDay() + 6) % 7; // 월요일을 0으로
     const day = DAYS[dayIndex];
@@ -81,7 +81,7 @@ function buildScheduleGrid(schedules: any[]) {
   });
 
   // 시간순으로 정렬
-  Object.keys(grid).forEach(day => {
+  Object.keys(grid).forEach((day: string) => {
     grid[day].sort((a, b) => {
       const timeA = a.time || '00:00';
       const timeB = b.time || '00:00';
@@ -224,7 +224,7 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
 
   // 시간대별로 그룹화
   const classesByTime: Record<string, (ClassInfo & { academy?: Academy; time?: string })[]> = {};
-  displayClasses.forEach(cls => {
+  displayClasses.forEach((cls: any) => {
     const time = cls.time || '00:00';
     if (!classesByTime[time]) {
       classesByTime[time] = [];
@@ -302,7 +302,7 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
             {selectedDay ? `${DAY_NAMES[DAYS.indexOf(selectedDay)]}요일 클래스가 없습니다.` : '이번 주 클래스가 없습니다.'}
           </div>
         ) : (
-          timeSlots.map(time => (
+          timeSlots.map((time: string) => (
             <div key={time} className="space-y-2">
               <h3 className="text-sm font-bold text-neutral-600 dark:text-neutral-400 px-2">{time}</h3>
               {classesByTime[time].map((classInfo) => (

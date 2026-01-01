@@ -137,7 +137,7 @@ export default function AcademiesPage() {
 
       // 2. 유효한 지점 필터링 (id가 있는 기존 지점과 id가 없는 새 지점 구분)
       const validBranches = formData.branches.filter(
-        (branch) => branch.name && branch.address_primary
+        (branch: any) => branch.name && branch.address_primary
       );
 
       if (validBranches.length === 0) {
@@ -196,7 +196,7 @@ export default function AcademiesPage() {
               }
 
               // 2. 이미지 삭제
-              const branchToDelete = existingBranches?.find((b) => b.id === branchId);
+              const branchToDelete = existingBranches?.find((b: any) => b.id === branchId);
               if (branchToDelete && branchToDelete.image_url) {
                 const existingUrl = branchToDelete.image_url;
                 if (existingUrl && existingUrl.includes('supabase.co/storage')) {

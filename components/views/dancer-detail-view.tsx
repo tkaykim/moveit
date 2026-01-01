@@ -135,7 +135,7 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
             <div className="text-center py-8 text-neutral-500">이번 주 개설된 클래스가 없습니다.</div>
           ) : (
             <div className="space-y-3">
-              {schedules.slice(0, 5).map(schedule => {
+              {schedules.slice(0, 5).map((schedule: any) => {
                 const startTime = new Date(schedule.start_time);
                 const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
                 const dayName = dayNames[startTime.getDay()];
