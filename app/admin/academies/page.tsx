@@ -170,7 +170,7 @@ export default function AcademiesPage() {
 
         // 삭제할 지점 찾기 (DB에 있지만 formData에 없는 지점)
         const deletedBranchIds = existingBranchIds.filter(
-          id => !formBranchIds.includes(id)
+          (id: any) => !formBranchIds.includes(id)
         );
 
         console.log('삭제할 지점 개수:', deletedBranchIds.length);
