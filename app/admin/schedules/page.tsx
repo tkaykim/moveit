@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -34,19 +34,7 @@ export default function SchedulesPage() {
     is_canceled: false,
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    if (formData.branch_id) {
-      loadHalls(formData.branch_id);
-    } else {
-      setHalls([]);
-    }
-  }, [formData.branch_id]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     const supabase = getSupabaseClient();
     if (!supabase) {
       setLoading(false);
@@ -88,9 +76,9 @@ export default function SchedulesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const loadHalls = async (branchId: string) => {
+  const loadHalls = useCallback(async (branchId: string) => {
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
@@ -106,7 +94,19 @@ export default function SchedulesPage() {
     } catch (error) {
       console.error('Error loading halls:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    if (formData.branch_id) {
+      loadHalls(formData.branch_id);
+    } else {
+      setHalls([]);
+    }
+  }, [formData.branch_id, loadHalls]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

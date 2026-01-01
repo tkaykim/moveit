@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -37,13 +37,7 @@ export default function ClassDetailPage() {
   const [bookings, setBookings] = useState<BookingWithFullDetails[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (classId) {
-      loadClassData();
-    }
-  }, [classId]);
-
-  const loadClassData = async () => {
+  const loadClassData = useCallback(async () => {
     const supabase = getSupabaseClient();
     if (!supabase) {
       setLoading(false);
@@ -104,7 +98,13 @@ export default function ClassDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [classId]);
+
+  useEffect(() => {
+    if (classId) {
+      loadClassData();
+    }
+  }, [classId, loadClassData]);
 
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);

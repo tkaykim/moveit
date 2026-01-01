@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Booking, Schedule, User, UserTicket } from '@/lib/supabase/types';
@@ -16,11 +16,7 @@ export default function BookingsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('ALL');
 
-  useEffect(() => {
-    loadBookings();
-  }, [filter]);
-
-  const loadBookings = async () => {
+  const loadBookings = useCallback(async () => {
     const supabase = getSupabaseClient();
     if (!supabase) {
       setLoading(false);
@@ -47,7 +43,11 @@ export default function BookingsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    loadBookings();
+  }, [loadBookings]);
 
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);

@@ -166,6 +166,7 @@ export default function BranchesPage() {
                 address_primary: '',
                 address_detail: '',
                 contact_number: '',
+                image_url: '',
                 is_active: true,
               });
             }}

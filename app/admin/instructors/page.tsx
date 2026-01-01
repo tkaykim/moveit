@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2, X } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Instructor } from '@/lib/supabase/types';
@@ -24,11 +24,7 @@ export default function InstructorsPage() {
     profileImageUrl: null as string | null,
   });
 
-  useEffect(() => {
-    loadInstructors();
-  }, []);
-
-  const loadInstructors = async () => {
+  const loadInstructors = useCallback(async () => {
     const supabase = getSupabaseClient();
     if (!supabase) {
       setLoading(false);
@@ -49,7 +45,11 @@ export default function InstructorsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadInstructors();
+  }, [loadInstructors]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

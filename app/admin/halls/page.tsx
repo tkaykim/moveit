@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -19,11 +19,7 @@ export default function HallsPage() {
     floor_info: '',
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     const supabase = getSupabaseClient();
     if (!supabase) {
       setLoading(false);
@@ -53,7 +49,11 @@ export default function HallsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

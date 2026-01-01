@@ -344,6 +344,7 @@ export function AcademyFormModal({
           address_primary: '',
           address_detail: '',
           contact_number: '',
+          image_url: null,
           halls: [],
         }],
       });
