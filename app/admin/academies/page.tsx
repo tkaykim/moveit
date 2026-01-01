@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Academy, Branch, Hall } from '@/lib/supabase/types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database';
 import { AcademyFormModal } from './components/academy-form-modal';
 import { uploadFile, deleteFile, extractFilePathFromUrl } from '@/lib/utils/storage';
 
@@ -76,8 +78,10 @@ export default function AcademiesPage() {
   };
 
   const handleSubmit = async (formData: AcademyFormData) => {
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
+    const supabaseClient = getSupabaseClient();
+    if (!supabaseClient) return;
+    // TypeScript 타입 추론을 위한 타입 단언
+    const supabase = supabaseClient as SupabaseClient<Database>;
 
     try {
       let academyId: string;
