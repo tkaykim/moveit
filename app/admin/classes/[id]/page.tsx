@@ -52,7 +52,7 @@ export default function ClassDetailPage() {
 
     try {
       // 클래스 정보 로드
-      const { data: classRes, error: classError } = await supabase
+      const { data: classRes, error: classError } = await (supabase as any)
         .from('classes')
         .select(`
           *,
@@ -69,14 +69,14 @@ export default function ClassDetailPage() {
         .single();
 
       if (classError) throw classError;
-      setClassData(classRes);
+      setClassData(classRes as ClassWithRelations);
 
       // 해당 클래스의 모든 스케줄 ID 가져오기
-      const scheduleIds = classRes?.schedules?.map(s => s.id) || [];
+      const scheduleIds = (classRes as ClassWithRelations)?.schedules?.map(s => s.id) || [];
 
       if (scheduleIds.length > 0) {
         // 예약 정보 로드 (user_tickets와 tickets 정보 포함)
-        const { data: bookingsRes, error: bookingsError } = await supabase
+        const { data: bookingsRes, error: bookingsError } = await (supabase as any)
           .from('bookings')
           .select(`
             *,
@@ -96,7 +96,7 @@ export default function ClassDetailPage() {
           .order('created_at', { ascending: false });
 
         if (bookingsError) throw bookingsError;
-        setBookings(bookingsRes || []);
+        setBookings((bookingsRes || []) as BookingWithFullDetails[]);
       }
     } catch (error) {
       console.error('Error loading class data:', error);
