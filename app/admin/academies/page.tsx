@@ -160,7 +160,7 @@ export default function AcademiesPage() {
           throw loadError;
         }
 
-        const existingBranchIds = (existingBranches || []).map(b => b.id);
+        const existingBranchIds = (existingBranches || []).map((b: any) => b.id);
         const formBranchIds = validBranches
           .filter(b => b.id && b.name && b.address_primary) // 유효하고 id가 있는 지점만
           .map(b => b.id!);
@@ -237,7 +237,7 @@ export default function AcademiesPage() {
             .eq('academy_id', academyId);
           
           console.log('삭제 후 DB에 남은 지점 개수:', verifyBranches?.length || 0);
-          console.log('삭제 후 DB에 남은 지점 IDs:', verifyBranches?.map(b => b.id) || []);
+          console.log('삭제 후 DB에 남은 지점 IDs:', verifyBranches?.map((b: any) => b.id) || []);
         }
       }
 
