@@ -134,7 +134,7 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
   });
 
   // 사용 가능한 장르 목록 추출
-  const availableGenres = ['ALL', ...new Set(dancers.map(d => d.genre?.toUpperCase()).filter(Boolean))];
+  const availableGenres = ['ALL', ...Array.from(new Set(dancers.map(d => d.genre?.toUpperCase()).filter((g): g is string => !!g)))];
 
   if (loading) {
     return (
