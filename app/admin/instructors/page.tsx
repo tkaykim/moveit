@@ -432,7 +432,7 @@ export default function InstructorsPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
-                        {new Date(instructor.created_at).toLocaleDateString('ko-KR')}
+                        {instructor.created_at ? new Date(instructor.created_at).toLocaleDateString('ko-KR') : '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end gap-2">

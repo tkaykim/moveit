@@ -120,7 +120,7 @@ export async function searchAll(query: string): Promise<SearchResult> {
     });
 
     // 장르 목록 추출
-    const genres = Array.from(new Set((classesData || []).map((c: any) => c.genre).filter((g): g is string => !!g)));
+    const genres = Array.from(new Set<string>((classesData || []).map((c: any) => c.genre).filter((g: any): g is string => !!g)));
 
     return {
       academies,

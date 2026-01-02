@@ -136,6 +136,7 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
           ) : (
             <div className="space-y-3">
               {schedules.slice(0, 5).map((schedule: any) => {
+                if (!schedule.start_time) return null;
                 const startTime = new Date(schedule.start_time);
                 const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
                 const dayName = dayNames[startTime.getDay()];

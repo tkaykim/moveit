@@ -540,10 +540,12 @@ export default function AcademiesPage() {
 
               if (batchHalls) {
                 batchHalls.forEach((hall: Hall) => {
-                  if (!hallsByBranchId.has(hall.branch_id)) {
-                    hallsByBranchId.set(hall.branch_id, []);
+                  if (hall.branch_id) {
+                    if (!hallsByBranchId.has(hall.branch_id)) {
+                      hallsByBranchId.set(hall.branch_id, []);
+                    }
+                    hallsByBranchId.get(hall.branch_id)!.push(hall);
                   }
-                  hallsByBranchId.get(hall.branch_id)!.push(hall);
                 });
               }
             }
@@ -831,7 +833,7 @@ export default function AcademiesPage() {
                         {academy.business_registration_number || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
-                        {new Date(academy.created_at).toLocaleDateString('ko-KR')}
+                        {academy.created_at ? new Date(academy.created_at).toLocaleDateString('ko-KR') : '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end gap-2">

@@ -76,8 +76,8 @@ export default function ClassesPage() {
   useEffect(() => {
     if (formData.hall_id && halls.length > 0) {
       const selectedHall = halls.find(h => h.id === formData.hall_id);
-      if (selectedHall && selectedHall.capacity > 0) {
-        setFormData((prev) => ({ ...prev, max_students: selectedHall.capacity }));
+      if (selectedHall && selectedHall.capacity && selectedHall.capacity > 0) {
+        setFormData((prev) => ({ ...prev, max_students: selectedHall.capacity || 20 }));
       }
     }
   }, [formData.hall_id, halls]);
@@ -275,19 +275,19 @@ export default function ClassesPage() {
       : [];
 
     setFormData({
-      academy_id: classItem.academy_id,
+      academy_id: classItem.academy_id || '',
       branch_id: firstSchedule?.branch_id || '',
       hall_id: firstSchedule?.hall_id || '',
       instructor_id: firstSchedule?.instructor_id || '',
       difficulty_level: classItem.difficulty_level || '',
       selectedGenres: genres,
-      class_type: classItem.class_type,
+      class_type: classItem.class_type || '',
       price: classItem.price || 0,
-      title: classItem.title,
+      title: classItem.title || '',
       description: classItem.description || '',
       thumbnail_url: classItem.thumbnail_url || '',
-      start_time: firstSchedule ? new Date(firstSchedule.start_time).toISOString().slice(0, 16) : '',
-      end_time: firstSchedule ? new Date(firstSchedule.end_time).toISOString().slice(0, 16) : '',
+      start_time: (firstSchedule && firstSchedule.start_time) ? new Date(firstSchedule.start_time).toISOString().slice(0, 16) : '',
+      end_time: (firstSchedule && firstSchedule.end_time) ? new Date(firstSchedule.end_time).toISOString().slice(0, 16) : '',
       max_students: firstSchedule?.max_students || 20,
     });
 
@@ -361,7 +361,8 @@ export default function ClassesPage() {
     }));
   };
 
-  const formatDateTime = (dateString: string) => {
+  const formatDateTime = (dateString: string | null) => {
+    if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleString('ko-KR', {
       month: 'short',
@@ -499,7 +500,7 @@ export default function ClassesPage() {
                 <option value="">홀 선택</option>
                 {halls.map((hall) => (
                   <option key={hall.id} value={hall.id}>
-                    {hall.name} {hall.capacity > 0 && `(${hall.capacity}명)`}
+                    {hall.name} {hall.capacity && hall.capacity > 0 && `(${hall.capacity}명)`}
                   </option>
                 ))}
               </select>
@@ -670,7 +671,7 @@ export default function ClassesPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-black dark:text-white mb-2">
-                    최대 인원 * {selectedHall && selectedHall.capacity > 0 && (
+                    최대 인원 * {selectedHall && selectedHall.capacity && selectedHall.capacity > 0 && (
                       <span className="text-xs text-neutral-500 dark:text-neutral-400">
                         (홀 수용 인원: {selectedHall.capacity}명)
                       </span>

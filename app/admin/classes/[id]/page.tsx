@@ -106,7 +106,8 @@ export default function ClassDetailPage() {
     }
   }, [classId, loadClassData]);
 
-  const formatDateTime = (dateString: string) => {
+  const formatDateTime = (dateString: string | null) => {
+    if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleString('ko-KR', {
       year: 'numeric',

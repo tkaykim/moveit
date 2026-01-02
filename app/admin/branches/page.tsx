@@ -111,13 +111,13 @@ export default function BranchesPage() {
   const handleEdit = (branch: Branch) => {
     setEditingId(branch.id);
     setFormData({
-      academy_id: branch.academy_id,
-      name: branch.name,
-      address_primary: branch.address_primary,
+      academy_id: branch.academy_id || '',
+      name: branch.name || '',
+      address_primary: branch.address_primary || '',
       address_detail: branch.address_detail || '',
       contact_number: branch.contact_number || '',
       image_url: branch.image_url || '',
-      is_active: branch.is_active,
+      is_active: branch.is_active || false,
     });
     setShowForm(true);
   };

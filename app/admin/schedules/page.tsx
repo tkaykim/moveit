@@ -159,17 +159,17 @@ export default function SchedulesPage() {
   const handleEdit = (schedule: ScheduleWithRelations) => {
     setEditingId(schedule.id);
     setFormData({
-      class_id: schedule.class_id,
-      branch_id: schedule.branch_id,
-      hall_id: schedule.hall_id,
-      instructor_id: schedule.instructor_id,
-      start_time: new Date(schedule.start_time).toISOString().slice(0, 16),
-      end_time: new Date(schedule.end_time).toISOString().slice(0, 16),
-      max_students: schedule.max_students,
-      current_students: schedule.current_students,
-      is_canceled: schedule.is_canceled,
+      class_id: schedule.class_id || '',
+      branch_id: schedule.branch_id || '',
+      hall_id: schedule.hall_id || '',
+      instructor_id: schedule.instructor_id || '',
+      start_time: schedule.start_time ? new Date(schedule.start_time).toISOString().slice(0, 16) : '',
+      end_time: schedule.end_time ? new Date(schedule.end_time).toISOString().slice(0, 16) : '',
+      max_students: schedule.max_students || 0,
+      current_students: schedule.current_students || 0,
+      is_canceled: schedule.is_canceled || false,
     });
-    loadHalls(schedule.branch_id);
+    loadHalls(schedule.branch_id || '');
     setShowForm(true);
   };
 
@@ -193,7 +193,8 @@ export default function SchedulesPage() {
     }
   };
 
-  const formatDateTime = (dateString: string) => {
+  const formatDateTime = (dateString: string | null) => {
+    if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleString('ko-KR', {
       month: 'short',
@@ -449,8 +450,10 @@ export default function SchedulesPage() {
                 </tr>
               ) : (
                 schedules.map((schedule) => {
-                  const isFull = schedule.current_students >= schedule.max_students;
-                  const isAlmostFull = schedule.current_students >= schedule.max_students * 0.8;
+                  const currentStudents = schedule.current_students || 0;
+                  const maxStudents = schedule.max_students || 0;
+                  const isFull = currentStudents >= maxStudents && maxStudents > 0;
+                  const isAlmostFull = currentStudents >= maxStudents * 0.8 && maxStudents > 0;
                   
                   return (
                     <tr key={schedule.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
@@ -480,7 +483,7 @@ export default function SchedulesPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
-                        {schedule.current_students} / {schedule.max_students}
+                        {currentStudents} / {maxStudents}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {schedule.is_canceled ? (

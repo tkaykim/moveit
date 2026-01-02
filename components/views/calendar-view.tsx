@@ -69,6 +69,7 @@ function buildScheduleGrid(schedules: any[]) {
   };
 
   schedules.forEach((schedule: any) => {
+    if (!schedule.start_time) return;
     const startTime = new Date(schedule.start_time);
     const dayIndex = (startTime.getDay() + 6) % 7; // 월요일을 0으로
     const day = DAYS[dayIndex];

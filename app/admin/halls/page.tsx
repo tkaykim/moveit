@@ -100,9 +100,9 @@ export default function HallsPage() {
   const handleEdit = (hall: Hall) => {
     setEditingId(hall.id);
     setFormData({
-      branch_id: hall.branch_id,
-      name: hall.name,
-      capacity: hall.capacity,
+      branch_id: hall.branch_id || '',
+      name: hall.name || '',
+      capacity: hall.capacity || 0,
       floor_info: hall.floor_info || '',
     });
     setShowForm(true);

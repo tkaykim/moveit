@@ -54,6 +54,7 @@ function buildScheduleGrid(schedules: any[]) {
   };
 
   schedules.forEach((schedule: any) => {
+    if (!schedule.start_time) return;
     const startTime = new Date(schedule.start_time);
     const dayIndex = (startTime.getDay() + 6) % 7; // 월요일을 0으로
     const day = DAYS[dayIndex];
@@ -209,10 +210,12 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
 
   // 시간대 추출 (모든 스케줄에서)
   const timeSlots = Array.from(new Set(
-    schedules.map((s: any) => {
-      const time = new Date(s.start_time);
-      return time.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
-    })
+    schedules
+      .filter((s: any) => s.start_time)
+      .map((s: any) => {
+        const time = new Date(s.start_time);
+        return time.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+      })
   )).sort();
 
   // 각 요일별로 시간대별로 그룹화된 스케줄 생성

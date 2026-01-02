@@ -21,11 +21,13 @@ function transformBooking(booking: any): HistoryLog {
   const classData = schedule.classes || {};
   const instructor = schedule.instructors || {};
   const branch = schedule.branches || {};
-  const date = new Date(booking.created_at);
+  const date = booking.created_at ? new Date(booking.created_at) : new Date();
   
   return {
     id: booking.id,
-    date: date.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+    date: booking.created_at 
+      ? date.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })
+      : '-',
     class: classData.title || '클래스 정보 없음',
     instructor: instructor.name_kr || instructor.name_en || '강사 정보 없음',
     studio: branch.name || '지점 정보 없음',
@@ -126,6 +128,7 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
         const thisMonth = now.getMonth();
         const thisYear = now.getFullYear();
         const thisMonthBookings = ((bookings || []) as any[]).filter((b: any) => {
+          if (!b.created_at) return false;
           const bookingDate = new Date(b.created_at);
           return bookingDate.getMonth() === thisMonth && 
                  bookingDate.getFullYear() === thisYear && 

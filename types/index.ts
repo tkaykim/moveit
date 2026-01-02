@@ -28,6 +28,8 @@ export interface Academy {
   price?: number; // 최소 가격 (classes에서 계산)
   badges?: string[]; // 배지 (추후 계산)
   img?: string; // logo_url 또는 기본 이미지
+  academyId?: string; // 원본 학원 ID
+  branchId?: string; // 지점 ID
 }
 
 // Dancer 타입: Instructor 기반
