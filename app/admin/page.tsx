@@ -12,7 +12,7 @@ export default function AdminPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <div className="bg-white dark:bg-neutral-900 rounded-xl p-6 border border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-primary/10 dark:bg-[#CCFF00]/10 rounded-lg">

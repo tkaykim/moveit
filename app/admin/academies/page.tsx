@@ -478,10 +478,10 @@ export default function AcademiesPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-black dark:text-white">학원 관리</h1>
-          <p className="text-neutral-600 dark:text-neutral-400 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-black dark:text-white">학원 관리</h1>
+          <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400 mt-1">
             학원을 등록하고 관리할 수 있습니다.
           </p>
         </div>
@@ -492,10 +492,11 @@ export default function AcademiesPage() {
               setEditingData(null);
               setShowModal(true);
             }}
-            className="px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-2"
+            className="w-full sm:w-auto px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center justify-center gap-2 text-sm sm:text-base"
           >
             <Plus size={20} />
-            학원 추가
+            <span className="hidden sm:inline">학원 추가</span>
+            <span className="sm:hidden">추가</span>
           </button>
         </div>
       </div>
@@ -521,7 +522,8 @@ export default function AcademiesPage() {
       />
 
       <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* 데스크톱 테이블 뷰 */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-neutral-100 dark:bg-neutral-800">
               <tr>
@@ -612,6 +614,84 @@ export default function AcademiesPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* 모바일 카드 뷰 */}
+        <div className="lg:hidden">
+          {academies.length === 0 ? (
+            <div className="px-4 py-12 text-center text-neutral-500 dark:text-neutral-400">
+              등록된 학원이 없습니다.
+            </div>
+          ) : (
+            <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
+              {academies.map((academy) => {
+                const tags = getTags(academy);
+                return (
+                  <div key={academy.id} className="p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <button
+                        onClick={() => router.push(`/academy-admin/${academy.id}`)}
+                        className="flex-1 text-left hover:text-primary dark:hover:text-[#CCFF00] hover:underline transition-colors"
+                      >
+                        <h3 className="font-semibold text-black dark:text-white text-base">
+                          {getDisplayName(academy)}
+                        </h3>
+                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEdit(academy)}
+                          className="text-primary dark:text-[#CCFF00] hover:opacity-80 p-1"
+                          aria-label="수정"
+                        >
+                          <Edit size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(academy.id)}
+                          className="text-red-500 hover:opacity-80 p-1"
+                          aria-label="삭제"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      {academy.address && (
+                        <div className="text-neutral-600 dark:text-neutral-400">
+                          <span className="font-medium text-neutral-700 dark:text-neutral-300">주소: </span>
+                          {academy.address}
+                        </div>
+                      )}
+                      {academy.contact_number && (
+                        <div className="text-neutral-600 dark:text-neutral-400">
+                          <span className="font-medium text-neutral-700 dark:text-neutral-300">연락처: </span>
+                          {academy.contact_number}
+                        </div>
+                      )}
+                      {tags.length > 0 && (
+                        <div>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="px-2 py-1 bg-primary/10 dark:bg-[#CCFF00]/10 text-primary dark:text-[#CCFF00] rounded-full text-xs"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {academy.created_at && (
+                        <div className="text-neutral-500 dark:text-neutral-400 text-xs pt-1">
+                          등록일: {new Date(academy.created_at).toLocaleDateString('ko-KR')}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

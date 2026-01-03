@@ -10,9 +10,11 @@ import {
   Users,
   LogIn,
   LogOut,
+  Menu,
+  X,
   type LucideIcon,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth/auth-context';
 
 interface MenuItem {
@@ -45,10 +47,27 @@ const menuItems: MenuItem[] = [
   },
 ];
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const { user, profile, signOut } = useAuth();
+
+  // 모바일에서 메뉴 클릭 시 드로어 닫기
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   const toggleMenu = (title: string) => {
     setExpandedMenus((prev) =>
@@ -68,10 +87,31 @@ export function AdminSidebar() {
     return children.some((child) => isActive(child.href));
   };
 
+  const handleLinkClick = () => {
+    // 모바일에서 링크 클릭 시 드로어 닫기
+    if (window.innerWidth < 1024) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="w-64 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 h-screen sticky top-0 overflow-y-auto flex flex-col">
-      <div className="p-6 border-b border-neutral-200 dark:border-neutral-800">
-        <Link href="/admin" className="flex items-center gap-2">
+    <>
+      {/* 모바일 오버레이 */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      {/* 사이드바 */}
+      <div
+        className={`fixed lg:sticky top-0 left-0 h-screen w-64 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 overflow-y-auto flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${
+          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
+      >
+      <div className="p-6 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
+        <Link href="/admin" className="flex items-center gap-2" onClick={handleLinkClick}>
           <div className="w-8 h-8 bg-primary dark:bg-[#CCFF00] rounded-lg flex items-center justify-center">
             <Building2 className="text-black w-5 h-5" />
           </div>
@@ -79,6 +119,14 @@ export function AdminSidebar() {
             관리자
           </span>
         </Link>
+        {/* 모바일 닫기 버튼 */}
+        <button
+          onClick={onClose}
+          className="lg:hidden p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+          aria-label="메뉴 닫기"
+        >
+          <X className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
+        </button>
       </div>
 
       <nav className="p-4 space-y-1 flex-1">
@@ -119,6 +167,7 @@ export function AdminSidebar() {
                         <Link
                           key={child.title}
                           href={child.href!}
+                          onClick={handleLinkClick}
                           className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
                             active
                               ? 'bg-primary dark:bg-[#CCFF00] text-black font-medium'
@@ -141,6 +190,7 @@ export function AdminSidebar() {
             <Link
               key={item.title}
               href={item.href!}
+              onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                 active
                   ? 'bg-primary dark:bg-[#CCFF00] text-black font-medium'
@@ -155,7 +205,7 @@ export function AdminSidebar() {
       </nav>
 
       {/* 좌측 하단: 로그인 상태 및 권한 표시 */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+      <div className="mt-auto p-4 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
         {user && profile ? (
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm">
@@ -200,6 +250,7 @@ export function AdminSidebar() {
         )}
       </div>
     </div>
+    </>
   );
 }
 
