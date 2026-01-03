@@ -17,3 +17,4 @@ CREATE INDEX IF NOT EXISTS idx_academy_students_academy_id ON public.academy_stu
 CREATE INDEX IF NOT EXISTS idx_academy_students_user_id ON public.academy_students(user_id);
 
 
+

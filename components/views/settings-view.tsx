@@ -187,3 +187,4 @@ export const SettingsView = ({ onBack }: SettingsViewProps) => {
   );
 };
 
+

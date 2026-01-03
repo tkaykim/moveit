@@ -69,3 +69,4 @@ CREATE TRIGGER update_academy_users_updated_at
 
 
 
+

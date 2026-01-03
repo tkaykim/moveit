@@ -131,3 +131,4 @@ export function HallModal({ academyId, hall, onClose }: HallModalProps) {
 }
 
 
+

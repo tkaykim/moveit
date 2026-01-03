@@ -58,3 +58,4 @@ CREATE INDEX IF NOT EXISTS idx_academies_tags ON public.academies USING gin(to_t
 
 
 
+

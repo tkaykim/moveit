@@ -40,3 +40,4 @@ npx supabase gen types typescript --project-id YOUR_PROJECT_ID > types/database.
 
 
 
+
