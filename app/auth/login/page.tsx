@@ -4,6 +4,7 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
+import { SocialLoginButtons } from '@/components/auth/social-login-buttons';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -89,6 +90,8 @@ function LoginForm() {
               {loading ? '로그인 중...' : '로그인'}
             </button>
           </form>
+
+          <SocialLoginButtons redirectTo={searchParams.get('redirect') || '/admin'} />
 
           <div className="mt-6 text-center">
             <p className="text-sm text-neutral-600 dark:text-neutral-400">
