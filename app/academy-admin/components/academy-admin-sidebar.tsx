@@ -34,13 +34,13 @@ const SidebarItem = ({ icon: Icon, label, href, active, onClick }: SidebarItemPr
     onClick={onClick}
     className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-all duration-200 rounded-lg mx-2 mb-1 ${
       active
-        ? 'bg-primary/10 dark:bg-[#CCFF00]/10 text-primary dark:text-[#CCFF00] font-bold shadow-sm'
+        ? 'bg-neutral-200 dark:bg-[#CCFF00]/10 text-neutral-900 dark:text-[#CCFF00] font-semibold shadow-sm'
         : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
     }`}
   >
     <Icon
       size={20}
-      className={active ? 'text-primary dark:text-[#CCFF00]' : 'text-neutral-400 dark:text-neutral-500'}
+      className={active ? 'text-neutral-900 dark:text-[#CCFF00]' : 'text-neutral-400 dark:text-neutral-500'}
     />
     <span className="text-sm">{label}</span>
   </Link>

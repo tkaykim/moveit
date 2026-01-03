@@ -554,7 +554,7 @@ export default function AcademiesPage() {
                             {tags.map((tag) => (
                               <span
                                 key={tag}
-                                className="px-2 py-1 bg-primary/10 dark:bg-[#CCFF00]/10 text-primary dark:text-[#CCFF00] rounded-full text-xs"
+                                className="px-2 py-1 bg-neutral-200 dark:bg-[#CCFF00]/10 text-neutral-900 dark:text-[#CCFF00] rounded-full text-xs font-medium"
                               >
                                 {tag}
                               </span>
@@ -648,7 +648,7 @@ export default function AcademiesPage() {
                             {tags.map((tag) => (
                               <span
                                 key={tag}
-                                className="px-2 py-1 bg-primary/10 dark:bg-[#CCFF00]/10 text-primary dark:text-[#CCFF00] rounded-full text-xs"
+                                className="px-2 py-1 bg-neutral-200 dark:bg-[#CCFF00]/10 text-neutral-900 dark:text-[#CCFF00] rounded-full text-xs font-medium"
                               >
                                 {tag}
                               </span>
