@@ -38,3 +38,4 @@ Supabase CLI를 사용하여 타입을 재생성할 수 있습니다:
 npx supabase gen types typescript --project-id YOUR_PROJECT_ID > types/database.ts
 ```
 
+

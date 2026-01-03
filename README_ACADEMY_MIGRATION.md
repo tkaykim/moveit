@@ -56,3 +56,4 @@ CREATE INDEX IF NOT EXISTS idx_academies_tags ON public.academies USING gin(to_t
 - 기존 데이터의 `name` 필드는 `name_kr`로 자동 마이그레이션됩니다
 - `name` 필드는 하위 호환성을 위해 유지되지만, 새로운 데이터는 `name_kr`과 `name_en`을 사용합니다
 
+

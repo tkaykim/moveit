@@ -140,3 +140,4 @@ WHERE email = 'your-admin@email.com';
 2. `middleware.ts`에서 해당 경로의 권한 체크 로직 확인
 3. 필요한 권한이 있는지 확인
 
+

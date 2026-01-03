@@ -69,3 +69,4 @@ export const PaymentView = ({ academy, classInfo, myTickets, onBack, onPayment }
   );
 };
 
+

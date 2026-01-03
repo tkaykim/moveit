@@ -91,7 +91,7 @@ export function StudentView({ academyId }: StudentViewProps) {
             .select('user_id')
             .in('ticket_id', ticketIds);
 
-          userIds = [...new Set(userTickets?.map((ut: any) => ut.user_id) || [])];
+          userIds = [...new Set((userTickets?.map((ut: any) => ut.user_id) || []) as string[])];
         } else {
           throw academyStudentsError;
         }

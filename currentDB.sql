@@ -130,5 +130,6 @@ CREATE TABLE public.users (
   profile_image text,
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  role USER-DEFINED NOT NULL DEFAULT 'USER'::user_role,
   CONSTRAINT users_pkey PRIMARY KEY (id)
 );

@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+---
+
+1. 실제 동작하는지 확인할 때에는 playwright를 활용하여 직접 확인하라.
+2. sql의 수정이나 db와의 연동상태, CRUD 상태에 대한 결과를 확인할 때에는 supabase mcp를 통해 직접 확인하라.
+3. 배포를 명령받으면 npm run build를 직접 수행하고 오류가 없는지 확인 후, 디버깅 완벽하게 해서 오류가 없는 경우에 git에 push까지 진행하고 vercel mcp 활용하여 직접 배포 완료 상태까지 확인하라. 배포에 오류가 난다면 다시 build 수정해서 npm run build 후 완벽하게 작동하는지 체크 한 다음 다시 git push, vercel mcp 통한 배포 상태 확인. 반복하여 정상 빌드 될때까지 반복하라. vercel을 통해 프로젝트 상태를 확인할 때에는 프로젝트명 : moveit 을 확인하면 됩니다.

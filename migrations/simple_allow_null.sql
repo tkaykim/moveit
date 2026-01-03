@@ -57,3 +57,4 @@ ALTER TABLE public.users ALTER COLUMN name DROP NOT NULL;
 -- instructors table (has name_kr, name_en - NOT stage_name)
 -- All columns already nullable in currentDB.sql
 
+

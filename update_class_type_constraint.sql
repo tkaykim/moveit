@@ -23,3 +23,4 @@ CHECK (class_type::text = ANY (ARRAY[
 -- 기존 데이터 확인용 (선택사항)
 -- SELECT id, title, class_type FROM public.classes LIMIT 10;
 
+

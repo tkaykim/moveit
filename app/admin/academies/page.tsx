@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Academy, Hall } from '@/lib/supabase/types';
 import { AcademyFormModal } from './components/academy-form-modal';
@@ -32,6 +33,7 @@ interface AcademyFormData {
 }
 
 export default function AcademiesPage() {
+  const router = useRouter();
   const [academies, setAcademies] = useState<Academy[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -556,7 +558,12 @@ export default function AcademiesPage() {
                   return (
                     <tr key={academy.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
                       <td className="px-6 py-4 text-sm font-medium text-black dark:text-white">
-                        {getDisplayName(academy)}
+                        <button
+                          onClick={() => router.push(`/academy-admin/${academy.id}`)}
+                          className="hover:text-primary dark:hover:text-[#CCFF00] hover:underline transition-colors text-left"
+                        >
+                          {getDisplayName(academy)}
+                        </button>
                       </td>
                       <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">
                         {academy.address || '-'}

@@ -67,3 +67,4 @@ CREATE TRIGGER update_academy_users_updated_at
 -- FROM public.users u, public.academies a
 -- WHERE u.email = 'owner@example.com' AND a.name_kr = '예시 학원';
 
+

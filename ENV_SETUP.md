@@ -92,3 +92,4 @@ notepad .env.local
 - 파일명: `.env.local`
 - 내용 입력 후 저장
 
+

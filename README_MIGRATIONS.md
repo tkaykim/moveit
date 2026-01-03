@@ -42,3 +42,4 @@ CREATE INDEX IF NOT EXISTS idx_classes_price ON public.classes(price);
 - 기존 데이터의 경우 `price`는 0으로, `instructor_id`는 NULL로 설정됩니다.
 - 필요시 기존 데이터를 업데이트하세요.
 
+

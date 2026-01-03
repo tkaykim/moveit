@@ -38,3 +38,4 @@ FOR ALL
 USING (bucket_id = 'instructor-profiles')
 WITH CHECK (bucket_id = 'instructor-profiles');
 
+

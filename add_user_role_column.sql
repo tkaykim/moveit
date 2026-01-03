@@ -25,3 +25,4 @@ ALTER COLUMN role SET NOT NULL;
 -- 5. 인덱스 생성 (성능 최적화)
 CREATE INDEX IF NOT EXISTS idx_users_role ON public.users(role);
 
+

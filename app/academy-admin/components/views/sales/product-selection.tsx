@@ -1,0 +1,79 @@
+"use client";
+
+import { Check } from 'lucide-react';
+import { formatCurrency } from '../utils/format-currency';
+
+interface ProductSelectionProps {
+  selectedProduct: any;
+  products: any[];
+  onProductSelect: (product: any) => void;
+  disabled: boolean;
+}
+
+export function ProductSelection({
+  selectedProduct,
+  products,
+  onProductSelect,
+  disabled,
+}: ProductSelectionProps) {
+  return (
+    <section
+      className={`bg-white dark:bg-neutral-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-neutral-800 transition-opacity ${
+        disabled ? 'opacity-50 pointer-events-none' : ''
+      }`}
+    >
+      <h2 className="text-lg font-semibold flex items-center gap-2 mb-4 text-gray-800 dark:text-white">
+        <span className="w-6 h-6 bg-slate-100 dark:bg-neutral-800 rounded-full flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-400">
+          2
+        </span>
+        수강권 선택
+      </h2>
+      {products.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          등록된 수강권이 없습니다.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {products.map((product) => (
+          <button
+            key={product.id}
+            onClick={() => onProductSelect(product)}
+            className={`relative p-4 rounded-xl border-2 text-left transition-all ${
+              selectedProduct?.id === product.id
+                ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-500 dark:ring-blue-400'
+                : 'border-slate-200 dark:border-neutral-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-slate-50 dark:hover:bg-neutral-800'
+            }`}
+          >
+            <div className="flex justify-between items-start mb-2">
+              <span
+                className={`text-xs font-bold px-2 py-1 rounded ${
+                  product.type === 'count'
+                    ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
+                    : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+                }`}
+              >
+                {product.type === 'count' ? '횟수제' : '기간제'}
+              </span>
+              {selectedProduct?.id === product.id && (
+                <div className="bg-blue-500 dark:bg-blue-400 text-white rounded-full p-0.5">
+                  <Check size={12} />
+                </div>
+              )}
+            </div>
+            <div className="font-bold text-slate-800 dark:text-white mb-1">{product.name}</div>
+            <div className="text-sm text-slate-600 dark:text-slate-400">
+              {formatCurrency(product.price)}
+            </div>
+            <div className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+              {product.type === 'count'
+                ? `${product.amount}회 제공`
+                : `${product.days}일 무제한`}
+            </div>
+          </button>
+        ))}
+        </div>
+      )}
+    </section>
+  );
+}
+

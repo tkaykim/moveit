@@ -107,3 +107,4 @@ ALTER TABLE public.bookings DISABLE ROW LEVEL SECURITY;
 
 **주의**: 프로덕션 환경에서는 적절한 RLS 정책을 설정해야 합니다.
 
+
