@@ -1,49 +1,39 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth/auth-context';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    try {
-      console.log('로그인 시도:', email);
-      const result = await signIn(email, password);
-      console.log('로그인 결과:', result);
+    const supabase = createClient();
 
-      if (result.error) {
-        setError(result.error);
-        setLoading(false);
-      } else {
-        // 로그인 성공 시 리다이렉트 처리
-        console.log('로그인 성공, 리다이렉트 중...');
-        
-        // URL 파라미터에서 redirect 확인
-        const urlParams = new URLSearchParams(window.location.search);
-        const redirectTo = urlParams.get('redirect') || '/admin';
-        
-        // 세션이 설정될 시간을 주기 위해 약간의 지연
-        setTimeout(() => {
-          window.location.href = redirectTo;
-        }, 200);
-      }
-    } catch (error: any) {
-      console.error('로그인 처리 중 에러:', error);
-      setError(error.message || '로그인 중 오류가 발생했습니다.');
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
+
+    if (authError) {
+      setError(authError.message);
       setLoading(false);
+      return;
     }
+
+    // 로그인 성공 - 전체 페이지 새로고침으로 리다이렉트
+    const redirectTo = searchParams.get('redirect') || '/admin';
+    window.location.href = redirectTo;
   };
 
   return (
@@ -62,10 +52,7 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2"
-              >
+              <label htmlFor="email" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                 이메일
               </label>
               <input
@@ -80,10 +67,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2"
-              >
+              <label htmlFor="password" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                 비밀번호
               </label>
               <input
@@ -109,26 +93,32 @@ export default function LoginPage() {
           <div className="mt-6 text-center">
             <p className="text-sm text-neutral-600 dark:text-neutral-400">
               계정이 없으신가요?{' '}
-              <Link
-                href="/auth/signup"
-                className="text-primary hover:underline font-medium"
-              >
+              <Link href="/auth/signup" className="text-primary hover:underline font-medium">
                 회원가입
               </Link>
             </p>
           </div>
 
           <div className="mt-4 text-center">
-            <Link
-              href="/"
-              className="text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300"
-            >
+            <Link href="/" className="text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300">
               ← 홈으로 돌아가기
             </Link>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-black">
+        <div className="text-neutral-600 dark:text-neutral-400">로딩 중...</div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
 
