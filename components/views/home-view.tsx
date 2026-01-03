@@ -6,6 +6,7 @@ import { ViewState } from '@/types';
 import { useState, useEffect } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Academy, Dancer } from '@/types';
+import { ThemeToggle } from '@/components/common/theme-toggle';
 
 interface HomeViewProps {
   onNavigate: (view: ViewState, query?: string) => void;
@@ -250,9 +251,10 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
       <header className="px-5 pt-8 pb-4 sticky top-0 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md z-30 border-b border-neutral-200 dark:border-neutral-800">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-black italic tracking-tighter">
-            MOVE<span className="text-primary dark:text-[#CCFF00]">.</span>IT
+            MOVE<span className="text-neutral-800 dark:text-[#CCFF00]">.</span>IT
           </h1>
           <div className="flex gap-3 items-center">
+            <ThemeToggle />
             <button className="relative">
               <Bell className="text-neutral-600 dark:text-neutral-400" />
               <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
@@ -269,7 +271,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="장르, 강사, 학원 검색" 
-            className="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full py-3 pl-10 pr-4 text-sm text-black dark:text-white focus:border-primary dark:focus:border-[#CCFF00] outline-none" 
+            className="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full py-3 pl-10 pr-4 text-sm text-black dark:text-white focus:border-neutral-800 dark:focus:border-[#CCFF00] outline-none" 
           />
         </form>
       </header>
@@ -380,7 +382,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
                     <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate mb-1">{instructor.genre}</p>
                   )}
                   {instructor.price && (
-                    <div className="text-xs font-bold text-primary dark:text-[#CCFF00]">
+                    <div className="text-xs font-bold text-neutral-800 dark:text-[#CCFF00]">
                       {instructor.price.toLocaleString()}원~
                     </div>
                   )}
@@ -457,7 +459,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
                     <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{academy.address}</p>
                   )}
                   {academy.price && (
-                    <div className="text-xs font-bold text-primary dark:text-[#CCFF00] mt-1">
+                    <div className="text-xs font-bold text-neutral-800 dark:text-[#CCFF00] mt-1">
                       {academy.price.toLocaleString()}원~
                     </div>
                   )}

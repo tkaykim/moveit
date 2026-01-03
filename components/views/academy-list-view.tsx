@@ -5,6 +5,7 @@ import { Star, MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Academy, ViewState } from '@/types';
+import { ThemeToggle } from '@/components/common/theme-toggle';
 
 interface AcademyListViewProps {
   onAcademyClick: (academy: Academy) => void;
@@ -90,7 +91,8 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
     <div className="pb-24 pt-14 px-5 animate-in slide-in-from-right-10 duration-300">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-black dark:text-white">댄스학원</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <ThemeToggle />
           <button className="text-xs bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700">
             거리순
           </button>
@@ -154,7 +156,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
                       )}
                     </div>
                     {academy.rating && (
-                      <div className="flex items-center gap-1 text-primary dark:text-[#CCFF00] text-xs font-bold flex-shrink-0 ml-2">
+                      <div className="flex items-center gap-1 text-neutral-800 dark:text-[#CCFF00] text-xs font-bold flex-shrink-0 ml-2">
                         <Star size={12} fill="currentColor" /> {academy.rating}
                       </div>
                     )}
@@ -182,7 +184,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
                         </span>
                       </div>
                     ) : academy.price ? (
-                      <span className="text-sm font-bold text-primary dark:text-[#CCFF00]">
+                      <span className="text-sm font-bold text-neutral-800 dark:text-[#CCFF00]">
                         {academy.price.toLocaleString()}원~
                       </span>
                     ) : null}

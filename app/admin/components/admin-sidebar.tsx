@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import {
   Building2,
   User,
-  BookOpen,
   ChevronRight,
   Users,
   LogIn,
@@ -34,11 +33,6 @@ const menuItems: MenuItem[] = [
     title: '강사 관리',
     icon: User,
     href: '/admin/instructors',
-  },
-  {
-    title: '클래스 관리',
-    icon: BookOpen,
-    href: '/admin/classes',
   },
   {
     title: '사용자 관리',

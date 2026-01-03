@@ -9,6 +9,7 @@ import { Academy, ClassInfo, ViewState } from '@/types';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { formatKSTTime } from '@/lib/utils/kst-time';
+import { ThemeToggle } from '@/components/common/theme-toggle';
 
 interface AcademyDetailViewProps {
   academy: Academy | null;
@@ -261,15 +262,18 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
           ) : (
             <div className="w-full h-full bg-neutral-100 dark:bg-neutral-800" />
           )}
-          <button 
-            onClick={onBack} 
-            className="absolute top-12 left-5 z-20 p-2 bg-black/30 backdrop-blur rounded-full text-white"
-          >
-            <ChevronLeft />
-          </button>
+          <div className="absolute top-12 left-5 right-5 z-20 flex justify-between items-center">
+            <button 
+              onClick={onBack} 
+              className="p-2 bg-black/30 backdrop-blur rounded-full text-white"
+            >
+              <ChevronLeft />
+            </button>
+            <ThemeToggle />
+          </div>
           <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white dark:from-neutral-950 to-transparent" />
           <div className="absolute bottom-6 left-6">
-            <span className="text-primary dark:text-[#CCFF00] text-xs font-bold border border-primary dark:border-[#CCFF00] px-2 py-0.5 rounded mb-2 inline-block">
+            <span className="bg-neutral-900 dark:bg-transparent text-white dark:text-[#CCFF00] text-xs font-bold border border-neutral-900 dark:border-[#CCFF00] px-2 py-0.5 rounded mb-2 inline-block">
               Premium Partner
             </span>
             <h1 className="text-3xl font-black text-black dark:text-white italic">{academy.name}</h1>
@@ -283,7 +287,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
             onClick={() => scrollToTab('home')}
             className={`flex-1 py-4 border-b-2 transition-colors ${
               activeTab === 'home'
-                ? 'border-primary dark:border-[#CCFF00] text-black dark:text-white'
+                ? 'border-neutral-800 dark:border-[#CCFF00] text-black dark:text-white'
                 : 'border-transparent hover:text-black dark:hover:text-white'
             }`}
           >
@@ -293,7 +297,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
             onClick={() => scrollToTab('schedule')}
             className={`flex-1 py-4 border-b-2 transition-colors ${
               activeTab === 'schedule'
-                ? 'border-primary dark:border-[#CCFF00] text-black dark:text-white'
+                ? 'border-neutral-800 dark:border-[#CCFF00] text-black dark:text-white'
                 : 'border-transparent hover:text-black dark:hover:text-white'
             }`}
           >
@@ -303,7 +307,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
             onClick={() => scrollToTab('reviews')}
             className={`flex-1 py-4 border-b-2 transition-colors ${
               activeTab === 'reviews'
-                ? 'border-primary dark:border-[#CCFF00] text-black dark:text-white'
+                ? 'border-neutral-800 dark:border-[#CCFF00] text-black dark:text-white'
                 : 'border-transparent hover:text-black dark:hover:text-white'
             }`}
           >
@@ -380,9 +384,9 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                           {isEmpty ? (
                             <button
                               onClick={() => handleAddClassClick(day, time)}
-                              className="h-full min-h-[40px] bg-neutral-100/30 dark:bg-neutral-900/30 rounded-lg border border-neutral-200/50 dark:border-neutral-800/50 hover:bg-neutral-100/50 dark:hover:bg-neutral-900/50 hover:border-primary dark:hover:border-[#CCFF00] transition-all flex items-center justify-center group"
+                              className="h-full min-h-[40px] bg-neutral-100/30 dark:bg-neutral-900/30 rounded-lg border border-neutral-200/50 dark:border-neutral-800/50 hover:bg-neutral-100/50 dark:hover:bg-neutral-900/50 hover:border-neutral-800 dark:hover:border-[#CCFF00] transition-all flex items-center justify-center group"
                             >
-                              <Plus size={16} className="text-neutral-400 dark:text-neutral-600 group-hover:text-primary dark:group-hover:text-[#CCFF00] transition-colors" />
+                              <Plus size={16} className="text-neutral-400 dark:text-neutral-600 group-hover:text-neutral-800 dark:group-hover:text-[#CCFF00] transition-colors" />
                             </button>
                           ) : (
                             <>
@@ -399,7 +403,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                                     className={`w-full min-h-[40px] rounded-lg border p-1.5 flex items-center gap-1.5 text-left transition-all active:scale-95 ${
                                       isFull 
                                         ? 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 opacity-60' 
-                                        : 'bg-neutral-200 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 hover:border-primary dark:hover:border-[#CCFF00] hover:bg-neutral-300 dark:hover:bg-neutral-700'
+                                        : 'bg-neutral-200 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 hover:border-neutral-800 dark:hover:border-[#CCFF00] hover:bg-neutral-300 dark:hover:bg-neutral-700'
                                     }`}
                                   >
                                     <span className={`text-[9px] font-bold truncate flex-1 ${isFull ? 'text-neutral-500 dark:text-neutral-500' : 'text-black dark:text-white'}`}>
@@ -419,9 +423,9 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                               })}
                               <button
                                 onClick={() => handleAddClassClick(day, time, firstHallId)}
-                                className="w-full min-h-[24px] bg-neutral-100/50 dark:bg-neutral-900/50 rounded border border-neutral-200/50 dark:border-neutral-800/50 hover:bg-neutral-100 dark:hover:bg-neutral-900 hover:border-primary dark:hover:border-[#CCFF00] transition-all flex items-center justify-center group"
+                                className="w-full min-h-[24px] bg-neutral-100/50 dark:bg-neutral-900/50 rounded border border-neutral-200/50 dark:border-neutral-800/50 hover:bg-neutral-100 dark:hover:bg-neutral-900 hover:border-neutral-800 dark:hover:border-[#CCFF00] transition-all flex items-center justify-center group"
                               >
-                                <Plus size={12} className="text-neutral-400 dark:text-neutral-600 group-hover:text-primary dark:group-hover:text-[#CCFF00] transition-colors" />
+                                <Plus size={12} className="text-neutral-400 dark:text-neutral-600 group-hover:text-neutral-800 dark:group-hover:text-[#CCFF00] transition-colors" />
                               </button>
                             </>
                           )}

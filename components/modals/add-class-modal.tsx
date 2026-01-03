@@ -590,7 +590,7 @@ export const AddClassModal = ({ isOpen, onClose, onSubmit, academy, day, time, w
                         }}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                           isSelected
-                            ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                            ? 'bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black'
                             : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'
                         }`}
                       >
@@ -684,7 +684,7 @@ export const AddClassModal = ({ isOpen, onClose, onSubmit, academy, day, time, w
             <button
               type="submit"
               disabled={loading}
-              className="flex-[2] bg-primary dark:bg-[#CCFF00] text-black font-black py-4 rounded-xl text-lg disabled:opacity-50"
+              className="flex-[2] bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black font-black py-4 rounded-xl text-lg disabled:opacity-50"
             >
               {loading ? '추가 중...' : '수업 추가'}
             </button>

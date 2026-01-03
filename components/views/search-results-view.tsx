@@ -153,7 +153,7 @@ export const SearchResultsView = ({ query, onBack, onAcademyClick, onDancerClick
                           </div>
                         </div>
                         {academy.price && (
-                          <div className="text-sm font-bold text-primary dark:text-[#CCFF00]">
+                          <div className="text-sm font-bold text-neutral-800 dark:text-[#CCFF00]">
                             {academy.price.toLocaleString()}원~
                           </div>
                         )}
@@ -189,7 +189,7 @@ export const SearchResultsView = ({ query, onBack, onAcademyClick, onDancerClick
                       </div>
                       <div className="absolute bottom-4 left-4">
                         {dancer.crew && (
-                          <span className="text-[10px] text-primary dark:text-[#CCFF00] font-bold border border-primary/30 dark:border-[#CCFF00]/30 px-1.5 py-0.5 rounded mb-1 inline-block">
+                          <span className="text-[10px] bg-neutral-900 dark:bg-transparent text-white dark:text-[#CCFF00] font-bold border border-neutral-900 dark:border-[#CCFF00]/30 px-1.5 py-0.5 rounded mb-1 inline-block">
                             {dancer.crew}
                           </span>
                         )}

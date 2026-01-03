@@ -1,6 +1,44 @@
+"use client";
+
 import { Building2, Users, Calendar, BookOpen } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+interface DashboardStats {
+  academyCount: number;
+  instructorCount: number;
+  classCount: number;
+  userCount: number;
+}
 
 export default function AdminPage() {
+  const [stats, setStats] = useState<DashboardStats>({
+    academyCount: 0,
+    instructorCount: 0,
+    classCount: 0,
+    userCount: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('/api/admin/stats');
+        if (response.ok) {
+          const data = await response.json();
+          setStats(data);
+        } else {
+          console.error('Failed to fetch stats');
+        }
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
   return (
     <div>
       <div className="mb-8">
@@ -19,7 +57,9 @@ export default function AdminPage() {
               <Building2 className="text-primary dark:text-[#CCFF00] w-6 h-6" />
             </div>
           </div>
-          <h3 className="text-2xl font-bold text-black dark:text-white mb-1">0</h3>
+          <h3 className="text-2xl font-bold text-black dark:text-white mb-1">
+            {loading ? '...' : stats.academyCount}
+          </h3>
           <p className="text-sm text-neutral-600 dark:text-neutral-400">등록된 학원</p>
         </div>
 
@@ -29,7 +69,9 @@ export default function AdminPage() {
               <Users className="text-blue-500 w-6 h-6" />
             </div>
           </div>
-          <h3 className="text-2xl font-bold text-black dark:text-white mb-1">0</h3>
+          <h3 className="text-2xl font-bold text-black dark:text-white mb-1">
+            {loading ? '...' : stats.instructorCount}
+          </h3>
           <p className="text-sm text-neutral-600 dark:text-neutral-400">등록된 강사</p>
         </div>
 
@@ -39,18 +81,22 @@ export default function AdminPage() {
               <BookOpen className="text-green-500 w-6 h-6" />
             </div>
           </div>
-          <h3 className="text-2xl font-bold text-black dark:text-white mb-1">0</h3>
+          <h3 className="text-2xl font-bold text-black dark:text-white mb-1">
+            {loading ? '...' : stats.classCount}
+          </h3>
           <p className="text-sm text-neutral-600 dark:text-neutral-400">등록된 클래스</p>
         </div>
 
         <div className="bg-white dark:bg-neutral-900 rounded-xl p-6 border border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-purple-500/10 rounded-lg">
-              <Calendar className="text-purple-500 w-6 h-6" />
+              <Users className="text-purple-500 w-6 h-6" />
             </div>
           </div>
-          <h3 className="text-2xl font-bold text-black dark:text-white mb-1">0</h3>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">오늘 예약</p>
+          <h3 className="text-2xl font-bold text-black dark:text-white mb-1">
+            {loading ? '...' : stats.userCount}
+          </h3>
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">전체 회원</p>
         </div>
       </div>
 
@@ -64,7 +110,6 @@ export default function AdminPage() {
         <ul className="mt-4 space-y-2 text-neutral-600 dark:text-neutral-400">
           <li>• 학원 관리: 학원, 지점, 홀을 등록하고 관리합니다</li>
           <li>• 강사 관리: 강사 정보를 등록하고 관리합니다</li>
-          <li>• 클래스 관리: 클래스를 등록하고 관리합니다</li>
           <li>• 시간표 관리: 클래스 시간표를 등록하고 관리합니다</li>
           <li>• 예약 관리: 예약 현황을 조회합니다</li>
         </ul>
