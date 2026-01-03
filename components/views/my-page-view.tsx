@@ -158,7 +158,7 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
     <>
       <div className="pt-12 px-5 pb-24 animate-in fade-in">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-black dark:text-white">마이다짐</h2>
+          <h2 className="text-xl font-bold text-black dark:text-white">마이 무브</h2>
           <div className="flex gap-3">
             <Bell className="text-neutral-500 dark:text-neutral-500" />
           </div>
