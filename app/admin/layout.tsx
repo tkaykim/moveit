@@ -1,11 +1,13 @@
 import { ReactNode } from 'react';
 import { AdminSidebar } from './components/admin-sidebar';
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: ReactNode;
 }) {
+  // 인증 및 권한 체크 제거 - 로그인 강제하지 않음
+
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex">
       <AdminSidebar />
@@ -17,4 +19,3 @@ export default function AdminLayout({
     </div>
   );
 }
-
