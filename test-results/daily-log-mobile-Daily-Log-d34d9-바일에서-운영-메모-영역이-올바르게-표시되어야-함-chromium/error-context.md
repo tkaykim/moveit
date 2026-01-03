@@ -1,0 +1,53 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - link "관리자" [ref=e5] [cursor=pointer]:
+          - /url: /admin
+          - img [ref=e7]
+          - generic [ref=e11]: 관리자
+        - button "메뉴 닫기" [ref=e12] [cursor=pointer]:
+          - img [ref=e13]
+      - navigation [ref=e16]:
+        - link "학원 관리" [ref=e17] [cursor=pointer]:
+          - /url: /admin/academies
+          - img [ref=e18]
+          - generic [ref=e22]: 학원 관리
+        - link "강사 관리" [ref=e23] [cursor=pointer]:
+          - /url: /admin/instructors
+          - img [ref=e24]
+          - generic [ref=e27]: 강사 관리
+        - link "사용자 관리" [ref=e28] [cursor=pointer]:
+          - /url: /admin/users
+          - img [ref=e29]
+          - generic [ref=e34]: 사용자 관리
+      - generic [ref=e36]:
+        - generic [ref=e39]: 로그인 안 됨
+        - link "로그인" [ref=e40] [cursor=pointer]:
+          - /url: /auth/login
+          - img [ref=e41]
+          - generic [ref=e44]: 로그인
+    - main [ref=e45]:
+      - generic [ref=e47]:
+        - button "메뉴 열기" [ref=e48] [cursor=pointer]:
+          - img [ref=e49]
+        - heading "관리자" [level=1] [ref=e50]
+      - generic [ref=e52]:
+        - generic [ref=e53]:
+          - generic [ref=e54]:
+            - heading "학원 관리" [level=1] [ref=e55]
+            - paragraph [ref=e56]: 학원을 등록하고 관리할 수 있습니다.
+          - button "추가" [ref=e58] [cursor=pointer]:
+            - img [ref=e59]
+            - generic [ref=e60]: 추가
+        - generic [ref=e63]: 등록된 학원이 없습니다.
+  - alert [ref=e64]
+  - generic [ref=e67] [cursor=pointer]:
+    - img [ref=e68]
+    - generic [ref=e70]: 5 errors
+    - button "Hide Errors" [ref=e71]:
+      - img [ref=e72]
+```

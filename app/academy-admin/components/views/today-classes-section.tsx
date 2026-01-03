@@ -280,6 +280,28 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
                   {hall.hallName}
                 </div>
                 <div className="space-y-3">
+                  {hall.past.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 opacity-60">
+                        지난 수업
+                      </div>
+                      <div className="space-y-2">
+                        {hall.past.map((cls) => (
+                          <ClassCell 
+                            key={cls.id} 
+                            class={cls} 
+                            status="past"
+                            onClick={async () => {
+                              setSelectedClass(cls);
+                              const log = await loadLogForClass(cls.id);
+                              setSelectedLog(log);
+                              setShowLogModal(true);
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {hall.ongoing.length > 0 && (
                     <div>
                       <div className="text-xs font-semibold text-green-700 dark:text-green-400 mb-2">
@@ -313,28 +335,6 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
                             key={cls.id} 
                             class={cls} 
                             status="upcoming"
-                            onClick={async () => {
-                              setSelectedClass(cls);
-                              const log = await loadLogForClass(cls.id);
-                              setSelectedLog(log);
-                              setShowLogModal(true);
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {hall.past.length > 0 && (
-                    <div>
-                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 opacity-60">
-                        지난 수업
-                      </div>
-                      <div className="space-y-2">
-                        {hall.past.map((cls) => (
-                          <ClassCell 
-                            key={cls.id} 
-                            class={cls} 
-                            status="past"
                             onClick={async () => {
                               setSelectedClass(cls);
                               const log = await loadLogForClass(cls.id);

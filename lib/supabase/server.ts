@@ -23,6 +23,27 @@ export async function createClient() {
           }
         },
       },
+      // 서버 사이드 연결 최적화
+      db: {
+        schema: 'public',
+      },
+      auth: {
+        persistSession: false, // 서버에서는 세션을 쿠키로만 관리
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        // 타임아웃 설정 (30초)
+        fetch: (url: RequestInfo | URL, options: RequestInit = {}) => {
+          return fetch(url, {
+            ...options,
+            signal: AbortSignal.timeout(30000), // 30초 타임아웃
+          });
+        },
+        headers: {
+          'x-client-info': 'moveit-server',
+        },
+      },
     }
   );
 }

@@ -3,8 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node --max-old-space-size=4096 node_modules/next/dist/bin/next dev",
+    "dev:turbo": "node --max-old-space-size=4096 node_modules/next/dist/bin/next dev --turbo",
+    "dev:high": "node --max-old-space-size=8192 node_modules/next/dist/bin/next dev",
+    "dev:high:turbo": "node --max-old-space-size=8192 node_modules/next/dist/bin/next dev --turbo",
+    "build": "node --max-old-space-size=4096 node_modules/next/dist/bin/next build",
+    "build:high": "node --max-old-space-size=8192 node_modules/next/dist/bin/next build",
     "start": "next start",
     "lint": "next lint"
   },
