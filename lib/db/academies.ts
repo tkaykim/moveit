@@ -8,7 +8,6 @@ export async function getAcademies() {
     .from('academies')
     .select(`
       *,
-      academy_images (*),
       classes (*),
       halls (*)
     `)
@@ -24,7 +23,6 @@ export async function getAcademyById(id: string) {
     .from('academies')
     .select(`
       *,
-      academy_images (*),
       classes (*),
       halls (*)
     `)

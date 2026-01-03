@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -18,6 +18,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/auth-context';
+import { getSupabaseClient } from '@/lib/utils/supabase-client';
 
 interface SidebarItemProps {
   icon: LucideIcon;
@@ -54,6 +55,7 @@ interface AcademyAdminSidebarProps {
 export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdminSidebarProps) {
   const pathname = usePathname();
   const { user, profile, signOut } = useAuth();
+  const [academyName, setAcademyName] = useState<string | null>(null);
 
   const menuItems = [
     { icon: LayoutDashboard, label: '대시보드', href: `/academy-admin/${academyId}` },
@@ -78,6 +80,35 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
       document.body.style.overflow = '';
     };
   }, [isOpen]);
+
+  // 학원 이름 가져오기
+  useEffect(() => {
+    async function loadAcademyName() {
+      try {
+        const supabase = getSupabaseClient();
+        if (!supabase) return;
+
+        const { data, error } = await supabase
+          .from('academies')
+          .select('name_kr, name_en')
+          .eq('id', academyId)
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          const name = data.name_kr || data.name_en || null;
+          setAcademyName(name);
+        }
+      } catch (error) {
+        console.error('Error loading academy name:', error);
+      }
+    }
+
+    if (academyId) {
+      loadAcademyName();
+    }
+  }, [academyId]);
 
   const isActive = (href: string) => {
     if (href === `/academy-admin/${academyId}`) {
@@ -109,19 +140,26 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="h-16 flex items-center justify-between px-6 border-b border-neutral-200 dark:border-neutral-800">
-          <Link href={`/academy-admin/${academyId}`} className="flex items-center gap-2" onClick={handleLinkClick}>
-            <div className="w-8 h-8 bg-primary dark:bg-[#CCFF00] rounded-lg flex items-center justify-center text-black font-bold italic">
-              M
+        <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 relative">
+          <Link href={`/academy-admin/${academyId}`} className="flex flex-col gap-2" onClick={handleLinkClick}>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-primary dark:bg-[#CCFF00] rounded-lg flex items-center justify-center text-black font-bold italic">
+                M
+              </div>
+              <h1 className="text-xl font-extrabold tracking-tight text-black dark:text-white italic">
+                MOVE <span className="text-primary dark:text-[#CCFF00]">IT</span>
+              </h1>
             </div>
-            <h1 className="text-xl font-extrabold tracking-tight text-black dark:text-white italic">
-              MOVE <span className="text-primary dark:text-[#CCFF00]">IT</span>
-            </h1>
+            {academyName && (
+              <p className="text-sm font-medium text-neutral-600 dark:text-neutral-400 ml-10 truncate">
+                {academyName}
+              </p>
+            )}
           </Link>
           {/* 모바일 닫기 버튼 */}
           <button
             onClick={onClose}
-            className="lg:hidden p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+            className="lg:hidden absolute top-4 right-4 p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
             aria-label="메뉴 닫기"
           >
             <X className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />

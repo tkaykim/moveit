@@ -210,47 +210,8 @@ export function AcademyFormModal({
   };
 
   const handleRemoveImage = async (imageIndex: number) => {
-    const imageToRemove = formData.academy_images[imageIndex];
-    
-    // 수정 모드이고 DB에 있는 이미지(id가 있는 경우)이면 즉시 DB에서 삭제
-    if (isEditing && imageToRemove.id) {
-      if (!confirm('이 이미지를 삭제하시겠습니까?')) {
-        return;
-      }
-
-      const supabase = getSupabaseClient() as any;
-      if (!supabase) {
-        alert('데이터베이스 연결에 실패했습니다.');
-        return;
-      }
-
-      try {
-        // Storage에서 이미지 삭제
-        if (imageToRemove.image_url && imageToRemove.image_url.includes('supabase.co/storage')) {
-          try {
-            const filePath = extractFilePathFromUrl(imageToRemove.image_url);
-            if (filePath) {
-              await deleteFile('academy-images', filePath);
-            }
-          } catch (error) {
-            console.error('Failed to delete image from storage:', error);
-          }
-        }
-
-        const { error } = await supabase
-          .from('academy_images')
-          .delete()
-          .eq('id', imageToRemove.id);
-
-        if (error) {
-          console.error('Error deleting image:', error);
-          throw new Error(`이미지 삭제에 실패했습니다: ${error.message}`);
-        }
-      } catch (error: any) {
-        console.error('Error deleting image from DB:', error);
-        alert(`이미지 삭제에 실패했습니다: ${error.message || '알 수 없는 오류'}`);
-        return;
-      }
+    if (!confirm('이 이미지를 삭제하시겠습니까?')) {
+      return;
     }
 
     // display_order 재조정

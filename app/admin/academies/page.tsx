@@ -61,10 +61,7 @@ export default function AcademiesPage() {
     try {
       const { data, error } = await (supabase as any)
         .from('academies')
-        .select(`
-          *,
-          academy_images (*)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -138,43 +135,44 @@ export default function AcademiesPage() {
         academyId = newAcademy.id;
       }
 
-      // 2. 학원 이미지 처리
+      // 2. 학원 이미지 처리 (JSONB 기반)
       if (editingId) {
-        // 기존 이미지 로드
-        const { data: existingImages } = await supabase
-          .from('academy_images')
-          .select('id, image_url')
-          .eq('academy_id', academyId);
+        // 기존 이미지 로드 (JSONB에서)
+        const { data: existingAcademy } = await supabase
+          .from('academies')
+          .select('images')
+          .eq('id', academyId)
+          .single();
 
-        const existingImageIds = (existingImages || []).map((img: any) => img.id);
-        const formImageIds = formData.academy_images
-          .filter((img) => img.id)
-          .map((img) => img.id!);
+        const existingImages = (existingAcademy?.images && Array.isArray(existingAcademy.images)) 
+          ? existingAcademy.images 
+          : [];
 
-        // 삭제할 이미지 찾기
-        const deletedImageIds = existingImageIds.filter(
-          (id: string) => !formImageIds.includes(id)
-        );
+        // 삭제할 이미지 찾기 (formData에 없는 기존 이미지)
+        const formImageUrls = formData.academy_images
+          .filter((img) => img.image_url && img.image_url.trim() !== '')
+          .map((img) => img.image_url);
 
-        // 삭제할 이미지 삭제
-        for (const imageId of deletedImageIds) {
-          const imageToDelete = existingImages?.find((img: any) => img.id === imageId);
-          if (imageToDelete?.image_url && imageToDelete.image_url.includes('supabase.co/storage')) {
-            try {
-              const filePath = extractFilePathFromUrl(imageToDelete.image_url);
-              if (filePath) {
-                await deleteFile('academy-images', filePath);
+        for (const existingImg of existingImages) {
+          if (!formImageUrls.includes(existingImg.url)) {
+            // Storage에서 삭제
+            if (existingImg.url && existingImg.url.includes('supabase.co/storage')) {
+              try {
+                const filePath = extractFilePathFromUrl(existingImg.url);
+                if (filePath) {
+                  await deleteFile('academy-images', filePath);
+                }
+              } catch (error) {
+                console.error('Failed to delete image from storage:', error);
               }
-            } catch (error) {
-              console.error('Failed to delete image from storage:', error);
             }
           }
-          await supabase.from('academy_images').delete().eq('id', imageId);
         }
       }
 
-      // 이미지 업로드 및 저장
-      let validImageIndex = 0;
+      // 이미지 업로드 및 JSONB 배열 생성
+      const imagesArray: Array<{ url: string; order: number }> = [];
+      
       for (let i = 0; i < formData.academy_images.length; i++) {
         const image = formData.academy_images[i];
         let imageUrl = image.image_url;
@@ -182,30 +180,21 @@ export default function AcademiesPage() {
         console.log(`Processing image ${i + 1}:`, {
           hasImageFile: !!image.imageFile,
           imageUrl: imageUrl,
-          hasImageId: !!image.id,
-          image: image, // 전체 이미지 객체 로그
+          image: image,
         });
 
-        // 새 파일이 업로드된 경우 (파일이 있으면 우선)
+        // 새 파일이 업로드된 경우
         if (image.imageFile) {
           try {
-            // 기존 이미지가 있으면 삭제
-            if (image.id && editingId) {
-              const { data: existingImage } = await supabase
-                .from('academy_images')
-                .select('image_url')
-                .eq('id', image.id)
-                .single();
-
-              if (existingImage?.image_url && existingImage.image_url.includes('supabase.co/storage')) {
-                try {
-                  const filePath = extractFilePathFromUrl(existingImage.image_url);
-                  if (filePath) {
-                    await deleteFile('academy-images', filePath);
-                  }
-                } catch (error) {
-                  console.error('Failed to delete old image:', error);
+            // 기존 이미지가 있으면 삭제 (수정 모드에서)
+            if (editingId && image.image_url && image.image_url.includes('supabase.co/storage')) {
+              try {
+                const filePath = extractFilePathFromUrl(image.image_url);
+                if (filePath) {
+                  await deleteFile('academy-images', filePath);
                 }
+              } catch (error) {
+                console.error('Failed to delete old image:', error);
               }
             }
 
@@ -220,15 +209,9 @@ export default function AcademiesPage() {
           }
         }
 
-        // imageUrl이 유효한 경우에만 저장 (파일 업로드 성공했거나 유효한 URL이 있는 경우)
-        // 파일이 있었지만 업로드 실패한 경우는 위에서 에러가 발생했을 것
-        // 여기서는 업로드 성공 후 imageUrl이 설정되었거나, 원래 유효한 URL이 있는 경우만 저장
+        // imageUrl이 유효한 경우에만 배열에 추가
         if (!imageUrl || (typeof imageUrl === 'string' && imageUrl.trim() === '')) {
-          console.warn(`이미지 ${i + 1}번째 항목에 유효한 URL 또는 파일이 없어 건너뜁니다.`, {
-            hasImageFile: !!image.imageFile,
-            imageUrl: imageUrl,
-            originalImageUrl: image.image_url,
-          });
+          console.warn(`이미지 ${i + 1}번째 항목에 유효한 URL 또는 파일이 없어 건너뜁니다.`);
           continue;
         }
 
@@ -243,41 +226,22 @@ export default function AcademiesPage() {
           }
         }
 
-        // 이미지 저장 또는 업데이트
-        const imageData = {
-          image_url: imageUrl,
-          display_order: validImageIndex,
-        };
+        // JSONB 배열에 추가
+        imagesArray.push({
+          url: imageUrl,
+          order: imagesArray.length,
+        });
+      }
 
-        if (image.id && editingId) {
-          console.log(`Updating image with id: ${image.id}`, imageData);
-          const { data: updateData, error: updateError } = await supabase
-            .from('academy_images')
-            .update(imageData)
-            .eq('id', image.id)
-            .select();
+      // JSONB 배열을 academies 테이블에 업데이트
+      const { error: imagesUpdateError } = await supabase
+        .from('academies')
+        .update({ images: imagesArray })
+        .eq('id', academyId);
 
-          if (updateError) {
-            console.error('Error updating image:', updateError);
-            throw new Error(`이미지 업데이트에 실패했습니다: ${updateError.message}`);
-          }
-          console.log('Image updated successfully:', updateData);
-        } else {
-          const insertData = {
-            academy_id: academyId,
-            ...imageData,
-          };
-          console.log(`Inserting new image for academy: ${academyId}`, insertData);
-          const { data: insertDataResult, error: insertError } = await supabase.from('academy_images').insert([insertData]).select();
-
-          if (insertError) {
-            console.error('Error inserting image:', insertError);
-            throw new Error(`이미지 저장에 실패했습니다: ${insertError.message}`);
-          }
-          console.log('Image inserted successfully:', insertDataResult);
-        }
-
-        validImageIndex++;
+      if (imagesUpdateError) {
+        console.error('Error updating images:', imagesUpdateError);
+        throw new Error(`이미지 저장에 실패했습니다: ${imagesUpdateError.message}`);
       }
 
       // 3. 홀 처리
@@ -348,17 +312,8 @@ export default function AcademiesPage() {
         throw hallsError;
       }
 
-      // 이미지 데이터 로드
-      const { data: images, error: imagesError } = await supabase
-        .from('academy_images')
-        .select('*')
-        .eq('academy_id', academy.id)
-        .order('display_order', { ascending: true });
-
-      if (imagesError) {
-        console.error('Error loading images:', imagesError);
-        throw imagesError;
-      }
+      // 이미지 데이터는 JSONB에서 로드
+      const images = (academy.images && Array.isArray(academy.images)) ? academy.images : [];
 
       const tags = academy.tags
         ? (academy.tags as string).split(',').map((t: string) => t.trim()).filter((t: string) => t)
@@ -381,10 +336,10 @@ export default function AcademiesPage() {
           name: hall.name,
           capacity: hall.capacity || 0,
         })),
-        academy_images: (images || []).map((img: any) => ({
-          id: img.id,
-          image_url: img.image_url || '',
-          display_order: img.display_order || 0,
+        academy_images: images.map((img: any) => ({
+          id: undefined, // JSONB에는 id가 없음
+          image_url: img.url || '',
+          display_order: img.order || 0,
         })),
       });
       setEditingId(academy.id);
@@ -439,17 +394,18 @@ export default function AcademiesPage() {
         await supabase.from('classes').delete().eq('academy_id', id);
       }
 
-      // 2. 이미지 삭제
-      const { data: images } = await supabase
-        .from('academy_images')
-        .select('image_url')
-        .eq('academy_id', id);
+      // 2. 이미지 삭제 (JSONB에서)
+      const { data: academy } = await supabase
+        .from('academies')
+        .select('images')
+        .eq('id', id)
+        .single();
 
-      if (images) {
-        for (const image of images) {
-          if (image.image_url && image.image_url.includes('supabase.co/storage')) {
+      if (academy?.images && Array.isArray(academy.images)) {
+        for (const image of academy.images) {
+          if (image.url && image.url.includes('supabase.co/storage')) {
             try {
-              const filePath = extractFilePathFromUrl(image.image_url);
+              const filePath = extractFilePathFromUrl(image.url);
               if (filePath) {
                 await deleteFile('academy-images', filePath);
               }
@@ -459,7 +415,6 @@ export default function AcademiesPage() {
           }
         }
       }
-      await supabase.from('academy_images').delete().eq('academy_id', id);
 
       // 3. 홀 삭제
       await supabase.from('halls').delete().eq('academy_id', id);

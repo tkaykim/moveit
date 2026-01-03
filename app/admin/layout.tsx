@@ -16,7 +16,7 @@ export default function AdminLayout({
       <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <main className="flex-1 overflow-y-auto w-full">
         {/* 모바일 햄버거 버튼 */}
-        <div className="lg:hidden sticky top-0 z-30 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
+        <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center justify-between px-4 py-3">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -31,7 +31,7 @@ export default function AdminLayout({
             <div className="w-10" /> {/* 중앙 정렬을 위한 공간 */}
           </div>
         </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 lg:pt-4 sm:pt-4 pt-16">
           {children}
         </div>
       </main>

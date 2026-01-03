@@ -59,7 +59,7 @@ export function AcademyAdminHeader({ academyId, onMenuClick }: AcademyAdminHeade
   return (
     <>
       {/* 모바일 헤더 */}
-      <div className="lg:hidden sticky top-0 z-30 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
         <div className="flex items-center justify-between px-4 py-3 gap-2">
           <button
             onClick={onMenuClick}

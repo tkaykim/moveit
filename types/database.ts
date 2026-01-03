@@ -21,6 +21,7 @@ export interface Database {
           tags: string | null
           address: string | null
           contact_number: string | null
+          images: Json | null
         }
         Insert: {
           id?: string
@@ -33,6 +34,7 @@ export interface Database {
           tags?: string | null
           address?: string | null
           contact_number?: string | null
+          images?: Json | null
         }
         Update: {
           id?: string
@@ -45,6 +47,7 @@ export interface Database {
           tags?: string | null
           address?: string | null
           contact_number?: string | null
+          images?: Json | null
         }
       }
       branches: {

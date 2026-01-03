@@ -160,21 +160,21 @@ export function DashboardView({ academyId }: DashboardViewProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {SUMMARY_STATS.map((stat, idx) => {
           const Icon = stat.icon;
           return (
             <div
               key={idx}
-              className="bg-white dark:bg-neutral-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 hover:shadow-md transition-shadow"
+              className="bg-white dark:bg-neutral-900 p-3 sm:p-6 rounded-lg sm:rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 hover:shadow-md transition-shadow"
             >
-              <div className="flex justify-between items-start mb-4">
-                <div className={`p-3 rounded-lg ${stat.bg}`}>
-                  <Icon className={stat.color} size={24} />
+              <div className="flex justify-between items-start mb-2 sm:mb-4">
+                <div className={`p-2 sm:p-3 rounded-lg ${stat.bg}`}>
+                  <Icon className={stat.color} size={20} />
                 </div>
                 <span
-                  className={`text-xs font-bold px-2 py-1 rounded-full ${
+                  className={`text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full ${
                     stat.color === 'text-red-600 dark:text-red-400'
                       ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
                       : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
@@ -183,10 +183,10 @@ export function DashboardView({ academyId }: DashboardViewProps) {
                   {stat.change}
                 </span>
               </div>
-              <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium">
+              <h3 className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium">
                 {stat.label}
               </h3>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+              <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white mt-0.5 sm:mt-1">
                 {stat.value}
               </p>
             </div>
@@ -198,14 +198,52 @@ export function DashboardView({ academyId }: DashboardViewProps) {
       <TodayClassesSection academyId={academyId} />
 
       {/* 최근 상담 내역 */}
-      <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="font-bold text-lg text-gray-800 dark:text-white">최근 상담/등록 현황</h3>
-          <button className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
+      <div className="bg-white dark:bg-neutral-900 rounded-lg sm:rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 p-4 sm:p-6">
+        <div className="flex justify-between items-center mb-4 sm:mb-6">
+          <h3 className="font-bold text-base sm:text-lg text-gray-800 dark:text-white">최근 상담/등록 현황</h3>
+          <button className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:underline">
             전체보기
           </button>
         </div>
-        <div className="overflow-x-auto">
+        
+        {/* 모바일: 카드 형태 */}
+        <div className="block sm:hidden space-y-3">
+          {recentConsultations.length === 0 ? (
+            <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+              상담 내역이 없습니다.
+            </div>
+          ) : (
+            recentConsultations.map((consultation) => (
+              <div
+                key={consultation.id}
+                className="border border-gray-200 dark:border-neutral-700 rounded-lg p-3 space-y-2"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="font-semibold text-sm text-gray-900 dark:text-white">
+                    {consultation.name}
+                  </div>
+                  <StatusBadge
+                    status={
+                      consultation.status === 'NEW'
+                        ? '상담대기'
+                        : consultation.status === 'SCHEDULED'
+                        ? '상담예정'
+                        : '완료'
+                    }
+                  />
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                  <div>관심 분야: {consultation.topic}</div>
+                  <div>담당자: {consultation.users?.name || '-'}</div>
+                  <div>날짜: {new Date(consultation.created_at).toLocaleDateString('ko-KR')}</div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* 데스크톱: 테이블 형태 */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="text-left text-xs font-medium text-gray-500 dark:text-gray-400 border-b dark:border-neutral-800 pb-2">

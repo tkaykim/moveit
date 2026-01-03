@@ -247,19 +247,19 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
   }
 
   return (
-    <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white dark:bg-neutral-900 rounded-lg sm:rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
         <div>
-          <h3 className="font-bold text-lg text-gray-800 dark:text-white mb-1">
+          <h3 className="font-bold text-base sm:text-lg text-gray-800 dark:text-white mb-1">
             오늘의 수업 일정
           </h3>
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <Clock size={16} />
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+            <Clock size={14} />
             <span className="font-mono">{formatCurrentTime()} (KST)</span>
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="text-left sm:text-right">
+          <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
             {classes.length}건
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400">오늘 예정</div>
@@ -267,61 +267,26 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
       </div>
 
       {classes.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
           오늘 예정된 수업이 없습니다.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b-2 border-gray-200 dark:border-neutral-700">
-                <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-neutral-800">
-                  홀
-                </th>
-                <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-neutral-800 opacity-60">
-                  지난 수업
-                </th>
-                <th className="text-center py-3 px-4 font-semibold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20">
-                  진행 중인 수업
-                </th>
-                <th className="text-center py-3 px-4 font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20">
-                  예정 수업
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {halls.map((hall) => (
-                <tr key={hall.hallId} className="border-b border-gray-100 dark:border-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-800/50">
-                  <td className="py-4 px-4 font-semibold text-gray-900 dark:text-white align-top">
-                    {hall.hallName}
-                  </td>
-                  <td className="py-4 px-4 align-top opacity-60">
-                    <div className="space-y-2">
-                      {hall.past.length === 0 ? (
-                        <div className="text-gray-400 dark:text-gray-500 text-sm">-</div>
-                      ) : (
-                        hall.past.map((cls) => (
-                          <ClassCell 
-                            key={cls.id} 
-                            class={cls} 
-                            status="past"
-                            onClick={async () => {
-                              setSelectedClass(cls);
-                              const log = await loadLogForClass(cls.id);
-                              setSelectedLog(log);
-                              setShowLogModal(true);
-                            }}
-                          />
-                        ))
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-4 px-4 align-top bg-green-50/30 dark:bg-green-900/10">
-                    <div className="space-y-2">
-                      {hall.ongoing.length === 0 ? (
-                        <div className="text-gray-400 dark:text-gray-500 text-sm">-</div>
-                      ) : (
-                        hall.ongoing.map((cls) => (
+        <>
+          {/* 모바일: 카드 형태 */}
+          <div className="block sm:hidden space-y-4">
+            {halls.map((hall) => (
+              <div key={hall.hallId} className="border border-gray-200 dark:border-neutral-700 rounded-lg p-3">
+                <div className="font-semibold text-sm text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-neutral-700">
+                  {hall.hallName}
+                </div>
+                <div className="space-y-3">
+                  {hall.ongoing.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold text-green-700 dark:text-green-400 mb-2">
+                        진행 중인 수업
+                      </div>
+                      <div className="space-y-2">
+                        {hall.ongoing.map((cls) => (
                           <ClassCell 
                             key={cls.id} 
                             class={cls} 
@@ -333,16 +298,17 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
                               setShowLogModal(true);
                             }}
                           />
-                        ))
-                      )}
+                        ))}
+                      </div>
                     </div>
-                  </td>
-                  <td className="py-4 px-4 align-top bg-blue-50/30 dark:bg-blue-900/10">
-                    <div className="space-y-2">
-                      {hall.upcoming.length === 0 ? (
-                        <div className="text-gray-400 dark:text-gray-500 text-sm">-</div>
-                      ) : (
-                        hall.upcoming.map((cls) => (
+                  )}
+                  {hall.upcoming.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold text-blue-700 dark:text-blue-400 mb-2">
+                        예정 수업
+                      </div>
+                      <div className="space-y-2">
+                        {hall.upcoming.map((cls) => (
                           <ClassCell 
                             key={cls.id} 
                             class={cls} 
@@ -354,15 +320,136 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
                               setShowLogModal(true);
                             }}
                           />
-                        ))
-                      )}
+                        ))}
+                      </div>
                     </div>
-                  </td>
+                  )}
+                  {hall.past.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 opacity-60">
+                        지난 수업
+                      </div>
+                      <div className="space-y-2">
+                        {hall.past.map((cls) => (
+                          <ClassCell 
+                            key={cls.id} 
+                            class={cls} 
+                            status="past"
+                            onClick={async () => {
+                              setSelectedClass(cls);
+                              const log = await loadLogForClass(cls.id);
+                              setSelectedLog(log);
+                              setShowLogModal(true);
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {hall.ongoing.length === 0 && hall.upcoming.length === 0 && hall.past.length === 0 && (
+                    <div className="text-center py-4 text-gray-400 dark:text-gray-500 text-sm">
+                      수업이 없습니다.
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 데스크톱: 테이블 형태 */}
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b-2 border-gray-200 dark:border-neutral-700">
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-neutral-800">
+                    홀
+                  </th>
+                  <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-neutral-800 opacity-60">
+                    지난 수업
+                  </th>
+                  <th className="text-center py-3 px-4 font-semibold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20">
+                    진행 중인 수업
+                  </th>
+                  <th className="text-center py-3 px-4 font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20">
+                    예정 수업
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {halls.map((hall) => (
+                  <tr key={hall.hallId} className="border-b border-gray-100 dark:border-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-800/50">
+                    <td className="py-4 px-4 font-semibold text-gray-900 dark:text-white align-top">
+                      {hall.hallName}
+                    </td>
+                    <td className="py-4 px-4 align-top opacity-60">
+                      <div className="space-y-2">
+                        {hall.past.length === 0 ? (
+                          <div className="text-gray-400 dark:text-gray-500 text-sm">-</div>
+                        ) : (
+                          hall.past.map((cls) => (
+                            <ClassCell 
+                              key={cls.id} 
+                              class={cls} 
+                              status="past"
+                              onClick={async () => {
+                                setSelectedClass(cls);
+                                const log = await loadLogForClass(cls.id);
+                                setSelectedLog(log);
+                                setShowLogModal(true);
+                              }}
+                            />
+                          ))
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 align-top bg-green-50/30 dark:bg-green-900/10">
+                      <div className="space-y-2">
+                        {hall.ongoing.length === 0 ? (
+                          <div className="text-gray-400 dark:text-gray-500 text-sm">-</div>
+                        ) : (
+                          hall.ongoing.map((cls) => (
+                            <ClassCell 
+                              key={cls.id} 
+                              class={cls} 
+                              status="ongoing"
+                              onClick={async () => {
+                                setSelectedClass(cls);
+                                const log = await loadLogForClass(cls.id);
+                                setSelectedLog(log);
+                                setShowLogModal(true);
+                              }}
+                            />
+                          ))
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 align-top bg-blue-50/30 dark:bg-blue-900/10">
+                      <div className="space-y-2">
+                        {hall.upcoming.length === 0 ? (
+                          <div className="text-gray-400 dark:text-gray-500 text-sm">-</div>
+                        ) : (
+                          hall.upcoming.map((cls) => (
+                            <ClassCell 
+                              key={cls.id} 
+                              class={cls} 
+                              status="upcoming"
+                              onClick={async () => {
+                                setSelectedClass(cls);
+                                const log = await loadLogForClass(cls.id);
+                                setSelectedLog(log);
+                                setShowLogModal(true);
+                              }}
+                            />
+                          ))
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {showLogModal && selectedClass && (
@@ -390,10 +477,19 @@ interface ClassCellProps {
 
 function ClassCell({ class: cls, status, onClick }: ClassCellProps) {
   const instructorName = cls.instructors?.name_kr || cls.instructors?.name_en || null;
+  const formatTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  };
 
   return (
     <div 
-      className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
+      className={`p-2.5 sm:p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
         status === 'past' 
           ? 'border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800/50 opacity-75 hover:opacity-100' 
           : status === 'ongoing'
@@ -402,10 +498,16 @@ function ClassCell({ class: cls, status, onClick }: ClassCellProps) {
       }`}
       onClick={onClick}
     >
-      <div className="font-semibold text-sm text-gray-900 dark:text-white mb-1">
+      <div className="font-semibold text-xs sm:text-sm text-gray-900 dark:text-white mb-1">
         {cls.title || '수업명 없음'}
       </div>
-      <div className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
+      {cls.start_time && (
+        <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 mb-1 font-medium">
+          {formatTime(cls.start_time)}
+          {cls.end_time && ` - ${formatTime(cls.end_time)}`}
+        </div>
+      )}
+      <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
         {instructorName && (
           <div>강사: {instructorName}</div>
         )}

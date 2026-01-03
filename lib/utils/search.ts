@@ -21,7 +21,6 @@ export async function searchAll(query: string): Promise<SearchResult> {
       .from('academies')
       .select(`
         *,
-        academy_images (*),
         classes (*)
       `)
       .or(`name_kr.ilike.%${searchTerm}%,name_en.ilike.%${searchTerm}%,tags.ilike.%${searchTerm}%`)
@@ -54,15 +53,15 @@ export async function searchAll(query: string): Promise<SearchResult> {
     const academies: Academy[] = (academiesData || []).map((dbAcademy: any) => {
       const name = dbAcademy.name_kr || dbAcademy.name_en || '이름 없음';
       const classes = dbAcademy.classes || [];
-      const images = dbAcademy.academy_images || [];
+      const images = (dbAcademy.images && Array.isArray(dbAcademy.images)) ? dbAcademy.images : [];
       const minPrice = classes.length > 0 
         ? Math.min(...classes.map((c: any) => c.price || 0))
         : 0;
 
-      // display_order로 정렬하여 첫 번째 이미지 또는 로고 사용
-      const sortedImages = images.sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0));
+      // order로 정렬하여 첫 번째 이미지 또는 로고 사용
+      const sortedImages = images.sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
       const imageUrl = sortedImages.length > 0 
-        ? sortedImages[0].image_url 
+        ? sortedImages[0].url 
         : dbAcademy.logo_url;
 
       return {
@@ -130,10 +129,7 @@ export async function searchByGenre(genre: string): Promise<SearchResult> {
       .from('classes')
       .select(`
         *,
-        academies (
-          *,
-          academy_images (*)
-        ),
+        academies (*),
         instructors (*)
       `)
       .ilike('genre', `%${genre}%`)
@@ -170,13 +166,13 @@ export async function searchByGenre(genre: string): Promise<SearchResult> {
     // Academy 변환
     const academies: Academy[] = Array.from(academyMap.values()).map((dbAcademy: any) => {
       const name = dbAcademy.name_kr || dbAcademy.name_en || '이름 없음';
-      const images = dbAcademy.academy_images || [];
+      const images = (dbAcademy.images && Array.isArray(dbAcademy.images)) ? dbAcademy.images : [];
       const minPrice = academyPriceMap.get(dbAcademy.id) || 0;
 
-      // display_order로 정렬하여 첫 번째 이미지 또는 로고 사용
-      const sortedImages = images.sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0));
+      // order로 정렬하여 첫 번째 이미지 또는 로고 사용
+      const sortedImages = images.sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
       const imageUrl = sortedImages.length > 0 
-        ? sortedImages[0].image_url 
+        ? sortedImages[0].url 
         : dbAcademy.logo_url;
 
       return {
