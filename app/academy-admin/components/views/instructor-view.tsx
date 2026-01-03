@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { SectionHeader } from '../common/section-header';
 import { StatusBadge } from '../common/status-badge';
 import { InstructorModal } from './instructors/instructor-modal';
+import { InstructorSearchModal } from './instructors/instructor-search-modal';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 
 interface InstructorViewProps {
@@ -14,6 +15,7 @@ export function InstructorView({ academyId }: InstructorViewProps) {
   const [instructors, setInstructors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
   const [selectedInstructor, setSelectedInstructor] = useState<any>(null);
 
   useEffect(() => {
@@ -28,13 +30,32 @@ export function InstructorView({ academyId }: InstructorViewProps) {
     }
 
     try {
-      // 해당 학원의 수업을 가진 강사들 조회
-      const { data: classes } = await supabase
-        .from('classes')
-        .select('instructor_id')
-        .eq('academy_id', academyId);
+      // 먼저 academy_instructors 테이블에서 조회 시도
+      let instructorIds: string[] = [];
+      
+      try {
+        const { data: academyInstructors, error: academyError } = await supabase
+          .from('academy_instructors')
+          .select('instructor_id')
+          .eq('academy_id', academyId)
+          .eq('is_active', true);
 
-      const instructorIds = [...new Set((classes || []).map((c: any) => c.instructor_id).filter(Boolean))];
+        if (!academyError && academyInstructors) {
+          instructorIds = academyInstructors.map((ai: any) => ai.instructor_id);
+        }
+      } catch (error: any) {
+        // academy_instructors 테이블이 없으면 classes 테이블로 fallback
+        if (error.code === '42P01') {
+          const { data: classes } = await supabase
+            .from('classes')
+            .select('instructor_id')
+            .eq('academy_id', academyId);
+
+          instructorIds = [...new Set((classes || []).map((c: any) => c.instructor_id).filter(Boolean))] as string[];
+        } else {
+          throw error;
+        }
+      }
 
       if (instructorIds.length === 0) {
         setInstructors([]);
@@ -48,7 +69,8 @@ export function InstructorView({ academyId }: InstructorViewProps) {
           *,
           classes!classes_instructor_id_fkey (
             id,
-            start_time
+            start_time,
+            academy_id
           )
         `)
         .in('id', instructorIds);
@@ -61,7 +83,9 @@ export function InstructorView({ academyId }: InstructorViewProps) {
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
       const instructorsWithStats = (data || []).map((instructor: any) => {
-        const thisMonthClasses = (instructor.classes || []).filter((c: any) => {
+        // 해당 학원의 클래스만 필터링
+        const academyClasses = (instructor.classes || []).filter((c: any) => c.academy_id === academyId);
+        const thisMonthClasses = academyClasses.filter((c: any) => {
           if (!c.start_time) return false;
           const classDate = new Date(c.start_time);
           return classDate >= startOfMonth && classDate <= endOfMonth;
@@ -69,7 +93,7 @@ export function InstructorView({ academyId }: InstructorViewProps) {
 
         return {
           ...instructor,
-          classesCount: instructor.classes?.length || 0,
+          classesCount: academyClasses.length,
           thisMonthClasses: thisMonthClasses.length,
           estimatedSalary: thisMonthClasses.length * 300000, // 임시 계산 (실제로는 정산 테이블에서 가져와야 함)
         };
@@ -98,8 +122,7 @@ export function InstructorView({ academyId }: InstructorViewProps) {
           title="강사 관리 및 정산"
           buttonText="강사 등록"
           onButtonClick={() => {
-            setSelectedInstructor(null);
-            setShowModal(true);
+            setShowSearchModal(true);
           }}
         />
 
@@ -178,6 +201,18 @@ export function InstructorView({ academyId }: InstructorViewProps) {
           onClose={() => {
             setShowModal(false);
             setSelectedInstructor(null);
+            loadInstructors();
+          }}
+        />
+      )}
+
+      {showSearchModal && (
+        <InstructorSearchModal
+          academyId={academyId}
+          onClose={() => {
+            setShowSearchModal(false);
+          }}
+          onInstructorRegistered={() => {
             loadInstructors();
           }}
         />

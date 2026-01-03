@@ -20,23 +20,14 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
       if (!dancer) return;
       
       try {
-        // 이번 주의 시작과 끝 날짜 계산
-        const now = new Date();
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay() + 1); // 월요일
-        startOfWeek.setHours(0, 0, 0, 0);
-        
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6); // 일요일
-        endOfWeek.setHours(23, 59, 59, 999);
-
         const supabase = getSupabaseClient();
         if (!supabase) {
           setLoading(false);
           return;
         }
 
-        // 강사의 스케줄 가져오기
+        // 현재 시간 이후의 모든 스케줄 가져오기
+        const now = new Date();
         const { data: instructorSchedules, error } = await (supabase as any)
           .from('schedules')
           .select(`
@@ -50,8 +41,7 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
           `)
           .eq('instructor_id', dancer.id)
           .eq('is_canceled', false)
-          .gte('start_time', startOfWeek.toISOString())
-          .lte('start_time', endOfWeek.toISOString())
+          .gte('start_time', now.toISOString())
           .order('start_time', { ascending: true });
 
         if (error) throw error;
@@ -134,10 +124,10 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
           {loading ? (
             <div className="text-center py-8 text-neutral-500">로딩 중...</div>
           ) : schedules.length === 0 ? (
-            <div className="text-center py-8 text-neutral-500">이번 주 개설된 클래스가 없습니다.</div>
+            <div className="text-center py-8 text-neutral-500">예정된 클래스가 없습니다.</div>
           ) : (
             <div className="space-y-3">
-              {schedules.slice(0, 5).map((schedule: any) => {
+              {schedules.map((schedule: any) => {
                 if (!schedule.start_time) return null;
                 const startTime = new Date(schedule.start_time);
                 const dayNames = ['일', '월', '화', '수', '목', '금', '토'];

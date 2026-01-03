@@ -41,7 +41,7 @@ export function DailyLogView({ academyId }: DailyLogViewProps) {
     try {
       const dateStr = selectedDate.toISOString().split('T')[0];
 
-      // 오늘의 클래스 로드
+      // 오늘의 클래스 로드 (video_url 포함)
       const startOfDay = new Date(selectedDate);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(selectedDate);
@@ -275,18 +275,25 @@ export function DailyLogView({ academyId }: DailyLogViewProps) {
                               <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase">
                                 출석 현황
                               </label>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 h-2 bg-gray-200 dark:bg-neutral-700 rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full bg-green-500 dark:bg-green-400"
-                                    style={{
-                                      width: `${((log.present_students || 0) / (log.total_students || 1)) * 100}%`,
-                                    }}
-                                  ></div>
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-2 bg-gray-200 dark:bg-neutral-700 rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full bg-green-500 dark:bg-green-400"
+                                      style={{
+                                        width: `${((item.present_students || 0) / (item.current_students || 1)) * 100}%`,
+                                      }}
+                                    ></div>
+                                  </div>
+                                  <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                    출석: {item.present_students || 0}명
+                                  </span>
                                 </div>
-                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                                  {log.present_students || 0} / {log.total_students || 0} 명
-                                </span>
+                                <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                                  <div>정원: {item.max_students || 0}명</div>
+                                  <div>신청자: {item.current_students || 0}명</div>
+                                  <div>출석자: {item.present_students || 0}명</div>
+                                </div>
                               </div>
                             </div>
 
@@ -306,6 +313,34 @@ export function DailyLogView({ academyId }: DailyLogViewProps) {
                               <p className="text-sm text-gray-800 dark:text-white bg-white dark:bg-neutral-900 p-3 rounded border border-gray-200 dark:border-neutral-700">
                                 {log.notes || '특이사항 없음'}
                               </p>
+                            </div>
+
+                            {(item.video_url || log?.video_url) && (
+                              <div className="mb-4">
+                                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase">
+                                  수업영상 링크
+                                </label>
+                                <a
+                                  href={item.video_url || log?.video_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline break-all"
+                                >
+                                  {item.video_url || log?.video_url}
+                                </a>
+                              </div>
+                            )}
+
+                            <div className="mt-4">
+                              <button
+                                onClick={() => {
+                                  setSelectedLog({ classItem: item, log });
+                                  setShowLogModal(true);
+                                }}
+                                className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+                              >
+                                일지 수정하기
+                              </button>
                             </div>
                           </>
                         ) : (

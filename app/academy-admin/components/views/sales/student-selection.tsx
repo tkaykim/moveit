@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, X, ChevronRight } from 'lucide-react';
+import { Search, X, ChevronRight, UserPlus } from 'lucide-react';
 
 interface StudentSelectionProps {
   selectedStudent: any;
@@ -8,6 +8,7 @@ interface StudentSelectionProps {
   students: any[];
   onStudentSelect: (student: any) => void;
   onSearchChange: (term: string) => void;
+  onRegisterStudent?: () => void;
 }
 
 export function StudentSelection({
@@ -16,6 +17,7 @@ export function StudentSelection({
   students,
   onStudentSelect,
   onSearchChange,
+  onRegisterStudent,
 }: StudentSelectionProps) {
   const filteredStudents = searchTerm
     ? students.filter(
@@ -70,8 +72,19 @@ export function StudentSelection({
                   </button>
                 ))
               ) : (
-                <div className="p-4 text-center text-slate-500 dark:text-slate-400 text-sm">
-                  검색 결과가 없습니다.
+                <div className="p-4 text-center">
+                  <div className="text-slate-500 dark:text-slate-400 text-sm mb-3">
+                    검색 결과가 없습니다.
+                  </div>
+                  {onRegisterStudent && (
+                    <button
+                      onClick={onRegisterStudent}
+                      className="w-full px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 font-medium"
+                    >
+                      <UserPlus size={16} />
+                      학생 등록하기
+                    </button>
+                  )}
                 </div>
               )}
             </div>

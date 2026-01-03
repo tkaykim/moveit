@@ -1,0 +1,369 @@
+{
+  "seoul": [
+    {
+      "name_kr": "원밀리언 댄스 스튜디오",
+      "name_en": "1MILLION Dance Studio",
+      "address": "서울특별시 강남구 논현로 131길 24",
+      "contact_number": "02-1234-5678",
+      "tags": "K-POP,힙합,컨템포러리,세계적유명",
+      "description": "세계적으로 유명한 댄스 스튜디오로, 유튜브 조회수 10억 이상의 댄스 크루",
+      "website": "https://www.1milliondance.com",
+      "instagram": "@1milliondance"
+    },
+    {
+      "name_kr": "저스트저크 아카데미",
+      "name_en": "Just Jerk Academy",
+      "address": "서울특별시 강남구 테헤란로 123",
+      "contact_number": "02-2345-6789",
+      "tags": "힙합,스트릿댄스,크루댄스",
+      "description": "세계 댄스 챔피언십 우승팀 저스트저크의 공식 아카데미",
+      "website": null,
+      "instagram": "@justjerk_official"
+    },
+    {
+      "name_kr": "YGX",
+      "name_en": "YGX",
+      "address": "서울특별시 강남구 청담동 123-45",
+      "contact_number": "02-3456-7890",
+      "tags": "K-POP,아이돌댄스,YG엔터테인먼트",
+      "description": "YG 엔터테인먼트 산하 댄스 아카데미",
+      "website": null,
+      "instagram": "@ygx_official"
+    },
+    {
+      "name_kr": "댄스원",
+      "name_en": "DANCE1",
+      "address": "서울특별시 강남구 역삼동 123-45",
+      "contact_number": "02-4567-8901",
+      "tags": "K-POP,컨템포러리,재즈댄스",
+      "description": "다양한 장르의 댄스를 전문적으로 가르치는 학원",
+      "website": null,
+      "instagram": null
+    },
+    {
+      "name_kr": "어반 댄스 아카데미",
+      "name_en": "Urban Dance Academy",
+      "address": "서울특별시 강남구 신사동 123-45",
+      "contact_number": "02-5678-9012",
+      "tags": "힙합,스트릿댄스,어반댄스",
+      "description": "스트릿 댄스와 어반 댄스 전문 교육 기관",
+      "website": null,
+      "instagram": null
+    },
+    {
+      "name_kr": "프리즘 댄스 스튜디오",
+      "name_en": "PRISM Dance Studio",
+      "address": "서울특별시 마포구 와우산로 29길 68",
+      "contact_number": "02-6789-0123",
+      "tags": "K-POP,힙합,재즈댄스,다양한장르",
+      "description": "다양한 댄스 장르를 제공하는 전문 스튜디오",
+      "website": null,
+      "instagram": "@prismdance_studio"
+    },
+    {
+      "name_kr": "댄스플래닛",
+      "name_en": "Dance Planet",
+      "address": "서울특별시 서초구 서초대로 77길 54",
+      "contact_number": "02-7890-1234",
+      "tags": "K-POP,컨템포러리,발레",
+      "description": "전문 댄스 교육 기관",
+      "website": "http://www.danceplanet.co.kr",
+      "instagram": null
+    },
+    {
+      "name_kr": "댄스홀릭",
+      "name_en": "Dance Holic",
+      "address": "서울특별시 강남구 테헤란로 5길 11",
+      "contact_number": "02-8901-2345",
+      "tags": "K-POP,힙합,스트릿댄스",
+      "description": "다양한 댄스 클래스를 제공하는 학원",
+      "website": "http://www.danceholic.co.kr",
+      "instagram": null
+    },
+    {
+      "name_kr": "소울 댄스 스튜디오",
+      "name_en": "Soul Dance Studio",
+      "address": "서울특별시 강남구 압구정로 123",
+      "contact_number": "02-9012-3456",
+      "tags": "힙합,소울댄스,스트릿댄스",
+      "description": "소울과 힙합 댄스 전문 스튜디오",
+      "website": null,
+      "instagram": null
+    },
+    {
+      "name_kr": "무브 댄스 아카데미",
+      "name_en": "Move Dance Academy",
+      "address": "서울특별시 강남구 선릉로 123",
+      "contact_number": "02-0123-4567",
+      "tags": "K-POP,컨템포러리,모던댄스",
+      "description": "모던 댄스와 컨템포러리 전문 아카데미",
+      "website": null,
+      "instagram": null
+    }
+  ],
+  "busan": [
+    {
+      "name_kr": "부산 댄스 스튜디오",
+      "name_en": "Busan Dance Studio",
+      "address": "부산광역시 해운대구 센텀중앙로 97",
+      "contact_number": "051-123-4567",
+      "tags": "K-POP,힙합,스트릿댄스",
+      "description": "부산 지역 대표 댄스 스튜디오",
+      "website": null,
+      "instagram": null
+    },
+    {
+      "name_kr": "해운대 댄스 아카데미",
+      "name_en": "Haeundae Dance Academy",
+      "address": "부산광역시 해운대구 해운대해변로 264",
+      "contact_number": "051-234-5678",
+      "tags": "K-POP,컨템포러리,재즈댄스",
+      "description": "해운대 지역 전문 댄스 아카데미",
+      "website": null,
+      "instagram": null
+    }
+  ],
+  "daegu": [
+    {
+      "name_kr": "대구 댄스 아카데미",
+      "name_en": "Daegu Dance Academy",
+      "address": "대구광역시 중구 동성로 25",
+      "contact_number": "053-123-4567",
+      "tags": "K-POP,힙합,스트릿댄스",
+      "description": "대구 지역 대표 댄스 아카데미",
+      "website": null,
+      "instagram": null
+    },
+    {
+      "name_kr": "수성 댄스 스튜디오",
+      "name_en": "Suseong Dance Studio",
+      "address": "대구광역시 수성구 범어로 200",
+      "contact_number": "053-234-5678",
+      "tags": "K-POP,컨템포러리,모던댄스",
+      "description": "수성구 지역 전문 댄스 스튜디오",
+      "website": null,
+      "instagram": null
+    }
+  ],
+  "incheon": [
+    {
+      "name_kr": "인천 댄스 센터",
+      "name_en": "Incheon Dance Center",
+      "address": "인천광역시 남동구 예술로 198",
+      "contact_number": "032-123-4567",
+      "tags": "K-POP,힙합,스트릿댄스",
+      "description": "인천 지역 대표 댄스 센터",
+      "website": null,
+      "instagram": null
+    },
+    {
+      "name_kr": "부평 댄스 스쿨",
+      "name_en": "Bupyeong Dance School",
+      "address": "인천광역시 부평구 부평대로 120",
+      "contact_number": "032-234-5678",
+      "tags": "K-POP,컨템포러리,재즈댄스",
+      "description": "부평 지역 전문 댄스 스쿨",
+      "website": null,
+      "instagram": null
+    }
+  ],
+  "gwangju": [
+    {
+      "name_kr": "광주 댄스 스쿨",
+      "name_en": "Gwangju Dance School",
+      "address": "광주광역시 서구 상무대로 100",
+      "contact_number": "062-123-4567",
+      "tags": "K-POP,힙합,스트릿댄스",
+      "description": "광주 지역 대표 댄스 스쿨",
+      "website": null,
+      "instagram": null
+    },
+    {
+      "name_kr": "댄스 광주",
+      "name_en": "Dance Gwangju",
+      "address": "광주광역시 동구 문화전당로 38",
+      "contact_number": "062-234-5678",
+      "tags": "K-POP,컨템포러리,모던댄스",
+      "description": "광주 지역 전문 댄스 아카데미",
+      "website": null,
+      "instagram": null
+    }
+  ],
+  "daejeon": [
+    {
+      "name_kr": "대전 댄스 아카데미",
+      "name_en": "Daejeon Dance Academy",
+      "address": "대전광역시 서구 둔산로 50",
+      "contact_number": "042-123-4567",
+      "tags": "K-POP,힙합,스트릿댄스",
+      "description": "대전 지역 대표 댄스 아카데미",
+      "website": null,
+      "instagram": null
+    },
+    {
+      "name_kr": "유성 댄스 스튜디오",
+      "name_en": "Yuseong Dance Studio",
+      "address": "대전광역시 유성구 대학로 291",
+      "contact_number": "042-234-5678",
+      "tags": "K-POP,컨템포러리,재즈댄스",
+      "description": "유성구 지역 전문 댄스 스튜디오",
+      "website": null,
+      "instagram": null
+    }
+  ],
+  "ulsan": [
+    {
+      "name_kr": "울산 댄스 센터",
+      "name_en": "Ulsan Dance Center",
+      "address": "울산광역시 남구 삼산로 200",
+      "contact_number": "052-123-4567",
+      "tags": "K-POP,힙합,스트릿댄스",
+      "description": "울산 지역 대표 댄스 센터",
+      "website": null,
+      "instagram": null
+    },
+    {
+      "name_kr": "댄스 울산",
+      "name_en": "Dance Ulsan",
+      "address": "울산광역시 중구 태화로 150",
+      "contact_number": "052-234-5678",
+      "tags": "K-POP,컨템포러리,모던댄스",
+      "description": "울산 지역 전문 댄스 아카데미",
+      "website": null,
+      "instagram": null
+    }
+  ],
+  "suwon": [
+    {
+      "name_kr": "수원 댄스 스튜디오",
+      "name_en": "Suwon Dance Studio",
+      "address": "경기도 수원시 팔달구 중부대로 50",
+      "contact_number": "031-123-4567",
+      "tags": "K-POP,힙합,스트릿댄스",
+      "description": "수원 지역 대표 댄스 스튜디오",
+      "website": null,
+      "instagram": null
+    },
+    {
+      "name_kr": "영통 댄스 아카데미",
+      "name_en": "Yeongtong Dance Academy",
+      "address": "경기도 수원시 영통구 영통로 100",
+      "contact_number": "031-234-5678",
+      "tags": "K-POP,컨템포러리,재즈댄스",
+      "description": "영통구 지역 전문 댄스 아카데미",
+      "website": null,
+      "instagram": null
+    }
+  ],
+  "seongnam": [
+    {
+      "name_kr": "성남 댄스 아카데미",
+      "name_en": "Seongnam Dance Academy",
+      "address": "경기도 성남시 분당구 성남대로 300",
+      "contact_number": "031-345-6789",
+      "tags": "K-POP,힙합,스트릿댄스",
+      "description": "성남 지역 대표 댄스 아카데미",
+      "website": null,
+      "instagram": null
+    },
+    {
+      "name_kr": "분당 댄스 스튜디오",
+      "name_en": "Bundang Dance Studio",
+      "address": "경기도 성남시 분당구 정자로 95",
+      "contact_number": "031-456-7890",
+      "tags": "K-POP,컨템포러리,모던댄스",
+      "description": "분당 지역 전문 댄스 스튜디오",
+      "website": null,
+      "instagram": null
+    }
+  ],
+  "goyang": [
+    {
+      "name_kr": "고양 댄스 센터",
+      "name_en": "Goyang Dance Center",
+      "address": "경기도 고양시 일산동구 중앙로 120",
+      "contact_number": "031-567-8901",
+      "tags": "K-POP,힙합,스트릿댄스",
+      "description": "고양 지역 대표 댄스 센터",
+      "website": null,
+      "instagram": null
+    },
+    {
+      "name_kr": "일산 댄스 스쿨",
+      "name_en": "Ilsan Dance School",
+      "address": "경기도 고양시 일산서구 일산로 200",
+      "contact_number": "031-678-9012",
+      "tags": "K-POP,컨템포러리,재즈댄스",
+      "description": "일산 지역 전문 댄스 스쿨",
+      "website": null,
+      "instagram": null
+    }
+  ],
+  "yongin": [
+    {
+      "name_kr": "용인 댄스 아카데미",
+      "name_en": "Yongin Dance Academy",
+      "address": "경기도 용인시 수지구 동천로 123",
+      "contact_number": "031-789-0123",
+      "tags": "K-POP,힙합,스트릿댄스",
+      "description": "용인 지역 대표 댄스 아카데미",
+      "website": null,
+      "instagram": null
+    },
+    {
+      "name_kr": "댄스 용인",
+      "name_en": "Dance Yongin",
+      "address": "경기도 용인시 기흥구 신갈로 50",
+      "contact_number": "031-890-1234",
+      "tags": "K-POP,컨템포러리,모던댄스",
+      "description": "용인 지역 전문 댄스 아카데미",
+      "website": null,
+      "instagram": null
+    }
+  ],
+  "bucheon": [
+    {
+      "name_kr": "부천 댄스 스튜디오",
+      "name_en": "Bucheon Dance Studio",
+      "address": "경기도 부천시 원미구 부천로 150",
+      "contact_number": "032-345-6789",
+      "tags": "K-POP,힙합,스트릿댄스",
+      "description": "부천 지역 대표 댄스 스튜디오",
+      "website": null,
+      "instagram": null
+    },
+    {
+      "name_kr": "소사 댄스 아카데미",
+      "name_en": "Sosa Dance Academy",
+      "address": "경기도 부천시 소사구 소사로 200",
+      "contact_number": "032-456-7890",
+      "tags": "K-POP,컨템포러리,재즈댄스",
+      "description": "소사 지역 전문 댄스 아카데미",
+      "website": null,
+      "instagram": null
+    }
+  ],
+  "anyang": [
+    {
+      "name_kr": "안양 댄스 센터",
+      "name_en": "Anyang Dance Center",
+      "address": "경기도 안양시 만안구 안양로 100",
+      "contact_number": "031-901-2345",
+      "tags": "K-POP,힙합,스트릿댄스",
+      "description": "안양 지역 대표 댄스 센터",
+      "website": null,
+      "instagram": null
+    },
+    {
+      "name_kr": "댄스 안양",
+      "name_en": "Dance Anyang",
+      "address": "경기도 안양시 동안구 평촌대로 200",
+      "contact_number": "031-012-3456",
+      "tags": "K-POP,컨템포러리,모던댄스",
+      "description": "안양 지역 전문 댄스 아카데미",
+      "website": null,
+      "instagram": null
+    }
+  ]
+}
+

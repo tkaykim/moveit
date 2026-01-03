@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { ClassInfo, Academy } from '@/types';
 import { ClassPreviewModal } from '@/components/modals/class-preview-modal';
+import { formatKSTTime } from '@/lib/utils/kst-time';
 
 interface CalendarViewProps {
   onAcademyClick?: (academy: Academy) => void;
@@ -35,11 +36,9 @@ function transformSchedule(schedule: any): ClassInfo & { academy?: Academy; time
     name: academyData.name_kr || academyData.name_en || '학원 정보 없음',
   } : undefined;
 
-  // 시간 정보
-  const startTime = schedule.start_time ? new Date(schedule.start_time) : null;
-  const endTime = schedule.end_time ? new Date(schedule.end_time) : null;
-  const startTimeStr = startTime ? startTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
-  const endTimeStr = endTime ? endTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+  // 시간 정보 (UTC를 KST로 변환하여 표시)
+  const startTimeStr = schedule.start_time ? formatKSTTime(schedule.start_time) : '';
+  const endTimeStr = schedule.end_time ? formatKSTTime(schedule.end_time) : '';
 
   return {
     id: schedule.id,
@@ -71,7 +70,8 @@ function buildScheduleGrid(schedules: any[]) {
     const startTime = new Date(schedule.start_time);
     const dayIndex = (startTime.getDay() + 6) % 7; // 월요일을 0으로
     const day = DAYS[dayIndex];
-    const time = startTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+    // UTC를 KST로 변환하여 시간 표시
+    const time = formatKSTTime(schedule.start_time);
     
     const classInfo = transformSchedule(schedule);
     classInfo.time = time;

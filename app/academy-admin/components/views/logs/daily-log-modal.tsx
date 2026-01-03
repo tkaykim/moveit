@@ -13,27 +13,24 @@ interface DailyLogModalProps {
 
 export function DailyLogModal({ academyId, classItem, log, onClose }: DailyLogModalProps) {
   const [formData, setFormData] = useState({
-    total_students: 0,
-    present_students: 0,
+    max_students: 0, // 정원
+    current_students: 0, // 신청자 수
+    present_students: 0, // 실제 출석자 수
     content: '',
     notes: '',
+    video_url: '',
   });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (log) {
+    if (classItem) {
       setFormData({
-        total_students: log.total_students || 0,
-        present_students: log.present_students || 0,
-        content: log.content || '',
-        notes: log.notes || '',
-      });
-    } else if (classItem) {
-      setFormData({
-        total_students: classItem.max_students || 0,
-        present_students: classItem.current_students || 0,
-        content: '',
-        notes: '',
+        max_students: classItem.max_students || 0, // 정원
+        current_students: classItem.current_students || 0, // 신청자 수
+        present_students: classItem.present_students || 0, // 실제 출석자 수
+        content: log?.content || '',
+        notes: log?.notes || '',
+        video_url: classItem.video_url || '',
       });
     }
   }, [log, classItem]);
@@ -51,27 +48,44 @@ export function DailyLogModal({ academyId, classItem, log, onClose }: DailyLogMo
 
     try {
       const today = new Date().toISOString().split('T')[0];
-      const data = {
+      
+      // classes 데이터 업데이트 (max_students, current_students, present_students, video_url)
+      const classUpdateData = {
+        max_students: formData.max_students,
+        current_students: formData.current_students,
+        present_students: formData.present_students,
+        video_url: formData.video_url || null,
+      };
+
+      // classes 업데이트
+      const { error: classError } = await supabase
+        .from('classes')
+        .update(classUpdateData)
+        .eq('id', classItem.id);
+
+      if (classError) throw classError;
+
+      // daily_logs 데이터 (수업 내용과 특이사항만 저장)
+      const logData = {
         academy_id: academyId,
         class_id: classItem.id,
         log_date: today,
-        total_students: formData.total_students,
-        present_students: formData.present_students,
         content: formData.content || null,
         notes: formData.notes || null,
         status: 'COMPLETED',
       };
 
+      // daily_logs 저장/업데이트
       if (log) {
         const { error } = await supabase
           .from('daily_logs')
-          .update({ ...data, updated_at: new Date().toISOString() })
+          .update({ ...logData, updated_at: new Date().toISOString() })
           .eq('id', log.id);
 
         if (error) throw error;
         alert('일지가 수정되었습니다.');
       } else {
-        const { error } = await supabase.from('daily_logs').insert([data]);
+        const { error } = await supabase.from('daily_logs').insert([logData]);
 
         if (error) throw error;
         alert('일지가 작성되었습니다.');
@@ -111,35 +125,61 @@ export function DailyLogModal({ academyId, classItem, log, onClose }: DailyLogMo
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              총 학생 수 *
+              정원 (최대 수강생 수) *
             </label>
             <input
               type="number"
               required
               min="0"
               className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-              value={formData.total_students}
+              value={formData.max_students}
               onChange={(e) =>
-                setFormData({ ...formData, total_students: parseInt(e.target.value) || 0 })
+                setFormData({ ...formData, max_students: parseInt(e.target.value) || 0 })
               }
             />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              classes.max_students - 수업 정원
+            </p>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              출석 학생 수 *
+              신청자 수 (현재 수강생 수) *
             </label>
             <input
               type="number"
               required
               min="0"
-              max={formData.total_students}
+              max={formData.max_students}
+              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+              value={formData.current_students}
+              onChange={(e) =>
+                setFormData({ ...formData, current_students: parseInt(e.target.value) || 0 })
+              }
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              classes.current_students - 수업을 신청한 학생 수
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              실제 출석자 수 *
+            </label>
+            <input
+              type="number"
+              required
+              min="0"
+              max={formData.current_students}
               className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
               value={formData.present_students}
               onChange={(e) =>
                 setFormData({ ...formData, present_students: parseInt(e.target.value) || 0 })
               }
             />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              classes.present_students - 실제로 출석한 학생 수
+            </p>
           </div>
 
           <div>
@@ -166,6 +206,22 @@ export function DailyLogModal({ academyId, classItem, log, onClose }: DailyLogMo
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               placeholder="부상자, 상담 필요 학생 등..."
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              수업영상 링크
+            </label>
+            <input
+              type="url"
+              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+              value={formData.video_url}
+              onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
+              placeholder="https://youtube.com/watch?v=..."
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              YouTube, Vimeo 등 영상 링크를 입력하세요.
+            </p>
           </div>
 
           <div className="flex gap-3 pt-4">

@@ -5,6 +5,7 @@ import { Plus, Edit, Trash2, Users, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Class, Academy, Hall, Instructor, Schedule, Booking, User } from '@/lib/supabase/types';
+import { formatNumberInput, parseNumberFromString, formatNumberWithCommas } from '@/lib/utils/number-format';
 
 const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)'] as const;
 
@@ -46,6 +47,10 @@ export default function ClassesPage() {
     start_time: '',
     end_time: '',
     max_students: 20,
+    // 페이 관련 필드
+    base_salary: '',
+    base_student_count: '',
+    additional_salary_per_student: '',
   });
 
   useEffect(() => {
@@ -166,6 +171,9 @@ export default function ClassesPage() {
         class_type: formData.class_type || 'regular',
         thumbnail_url: formData.thumbnail_url || null,
         price: formData.price || 0,
+        base_salary: parseNumberFromString(formData.base_salary),
+        base_student_count: formData.base_student_count ? parseInt(formData.base_student_count, 10) : null,
+        additional_salary_per_student: formData.additional_salary_per_student ? parseNumberFromString(formData.additional_salary_per_student) : null,
       };
 
       if (editingId) {
@@ -231,6 +239,9 @@ export default function ClassesPage() {
       start_time: '',
       end_time: '',
       max_students: 20,
+      base_salary: '',
+      base_student_count: '',
+      additional_salary_per_student: '',
     });
     setHalls([]);
   };
@@ -257,6 +268,9 @@ export default function ClassesPage() {
       start_time: (firstSchedule && firstSchedule.start_time) ? new Date(firstSchedule.start_time).toISOString().slice(0, 16) : '',
       end_time: (firstSchedule && firstSchedule.end_time) ? new Date(firstSchedule.end_time).toISOString().slice(0, 16) : '',
       max_students: firstSchedule?.max_students || 20,
+      base_salary: formatNumberWithCommas((classItem as any).base_salary || 0),
+      base_student_count: (classItem as any).base_student_count ? String((classItem as any).base_student_count) : '',
+      additional_salary_per_student: formatNumberWithCommas((classItem as any).additional_salary_per_student || 0),
     });
 
     if (classItem.academy_id) {
@@ -576,6 +590,81 @@ export default function ClassesPage() {
                 className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
                 placeholder="0"
               />
+            </div>
+
+            {/* 페이 책정 */}
+            <div>
+              <h3 className="text-lg font-semibold text-black dark:text-white mb-4">페이 책정</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-2">
+                    기본급 * <span className="text-xs text-neutral-500">(원)</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
+                    value={formData.base_salary}
+                    onChange={(e) => {
+                      const formatted = formatNumberInput(e.target.value);
+                      setFormData({ ...formData, base_salary: formatted });
+                    }}
+                    placeholder="예: 50,000"
+                  />
+                </div>
+
+                <div className="bg-neutral-50 dark:bg-neutral-800/50 p-4 rounded-lg space-y-3">
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-2">
+                    인원이 <span className="font-semibold">기본 인원 수</span> 이상일 경우, 기본 인원을 제외한 추가 인원당 추가 지급
+                  </p>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-black dark:text-white mb-2">
+                        기본 인원 수 <span className="text-xs text-neutral-500">(명)</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
+                        value={formData.base_student_count}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === '' || /^\d+$/.test(value)) {
+                            setFormData({ ...formData, base_student_count: value });
+                          }
+                        }}
+                        placeholder="예: 10"
+                      />
+                      <p className="text-xs text-neutral-500 mt-1">이 인원까지는 기본급만 지급</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-black dark:text-white mb-2">
+                        추가 인원당 금액 <span className="text-xs text-neutral-500">(원)</span>
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
+                        value={formData.additional_salary_per_student}
+                        onChange={(e) => {
+                          const formatted = formatNumberInput(e.target.value);
+                          setFormData({ ...formData, additional_salary_per_student: formatted });
+                        }}
+                        placeholder="예: 5,000"
+                      />
+                      <p className="text-xs text-neutral-500 mt-1">기본 인원 초과 시 인원당 추가 지급</p>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-900 p-2 rounded border border-neutral-200 dark:border-neutral-700">
+                    <p className="font-semibold mb-1">예시:</p>
+                    <p>기본급: 50,000원, 기본 인원: 10명, 추가 인원당: 5,000원</p>
+                    <p>→ 10명까지: 50,000원, 11명: 55,000원, 12명: 60,000원</p>
+                    <p className="mt-2 text-neutral-400">* 기본급만 있는 경우: 기본 인원 수와 추가 인원당 금액은 비워두세요</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* 9. 시간표 정보 */}

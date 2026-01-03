@@ -1,12 +1,14 @@
 "use client";
 
 import Image from 'next/image';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Plus } from 'lucide-react';
 import { LevelBadge } from '@/components/common/level-badge';
 import { ClassPreviewModal } from '@/components/modals/class-preview-modal';
+import { AddClassModal } from '@/components/modals/add-class-modal';
 import { Academy, ClassInfo, ViewState } from '@/types';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import { formatKSTTime } from '@/lib/utils/kst-time';
 
 interface AcademyDetailViewProps {
   academy: Academy | null;
@@ -57,7 +59,8 @@ function buildScheduleGrid(schedules: any[]) {
     const startTime = new Date(schedule.start_time);
     const dayIndex = (startTime.getDay() + 6) % 7; // 월요일을 0으로
     const day = DAYS[dayIndex];
-    const time = startTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+    // UTC를 KST로 변환하여 시간 표시
+    const time = formatKSTTime(schedule.start_time);
     
     const classInfo = transformSchedule(schedule);
     classInfo.time = time;
@@ -84,6 +87,17 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
   const [activeTab, setActiveTab] = useState<'home' | 'schedule' | 'reviews'>('schedule');
   const [scheduleGrid, setScheduleGrid] = useState<Record<string, ClassInfo[]>>({
     MON: [], TUE: [], WED: [], THU: [], FRI: [], SAT: [], SUN: []
+  });
+  const [showAddClassModal, setShowAddClassModal] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<string>('');
+  const [selectedTime, setSelectedTime] = useState<string>('');
+  const [selectedHallId, setSelectedHallId] = useState<string | null>(null);
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay() + 1); // 월요일
+    startOfWeek.setHours(0, 0, 0, 0);
+    return startOfWeek;
   });
   const homeRef = useRef<HTMLDivElement>(null);
   const scheduleRef = useRef<HTMLDivElement>(null);
@@ -121,20 +135,18 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
     }
   }, []);
 
-  useEffect(() => {
-    async function loadSchedules() {
-      if (!academy) return;
+  const loadSchedules = useCallback(async () => {
+    if (!academy) return;
+    
+    try {
+      setLoading(true);
+      // 현재 주의 시작과 끝 날짜 계산
+      const startOfWeek = new Date(currentWeekStart);
+      startOfWeek.setHours(0, 0, 0, 0);
       
-      try {
-        // 이번 주의 시작과 끝 날짜 계산
-        const now = new Date();
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay() + 1); // 월요일
-        startOfWeek.setHours(0, 0, 0, 0);
-        
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6); // 일요일
-        endOfWeek.setHours(23, 59, 59, 999);
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6); // 일요일
+      endOfWeek.setHours(23, 59, 59, 999);
 
         const supabase = getSupabaseClient();
         if (!supabase) {
@@ -173,9 +185,11 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
       } finally {
         setLoading(false);
       }
-    }
+  }, [academy, currentWeekStart]);
+
+  useEffect(() => {
     loadSchedules();
-  }, [academy]);
+  }, [loadSchedules]);
 
   if (!academy) return null;
 
@@ -193,25 +207,42 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
     onClassBook(classWithPrice);
   };
 
-  // 시간대 추출 (모든 스케줄에서)
-  const timeSlots = Array.from(new Set(
+  const handleAddClassClick = (day: string, time: string, hallId?: string | null) => {
+    setSelectedDay(day);
+    setSelectedTime(time);
+    setSelectedHallId(hallId || null);
+    setShowAddClassModal(true);
+  };
+
+  const handleAddClassSubmit = () => {
+    loadSchedules();
+  };
+
+  // 시간대 추출 (모든 스케줄에서) - 기본 시간대도 포함
+  const existingTimeSlots = Array.from(new Set(
     schedules
       .filter((s: any) => s.start_time)
-      .map((s: any) => {
-        const time = new Date(s.start_time);
-        return time.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
-      })
+      .map((s: any) => formatKSTTime(s.start_time))
   )).sort();
+  
+  // 기본 시간대 추가 (09:00 ~ 22:00, 1시간 간격)
+  const defaultTimeSlots: string[] = [];
+  for (let hour = 9; hour <= 22; hour++) {
+    defaultTimeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
+  }
+  
+  // 기존 시간대와 기본 시간대 합치기
+  const allTimeSlots = Array.from(new Set([...existingTimeSlots, ...defaultTimeSlots])).sort();
 
-  // 각 요일별로 시간대별로 그룹화된 스케줄 생성
-  const scheduleByTimeAndDay: Record<string, Record<string, ClassInfo>> = {};
-  timeSlots.forEach((time: string) => {
+  // 각 요일별로 시간대별로 그룹화된 스케줄 생성 (같은 시간대에 여러 수업 가능)
+  const scheduleByTimeAndDay: Record<string, Record<string, ClassInfo[]>> = {};
+  allTimeSlots.forEach((time: string) => {
     scheduleByTimeAndDay[time] = {};
     DAYS.forEach((day: string) => {
       const daySchedules = scheduleGrid[day] || [];
-      const schedule = daySchedules.find((s: ClassInfo) => s.time === time);
-      if (schedule) {
-        scheduleByTimeAndDay[time][day] = schedule;
+      const schedules = daySchedules.filter((s: ClassInfo) => s.time === time);
+      if (schedules.length > 0) {
+        scheduleByTimeAndDay[time][day] = schedules;
       }
     });
   });
@@ -320,43 +351,79 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                   </div>
                 ))}
               </div>
-              {timeSlots.length === 0 ? (
+              {allTimeSlots.length === 0 ? (
                 <div className="text-center py-12 text-neutral-500">이번 주 스케줄이 없습니다.</div>
               ) : (
-                timeSlots.map((time: string) => (
+                allTimeSlots.map((time: string) => (
                   <div key={time} className="flex mb-2">
                     <div className="w-12 flex-shrink-0 flex flex-col items-center justify-center text-[10px] font-bold text-neutral-600 dark:text-neutral-400 bg-neutral-100/50 dark:bg-neutral-900/50 rounded-l-lg border-y border-l border-neutral-200 dark:border-neutral-800">
                       {time}
                     </div>
                     {DAYS.map((day: string) => {
-                      const classInfo = scheduleByTimeAndDay[time]?.[day];
-                      const isEmpty = !classInfo || classInfo.status === 'NONE';
-                      const isFull = classInfo?.status === 'FULL';
+                      const classInfos = scheduleByTimeAndDay[time]?.[day] || [];
+                      const isEmpty = classInfos.length === 0;
+                      // 첫 번째 수업의 홀 ID 가져오기
+                      let firstHallId: string | null = null;
+                      if (classInfos.length > 0) {
+                        const firstSchedule = schedules.find((s: any) => {
+                          if (!s.start_time) return false;
+                          const sTime = new Date(s.start_time);
+                          const sDayIndex = (sTime.getDay() + 6) % 7;
+                          const sTimeStr = formatKSTTime(s.start_time);
+                          return DAYS[sDayIndex] === day && sTimeStr === time && s.id === classInfos[0].id;
+                        });
+                        firstHallId = firstSchedule?.hall_id || null;
+                      }
 
                       return (
-                        <div key={`${day}-${time}`} className="flex-1 p-0.5 min-w-0">
+                        <div key={`${day}-${time}`} className="flex-1 p-0.5 min-w-0 flex flex-col gap-0.5">
                           {isEmpty ? (
-                            <div className="h-full min-h-[70px] bg-neutral-100/30 dark:bg-neutral-900/30 rounded-lg border border-neutral-200/50 dark:border-neutral-800/50"></div>
-                          ) : (
-                            <button 
-                              onClick={() => handleClassClick(classInfo, time)}
-                              className={`w-full h-full min-h-[70px] rounded-lg border p-1 flex flex-col justify-between text-left transition-all active:scale-95 ${
-                                isFull 
-                                  ? 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 opacity-60' 
-                                  : 'bg-neutral-200 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 hover:border-primary dark:hover:border-[#CCFF00] hover:bg-neutral-300 dark:hover:bg-neutral-700'
-                              }`}
+                            <button
+                              onClick={() => handleAddClassClick(day, time)}
+                              className="h-full min-h-[40px] bg-neutral-100/30 dark:bg-neutral-900/30 rounded-lg border border-neutral-200/50 dark:border-neutral-800/50 hover:bg-neutral-100/50 dark:hover:bg-neutral-900/50 hover:border-primary dark:hover:border-[#CCFF00] transition-all flex items-center justify-center group"
                             >
-                              <div className="flex justify-between items-start w-full gap-1">
-                                <span className={`text-[8px] font-bold truncate flex-1 ${isFull ? 'text-neutral-500 dark:text-neutral-500' : 'text-black dark:text-white'}`}>
-                                  {classInfo.instructor}
-                                </span>
-                                <LevelBadge level={classInfo.level} simple />
-                              </div>
-                              <div className="mt-0.5">
-                                <div className="text-[7px] text-neutral-500 dark:text-neutral-500 truncate">{classInfo.genre}</div>
-                                {isFull && <div className="text-[7px] text-red-500 dark:text-red-400 font-bold mt-0.5">FULL</div>}
-                              </div>
+                              <Plus size={16} className="text-neutral-400 dark:text-neutral-600 group-hover:text-primary dark:group-hover:text-[#CCFF00] transition-colors" />
                             </button>
+                          ) : (
+                            <>
+                              {classInfos.map((classInfo, index) => {
+                                const isFull = classInfo.status === 'FULL';
+                                // 각 수업의 홀 ID 찾기
+                                const schedule = schedules.find((s: any) => s.id === classInfo.id);
+                                const hallId = schedule?.hall_id || null;
+                                
+                                return (
+                                  <button 
+                                    key={`${classInfo.id}-${index}`}
+                                    onClick={() => handleClassClick(classInfo, time)}
+                                    className={`w-full min-h-[40px] rounded-lg border p-1.5 flex items-center gap-1.5 text-left transition-all active:scale-95 ${
+                                      isFull 
+                                        ? 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 opacity-60' 
+                                        : 'bg-neutral-200 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 hover:border-primary dark:hover:border-[#CCFF00] hover:bg-neutral-300 dark:hover:bg-neutral-700'
+                                    }`}
+                                  >
+                                    <span className={`text-[9px] font-bold truncate flex-1 ${isFull ? 'text-neutral-500 dark:text-neutral-500' : 'text-black dark:text-white'}`}>
+                                      {classInfo.instructor}
+                                    </span>
+                                    <LevelBadge level={classInfo.level} simple />
+                                    <span className="text-[8px] text-neutral-500 dark:text-neutral-500 truncate max-w-[50px]">
+                                      {classInfo.genre}
+                                    </span>
+                                    {isFull && (
+                                      <span className="text-[8px] text-red-500 dark:text-red-400 font-bold whitespace-nowrap">
+                                        FULL
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                              <button
+                                onClick={() => handleAddClassClick(day, time, firstHallId)}
+                                className="w-full min-h-[24px] bg-neutral-100/50 dark:bg-neutral-900/50 rounded border border-neutral-200/50 dark:border-neutral-800/50 hover:bg-neutral-100 dark:hover:bg-neutral-900 hover:border-primary dark:hover:border-[#CCFF00] transition-all flex items-center justify-center group"
+                              >
+                                <Plus size={12} className="text-neutral-400 dark:text-neutral-600 group-hover:text-primary dark:group-hover:text-[#CCFF00] transition-colors" />
+                              </button>
+                            </>
                           )}
                         </div>
                       );
@@ -380,6 +447,19 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
         classInfo={previewClass}
         onClose={() => setPreviewClass(null)}
         onBook={handleBook}
+      />
+      <AddClassModal
+        isOpen={showAddClassModal}
+        onClose={() => {
+          setShowAddClassModal(false);
+          setSelectedHallId(null);
+        }}
+        onSubmit={handleAddClassSubmit}
+        academy={academy}
+        day={selectedDay}
+        time={selectedTime}
+        weekStartDate={currentWeekStart}
+        defaultHallId={selectedHallId}
       />
     </>
   );

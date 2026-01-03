@@ -28,6 +28,11 @@ interface AcademyFormData {
   address: string | null;
   contact_number: string | null;
   logo_url: string | null;
+  instagram_handle: string | null;
+  youtube_url: string | null;
+  tiktok_handle: string | null;
+  website_url: string | null;
+  other_url: string | null;
   halls: HallData[];
   academy_images: AcademyImageData[];
 }
@@ -94,6 +99,11 @@ export default function AcademiesPage() {
           address: formData.address || null,
           contact_number: formData.contact_number || null,
           logo_url: formData.logo_url || null,
+          instagram_handle: formData.instagram_handle || null,
+          youtube_url: formData.youtube_url || null,
+          tiktok_handle: formData.tiktok_handle || null,
+          website_url: formData.website_url || null,
+          other_url: formData.other_url || null,
         };
 
         const { error } = await supabase
@@ -111,6 +121,11 @@ export default function AcademiesPage() {
           address: formData.address || null,
           contact_number: formData.contact_number || null,
           logo_url: formData.logo_url || null,
+          instagram_handle: formData.instagram_handle || null,
+          youtube_url: formData.youtube_url || null,
+          tiktok_handle: formData.tiktok_handle || null,
+          website_url: formData.website_url || null,
+          other_url: formData.other_url || null,
         };
 
         const { data: newAcademy, error } = await supabase
@@ -356,6 +371,11 @@ export default function AcademiesPage() {
         address: (academy as any).address || '',
         contact_number: (academy as any).contact_number || '',
         logo_url: academy.logo_url || '',
+        instagram_handle: (academy as any).instagram_handle || '',
+        youtube_url: (academy as any).youtube_url || '',
+        tiktok_handle: (academy as any).tiktok_handle || '',
+        website_url: (academy as any).website_url || '',
+        other_url: (academy as any).other_url || '',
         halls: (halls || []).map((hall: any) => ({
           id: hall.id,
           name: hall.name,

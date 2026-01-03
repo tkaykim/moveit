@@ -7,6 +7,7 @@ import { DiscountApplication } from './discount-application';
 import { PaymentSummary } from './payment-summary';
 import { ConfirmModal } from './confirm-modal';
 import { SuccessModal } from './success-modal';
+import { StudentRegisterModal } from '../students/student-register-modal';
 import { usePricing } from '../hooks/use-pricing';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 
@@ -26,6 +27,7 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
   const [manualDiscountValue, setManualDiscountValue] = useState(0);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [discountPolicies, setDiscountPolicies] = useState<any[]>([]);
@@ -176,6 +178,16 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
     setIsSuccessModalOpen(false);
   };
 
+  const handleStudentRegister = () => {
+    setIsRegisterModalOpen(true);
+  };
+
+  const handleStudentRegisterClose = () => {
+    setIsRegisterModalOpen(false);
+    // 학생 등록 후 목록 다시 로드
+    loadData();
+  };
+
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -186,6 +198,7 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
             students={students}
             onStudentSelect={setSelectedStudent}
             onSearchChange={setSearchTerm}
+            onRegisterStudent={handleStudentRegister}
           />
 
           <ProductSelection
@@ -238,6 +251,13 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
             resetForm();
             onViewLogs();
           }}
+        />
+      )}
+
+      {isRegisterModalOpen && (
+        <StudentRegisterModal
+          academyId={academyId}
+          onClose={handleStudentRegisterClose}
         />
       )}
     </>

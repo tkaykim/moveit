@@ -69,49 +69,44 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
           return;
         }
 
-        // 스케줄을 통해 강사와 클래스, 학원 정보를 가져옴
-        const { data: schedulesData, error: schedulesError } = await supabase
-          .from('schedules')
+        // instructors 테이블에서 직접 데이터를 가져옴
+        const { data: instructorsData, error: instructorsError } = await supabase
+          .from('instructors')
           .select(`
             *,
-            instructors (*),
             classes (
-              *,
-              academies (*)
+              id,
+              price,
+              academy_id,
+              academies (
+                id,
+                address
+              )
             )
           `)
-          .eq('is_canceled', false)
-          .gte('start_time', new Date().toISOString())
-          .order('start_time', { ascending: true });
+          .order('created_at', { ascending: false });
 
-        if (schedulesError) throw schedulesError;
+        if (instructorsError) {
+          console.error('Error loading instructors:', instructorsError);
+          throw instructorsError;
+        }
 
-        // 강사별로 그룹화
-        const instructorMap = new Map<string, any>();
-        (schedulesData || []).forEach((schedule: any) => {
-          const instructorId = schedule.instructors?.id;
-          if (!instructorId) return;
+        // 데이터 변환
+        const transformed = (instructorsData || []).map((instructor: any) => {
+          const classes = instructor.classes || [];
+          
+          // 가격 정보 추출
+          const prices = classes
+            .filter((c: any) => c.price && c.price > 0)
+            .map((c: any) => c.price);
+          const minPrice = prices.length > 0 ? Math.min(...prices) : undefined;
 
-          if (!instructorMap.has(instructorId)) {
-            instructorMap.set(instructorId, {
-              instructor: schedule.instructors,
-              classes: [],
-              academies: new Set<string>(),
-            });
-          }
+          // 위치 정보 추출 (academies에서 첫 번째 주소 사용)
+          const addresses = classes
+            .map((c: any) => c.academies?.address)
+            .filter((addr: any) => addr);
+          const location = addresses[0] || '서울 마포구 합정동';
 
-          const entry = instructorMap.get(instructorId);
-          if (schedule.classes) {
-            entry.classes.push(schedule.classes);
-          }
-          if (schedule.classes?.academies?.address) {
-            entry.academies.add(schedule.classes.academies.address);
-          }
-        });
-
-        // 변환
-        const transformed = Array.from(instructorMap.values()).map(({ instructor, classes, academies }) => {
-          const location = Array.from(academies)[0] as string || '서울 마포구 합정동';
           const instructorData = transformInstructor(instructor, classes);
           instructorData.location = location;
           return instructorData;
@@ -120,6 +115,7 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
         setDancers(transformed);
       } catch (error) {
         console.error('Error loading instructors:', error);
+        setDancers([]);
       } finally {
         setLoading(false);
       }

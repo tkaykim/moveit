@@ -4,6 +4,17 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 
+const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)'] as const;
+
+const REFERRAL_SOURCES = [
+  { value: 'INSTAGRAM', label: '인스타그램' },
+  { value: 'YOUTUBE', label: '유튜브' },
+  { value: 'REFERRAL', label: '지인추천' },
+  { value: 'INSTRUCTOR_ACCOUNT', label: '강사 계정을 보고' },
+  { value: 'NAVER', label: '네이버' },
+  { value: 'EVENT', label: '행사나 공연' },
+] as const;
+
 interface StudentRegisterModalProps {
   academyId: string;
   onClose: () => void;
@@ -11,10 +22,20 @@ interface StudentRegisterModalProps {
 
 export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModalProps) {
   const [formData, setFormData] = useState({
+    // 기본 정보
     name: '',
+    name_en: '',
     nickname: '',
-    email: '',
     phone: '',
+    email: '',
+    birth_date: '',
+    gender: '',
+    address: '',
+    nationality: '한국', // 기본값: 한국
+    // 학원별 정보
+    referral_source: '',
+    interested_genres: [] as string[],
+    level: '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -64,7 +85,7 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
       if (existingUser) {
         userId = existingUser.id;
         
-        // 기존 사용자 정보 업데이트 (이름, 닉네임 등이 변경되었을 수 있음)
+        // 기존 사용자 정보 업데이트
         const updateData: any = {};
         if (formData.name && formData.name !== existingUser.name) {
           updateData.name = formData.name;
@@ -78,6 +99,11 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
         if (formData.phone && formData.phone !== existingUser.phone) {
           updateData.phone = formData.phone;
         }
+        if (formData.name_en) updateData.name_en = formData.name_en;
+        if (formData.birth_date) updateData.birth_date = formData.birth_date;
+        if (formData.gender) updateData.gender = formData.gender;
+        if (formData.address) updateData.address = formData.address;
+        if (formData.nationality) updateData.nationality = formData.nationality;
 
         if (Object.keys(updateData).length > 0) {
           const { error: updateError } = await supabase
@@ -96,35 +122,58 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
           .eq('user_id', userId)
           .maybeSingle();
 
-        // 4. 학원-학생 관계가 없으면 생성
+        // 4. 학원-학생 관계가 없으면 생성, 있으면 업데이트
+        const academyStudentData: any = {
+          academy_id: academyId,
+          user_id: userId,
+        };
+        if (formData.referral_source) academyStudentData.referral_source = formData.referral_source;
+        if (formData.interested_genres.length > 0) academyStudentData.interested_genres = formData.interested_genres;
+        if (formData.level) academyStudentData.level = formData.level;
+
         if (!existingRelation) {
           const { error: relationError } = await supabase
             .from('academy_students')
-            .insert([{
-              academy_id: academyId,
-              user_id: userId,
-            }]);
+            .insert([academyStudentData]);
 
           if (relationError) {
-            // 테이블이 없을 수 있으므로 에러를 무시하지 않고 확인
             if (relationError.code === '42P01') {
               throw new Error('academy_students 테이블이 없습니다. 마이그레이션을 실행해주세요.');
             }
             throw relationError;
           }
+        } else {
+          // 기존 관계가 있으면 업데이트
+          const { error: updateRelationError } = await supabase
+            .from('academy_students')
+            .update(academyStudentData)
+            .eq('id', existingRelation.id);
+
+          if (updateRelationError) throw updateRelationError;
         }
 
         alert('기존 학생을 해당 학원의 수강생으로 등록했습니다.');
       } else {
         // 5. 신규 사용자 생성
+        const userData: any = {
+          name: formData.name,
+          nickname: formData.nickname || null,
+          email: formData.email || null,
+          phone: formData.phone || null,
+        };
+        if (formData.name_en) userData.name_en = formData.name_en;
+        if (formData.birth_date) userData.birth_date = formData.birth_date;
+        if (formData.gender) userData.gender = formData.gender;
+        if (formData.address) userData.address = formData.address;
+        if (formData.nationality) userData.nationality = formData.nationality;
+
         const { data: newUser, error: insertError } = await supabase
           .from('users')
-          .insert([formData])
+          .insert([userData])
           .select()
           .single();
 
         if (insertError) {
-          // 이메일 중복 에러 처리
           if (insertError.code === '23505' && insertError.message.includes('email')) {
             throw new Error('이미 등록된 이메일입니다.');
           }
@@ -134,15 +183,19 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
         userId = newUser.id;
 
         // 6. 학원-학생 관계 생성
+        const academyStudentData: any = {
+          academy_id: academyId,
+          user_id: userId,
+        };
+        if (formData.referral_source) academyStudentData.referral_source = formData.referral_source;
+        if (formData.interested_genres.length > 0) academyStudentData.interested_genres = formData.interested_genres;
+        if (formData.level) academyStudentData.level = formData.level;
+
         const { error: relationError } = await supabase
           .from('academy_students')
-          .insert([{
-            academy_id: academyId,
-            user_id: userId,
-          }]);
+          .insert([academyStudentData]);
 
         if (relationError) {
-          // 테이블이 없을 수 있으므로 에러를 무시하지 않고 확인
           if (relationError.code === '42P01') {
             throw new Error('academy_students 테이블이 없습니다. 마이그레이션을 실행해주세요.');
           }
@@ -163,10 +216,19 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
     }
   };
 
+  const toggleGenre = (genre: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      interested_genres: prev.interested_genres.includes(genre)
+        ? prev.interested_genres.filter((g) => g !== genre)
+        : [...prev.interested_genres, genre],
+    }));
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 dark:bg-black/60 backdrop-blur-sm">
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
-        <div className="p-6 border-b dark:border-neutral-800 flex justify-between items-center">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-6 border-b dark:border-neutral-800 flex justify-between items-center flex-shrink-0">
           <h3 className="text-xl font-bold text-gray-800 dark:text-white">학생 등록</h3>
           <button
             onClick={onClose}
@@ -176,57 +238,206 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              이름 *
-            </label>
-            <input
-              type="text"
-              required
-              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            />
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
+          {/* 기본 정보 섹션 */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 border-b dark:border-neutral-700 pb-2">
+              기본 정보
+            </h4>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                이름 *
+              </label>
+              <input
+                type="text"
+                required
+                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="홍길동"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                영어이름
+              </label>
+              <input
+                type="text"
+                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                value={formData.name_en}
+                onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
+                placeholder="Hong Gildong"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                닉네임
+              </label>
+              <input
+                type="text"
+                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                value={formData.nickname}
+                onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
+                placeholder="닉네임"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  전화번호
+                </label>
+                <input
+                  type="tel"
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="010-1234-5678"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  이메일
+                </label>
+                <input
+                  type="email"
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="example@email.com"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  생년월일
+                </label>
+                <input
+                  type="date"
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={formData.birth_date}
+                  onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  성별
+                </label>
+                <select
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={formData.gender}
+                  onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                >
+                  <option value="">선택</option>
+                  <option value="MALE">남성</option>
+                  <option value="FEMALE">여성</option>
+                  <option value="OTHER">기타</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  주소 (동까지만 입력 가능)
+                </label>
+                <input
+                  type="text"
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder="서울시 강남구 역삼동"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  국적
+                </label>
+                <input
+                  type="text"
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={formData.nationality}
+                  onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                  placeholder="한국"
+                />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              닉네임
-            </label>
-            <input
-              type="text"
-              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-              value={formData.nickname}
-              onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
-            />
+          {/* 학원별 정보 섹션 */}
+          <div className="space-y-4 pt-4 border-t dark:border-neutral-700">
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 border-b dark:border-neutral-700 pb-2">
+              학원별 정보
+            </h4>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                학원을 알게 된 경로
+              </label>
+              <select
+                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                value={formData.referral_source}
+                onChange={(e) => setFormData({ ...formData, referral_source: e.target.value })}
+              >
+                <option value="">선택</option>
+                {REFERRAL_SOURCES.map((source) => (
+                  <option key={source.value} value={source.value}>
+                    {source.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                관심있는 장르 (여러개 선택 가능)
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {GENRES.map((genre) => (
+                  <button
+                    key={genre}
+                    type="button"
+                    onClick={() => toggleGenre(genre)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                      formData.interested_genres.includes(genre)
+                        ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                        : 'bg-neutral-200 dark:bg-neutral-700 text-gray-700 dark:text-gray-300 hover:bg-neutral-300 dark:hover:bg-neutral-600'
+                    }`}
+                  >
+                    {genre}
+                  </button>
+                ))}
+              </div>
+              {formData.interested_genres.length > 0 && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  선택된 장르: {formData.interested_genres.join(', ')}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Level
+              </label>
+              <input
+                type="text"
+                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                value={formData.level}
+                onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                placeholder="예: 초급, 중급, 고급"
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              전화번호
-            </label>
-            <input
-              type="tel"
-              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              이메일
-            </label>
-            <input
-              type="email"
-              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            />
-          </div>
-
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-4 border-t dark:border-neutral-700">
             <button
               type="button"
               onClick={onClose}

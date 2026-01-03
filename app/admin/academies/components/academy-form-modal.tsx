@@ -26,6 +26,11 @@ interface AcademyFormData {
   address: string | null;
   contact_number: string | null;
   logo_url: string | null;
+  instagram_handle: string | null;
+  youtube_url: string | null;
+  tiktok_handle: string | null;
+  website_url: string | null;
+  other_url: string | null;
   halls: HallData[];
   academy_images: AcademyImageData[];
 }
@@ -52,6 +57,11 @@ export function AcademyFormModal({
     address: '',
     contact_number: '',
     logo_url: '',
+    instagram_handle: '',
+    youtube_url: '',
+    tiktok_handle: '',
+    website_url: '',
+    other_url: '',
     halls: [],
     academy_images: [],
   });
@@ -69,6 +79,11 @@ export function AcademyFormModal({
           address: initialData.address || '',
           contact_number: initialData.contact_number || '',
           logo_url: initialData.logo_url || '',
+          instagram_handle: initialData.instagram_handle || '',
+          youtube_url: initialData.youtube_url || '',
+          tiktok_handle: initialData.tiktok_handle || '',
+          website_url: initialData.website_url || '',
+          other_url: initialData.other_url || '',
           halls: initialData.halls || [],
           academy_images: initialData.academy_images || [],
         });
@@ -81,6 +96,11 @@ export function AcademyFormModal({
           address: '',
           contact_number: '',
           logo_url: '',
+          instagram_handle: '',
+          youtube_url: '',
+          tiktok_handle: '',
+          website_url: '',
+          other_url: '',
           halls: [],
           academy_images: [],
         });
@@ -318,6 +338,11 @@ export function AcademyFormModal({
         address: '',
         contact_number: '',
         logo_url: '',
+        instagram_handle: '',
+        youtube_url: '',
+        tiktok_handle: '',
+        website_url: '',
+        other_url: '',
         halls: [],
         academy_images: [],
       });
@@ -460,6 +485,83 @@ export function AcademyFormModal({
                     type="url"
                     value={formData.logo_url || ''}
                     onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+                    className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* SNS 연결 */}
+            <div>
+              <h3 className="text-lg font-semibold text-black dark:text-white mb-4">SNS 연결</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-2">
+                    인스타그램 핸들명
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-neutral-500 dark:text-neutral-400">@</span>
+                    <input
+                      type="text"
+                      value={formData.instagram_handle || ''}
+                      onChange={(e) => setFormData({ ...formData, instagram_handle: e.target.value })}
+                      placeholder="예: dance_academy"
+                      className="flex-1 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-2">
+                    유튜브 링크
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.youtube_url || ''}
+                    onChange={(e) => setFormData({ ...formData, youtube_url: e.target.value })}
+                    placeholder="예: https://www.youtube.com/@dance_academy"
+                    className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-2">
+                    틱톡 핸들명
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-neutral-500 dark:text-neutral-400">@</span>
+                    <input
+                      type="text"
+                      value={formData.tiktok_handle || ''}
+                      onChange={(e) => setFormData({ ...formData, tiktok_handle: e.target.value })}
+                      placeholder="예: dance_academy"
+                      className="flex-1 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-2">
+                    홈페이지
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.website_url || ''}
+                    onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
+                    placeholder="예: https://www.dance-academy.com"
+                    className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-2">
+                    기타 링크
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.other_url || ''}
+                    onChange={(e) => setFormData({ ...formData, other_url: e.target.value })}
+                    placeholder="예: https://blog.naver.com/dance_academy"
                     className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
                   />
                 </div>

@@ -1,12 +1,4 @@
-import { Academy, Dancer, HistoryLog, ClassInfo, User } from '@/types';
-
-export const USER: User = {
-  name: "DancingQueen",
-  level: "VIP Member",
-  tickets: 3,
-  savedAcademies: ["1", "2"],
-  savedDancers: ["101", "103"]
-};
+import { Academy, Dancer, HistoryLog, ClassInfo } from '@/types';
 
 export const BANNERS = [
   { id: 1, title: "NEW CLASS OPEN", subtitle: "JustJerk Academy 15th Anniv.", color: "from-purple-600 to-blue-600" },
