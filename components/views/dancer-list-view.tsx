@@ -1,7 +1,7 @@
 "use client";
 
 import Image from 'next/image';
-import { Play, User, MapPin, Star, Heart, Filter, Tag, Clock, Users } from 'lucide-react';
+import { Star, Heart, Filter, Tag } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Dancer } from '@/types';
@@ -16,6 +16,8 @@ interface InstructorWithDetails extends Dancer {
   location?: string;
   rating?: number;
   discount?: { originalPrice: number; discountPercent: number; finalPrice: number };
+  mainGenre?: string;
+  upcomingClassesCount?: number;
 }
 
 // DB 데이터를 UI 타입으로 변환
@@ -79,9 +81,10 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
               id,
               price,
               academy_id,
-              academies (
+              schedules (
                 id,
-                address
+                start_time,
+                is_canceled
               )
             )
           `)
@@ -102,14 +105,25 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
             .map((c: any) => c.price);
           const minPrice = prices.length > 0 ? Math.min(...prices) : undefined;
 
-          // 위치 정보 추출 (academies에서 첫 번째 주소 사용)
-          const addresses = classes
-            .map((c: any) => c.academies?.address)
-            .filter((addr: any) => addr);
-          const location = addresses[0] || '서울 마포구 합정동';
+          // 진행 예정인 수업 개수 계산
+          const now = new Date();
+          const upcomingClassesCount = classes.reduce((count: number, c: any) => {
+            const schedules = c.schedules || [];
+            const upcoming = schedules.filter((s: any) => {
+              if (s.is_canceled) return false;
+              const startTime = new Date(s.start_time);
+              return startTime > now;
+            });
+            return count + upcoming.length;
+          }, 0);
+
+          // 메인 장르 추출
+          const specialties = instructor.specialties || '';
+          const mainGenre = specialties.split(',')[0]?.trim() || '';
 
           const instructorData = transformInstructor(instructor, classes);
-          instructorData.location = location;
+          instructorData.mainGenre = mainGenre;
+          instructorData.upcomingClassesCount = upcomingClassesCount;
           return instructorData;
         });
 
@@ -128,8 +142,16 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
     if (dancerFilter !== 'ALL' && d.genre?.toUpperCase() !== dancerFilter) {
       return false;
     }
-    if (searchQuery.trim() && !d.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const nameKr = (d.name_kr || '').toLowerCase();
+      const nameEn = (d.name_en || '').toLowerCase();
+      const name = (d.name || '').toLowerCase();
+      
+      // 한글 이름, 영어 이름, 또는 표시 이름 중 하나라도 일치하면 통과
+      if (!nameKr.includes(query) && !nameEn.includes(query) && !name.includes(query)) {
+        return false;
+      }
     }
     return true;
   });
@@ -203,7 +225,7 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
               onClick={() => onDancerClick(dancer)}
               className="bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 active:scale-[0.98] transition-transform"
             >
-              <div className="flex gap-3 p-3">
+              <div className="flex gap-3 p-3 relative">
                 {/* 이미지 */}
                 <div className="relative w-24 h-24 rounded-xl overflow-hidden flex-shrink-0">
                   <Image
@@ -212,26 +234,12 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
                     fill
                     className="object-cover"
                   />
-                  {/* 소득공제 태그 */}
-                  <div className="absolute top-1 left-1 bg-neutral-900 dark:bg-neutral-800 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">
-                    소득공제
-                  </div>
-                  {/* 찜 버튼 */}
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // 찜 기능 구현
-                    }}
-                    className="absolute top-1 right-1 w-6 h-6 bg-black/30 backdrop-blur rounded-full flex items-center justify-center"
-                  >
-                    <Heart size={12} className="text-white" />
-                  </button>
                 </div>
 
                 {/* 정보 */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between mb-1">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <h3 className="text-base font-bold text-black dark:text-white truncate">{dancer.name}</h3>
                       {dancer.rating && (
                         <div className="flex items-center gap-1 text-xs text-neutral-600 dark:text-neutral-400">
@@ -240,15 +248,31 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
                         </div>
                       )}
                     </div>
+                    {/* 찜 버튼 - 이미지 밖으로 이동 */}
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // 찜 기능 구현
+                      }}
+                      className="flex-shrink-0 w-8 h-8 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                    >
+                      <Heart size={14} className="text-neutral-600 dark:text-neutral-400" />
+                    </button>
                   </div>
 
-                  {/* 위치 */}
-                  {dancer.location && (
-                    <div className="flex items-center gap-1 text-xs text-neutral-600 dark:text-neutral-400 mb-2">
-                      <MapPin size={10} />
-                      <span className="truncate">{dancer.location}</span>
-                    </div>
-                  )}
+                  {/* 메인 장르와 진행 예정 수업 개수 */}
+                  <div className="flex items-center gap-2 mb-2">
+                    {dancer.mainGenre && (
+                      <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">
+                        {dancer.mainGenre}
+                      </span>
+                    )}
+                    {dancer.upcomingClassesCount !== undefined && (
+                      <span className="text-xs text-neutral-600 dark:text-neutral-400">
+                        진행 예정 {dancer.upcomingClassesCount}개
+                      </span>
+                    )}
+                  </div>
 
                   {/* 가격 */}
                   <div className="flex items-center gap-2">

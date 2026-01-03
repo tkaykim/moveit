@@ -103,28 +103,54 @@ export function ClassesView({ academyId }: ClassesViewProps) {
       const endOfMonth = new Date(year, month + 1, 0);
       endOfMonth.setHours(23, 59, 59, 999);
 
-      const { data, error } = await supabase
+      // 먼저 academy_id에 해당하는 클래스 ID 목록 가져오기
+      const { data: classesData, error: classesError } = await supabase
         .from('classes')
+        .select('id')
+        .eq('academy_id', academyId);
+
+      if (classesError) throw classesError;
+      const classIds = (classesData || []).map((c: any) => c.id);
+
+      // schedules 테이블에서 데이터 가져오기 (실제 스케줄)
+      const { data: schedulesData, error: schedulesError } = await supabase
+        .from('schedules')
         .select(`
           *,
-          instructors (
-            id,
-            name_kr,
-            name_en
-          ),
-          halls (
-            id,
-            name
+          classes (
+            *,
+            instructors (
+              id,
+              name_kr,
+              name_en
+            ),
+            halls (
+              id,
+              name
+            )
           )
         `)
-        .eq('academy_id', academyId)
         .eq('is_canceled', false)
+        .in('class_id', classIds.length > 0 ? classIds : [''])
         .gte('start_time', startOfMonth.toISOString())
         .lte('start_time', endOfMonth.toISOString())
         .order('start_time', { ascending: true });
 
-      if (error) throw error;
-      setClasses(data || []);
+      if (schedulesError) throw schedulesError;
+      
+      // schedules 데이터를 classes 형태로 변환 (기존 코드와의 호환성)
+      const transformedData = (schedulesData || []).map((schedule: any) => ({
+        ...schedule.classes,
+        start_time: schedule.start_time,
+        end_time: schedule.end_time,
+        schedule_id: schedule.id,
+        id: schedule.id, // schedule id를 id로 사용 (편집 시 필요)
+        instructor_id: schedule.instructor_id || schedule.classes?.instructor_id,
+        hall_id: schedule.hall_id || schedule.classes?.hall_id,
+        max_students: schedule.max_students || schedule.classes?.max_students,
+      }));
+      
+      setClasses(transformedData);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -132,6 +158,8 @@ export function ClassesView({ academyId }: ClassesViewProps) {
     }
   };
 
+
+  // 특정 날짜와 홀에 대한 모든 클래스 가져오기 (난이도 구분 없이)
   const getClassesForDateAndHall = (date: Date | null, hallId?: string) => {
     if (!date) return [];
 
@@ -142,40 +170,12 @@ export function ClassesView({ academyId }: ClassesViewProps) {
     endOfDay.setHours(23, 59, 59, 999);
 
     return classes.filter((classItem) => {
+      if (!classItem.start_time) return false;
       const classDate = new Date(classItem.start_time);
       const isInDay = classDate >= startOfDay && classDate <= endOfDay;
       const matchesHall = !hallId || classItem.hall_id === hallId;
       return isInDay && matchesHall;
     });
-  };
-
-  // 난이도별로 클래스 그룹화
-  const getClassesByDifficulty = (hallId?: string) => {
-    const filteredHalls = hallId ? halls.filter((h) => h.id === hallId) : halls;
-    const result: Record<string, Record<string, any[]>> = {
-      BEGINNER: {},
-      INTERMEDIATE: {},
-      ADVANCED: {},
-    };
-
-    filteredHalls.forEach((hall) => {
-      result.BEGINNER[hall.id] = [];
-      result.INTERMEDIATE[hall.id] = [];
-      result.ADVANCED[hall.id] = [];
-    });
-
-    classes.forEach((classItem) => {
-      const difficulty = classItem.difficulty_level || 'BEGINNER';
-      const itemHallId = classItem.hall_id;
-      if (itemHallId && result[difficulty] && result[difficulty][itemHallId]) {
-        // 특정 홀 필터가 있으면 해당 홀만, 없으면 모든 홀
-        if (!hallId || itemHallId === hallId) {
-          result[difficulty][itemHallId].push(classItem);
-        }
-      }
-    });
-
-    return result;
   };
 
   const formatTime = (dateString: string) => {
@@ -191,7 +191,8 @@ export function ClassesView({ academyId }: ClassesViewProps) {
     const filteredHalls = hallId ? halls.filter((h) => h.id === hallId) : halls;
     const showAllHalls = !hallId;
 
-    if (showAllHalls && halls.length === 0) {
+    // 홀이 없을 때만 메시지 표시
+    if (halls.length === 0) {
       return (
         <div className="col-span-full flex flex-col items-center justify-center py-20 px-4">
           <div className="text-center space-y-4">
@@ -215,140 +216,98 @@ export function ClassesView({ academyId }: ClassesViewProps) {
       );
     }
 
-    // 난이도별로 클래스 그룹화
-    const classesByDifficulty = getClassesByDifficulty(hallId);
-    const difficultyOrder: Array<keyof typeof classesByDifficulty> = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
-
+    // 홀별로 달력 렌더링 (난이도 구분 없이 하나의 달력)
     return (
-      <div className="col-span-full space-y-8">
-        {difficultyOrder.map((difficulty) => {
-          const difficultyColor = getDifficultyColor(difficulty);
-          const difficultyLabel = DIFFICULTY_LABELS[difficulty];
-          const hasClasses = filteredHalls.some((hall) => {
-            const hallClasses = classesByDifficulty[difficulty][hall.id] || [];
-            return hallClasses.length > 0;
-          });
-
-          if (!hasClasses && showAllHalls) return null;
-
-          return (
-            <div key={difficulty} className="space-y-6">
-              {/* 난이도 범주 헤더 - 칩 형태 */}
-              <div className="flex items-center gap-2">
-                <div className={`${difficultyColor.bg} ${difficultyColor.border} border rounded-full px-3 py-1.5 inline-flex items-center gap-2`}>
-                  <div className={`w-2 h-2 rounded-full ${difficultyColor.text.replace('text-', 'bg-')}`}></div>
-                  <span className={`text-sm font-semibold ${difficultyColor.text}`}>
-                    {difficultyLabel}
-                  </span>
+      <div className="col-span-full space-y-6">
+        {filteredHalls.map((hall) => (
+          <div key={hall.id} className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-base font-bold text-gray-900 dark:text-white">
+                {hall.name} {hall.capacity ? `(${hall.capacity}명)` : ''}
+              </h4>
+              {showAllHalls ? (
+                <button
+                  onClick={() => setSelectedHallFilter(hall.id)}
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  이 홀만 보기
+                </button>
+              ) : (
+                <button
+                  onClick={() => setSelectedHallFilter('all')}
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  전체 보기
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-7 gap-1 sm:gap-2 min-w-0">
+              {/* 요일 헤더 */}
+              {DAYS.map((day) => (
+                <div key={day} className="font-bold text-gray-800 dark:text-white py-2 bg-gray-100 dark:bg-neutral-800 rounded-lg text-xs sm:text-sm text-center">
+                  {day}
                 </div>
-              </div>
-
-              {/* 홀별로 표시 */}
-              {filteredHalls.map((hall) => {
-                const hallClasses = classesByDifficulty[difficulty][hall.id] || [];
-                const hasHallClasses = hallClasses.length > 0;
-
-                if (!hasHallClasses && showAllHalls) return null;
-
+              ))}
+              {/* 날짜 셀 - 모든 난이도의 클래스를 하나의 달력에 색깔로 구분하여 표시 */}
+              {monthDays.map((date, index) => {
+                if (!date) {
+                  return <div key={`empty-${index}`} className="min-h-[100px] sm:min-h-[150px]"></div>;
+                }
+                // 해당 날짜와 홀의 모든 클래스 가져오기 (난이도 구분 없이)
+                const dayClasses = getClassesForDateAndHall(date, hall.id);
+                const isToday = date.toDateString() === new Date().toDateString();
                 return (
-                  <div key={hall.id} className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-base font-bold text-gray-900 dark:text-white">
-                        {hall.name} {hall.capacity ? `(${hall.capacity}명)` : ''}
-                      </h4>
-                      {showAllHalls ? (
-                        <button
-                          onClick={() => setSelectedHallFilter(hall.id)}
-                          className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                        >
-                          이 홀만 보기
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setSelectedHallFilter('all')}
-                          className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                        >
-                          전체 보기
-                        </button>
-                      )}
+                  <div
+                    key={date.toISOString()}
+                    className={`min-h-[100px] sm:min-h-[150px] border border-gray-200 dark:border-neutral-700 rounded-lg p-1 sm:p-2 ${
+                      isToday ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' : 'bg-white dark:bg-neutral-900'
+                    }`}
+                  >
+                    <div className={`text-xs sm:text-sm font-bold mb-1 ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                      {date.getDate()}
                     </div>
-                    <div className="grid grid-cols-7 gap-1 sm:gap-2 min-w-0">
-                      {/* 요일 헤더 */}
-                      {DAYS.map((day) => (
-                        <div key={day} className="font-bold text-gray-800 dark:text-white py-2 bg-gray-100 dark:bg-neutral-800 rounded-lg text-xs sm:text-sm text-center">
-                          {day}
-                        </div>
-                      ))}
-                      {/* 날짜 셀 */}
-                      {monthDays.map((date, index) => {
-                        if (!date) {
-                          return <div key={`empty-${index}`} className="min-h-[100px] sm:min-h-[150px]"></div>;
-                        }
-                        const dayClasses = hallClasses.filter((classItem) => {
-                          const classDate = new Date(classItem.start_time);
-                          const startOfDay = new Date(date);
-                          startOfDay.setHours(0, 0, 0, 0);
-                          const endOfDay = new Date(date);
-                          endOfDay.setHours(23, 59, 59, 999);
-                          return classDate >= startOfDay && classDate <= endOfDay;
-                        });
-                        const isToday = date.toDateString() === new Date().toDateString();
+                    <div className="space-y-1 overflow-y-auto max-h-[120px] sm:max-h-[130px]">
+                      {dayClasses.map((classItem) => {
+                        const classDifficulty = getDifficultyColor(classItem.difficulty_level || 'BEGINNER');
                         return (
                           <div
-                            key={date.toISOString()}
-                            className={`min-h-[100px] sm:min-h-[150px] border border-gray-200 dark:border-neutral-700 rounded-lg p-1 sm:p-2 ${
-                              isToday ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' : 'bg-white dark:bg-neutral-900'
-                            }`}
+                            key={classItem.id || classItem.schedule_id}
+                            className={`${classDifficulty.bg} ${classDifficulty.border} p-1.5 sm:p-2 rounded border text-left hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden group flex items-center gap-1.5`}
+                            onClick={() => {
+                              setSelectedClass(classItem);
+                              setShowClassModal(true);
+                            }}
                           >
-                            <div className={`text-xs sm:text-sm font-bold mb-1 ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>
-                              {date.getDate()}
-                            </div>
-                            <div className="space-y-1 overflow-y-auto max-h-[120px] sm:max-h-[130px]">
-                              {dayClasses.map((classItem) => {
-                                const classDifficulty = getDifficultyColor(classItem.difficulty_level || 'BEGINNER');
-                                return (
-                                  <div
-                                    key={classItem.id}
-                                    className={`${classDifficulty.bg} ${classDifficulty.border} p-1.5 sm:p-2 rounded border text-left hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden group flex items-center gap-1.5`}
-                                    onClick={() => {
-                                      setSelectedClass(classItem);
-                                      setShowClassModal(true);
-                                    }}
-                                  >
-                                    <div className={`absolute top-0 left-0 w-1 h-full ${classDifficulty.text.replace('text-', 'bg-')}`}></div>
-                                    <span className="text-[9px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                      {formatTime(classItem.start_time)}
-                                    </span>
-                                    <span className="font-bold text-gray-800 dark:text-white text-[9px] sm:text-xs truncate flex-1">
-                                      {classItem.title || '-'}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedClass(null);
-                                  setSelectedDate(date);
-                                  setSelectedHallFilter(hall.id);
-                                  setShowClassModal(true);
-                                }}
-                                className="w-full mt-1 p-1.5 sm:p-2 border-2 border-dashed border-gray-300 dark:border-neutral-600 rounded hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center justify-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-                              >
-                                <Plus size={14} />
-                                <span>클래스 추가</span>
-                              </button>
-                            </div>
+                            <div className={`absolute top-0 left-0 w-1 h-full ${classDifficulty.text.replace('text-', 'bg-')}`}></div>
+                            <span className="text-[9px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                              {formatTime(classItem.start_time)}
+                            </span>
+                            <span className="font-bold text-gray-800 dark:text-white text-[9px] sm:text-xs truncate flex-1">
+                              {classItem.title || '-'}
+                            </span>
                           </div>
                         );
                       })}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedClass(null);
+                          setSelectedDate(date);
+                          setSelectedHallFilter(hall.id);
+                          setShowClassModal(true);
+                        }}
+                        className="w-full mt-1 p-1.5 sm:p-2 border-2 border-dashed border-gray-300 dark:border-neutral-600 rounded hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center justify-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                      >
+                        <Plus size={14} />
+                        <span>클래스 추가</span>
+                      </button>
                     </div>
                   </div>
                 );
               })}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     );
   };
@@ -448,6 +407,22 @@ export function ClassesView({ academyId }: ClassesViewProps) {
                 <ChevronRight size={20} className="text-gray-600 dark:text-gray-400" />
               </button>
             </div>
+          </div>
+
+          {/* 난이도 범주 범례 - 하나만 표시 */}
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            {['BEGINNER', 'INTERMEDIATE', 'ADVANCED'].map((difficulty) => {
+              const difficultyColor = getDifficultyColor(difficulty);
+              const difficultyLabel = DIFFICULTY_LABELS[difficulty];
+              return (
+                <div key={difficulty} className={`${difficultyColor.bg} ${difficultyColor.border} border rounded-full px-3 py-1.5 inline-flex items-center gap-2`}>
+                  <div className={`w-2 h-2 rounded-full ${difficultyColor.text.replace('text-', 'bg-')}`}></div>
+                  <span className={`text-sm font-semibold ${difficultyColor.text}`}>
+                    {difficultyLabel}
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
           <div className="grid grid-cols-7 gap-1 sm:gap-2 min-w-[700px] sm:min-w-0">

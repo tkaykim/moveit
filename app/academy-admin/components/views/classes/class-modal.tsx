@@ -20,6 +20,7 @@ const DIFFICULTY_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
 const CLASS_TYPES = ['regular', 'popup', 'workshop', 'ONE_DAY', 'PRIVATE', 'RENTAL'];
 
 export function ClassModal({ academyId, classData, defaultDate, defaultHallId, onClose }: ClassModalProps) {
+  const [isRegularClass, setIsRegularClass] = useState(false); // 정규 수업 여부
   const [formData, setFormData] = useState({
     title: '',
     song: '',
@@ -37,6 +38,12 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
     base_salary: '',
     base_student_count: '',
     additional_salary_per_student: '',
+    // 정규 수업 관련 필드
+    start_date: '', // 시작 날짜 (YYYY-MM-DD)
+    end_date: '', // 종료 날짜 (YYYY-MM-DD)
+    start_time_only: '', // 시작 시간 (HH:mm)
+    end_time_only: '', // 종료 시간 (HH:mm)
+    selected_days: [] as number[], // 선택된 요일 [0=일, 1=월, ..., 6=토]
   });
   const [halls, setHalls] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,8 +51,45 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
   useEffect(() => {
     loadData();
     if (classData) {
+      // 정규 수업인지 확인 (recurring_schedule_id가 있으면 정규 수업)
+      const checkRegularClass = async () => {
+        const supabase = getSupabaseClient();
+        if (!supabase) return;
+        
+        // schedules 테이블에서 recurring_schedule_id가 있는지 확인
+        const { data: schedules } = await supabase
+          .from('schedules')
+          .select('recurring_schedule_id')
+          .eq('class_id', classData.id)
+          .limit(1);
+        
+        if (schedules && schedules.length > 0 && schedules[0].recurring_schedule_id) {
+          setIsRegularClass(true);
+          // recurring_schedules에서 정보 가져오기
+          const { data: recurringSchedule } = await supabase
+            .from('recurring_schedules')
+            .select('*')
+            .eq('id', schedules[0].recurring_schedule_id)
+            .single();
+          
+          if (recurringSchedule) {
+            setFormData((prev) => ({
+              ...prev,
+              start_date: recurringSchedule.start_date,
+              end_date: recurringSchedule.end_date,
+              start_time_only: recurringSchedule.start_time?.slice(0, 5) || '',
+              end_time_only: recurringSchedule.end_time?.slice(0, 5) || '',
+              selected_days: recurringSchedule.days_of_week || [],
+            }));
+          }
+        }
+      };
+      
+      checkRegularClass();
+      
       // UTC 시간을 KST로 변환하여 표시
-      setFormData({
+      setFormData((prev) => ({
+        ...prev,
         title: classData.title || '',
         song: classData.song || '',
         genre: classData.genre || '',
@@ -61,7 +105,7 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
         base_salary: formatNumberWithCommas(classData.base_salary || 0),
         base_student_count: classData.base_student_count ? String(classData.base_student_count) : '',
         additional_salary_per_student: formatNumberWithCommas(classData.additional_salary_per_student || 0),
-      });
+      }));
     } else if (defaultDate) {
       // 새 클래스 추가 시 기본 날짜와 시간 설정 (KST 기준)
       const kstDate = new Date(defaultDate);
@@ -75,11 +119,23 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
       endDate.setHours(endDate.getHours() + 1);
       const endDateStr = dateToKSTInput(endDate);
       
+      // 정규 수업용 기본값 설정
+      const startDateOnly = kstDate.toISOString().split('T')[0];
+      const endDateOnly = new Date(kstDate);
+      endDateOnly.setDate(endDateOnly.getDate() + 12 * 7); // 12주 후
+      const endDateOnlyStr = endDateOnly.toISOString().split('T')[0];
+      const startTimeOnly = '14:00';
+      const endTimeOnly = '15:00';
+      
       setFormData((prev) => ({
         ...prev,
         start_time: dateStr,
         end_time: endDateStr,
         hall_id: defaultHallId || '',
+        start_date: startDateOnly,
+        end_date: endDateOnlyStr,
+        start_time_only: startTimeOnly,
+        end_time_only: endTimeOnly,
       }));
     } else {
       // 새 클래스 추가 시 오후 2시 기본 설정
@@ -91,10 +147,22 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
       endDate.setHours(endDate.getHours() + 1);
       const endDateStr = dateToKSTInput(endDate);
       
+      // 정규 수업용 기본값 설정
+      const startDateOnly = now.toISOString().split('T')[0];
+      const endDateOnly = new Date(now);
+      endDateOnly.setDate(endDateOnly.getDate() + 12 * 7); // 12주 후
+      const endDateOnlyStr = endDateOnly.toISOString().split('T')[0];
+      const startTimeOnly = '14:00';
+      const endTimeOnly = '15:00';
+      
       setFormData((prev) => ({
         ...prev,
         start_time: dateStr,
         end_time: endDateStr,
+        start_date: startDateOnly,
+        end_date: endDateOnlyStr,
+        start_time_only: startTimeOnly,
+        end_time_only: endTimeOnly,
       }));
     }
   }, [classData, academyId, defaultDate, defaultHallId]);
@@ -225,54 +293,16 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
         }
       }
 
-      // KST 시간을 UTC로 변환하여 저장
-      const startTimeUTC = convertKSTInputToUTC(formData.start_time);
-      const endTimeUTC = convertKSTInputToUTC(formData.end_time);
-
-      if (!startTimeUTC || !endTimeUTC) {
-        alert('시간을 올바르게 입력해주세요.');
-        setLoading(false);
-        return;
-      }
-
-      // 종료 시간이 시작 시간보다 앞서는지 확인
-      if (new Date(endTimeUTC) <= new Date(startTimeUTC)) {
-        alert('종료 시간은 시작 시간보다 이후여야 합니다.');
-        setLoading(false);
-        return;
-      }
-
-      // 시간과 홀이 모두 겹치는 수업이 있는지 확인
-      if (formData.hall_id) {
-        console.log('겹침 체크 시작:', { startTimeUTC, endTimeUTC, hallId: formData.hall_id, excludeId: classData?.id });
-        const hasOverlap = await checkScheduleOverlap(
-          startTimeUTC,
-          endTimeUTC,
-          formData.hall_id,
-          classData?.id
-        );
-        console.log('겹침 체크 결과:', hasOverlap);
-
-        if (hasOverlap) {
-          const confirm = window.confirm('겹치는 수업이 있습니다. 시간/홀을 모두 확인해주세요. 이대로 등록하시겠습니까?');
-          if (!confirm) {
-            setLoading(false);
-            return;
-          }
-        }
-      }
-
-      const data = {
+      // 클래스 기본 정보 저장 (정규 수업과 단일 수업 공통)
+      const classDataToSave = {
         academy_id: academyId,
         title: title,
         song: formData.song || null,
         genre: formData.genre || null,
         difficulty_level: formData.difficulty_level,
-        class_type: formData.class_type,
+        class_type: isRegularClass ? 'REGULAR' : formData.class_type,
         price: formData.price,
         description: formData.description || null,
-        start_time: startTimeUTC,
-        end_time: endTimeUTC,
         instructor_id: formData.instructor_id || null,
         hall_id: formData.hall_id || null,
         max_students: formData.max_students,
@@ -281,16 +311,283 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
         additional_salary_per_student: formData.additional_salary_per_student ? parseNumberFromString(formData.additional_salary_per_student) : null,
       };
 
-      if (classData) {
-        const { error } = await supabase.from('classes').update(data).eq('id', classData.id);
+      let classId: string;
 
-        if (error) throw error;
+      if (classData) {
+        // 수정 모드
+        const { data: updatedClass, error: updateError } = await supabase
+          .from('classes')
+          .update(classDataToSave)
+          .eq('id', classData.id)
+          .select()
+          .single();
+
+        if (updateError) throw updateError;
+        classId = updatedClass.id;
         alert('클래스가 수정되었습니다.');
       } else {
-        const { error } = await supabase.from('classes').insert([data]);
+        // 신규 등록
+        const { data: newClass, error: insertError } = await supabase
+          .from('classes')
+          .insert([classDataToSave])
+          .select()
+          .single();
 
-        if (error) throw error;
-        alert('클래스가 등록되었습니다.');
+        if (insertError) throw insertError;
+        classId = newClass.id;
+      }
+
+      if (isRegularClass) {
+        // 정규 수업 처리
+        if (!formData.start_date || !formData.end_date || !formData.start_time_only || !formData.end_time_only) {
+          alert('정규 수업은 시작/종료 날짜와 시간을 모두 입력해주세요.');
+          setLoading(false);
+          return;
+        }
+
+        if (formData.selected_days.length === 0) {
+          alert('최소 하나의 요일을 선택해주세요.');
+          setLoading(false);
+          return;
+        }
+
+        // 날짜 검증
+        const startDate = new Date(formData.start_date);
+        const endDate = new Date(formData.end_date);
+        if (endDate < startDate) {
+          alert('종료 날짜는 시작 날짜보다 이후여야 합니다.');
+          setLoading(false);
+          return;
+        }
+
+        // 정규 수업 템플릿 데이터
+        const recurringScheduleData = {
+          class_id: classId,
+          academy_id: academyId,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          start_time: formData.start_time_only + ':00',
+          end_time: formData.end_time_only + ':00',
+          days_of_week: formData.selected_days,
+          hall_id: formData.hall_id || null,
+          instructor_id: formData.instructor_id || null,
+          max_students: formData.max_students,
+          is_active: true,
+        };
+
+        let recurringScheduleId: string;
+
+        if (classData) {
+          // 수정 모드: 기존 recurring_schedule 찾기
+          const { data: existingSchedules } = await supabase
+            .from('schedules')
+            .select('recurring_schedule_id')
+            .eq('class_id', classData.id)
+            .limit(1);
+
+          if (existingSchedules && existingSchedules.length > 0 && existingSchedules[0].recurring_schedule_id) {
+            // 기존 recurring_schedule 업데이트
+            const { error: updateError } = await supabase
+              .from('recurring_schedules')
+              .update(recurringScheduleData)
+              .eq('id', existingSchedules[0].recurring_schedule_id);
+
+            if (updateError) throw updateError;
+            recurringScheduleId = existingSchedules[0].recurring_schedule_id;
+
+            // 기존 스케줄 삭제
+            const { error: deleteError } = await supabase
+              .from('schedules')
+              .delete()
+              .eq('recurring_schedule_id', recurringScheduleId);
+
+            if (deleteError) throw deleteError;
+          } else {
+            // 기존 recurring_schedule이 없으면 새로 생성
+            const { data: newRecurringSchedule, error: insertError } = await supabase
+              .from('recurring_schedules')
+              .insert([recurringScheduleData])
+              .select()
+              .single();
+
+            if (insertError) throw insertError;
+            recurringScheduleId = newRecurringSchedule.id;
+          }
+        } else {
+          // 신규 등록
+          const { data: newRecurringSchedule, error: insertError } = await supabase
+            .from('recurring_schedules')
+            .insert([recurringScheduleData])
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+          recurringScheduleId = newRecurringSchedule.id;
+        }
+
+        // 선택된 기간과 요일에 대해 모든 스케줄 생성
+        const schedulesToInsert: any[] = [];
+        const currentDate = new Date(startDate);
+        const endDateObj = new Date(endDate);
+
+        while (currentDate <= endDateObj) {
+          const dayOfWeek = currentDate.getDay(); // 0=일요일, 1=월요일, ..., 6=토요일
+          
+          if (formData.selected_days.includes(dayOfWeek)) {
+            // 이 날짜에 수업 생성
+            const year = currentDate.getFullYear();
+            const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const dayStr = String(currentDate.getDate()).padStart(2, '0');
+            
+            const kstStartString = `${year}-${month}-${dayStr}T${formData.start_time_only}`;
+            const kstEndString = `${year}-${month}-${dayStr}T${formData.end_time_only}`;
+
+            const startTimeUTC = convertKSTInputToUTC(kstStartString);
+            const endTimeUTC = convertKSTInputToUTC(kstEndString);
+
+            if (!startTimeUTC || !endTimeUTC) {
+              throw new Error('시간 변환에 실패했습니다.');
+            }
+
+            schedulesToInsert.push({
+              class_id: classId,
+              hall_id: formData.hall_id || null,
+              instructor_id: formData.instructor_id || null,
+              start_time: startTimeUTC,
+              end_time: endTimeUTC,
+              max_students: formData.max_students,
+              current_students: 0,
+              is_canceled: false,
+              recurring_schedule_id: recurringScheduleId,
+            });
+          }
+
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        // 모든 스케줄 일괄 생성
+        if (schedulesToInsert.length > 0) {
+          const { error: scheduleError } = await supabase
+            .from('schedules')
+            .insert(schedulesToInsert);
+
+          if (scheduleError) throw scheduleError;
+        }
+
+        alert(`정규 수업이 ${classData ? '수정' : '등록'}되었습니다. (총 ${schedulesToInsert.length}개 스케줄)`);
+      } else {
+        // 단일 수업 처리
+        // KST 시간을 UTC로 변환하여 저장
+        const startTimeUTC = convertKSTInputToUTC(formData.start_time);
+        const endTimeUTC = convertKSTInputToUTC(formData.end_time);
+
+        if (!startTimeUTC || !endTimeUTC) {
+          alert('시간을 올바르게 입력해주세요.');
+          setLoading(false);
+          return;
+        }
+
+        // 종료 시간이 시작 시간보다 앞서는지 확인
+        if (new Date(endTimeUTC) <= new Date(startTimeUTC)) {
+          alert('종료 시간은 시작 시간보다 이후여야 합니다.');
+          setLoading(false);
+          return;
+        }
+
+        // 시간과 홀이 모두 겹치는 수업이 있는지 확인
+        if (formData.hall_id) {
+          console.log('겹침 체크 시작:', { startTimeUTC, endTimeUTC, hallId: formData.hall_id, excludeId: classData?.id });
+          const hasOverlap = await checkScheduleOverlap(
+            startTimeUTC,
+            endTimeUTC,
+            formData.hall_id,
+            classData?.id
+          );
+          console.log('겹침 체크 결과:', hasOverlap);
+
+          if (hasOverlap) {
+            const confirm = window.confirm('겹치는 수업이 있습니다. 시간/홀을 모두 확인해주세요. 이대로 등록하시겠습니까?');
+            if (!confirm) {
+              setLoading(false);
+              return;
+            }
+          }
+        }
+
+        // 단일 수업의 경우 classes 테이블에 start_time과 end_time 저장
+        const { error: updateError } = await supabase
+          .from('classes')
+          .update({
+            start_time: startTimeUTC,
+            end_time: endTimeUTC,
+          })
+          .eq('id', classId);
+
+        if (updateError) throw updateError;
+
+        if (classData) {
+          // 수정 모드: 기존 스케줄 업데이트
+          const { data: existingSchedules } = await supabase
+            .from('schedules')
+            .select('id')
+            .eq('class_id', classId)
+            .is('recurring_schedule_id', null)
+            .limit(1);
+
+          if (existingSchedules && existingSchedules.length > 0) {
+            // 기존 스케줄 업데이트
+            const { error: scheduleUpdateError } = await supabase
+              .from('schedules')
+              .update({
+                hall_id: formData.hall_id || null,
+                instructor_id: formData.instructor_id || null,
+                start_time: startTimeUTC,
+                end_time: endTimeUTC,
+                max_students: formData.max_students,
+              })
+              .eq('id', existingSchedules[0].id);
+
+            if (scheduleUpdateError) throw scheduleUpdateError;
+          } else {
+            // 기존 스케줄이 없으면 새로 생성
+            const scheduleData = {
+              class_id: classId,
+              hall_id: formData.hall_id || null,
+              instructor_id: formData.instructor_id || null,
+              start_time: startTimeUTC,
+              end_time: endTimeUTC,
+              max_students: formData.max_students,
+              current_students: 0,
+              is_canceled: false,
+            };
+
+            const { error: scheduleError } = await supabase
+              .from('schedules')
+              .insert([scheduleData]);
+
+            if (scheduleError) throw scheduleError;
+          }
+        } else {
+          // 신규 등록: schedules 테이블에 저장
+          const scheduleData = {
+            class_id: classId,
+            hall_id: formData.hall_id || null,
+            instructor_id: formData.instructor_id || null,
+            start_time: startTimeUTC,
+            end_time: endTimeUTC,
+            max_students: formData.max_students,
+            current_students: 0,
+            is_canceled: false,
+          };
+
+          const { error: scheduleError } = await supabase
+            .from('schedules')
+            .insert([scheduleData]);
+
+          if (scheduleError) throw scheduleError;
+
+          alert('단일 수업이 등록되었습니다.');
+        }
       }
 
       onClose();
@@ -372,6 +669,37 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
             </select>
           </div>
 
+          {/* 수업 유형 선택 (정규 수업 / 단일 수업) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              수업 유형 *
+            </label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="class_mode"
+                  value="single"
+                  checked={!isRegularClass}
+                  onChange={() => setIsRegularClass(false)}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <span className="text-gray-700 dark:text-gray-300">단일 수업</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="class_mode"
+                  value="regular"
+                  checked={isRegularClass}
+                  onChange={() => setIsRegularClass(true)}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <span className="text-gray-700 dark:text-gray-300">정규 수업</span>
+              </label>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               클래스 유형
@@ -407,33 +735,150 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                시작 시간 *
-              </label>
-              <input
-                type="datetime-local"
-                required
-                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                value={formData.start_time}
-                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-              />
-            </div>
+          {isRegularClass ? (
+            <>
+              {/* 정규 수업 입력 필드 */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-3">정규 수업 설정</h4>
+                
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      시작 날짜 *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.start_date}
+                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                      className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      종료 날짜 *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.end_date}
+                      onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                      min={formData.start_date}
+                      className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                종료 시간 *
-              </label>
-              <input
-                type="datetime-local"
-                required
-                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                value={formData.end_time}
-                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-              />
-            </div>
-          </div>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      시작 시간 *
+                    </label>
+                    <input
+                      type="time"
+                      required
+                      value={formData.start_time_only}
+                      onChange={(e) => setFormData({ ...formData, start_time_only: e.target.value })}
+                      className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      종료 시간 *
+                    </label>
+                    <input
+                      type="time"
+                      required
+                      value={formData.end_time_only}
+                      onChange={(e) => setFormData({ ...formData, end_time_only: e.target.value })}
+                      className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    수업 요일 * (최소 1개 선택)
+                  </label>
+                  <div className="flex gap-2 flex-wrap">
+                    {[
+                      { value: 0, label: '일' },
+                      { value: 1, label: '월' },
+                      { value: 2, label: '화' },
+                      { value: 3, label: '수' },
+                      { value: 4, label: '목' },
+                      { value: 5, label: '금' },
+                      { value: 6, label: '토' },
+                    ].map((dayOption) => {
+                      const isSelected = formData.selected_days.includes(dayOption.value);
+                      return (
+                        <button
+                          key={dayOption.value}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setFormData({
+                                ...formData,
+                                selected_days: formData.selected_days.filter(d => d !== dayOption.value),
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                selected_days: [...formData.selected_days, dayOption.value],
+                              });
+                            }
+                          }}
+                          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                            isSelected
+                              ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                              : 'bg-gray-200 dark:bg-neutral-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-neutral-600'
+                          }`}
+                        >
+                          {dayOption.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {formData.selected_days.length > 0 && (
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      선택된 요일: {formData.selected_days.map(d => ['일', '월', '화', '수', '목', '금', '토'][d]).join(', ')}요일
+                    </p>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* 단일 수업 입력 필드 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    시작 시간 *
+                  </label>
+                  <input
+                    type="datetime-local"
+                    required
+                    className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                    value={formData.start_time}
+                    onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    종료 시간 *
+                  </label>
+                  <input
+                    type="datetime-local"
+                    required
+                    className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                    value={formData.end_time}
+                    onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -563,6 +1008,80 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
           </div>
 
           <div className="flex gap-3 pt-4">
+            {classData && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!window.confirm('정말 이 클래스를 삭제하시겠습니까?')) return;
+                  
+                  setLoading(true);
+                  const supabase = getSupabaseClient();
+                  if (!supabase) {
+                    alert('데이터베이스 연결에 실패했습니다.');
+                    setLoading(false);
+                    return;
+                  }
+
+                  try {
+                    // 정규 수업인 경우 관련된 모든 스케줄과 recurring_schedule 삭제
+                    if (isRegularClass) {
+                      // recurring_schedule_id 찾기
+                      const { data: schedules } = await supabase
+                        .from('schedules')
+                        .select('recurring_schedule_id')
+                        .eq('class_id', classData.id)
+                        .limit(1);
+                      
+                      if (schedules && schedules.length > 0 && schedules[0].recurring_schedule_id) {
+                        // 관련된 모든 스케줄 삭제
+                        const { error: scheduleDeleteError } = await supabase
+                          .from('schedules')
+                          .delete()
+                          .eq('recurring_schedule_id', schedules[0].recurring_schedule_id);
+                        
+                        if (scheduleDeleteError) throw scheduleDeleteError;
+                        
+                        // recurring_schedule 삭제
+                        const { error: recurringDeleteError } = await supabase
+                          .from('recurring_schedules')
+                          .delete()
+                          .eq('id', schedules[0].recurring_schedule_id);
+                        
+                        if (recurringDeleteError) throw recurringDeleteError;
+                      }
+                    } else {
+                      // 단일 수업인 경우 해당 스케줄만 삭제
+                      const { error: scheduleDeleteError } = await supabase
+                        .from('schedules')
+                        .delete()
+                        .eq('class_id', classData.id);
+                      
+                      if (scheduleDeleteError) throw scheduleDeleteError;
+                    }
+                    
+                    // 클래스 삭제
+                    const { error: classDeleteError } = await supabase
+                      .from('classes')
+                      .delete()
+                      .eq('id', classData.id);
+                    
+                    if (classDeleteError) throw classDeleteError;
+                    
+                    alert('클래스가 삭제되었습니다.');
+                    onClose();
+                  } catch (error: any) {
+                    console.error('Error deleting class:', error);
+                    alert(`클래스 삭제에 실패했습니다: ${error.message}`);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading}
+                className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors disabled:opacity-50"
+              >
+                삭제
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}

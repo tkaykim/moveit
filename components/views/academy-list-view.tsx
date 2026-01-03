@@ -1,15 +1,19 @@
 "use client";
 
 import Image from 'next/image';
-import { Star, MapPin } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Star, MapPin, Search, X } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Academy, ViewState } from '@/types';
 import { ThemeToggle } from '@/components/common/theme-toggle';
+import { AcademyFilterModal, AcademyFilter } from '@/components/modals/academy-filter-modal';
+import { calculateDistance, parseAddressToCoordinates, formatDistance } from '@/lib/utils/distance';
 
 interface AcademyListViewProps {
   onAcademyClick: (academy: Academy) => void;
 }
+
+type SortOption = 'default' | 'distance' | 'price_asc' | 'price_desc';
 
 // DB 데이터를 UI 타입으로 변환
 function transformAcademy(dbAcademy: any): Academy {
@@ -46,6 +50,43 @@ function transformAcademy(dbAcademy: any): Academy {
 export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
   const [academies, setAcademies] = useState<Academy[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOption, setSortOption] = useState<SortOption>('default');
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [filter, setFilter] = useState<AcademyFilter>({
+    tags: [],
+    priceRange: { min: null, max: null },
+  });
+  const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  // 사용자 위치 가져오기
+  useEffect(() => {
+    if (sortOption === 'distance' && !userLocation) {
+      setLocationLoading(true);
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setUserLocation({
+              lat: position.coords.latitude,
+              lon: position.coords.longitude,
+            });
+            setLocationLoading(false);
+          },
+          (error) => {
+            console.error('Error getting location:', error);
+            // 위치를 가져올 수 없으면 서울 중심 좌표 사용
+            setUserLocation({ lat: 37.5665, lon: 126.9780 });
+            setLocationLoading(false);
+          }
+        );
+      } else {
+        // Geolocation을 지원하지 않으면 서울 중심 좌표 사용
+        setUserLocation({ lat: 37.5665, lon: 126.9780 });
+        setLocationLoading(false);
+      }
+    }
+  }, [sortOption, userLocation]);
 
   useEffect(() => {
     async function loadAcademies() {
@@ -78,6 +119,122 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
     loadAcademies();
   }, []);
 
+  // 사용 가능한 태그 추출
+  const availableTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    academies.forEach(academy => {
+      if (academy.tags) {
+        academy.tags.split(',').forEach(tag => {
+          const trimmed = tag.trim();
+          if (trimmed) tagSet.add(trimmed);
+        });
+      }
+    });
+    return Array.from(tagSet).sort();
+  }, [academies]);
+
+  // 필터링 및 정렬된 학원 목록
+  const filteredAndSortedAcademies = useMemo(() => {
+    let filtered = [...academies];
+
+    // 검색 필터
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(academy => {
+        const nameMatch = academy.name.toLowerCase().includes(query);
+        const tagMatch = academy.tags?.toLowerCase().includes(query);
+        const addressMatch = academy.address?.toLowerCase().includes(query);
+        return nameMatch || tagMatch || addressMatch;
+      });
+    }
+
+    // 태그 필터
+    if (filter.tags.length > 0) {
+      filtered = filtered.filter(academy => {
+        if (!academy.tags) return false;
+        const academyTags = academy.tags.split(',').map(t => t.trim().toLowerCase());
+        return filter.tags.some(filterTag => 
+          academyTags.includes(filterTag.toLowerCase())
+        );
+      });
+    }
+
+    // 가격대 필터
+    if (filter.priceRange.min !== null || filter.priceRange.max !== null) {
+      filtered = filtered.filter(academy => {
+        if (!academy.price) return false;
+        const price = academy.price;
+        const minOk = filter.priceRange.min === null || price >= filter.priceRange.min;
+        const maxOk = filter.priceRange.max === null || price <= filter.priceRange.max;
+        return minOk && maxOk;
+      });
+    }
+
+    // 거리 계산 및 정렬
+    if (sortOption === 'distance' && userLocation) {
+      filtered = filtered.map(academy => {
+        const coords = parseAddressToCoordinates(academy.address);
+        if (coords) {
+          const distance = calculateDistance(
+            userLocation.lat,
+            userLocation.lon,
+            coords[0],
+            coords[1]
+          );
+          return {
+            ...academy,
+            dist: formatDistance(distance),
+            distanceKm: distance, // 정렬용
+          };
+        }
+        return {
+          ...academy,
+          distanceKm: Infinity, // 좌표를 알 수 없으면 맨 뒤로
+        };
+      }).sort((a, b) => {
+        const distA = (a as any).distanceKm || Infinity;
+        const distB = (b as any).distanceKm || Infinity;
+        return distA - distB;
+      });
+    } else if (sortOption === 'price_asc') {
+      filtered.sort((a, b) => {
+        const priceA = a.price || Infinity;
+        const priceB = b.price || Infinity;
+        return priceA - priceB;
+      });
+    } else if (sortOption === 'price_desc') {
+      filtered.sort((a, b) => {
+        const priceA = a.price || 0;
+        const priceB = b.price || 0;
+        return priceB - priceA;
+      });
+    }
+
+    return filtered;
+  }, [academies, searchQuery, filter, sortOption, userLocation]);
+
+  const handleSortToggle = () => {
+    const options: SortOption[] = ['default', 'distance', 'price_asc', 'price_desc'];
+    const currentIndex = options.indexOf(sortOption);
+    const nextIndex = (currentIndex + 1) % options.length;
+    setSortOption(options[nextIndex]);
+  };
+
+  const getSortLabel = () => {
+    switch (sortOption) {
+      case 'distance':
+        return '거리순';
+      case 'price_asc':
+        return '가격 낮은순';
+      case 'price_desc':
+        return '가격 높은순';
+      default:
+        return '기본순';
+    }
+  };
+
+  const activeFilterCount = filter.tags.length + (filter.priceRange.min !== null || filter.priceRange.max !== null ? 1 : 0);
+
   if (loading) {
     return (
       <div className="pb-24 pt-14 px-5 animate-in slide-in-from-right-10 duration-300">
@@ -88,23 +245,79 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
 
   return (
     <div className="pb-24 pt-14 px-5 animate-in slide-in-from-right-10 duration-300">
+      {/* 검색 바 */}
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
+          <input
+            type="text"
+            placeholder="학원명, 태그, 주소로 검색..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-10 py-3 bg-neutral-100 dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 text-black dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black dark:hover:text-white"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 헤더 및 정렬/필터 버튼 */}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-black dark:text-white">댄스학원</h2>
         <div className="flex gap-2 items-center">
           <ThemeToggle />
-          <button className="text-xs bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700">
-            거리순
+          <button
+            onClick={handleSortToggle}
+            className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+              sortOption !== 'default'
+                ? 'bg-primary dark:bg-[#CCFF00] text-black border-primary dark:border-[#CCFF00]'
+                : 'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border-neutral-200 dark:border-neutral-700'
+            }`}
+            disabled={locationLoading && sortOption === 'distance'}
+          >
+            {locationLoading && sortOption === 'distance' ? '위치 확인 중...' : getSortLabel()}
           </button>
-          <button className="text-xs bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700">
+          <button
+            onClick={() => setIsFilterModalOpen(true)}
+            className={`text-xs px-3 py-1.5 rounded-full border relative transition-all ${
+              activeFilterCount > 0
+                ? 'bg-primary dark:bg-[#CCFF00] text-black border-primary dark:border-[#CCFF00]'
+                : 'bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border-neutral-200 dark:border-neutral-700'
+            }`}
+          >
             필터
+            {activeFilterCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+                {activeFilterCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
+
+      {/* 검색 결과 카운트 */}
+      {searchQuery && (
+        <div className="mb-4 text-sm text-neutral-600 dark:text-neutral-400">
+          {filteredAndSortedAcademies.length}개의 학원을 찾았습니다
+        </div>
+      )}
+
+      {/* 학원 목록 */}
       <div className="space-y-4">
-        {academies.length === 0 ? (
-          <div className="text-center py-12 text-neutral-500">등록된 학원이 없습니다.</div>
+        {filteredAndSortedAcademies.length === 0 ? (
+          <div className="text-center py-12 text-neutral-500">
+            {searchQuery || activeFilterCount > 0
+              ? '검색 결과가 없습니다.'
+              : '등록된 학원이 없습니다.'}
+          </div>
         ) : (
-          academies.map(academy => {
+          filteredAndSortedAcademies.map(academy => {
             // 할인 정보 계산 (예시)
             const hasDiscount = academy.price && academy.price < 100000;
             const discount = hasDiscount ? {
@@ -194,6 +407,17 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
           })
         )}
       </div>
+
+      {/* 필터 모달 */}
+      <AcademyFilterModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        onApply={(newFilter) => {
+          setFilter(newFilter);
+        }}
+        currentFilter={filter}
+        availableTags={availableTags}
+      />
     </div>
   );
 };

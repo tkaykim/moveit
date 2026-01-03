@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Clipboard } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Academy, Hall } from '@/lib/supabase/types';
@@ -44,6 +44,9 @@ export default function AcademiesPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingData, setEditingData] = useState<AcademyFormData | null>(null);
+  const [imageUrls, setImageUrls] = useState<Record<string, [string, string, string]>>({});
+  const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadAcademies();
@@ -70,6 +73,18 @@ export default function AcademiesPage() {
       }
 
       setAcademies(data || []);
+      
+      // 이미지 URL 초기화
+      const initialImageUrls: Record<string, [string, string, string]> = {};
+      (data || []).forEach((academy: any) => {
+        const images = (academy.images && Array.isArray(academy.images)) ? academy.images : [];
+        initialImageUrls[academy.id] = [
+          images[0]?.url || '',
+          images[1]?.url || '',
+          images[2]?.url || '',
+        ];
+      });
+      setImageUrls(initialImageUrls);
     } catch (error: any) {
       console.error('Error loading academies:', error);
       const errorMessage = error?.message || '알 수 없는 오류가 발생했습니다.';
@@ -447,12 +462,108 @@ export default function AcademiesPage() {
     return tags.split(',').map((t: string) => t.trim()).filter((t: string) => t);
   };
 
+  const handleImageUrlsChange = (academyId: string, index: number, value: string) => {
+    setImageUrls((prev) => {
+      const current = prev[academyId] || ['', '', ''];
+      const updated = [...current];
+      updated[index] = value;
+      return { ...prev, [academyId]: updated as [string, string, string] };
+    });
+  };
+
+  const handleUpdateImages = async (academyId: string) => {
+    const supabaseClient = getSupabaseClient();
+    if (!supabaseClient) return;
+    const supabase = supabaseClient as any;
+
+    if (updatingIds.has(academyId)) return; // 이미 업데이트 중이면 무시
+
+    setUpdatingIds((prev) => new Set(prev).add(academyId));
+
+    try {
+      const urls = imageUrls[academyId] || ['', '', ''];
+      const imagesArray = urls
+        .filter((url) => url && url.trim() !== '')
+        .map((url, index) => ({
+          url: url.trim(),
+          order: index + 1,
+        }));
+
+      const { error } = await supabase
+        .from('academies')
+        .update({ images: imagesArray })
+        .eq('id', academyId);
+
+      if (error) throw error;
+
+      await loadAcademies();
+    } catch (error: any) {
+      console.error('Error updating images:', error);
+      alert(`이미지 URL 업데이트에 실패했습니다: ${error?.message || '알 수 없는 오류'}`);
+    } finally {
+      setUpdatingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(academyId);
+        return next;
+      });
+    }
+  };
+
+  const handleToggleActive = async (academy: Academy) => {
+    const supabaseClient = getSupabaseClient();
+    if (!supabaseClient) return;
+    const supabase = supabaseClient as any;
+
+    setUpdatingIds((prev) => new Set(prev).add(academy.id));
+
+    try {
+      const newActiveStatus = !(academy as any).is_active;
+      const { error } = await supabase
+        .from('academies')
+        .update({ is_active: newActiveStatus })
+        .eq('id', academy.id);
+
+      if (error) throw error;
+
+      await loadAcademies();
+    } catch (error: any) {
+      console.error('Error toggling active status:', error);
+      alert(`상태 변경에 실패했습니다: ${error?.message || '알 수 없는 오류'}`);
+    } finally {
+      setUpdatingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(academy.id);
+        return next;
+      });
+    }
+  };
+
+  const handleCopyToClipboard = async (academyName: string) => {
+    try {
+      await navigator.clipboard.writeText(academyName);
+      setToastMessage('학원명이 클립보드에 복사되었습니다.');
+      setTimeout(() => setToastMessage(null), 2000);
+    } catch (error) {
+      console.error('클립보드 복사 실패:', error);
+      setToastMessage('클립보드 복사에 실패했습니다.');
+      setTimeout(() => setToastMessage(null), 2000);
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-12">로딩 중...</div>;
   }
 
   return (
     <div>
+      {/* Toast Message */}
+      {toastMessage && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in">
+          <div className="bg-neutral-900 dark:bg-neutral-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
+            {toastMessage}
+          </div>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-black dark:text-white">학원 관리</h1>
@@ -517,6 +628,12 @@ export default function AcademiesPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
                   등록일
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
+                  상태
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
+                  이미지 URL
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
                   작업
                 </th>
@@ -525,7 +642,7 @@ export default function AcademiesPage() {
             <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
               {academies.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-neutral-500 dark:text-neutral-400">
+                  <td colSpan={8} className="px-6 py-12 text-center text-neutral-500 dark:text-neutral-400">
                     등록된 학원이 없습니다.
                   </td>
                 </tr>
@@ -566,6 +683,49 @@ export default function AcademiesPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
                         {academy.created_at ? new Date(academy.created_at).toLocaleDateString('ko-KR') : '-'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => handleToggleActive(academy)}
+                          disabled={updatingIds.has(academy.id)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                            (academy as any).is_active !== false
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                              : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'
+                          } ${updatingIds.has(academy.id) ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80 cursor-pointer'}`}
+                        >
+                          {(academy as any).is_active !== false ? '활성' : '비활성'}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-2 min-w-[300px]">
+                          {[0, 1, 2].map((index) => (
+                            <input
+                              key={index}
+                              type="text"
+                              placeholder={`이미지 URL ${index + 1}`}
+                              value={imageUrls[academy.id]?.[index] || ''}
+                              onChange={(e) => handleImageUrlsChange(academy.id, index, e.target.value)}
+                              className="px-3 py-1.5 text-xs bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-black dark:text-white placeholder-neutral-400"
+                            />
+                          ))}
+                          <div className="flex gap-2 mt-1">
+                            <button
+                              onClick={() => handleUpdateImages(academy.id)}
+                              disabled={updatingIds.has(academy.id)}
+                              className="flex-1 px-3 py-1.5 text-xs bg-primary dark:bg-[#CCFF00] text-black rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                            >
+                              {updatingIds.has(academy.id) ? '저장 중...' : '저장'}
+                            </button>
+                            <button
+                              onClick={() => handleCopyToClipboard(academy.name_kr || academy.name_en || '')}
+                              className="px-3 py-1.5 text-xs bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded hover:opacity-80 transition-opacity"
+                              title="학원명 복사"
+                            >
+                              <Clipboard size={14} />
+                            </button>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end gap-2">
@@ -629,7 +789,52 @@ export default function AcademiesPage() {
                         </button>
                       </div>
                     </div>
-                    <div className="space-y-2 text-sm">
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-neutral-700 dark:text-neutral-300">상태: </span>
+                        <button
+                          onClick={() => handleToggleActive(academy)}
+                          disabled={updatingIds.has(academy.id)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                            (academy as any).is_active !== false
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                              : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'
+                          } ${updatingIds.has(academy.id) ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80 cursor-pointer'}`}
+                        >
+                          {(academy as any).is_active !== false ? '활성' : '비활성'}
+                        </button>
+                      </div>
+                      <div>
+                        <div className="font-medium text-neutral-700 dark:text-neutral-300 mb-2">이미지 URL:</div>
+                        <div className="flex flex-col gap-2">
+                          {[0, 1, 2].map((index) => (
+                            <input
+                              key={index}
+                              type="text"
+                              placeholder={`이미지 URL ${index + 1}`}
+                              value={imageUrls[academy.id]?.[index] || ''}
+                              onChange={(e) => handleImageUrlsChange(academy.id, index, e.target.value)}
+                              className="px-3 py-1.5 text-xs bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-black dark:text-white placeholder-neutral-400"
+                            />
+                          ))}
+                          <div className="flex gap-2 mt-1">
+                            <button
+                              onClick={() => handleUpdateImages(academy.id)}
+                              disabled={updatingIds.has(academy.id)}
+                              className="flex-1 px-3 py-1.5 text-xs bg-primary dark:bg-[#CCFF00] text-black rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                            >
+                              {updatingIds.has(academy.id) ? '저장 중...' : '저장'}
+                            </button>
+                            <button
+                              onClick={() => handleCopyToClipboard(academy.name_kr || academy.name_en || '')}
+                              className="px-3 py-1.5 text-xs bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded hover:opacity-80 transition-opacity"
+                              title="학원명 복사"
+                            >
+                              <Clipboard size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                       {academy.address && (
                         <div className="text-neutral-600 dark:text-neutral-400">
                           <span className="font-medium text-neutral-700 dark:text-neutral-300">주소: </span>

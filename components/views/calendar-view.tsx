@@ -21,8 +21,10 @@ function transformSchedule(schedule: any): ClassInfo & { academy?: Academy; time
   const classData = schedule.classes || {};
   const genre = classData.genre || 'ALL';
   const level = classData.difficulty_level || 'All Level';
-  const isFull = schedule.current_students >= schedule.max_students;
-  const isAlmostFull = schedule.current_students >= schedule.max_students * 0.8;
+  const maxStudents = schedule.max_students || classData.max_students || 0;
+  const currentStudents = schedule.current_students || classData.current_students || 0;
+  const isFull = maxStudents > 0 && currentStudents >= maxStudents;
+  const isAlmostFull = maxStudents > 0 && currentStudents >= maxStudents * 0.8;
   const status = isFull ? 'FULL' : isAlmostFull ? 'ALMOST_FULL' : 'AVAILABLE';
 
   // Academy 정보 생성
@@ -34,6 +36,7 @@ function transformSchedule(schedule: any): ClassInfo & { academy?: Academy; time
     tags: academyData.tags,
     logo_url: academyData.logo_url,
     name: academyData.name_kr || academyData.name_en || '학원 정보 없음',
+    address: academyData.address,
   } : undefined;
 
   // 시간 정보 (UTC를 KST로 변환하여 표시)
@@ -41,21 +44,40 @@ function transformSchedule(schedule: any): ClassInfo & { academy?: Academy; time
   const endTimeStr = schedule.end_time ? formatKSTTime(schedule.end_time) : '';
 
   return {
-    id: schedule.id,
-    schedule_id: schedule.id,
+    id: schedule.id || classData.id,
+    schedule_id: schedule.id || classData.id,
     instructor,
     genre,
     level,
     status,
     price: classData.price || 0,
     class_title: classData.title,
-    hall_name: schedule.halls?.name,
+    hall_name: schedule.halls?.name || classData.halls?.name,
     academy,
     time: startTimeStr,
-    startTime: schedule.start_time,
-    endTime: schedule.end_time,
-    maxStudents: schedule.max_students,
-    currentStudents: schedule.current_students,
+    startTime: schedule.start_time || classData.start_time,
+    endTime: schedule.end_time || classData.end_time,
+    maxStudents,
+    currentStudents,
+  };
+}
+
+// Class를 Schedule 형태로 변환 (schedules가 없을 때 사용)
+function transformClassToSchedule(classData: any): any {
+  return {
+    id: classData.id,
+    class_id: classData.id,
+    start_time: classData.start_time,
+    end_time: classData.end_time,
+    max_students: classData.max_students || 0,
+    current_students: classData.current_students || 0,
+    is_canceled: classData.is_canceled || false,
+    classes: {
+      ...classData,
+      academies: classData.academies,
+    },
+    instructors: classData.instructors,
+    halls: classData.halls,
   };
 }
 
@@ -124,7 +146,7 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
           return;
         }
 
-        // 모든 스케줄 가져오기
+        // 먼저 schedules 테이블에서 가져오기 시도
         const { data: allSchedules, error: schedulesError } = await (supabase as any)
           .from('schedules')
           .select(`
@@ -141,10 +163,39 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
           .lte('start_time', endOfWeek.toISOString())
           .order('start_time', { ascending: true });
 
-        if (schedulesError) throw schedulesError;
+        let finalSchedules: any[] = [];
 
-        setSchedules(allSchedules || []);
-        const grid = buildScheduleGrid(allSchedules || []);
+        if (schedulesError) {
+          console.error('Error loading schedules:', schedulesError);
+        } else if (allSchedules && allSchedules.length > 0) {
+          // schedules 테이블에 데이터가 있으면 사용
+          finalSchedules = allSchedules;
+        } else {
+          // schedules 테이블이 비어있으면 classes 테이블에서 직접 가져오기
+          const { data: allClasses, error: classesError } = await (supabase as any)
+            .from('classes')
+            .select(`
+              *,
+              academies (*),
+              instructors (*),
+              halls (*)
+            `)
+            .eq('is_canceled', false)
+            .not('start_time', 'is', null)
+            .gte('start_time', startOfWeek.toISOString())
+            .lte('start_time', endOfWeek.toISOString())
+            .order('start_time', { ascending: true });
+
+          if (classesError) {
+            console.error('Error loading classes:', classesError);
+          } else if (allClasses && allClasses.length > 0) {
+            // classes 데이터를 schedule 형태로 변환
+            finalSchedules = allClasses.map((classData: any) => transformClassToSchedule(classData));
+          }
+        }
+
+        setSchedules(finalSchedules);
+        const grid = buildScheduleGrid(finalSchedules);
         setScheduleGrid(grid);
       } catch (error) {
         console.error('Error loading schedules:', error);

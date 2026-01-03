@@ -16,11 +16,58 @@ interface MyPageViewProps {
   onDancerClick?: (dancer: Dancer) => void;
 }
 
+// DB Academy를 UI Academy로 변환
+function transformAcademy(dbAcademy: any): Academy {
+  const name = dbAcademy.name_kr || dbAcademy.name_en || '이름 없음';
+  const images = (dbAcademy.images && Array.isArray(dbAcademy.images)) ? dbAcademy.images : [];
+  const sortedImages = images.sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+  const imageUrl = sortedImages.length > 0 
+    ? sortedImages[0].url 
+    : dbAcademy.logo_url;
+
+  return {
+    id: dbAcademy.id,
+    name_kr: dbAcademy.name_kr,
+    name_en: dbAcademy.name_en,
+    tags: dbAcademy.tags,
+    logo_url: dbAcademy.logo_url,
+    name,
+    dist: undefined,
+    rating: undefined,
+    price: undefined,
+    badges: [],
+    img: imageUrl || undefined,
+    academyId: dbAcademy.id,
+    address: dbAcademy.address,
+  };
+}
+
+// DB Instructor를 UI Dancer로 변환
+function transformInstructor(dbInstructor: any): Dancer {
+  const name = dbInstructor.name_kr || dbInstructor.name_en || '이름 없음';
+  const specialties = dbInstructor.specialties || '';
+  const genre = specialties.split(',')[0]?.trim() || 'ALL';
+  const crew = specialties.split(',')[1]?.trim() || '';
+
+  return {
+    id: dbInstructor.id,
+    name_kr: dbInstructor.name_kr,
+    name_en: dbInstructor.name_en,
+    bio: dbInstructor.bio,
+    instagram_url: dbInstructor.instagram_url,
+    specialties: dbInstructor.specialties,
+    name,
+    crew: crew || undefined,
+    genre: genre || undefined,
+    followers: undefined,
+    img: dbInstructor.profile_image_url || undefined,
+  };
+}
+
 // Booking을 HistoryLog로 변환
 function transformBooking(booking: any): HistoryLog {
-  const schedule = booking.schedules || {};
-  const classData = schedule.classes || {};
-  const instructor = schedule.instructors || {};
+  const classData = booking.classes || {};
+  const instructor = classData.instructors || {};
   const academy = classData.academies || {};
   const date = booking.created_at ? new Date(booking.created_at) : new Date();
   
@@ -31,8 +78,8 @@ function transformBooking(booking: any): HistoryLog {
       : '-',
     class: classData.title || '클래스 정보 없음',
     instructor: instructor.name_kr || instructor.name_en || '강사 정보 없음',
-    studio: academy.name || academy.address || '학원 정보 없음',
-    status: booking.status === 'CONFIRMED' ? 'ATTENDED' : booking.status as 'ATTENDED' | 'ABSENT' | 'CONFIRMED',
+    studio: academy.name_kr || academy.name_en || academy.address || '학원 정보 없음',
+    status: booking.status === 'CONFIRMED' || booking.status === 'COMPLETED' ? 'ATTENDED' : booking.status as 'ATTENDED' | 'ABSENT' | 'CONFIRMED',
   };
 }
 
@@ -41,6 +88,7 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
   const [historyLogs, setHistoryLogs] = useState<HistoryLog[]>([]);
   const [userName, setUserName] = useState('사용자');
   const [userEmail, setUserEmail] = useState('');
+  const [userProfileImage, setUserProfileImage] = useState<string | null>(null);
   const [totalTickets, setTotalTickets] = useState(0);
   const [remainingTickets, setRemainingTickets] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -78,18 +126,45 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
         if (userProfile) {
           setUserName(userProfile.name || userProfile.nickname || '사용자');
           setUserEmail(user.email || '');
+          setUserProfileImage(userProfile.profile_image || null);
+        } else {
+          setUserName(user.email?.split('@')[0] || '사용자');
+          setUserEmail(user.email || '');
         }
 
-        // 포인트, 쿠폰, 찜 개수는 실제로는 DB에서 가져와야 함
-        // 여기서는 예시 데이터
+        // 포인트, 쿠폰은 아직 테이블이 없으므로 0으로 설정
         setPoints(0);
         setCoupons(0);
         
-        // 찜 목록 로드 (TODO: 실제로는 saved_academies, saved_instructors 같은 테이블이 필요합니다)
-        // 현재는 빈 배열로 설정
-        setSavedAcademies([]);
-        setSavedDancers([]);
-        setFavorites(0);
+        // 찜한 학원 목록 로드
+        const { data: academyFavorites } = await (supabase as any)
+          .from('academy_favorites')
+          .select(`
+            *,
+            academies (*)
+          `)
+          .eq('user_id', user.id);
+        
+        const savedAcademiesList = ((academyFavorites || []) as any[])
+          .map((fav: any) => transformAcademy(fav.academies))
+          .filter((academy: Academy) => academy.id); // 유효한 학원만 필터링
+        setSavedAcademies(savedAcademiesList);
+        
+        // 찜한 강사 목록 로드
+        const { data: instructorFavorites } = await (supabase as any)
+          .from('instructor_favorites')
+          .select(`
+            *,
+            instructors (*)
+          `)
+          .eq('user_id', user.id);
+        
+        const savedDancersList = ((instructorFavorites || []) as any[])
+          .map((fav: any) => transformInstructor(fav.instructors))
+          .filter((dancer: Dancer) => dancer.id); // 유효한 강사만 필터링
+        setSavedDancers(savedDancersList);
+        
+        setFavorites(savedAcademiesList.length + savedDancersList.length);
 
         // 수강권 정보 가져오기
         const { data: userTickets } = await (supabase as any)
@@ -103,22 +178,16 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
         setTotalTickets(total);
         setRemainingTickets(total);
 
-        // 예약 내역 가져오기
+        // 예약 내역 가져오기 (bookings는 class_id를 가지고 있음)
         const { data: bookings } = await (supabase as any)
           .from('bookings')
           .select(`
             *,
-            schedules (
+            classes (
               *,
-              classes (
-                *,
-                academies (*)
-              ),
-              instructors (*),
-              halls (*)
-            ),
-            users (*),
-            user_tickets (*)
+              academies (*),
+              instructors (*)
+            )
           `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
@@ -169,8 +238,18 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
         {/* 프로필 */}
         <div className="flex items-center gap-4 mb-6">
           <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px]">
-            <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center">
-              <User className="text-black dark:text-white" size={24} />
+            <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center overflow-hidden">
+              {userProfileImage ? (
+                <Image 
+                  src={userProfileImage}
+                  alt={userName}
+                  width={64}
+                  height={64}
+                  className="object-cover"
+                />
+              ) : (
+                <User className="text-black dark:text-white" size={24} />
+              )}
             </div>
           </div>
           <div className="flex-1">

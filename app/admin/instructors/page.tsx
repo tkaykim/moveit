@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit, Trash2, X } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Clipboard } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Instructor } from '@/lib/supabase/types';
 import { ImageUpload } from '@/components/common/image-upload';
@@ -23,6 +23,9 @@ export default function InstructorsPage() {
     profileImageFile: null as File | null,
     profileImageUrl: null as string | null,
   });
+  const [profileImageUrls, setProfileImageUrls] = useState<Record<string, string>>({});
+  const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const loadInstructors = useCallback(async () => {
     const supabase = getSupabaseClient();
@@ -39,6 +42,13 @@ export default function InstructorsPage() {
 
       if (error) throw error;
       setInstructors(data || []);
+      
+      // 프로필 이미지 URL 초기화
+      const initialProfileImageUrls: Record<string, string> = {};
+      (data || []).forEach((instructor: any) => {
+        initialProfileImageUrls[instructor.id] = instructor.profile_image_url || '';
+      });
+      setProfileImageUrls(initialProfileImageUrls);
     } catch (error) {
       console.error('Error loading instructors:', error);
       alert('강사 목록을 불러오는데 실패했습니다.');
@@ -218,12 +228,71 @@ export default function InstructorsPage() {
     return specialties.split(',').map(g => g.trim()).filter(g => GENRES.includes(g as typeof GENRES[number]));
   };
 
+  const handleProfileImageUrlChange = (instructorId: string, value: string) => {
+    setProfileImageUrls((prev) => ({
+      ...prev,
+      [instructorId]: value,
+    }));
+  };
+
+  const handleUpdateProfileImage = async (instructorId: string) => {
+    const supabaseClient = getSupabaseClient();
+    if (!supabaseClient) return;
+    const supabase = supabaseClient as any;
+
+    if (updatingIds.has(instructorId)) return; // 이미 업데이트 중이면 무시
+
+    setUpdatingIds((prev) => new Set(prev).add(instructorId));
+
+    try {
+      const profileImageUrl = profileImageUrls[instructorId]?.trim() || null;
+
+      const { error } = await supabase
+        .from('instructors')
+        .update({ profile_image_url: profileImageUrl })
+        .eq('id', instructorId);
+
+      if (error) throw error;
+
+      await loadInstructors();
+    } catch (error: any) {
+      console.error('Error updating profile image:', error);
+      alert(`프로필 이미지 URL 업데이트에 실패했습니다: ${error?.message || '알 수 없는 오류'}`);
+    } finally {
+      setUpdatingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(instructorId);
+        return next;
+      });
+    }
+  };
+
+  const handleCopyToClipboard = async (instructorName: string) => {
+    try {
+      await navigator.clipboard.writeText(instructorName);
+      setToastMessage('강사명이 클립보드에 복사되었습니다.');
+      setTimeout(() => setToastMessage(null), 2000);
+    } catch (error) {
+      console.error('클립보드 복사 실패:', error);
+      setToastMessage('클립보드 복사에 실패했습니다.');
+      setTimeout(() => setToastMessage(null), 2000);
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-12">로딩 중...</div>;
   }
 
   return (
     <div>
+      {/* Toast Message */}
+      {toastMessage && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in">
+          <div className="bg-neutral-900 dark:bg-neutral-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
+            {toastMessage}
+          </div>
+        </div>
+      )}
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-black dark:text-white">강사 관리</h1>
@@ -395,6 +464,9 @@ export default function InstructorsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
                   등록일
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
+                  프로필 이미지 URL
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
                   작업
                 </th>
@@ -403,7 +475,7 @@ export default function InstructorsPage() {
             <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
               {instructors.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-neutral-500 dark:text-neutral-400">
+                  <td colSpan={5} className="px-6 py-12 text-center text-neutral-500 dark:text-neutral-400">
                     등록된 강사가 없습니다.
                   </td>
                 </tr>
@@ -439,6 +511,33 @@ export default function InstructorsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
                         {instructor.created_at ? new Date(instructor.created_at).toLocaleDateString('ko-KR') : '-'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-2 min-w-[300px]">
+                          <input
+                            type="text"
+                            placeholder="프로필 이미지 URL"
+                            value={profileImageUrls[instructor.id] || ''}
+                            onChange={(e) => handleProfileImageUrlChange(instructor.id, e.target.value)}
+                            className="px-3 py-1.5 text-xs bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-black dark:text-white placeholder-neutral-400"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleUpdateProfileImage(instructor.id)}
+                              disabled={updatingIds.has(instructor.id)}
+                              className="flex-1 px-3 py-1.5 text-xs bg-primary dark:bg-[#CCFF00] text-black rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                            >
+                              {updatingIds.has(instructor.id) ? '저장 중...' : '저장'}
+                            </button>
+                            <button
+                              onClick={() => handleCopyToClipboard(instructor.name_kr || instructor.name_en || '')}
+                              className="px-3 py-1.5 text-xs bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded hover:opacity-80 transition-opacity"
+                              title="강사명 복사"
+                            >
+                              <Clipboard size={14} />
+                            </button>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end gap-2">
