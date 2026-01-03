@@ -190,17 +190,6 @@ export function StudentView({ academyId }: StudentViewProps) {
       .reduce((sum, t) => sum + t.remaining_count, 0);
   };
 
-  const getLastVisit = (student: Student): string => {
-    const bookings = student.bookings || [];
-    if (bookings.length === 0) return '-';
-    const lastBooking = bookings
-      .filter((b) => b.created_at)
-      .sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      )[0];
-    if (!lastBooking) return '-';
-    return new Date(lastBooking.created_at).toLocaleDateString('ko-KR');
-  };
 
   const filteredStudents = students.filter((student) => {
     if (!searchTerm) return true;
@@ -230,7 +219,7 @@ export function StudentView({ academyId }: StudentViewProps) {
         />
 
         <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 overflow-hidden">
-          <div className="p-4 border-b dark:border-neutral-800 flex gap-3 bg-gray-50 dark:bg-neutral-800">
+          <div className="p-3 sm:p-4 border-b dark:border-neutral-800 flex flex-col sm:flex-row gap-3 bg-gray-50 dark:bg-neutral-800">
             <div className="relative flex-1 max-w-sm">
               <input
                 type="text"
@@ -244,89 +233,75 @@ export function StudentView({ academyId }: StudentViewProps) {
                 className="absolute left-3 top-2.5 text-gray-400 dark:text-gray-500"
               />
             </div>
-            <button className="flex items-center gap-2 px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-neutral-800">
-              <Filter size={16} /> 필터
-            </button>
-            <button className="flex items-center gap-2 px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-neutral-800">
-              <Download size={16} /> 엑셀 다운로드
-            </button>
+            <div className="flex gap-2 sm:gap-3">
+              <button className="flex items-center gap-2 px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-neutral-800">
+                <Filter size={16} /> <span className="hidden sm:inline">필터</span>
+              </button>
+              <button className="flex items-center gap-2 px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-neutral-800">
+                <Download size={16} /> <span className="hidden sm:inline">엑셀 다운로드</span>
+              </button>
+            </div>
           </div>
 
-          <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50 dark:bg-neutral-800 text-gray-500 dark:text-gray-400 font-medium">
-              <tr>
-                <th className="px-6 py-3">이름</th>
-                <th className="px-6 py-3">연락처</th>
-                <th className="px-6 py-3">수강 클래스</th>
-                <th className="px-6 py-3">잔여 횟수</th>
-                <th className="px-6 py-3">최근 방문일</th>
-                <th className="px-6 py-3">상태</th>
-                <th className="px-6 py-3 text-right">관리</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-neutral-800">
-              {filteredStudents.length === 0 ? (
+          {/* 테이블 형태 (모바일/데스크톱 공통) */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-gray-50 dark:bg-neutral-800 text-gray-500 dark:text-gray-400 font-medium">
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                    {searchTerm ? '검색 결과가 없습니다.' : '등록된 학생이 없습니다.'}
-                  </td>
+                  <th className="px-4 sm:px-6 py-3">이름</th>
+                  <th className="px-4 sm:px-6 py-3">연락처</th>
+                  <th className="px-4 sm:px-6 py-3">잔여 횟수</th>
+                  <th className="px-4 sm:px-6 py-3">상태</th>
                 </tr>
-              ) : (
-                filteredStudents.map((student) => {
-                  const status = getStudentStatus(student);
-                  const remaining = getTotalRemaining(student);
-                  const lastVisit = getLastVisit(student);
-                  const classType = student.user_tickets?.[0]?.tickets?.name || '-';
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-neutral-800">
+                {filteredStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 sm:px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                      {searchTerm ? '검색 결과가 없습니다.' : '등록된 학생이 없습니다.'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredStudents.map((student) => {
+                    const status = getStudentStatus(student);
+                    const remaining = getTotalRemaining(student);
 
-                  return (
-                    <tr
-                      key={student.id}
-                      className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer group"
-                      onClick={() => {
-                        setSelectedStudent(student);
-                        setShowDetailModal(true);
-                      }}
-                    >
-                      <td className="px-6 py-4 font-bold text-gray-800 dark:text-white">
-                        {student.name || student.nickname || '-'}
-                      </td>
-                      <td className="px-6 py-4 text-gray-600 dark:text-gray-400">
-                        {student.phone || '-'}
-                      </td>
-                      <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{classType}</td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`font-bold ${
-                            remaining <= 3
-                              ? 'text-red-500 dark:text-red-400'
-                              : 'text-blue-600 dark:text-blue-400'
-                          }`}
-                        >
-                          {remaining}회
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{lastVisit}</td>
-                      <td className="px-6 py-4">
-                        <StatusBadge status={status} />
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedStudent(student);
-                            setShowDetailModal(true);
-                          }}
-                          className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <MoreHorizontal size={20} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                    return (
+                      <tr
+                        key={student.id}
+                        className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
+                        onClick={() => {
+                          setSelectedStudent(student);
+                          setShowDetailModal(true);
+                        }}
+                      >
+                        <td className="px-4 sm:px-6 py-4 font-bold text-gray-800 dark:text-white">
+                          {student.name || student.nickname || '-'}
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 text-gray-600 dark:text-gray-400">
+                          {student.phone || '-'}
+                        </td>
+                        <td className="px-4 sm:px-6 py-4">
+                          <span
+                            className={`font-bold ${
+                              remaining <= 3
+                                ? 'text-red-500 dark:text-red-400'
+                                : 'text-blue-600 dark:text-blue-400'
+                            }`}
+                          >
+                            {remaining}회
+                          </span>
+                        </td>
+                        <td className="px-4 sm:px-6 py-4">
+                          <StatusBadge status={status} />
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
           {filteredStudents.length > 0 && (
             <div className="p-4 border-t dark:border-neutral-800 bg-gray-50 dark:bg-neutral-800 text-center text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-700 cursor-pointer transition-colors">
               더 보기 ({filteredStudents.length} / {students.length})

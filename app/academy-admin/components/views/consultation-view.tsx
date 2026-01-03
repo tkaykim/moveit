@@ -104,46 +104,47 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
           }}
         />
 
-        <div className="flex-1 grid grid-cols-3 gap-6 overflow-hidden pb-6">
+        <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 overflow-y-auto sm:overflow-hidden pb-6">
           {/* 1. 신규 문의 */}
-          <div className="bg-gray-100 dark:bg-neutral-800 rounded-xl p-4 flex flex-col h-full border border-gray-200 dark:border-neutral-700">
-            <div className="flex justify-between items-center mb-4 px-1">
-              <h3 className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+          <div className="bg-gray-100 dark:bg-neutral-800 rounded-xl p-3 sm:p-4 flex flex-col sm:h-full min-h-[300px] sm:min-h-0 border border-gray-200 dark:border-neutral-700">
+            <div className="flex justify-between items-center mb-3 sm:mb-4 px-1">
+              <h3 className="font-bold text-sm sm:text-base text-gray-700 dark:text-gray-300 flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-yellow-400 dark:bg-yellow-500"></div> 신규 문의
               </h3>
               <span className="bg-white dark:bg-neutral-900 text-gray-600 dark:text-gray-400 text-xs px-2 py-1 rounded-full border dark:border-neutral-700">
                 {newConsultations.length}
               </span>
             </div>
-            <div className="space-y-3 overflow-y-auto pr-2">
+            <div className="space-y-2 sm:space-y-3 overflow-y-auto pr-1 sm:pr-2 flex-1">
               {newConsultations.map((item) => (
                 <div
                   key={item.id}
-                  className="bg-white dark:bg-neutral-900 p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow border-l-4 border-yellow-400 dark:border-yellow-500 group"
+                  className="bg-white dark:bg-neutral-900 p-3 sm:p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow border-l-4 border-yellow-400 dark:border-yellow-500 group"
                   onClick={() => {
                     setSelectedConsultation(item);
                     setShowModal(true);
                   }}
                 >
                   <div className="flex justify-between items-start">
-                    <h4 className="font-bold text-gray-800 dark:text-white">{item.name}</h4>
+                    <h4 className="font-bold text-sm sm:text-base text-gray-800 dark:text-white flex-1 pr-2">{item.name}</h4>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedConsultation(item);
                         setShowModal(true);
                       }}
-                      className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400"
+                      className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 flex-shrink-0"
                     >
                       <MoreHorizontal size={16} />
                     </button>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{item.topic}</p>
-                  <div className="flex justify-between items-center mt-3 text-xs text-gray-400 dark:text-gray-500">
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{item.topic}</p>
+                  <div className="flex justify-between items-center mt-2 sm:mt-3 text-xs text-gray-400 dark:text-gray-500">
                     <span className="flex items-center gap-1">
-                      <Clock size={12} /> {new Date(item.created_at).toLocaleDateString('ko-KR')}
+                      <Clock size={12} /> <span className="hidden sm:inline">{new Date(item.created_at).toLocaleDateString('ko-KR')}</span>
+                      <span className="sm:hidden">{new Date(item.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}</span>
                     </span>
-                    <span className="bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded text-gray-600 dark:text-gray-400">
+                    <span className="bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded text-gray-600 dark:text-gray-400 text-[10px] sm:text-xs">
                       {item.users?.name || '-'}
                     </span>
                   </div>
@@ -154,7 +155,7 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
                   setSelectedConsultation(null);
                   setShowModal(true);
                 }}
-                className="w-full py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-700 rounded-lg border border-dashed border-gray-300 dark:border-neutral-600 transition-colors"
+                className="w-full py-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-700 rounded-lg border border-dashed border-gray-300 dark:border-neutral-600 transition-colors"
               >
                 + 카드 추가
               </button>
@@ -162,47 +163,52 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
           </div>
 
           {/* 2. 상담 예정 */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 flex flex-col h-full border border-blue-100 dark:border-blue-900/30">
-            <div className="flex justify-between items-center mb-4 px-1">
-              <h3 className="font-bold text-blue-800 dark:text-blue-400 flex items-center gap-2">
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 sm:p-4 flex flex-col sm:h-full min-h-[300px] sm:min-h-0 border border-blue-100 dark:border-blue-900/30">
+            <div className="flex justify-between items-center mb-3 sm:mb-4 px-1">
+              <h3 className="font-bold text-sm sm:text-base text-blue-800 dark:text-blue-400 flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400"></div> 상담 예정
               </h3>
               <span className="bg-white dark:bg-neutral-900 text-blue-700 dark:text-blue-400 text-xs px-2 py-1 rounded-full border border-blue-100 dark:border-blue-900/30">
                 {scheduledConsultations.length}
               </span>
             </div>
-            <div className="space-y-3 overflow-y-auto pr-2">
+            <div className="space-y-2 sm:space-y-3 overflow-y-auto pr-1 sm:pr-2 flex-1">
               {scheduledConsultations.map((item) => (
                 <div
                   key={item.id}
-                  className="bg-white dark:bg-neutral-900 p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow border-l-4 border-blue-500 dark:border-blue-400"
+                  className="bg-white dark:bg-neutral-900 p-3 sm:p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow border-l-4 border-blue-500 dark:border-blue-400"
                   onClick={() => {
                     setSelectedConsultation(item);
                     setShowModal(true);
                   }}
                 >
                   <div className="flex justify-between items-start">
-                    <h4 className="font-bold text-gray-800 dark:text-white">{item.name}</h4>
+                    <h4 className="font-bold text-sm sm:text-base text-gray-800 dark:text-white flex-1 pr-2">{item.name}</h4>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedConsultation(item);
                         setShowModal(true);
                       }}
-                      className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400"
+                      className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 flex-shrink-0"
                     >
                       <MoreHorizontal size={16} />
                     </button>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{item.topic}</p>
-                  <div className="flex justify-between items-center mt-3 text-xs text-gray-400 dark:text-gray-500">
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{item.topic}</p>
+                  <div className="flex justify-between items-center mt-2 sm:mt-3 text-xs text-gray-400 dark:text-gray-500">
                     <span className="text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1">
                       <Calendar size={12} />{' '}
                       {item.scheduled_at
-                        ? new Date(item.scheduled_at).toLocaleString('ko-KR')
+                        ? (
+                          <>
+                            <span className="hidden sm:inline">{new Date(item.scheduled_at).toLocaleString('ko-KR')}</span>
+                            <span className="sm:hidden">{new Date(item.scheduled_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}</span>
+                          </>
+                        )
                         : '-'}
                     </span>
-                    <span className="bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded text-gray-600 dark:text-gray-400">
+                    <span className="bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded text-gray-600 dark:text-gray-400 text-[10px] sm:text-xs">
                       {item.users?.name || '-'}
                     </span>
                   </div>
@@ -212,33 +218,36 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
           </div>
 
           {/* 3. 등록 완료 */}
-          <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 flex flex-col h-full border border-green-100 dark:border-green-900/30">
-            <div className="flex justify-between items-center mb-4 px-1">
-              <h3 className="font-bold text-green-800 dark:text-green-400 flex items-center gap-2">
+          <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 sm:p-4 flex flex-col sm:h-full min-h-[300px] sm:min-h-0 border border-green-100 dark:border-green-900/30">
+            <div className="flex justify-between items-center mb-3 sm:mb-4 px-1">
+              <h3 className="font-bold text-sm sm:text-base text-green-800 dark:text-green-400 flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400"></div> 등록/결제 완료
               </h3>
               <span className="bg-white dark:bg-neutral-900 text-green-700 dark:text-green-400 text-xs px-2 py-1 rounded-full border border-green-100 dark:border-green-900/30">
                 {completedConsultations.length}
               </span>
             </div>
-            <div className="space-y-3 overflow-y-auto pr-2">
+            <div className="space-y-2 sm:space-y-3 overflow-y-auto pr-1 sm:pr-2 flex-1">
               {completedConsultations.map((item) => (
                 <div
                   key={item.id}
-                  className="bg-white dark:bg-neutral-900 p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow border-l-4 border-green-500 dark:border-green-400 opacity-80 hover:opacity-100"
+                  className="bg-white dark:bg-neutral-900 p-3 sm:p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow border-l-4 border-green-500 dark:border-green-400 opacity-80 hover:opacity-100"
                   onClick={() => {
                     setSelectedConsultation(item);
                     setShowModal(true);
                   }}
                 >
-                  <div className="flex justify-between">
-                    <h4 className="font-bold text-gray-800 dark:text-white">{item.name}</h4>
-                    <CheckCircle size={16} className="text-green-600 dark:text-green-400" />
+                  <div className="flex justify-between items-start">
+                    <h4 className="font-bold text-sm sm:text-base text-gray-800 dark:text-white flex-1 pr-2">{item.name}</h4>
+                    <CheckCircle size={16} className="text-green-600 dark:text-green-400 flex-shrink-0" />
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{item.topic}</p>
-                  <div className="flex justify-between items-center mt-3 text-xs text-gray-400 dark:text-gray-500">
-                    <span>{new Date(item.created_at).toLocaleDateString('ko-KR')}</span>
-                    <span className="bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded text-gray-600 dark:text-gray-400">
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{item.topic}</p>
+                  <div className="flex justify-between items-center mt-2 sm:mt-3 text-xs text-gray-400 dark:text-gray-500">
+                    <span>
+                      <span className="hidden sm:inline">{new Date(item.created_at).toLocaleDateString('ko-KR')}</span>
+                      <span className="sm:hidden">{new Date(item.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}</span>
+                    </span>
+                    <span className="bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded text-gray-600 dark:text-gray-400 text-[10px] sm:text-xs">
                       {item.users?.name || '-'}
                     </span>
                   </div>

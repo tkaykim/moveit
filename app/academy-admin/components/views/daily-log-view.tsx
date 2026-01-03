@@ -308,17 +308,25 @@ export function DailyLogView({ academyId }: DailyLogViewProps) {
                   minute: '2-digit',
                 });
 
+                const hasWarning = status === 'PENDING' || log?.notes;
+                
                 return (
                   <div
                     key={item.id}
                     className={`bg-white dark:bg-neutral-900 rounded-xl shadow-sm border overflow-hidden transition-all ${
                       expandedLogId === item.id
                         ? 'ring-2 ring-blue-500 dark:ring-blue-400 border-transparent'
+                        : hasWarning
+                        ? 'border-yellow-300 dark:border-yellow-700 bg-yellow-50/30 dark:bg-yellow-900/10 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
                         : 'border-gray-100 dark:border-neutral-800'
                     }`}
                   >
                     <div
-                      className="p-3 md:p-4 flex items-start md:items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors gap-3"
+                      className={`p-3 md:p-4 flex items-start md:items-center justify-between cursor-pointer transition-colors gap-3 ${
+                        hasWarning
+                          ? 'hover:bg-yellow-100 dark:hover:bg-yellow-900/30'
+                          : 'hover:bg-gray-50 dark:hover:bg-neutral-800'
+                      }`}
                       onClick={() => setExpandedLogId(expandedLogId === item.id ? null : item.id)}
                     >
                       <div className="flex items-start md:items-center gap-3 md:gap-4 flex-1 min-w-0">
