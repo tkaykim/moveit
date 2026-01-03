@@ -10,52 +10,36 @@ interface AcademyListViewProps {
   onAcademyClick: (academy: Academy) => void;
 }
 
-// DB 데이터를 UI 타입으로 변환 - 각 지점을 별도 항목으로
-function transformAcademyWithBranches(dbAcademy: any): Academy[] {
+// DB 데이터를 UI 타입으로 변환
+function transformAcademy(dbAcademy: any): Academy {
   const name = dbAcademy.name_kr || dbAcademy.name_en || '이름 없음';
-  const branches = dbAcademy.branches || [];
   const classes = dbAcademy.classes || [];
+  const images = dbAcademy.academy_images || [];
   const minPrice = classes.length > 0 
     ? Math.min(...classes.map((c: any) => c.price || 0))
     : 0;
 
-  // 지점이 없으면 하나의 항목으로 반환
-  if (branches.length === 0) {
-    return [{
-      id: dbAcademy.id,
-      name_kr: dbAcademy.name_kr,
-      name_en: dbAcademy.name_en,
-      tags: dbAcademy.tags,
-      logo_url: dbAcademy.logo_url,
-      name,
-      branch: undefined,
-      dist: undefined,
-      rating: undefined,
-      price: minPrice > 0 ? minPrice : undefined,
-      badges: [],
-      img: dbAcademy.logo_url || undefined,
-      academyId: dbAcademy.id,
-    }];
-  }
+  // display_order로 정렬하여 첫 번째 이미지 또는 로고 사용
+  const sortedImages = images.sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0));
+  const imageUrl = sortedImages.length > 0 
+    ? sortedImages[0].image_url 
+    : dbAcademy.logo_url;
 
-  // 각 지점을 별도 항목으로 변환
-  return branches.map((branch: any) => ({
-    id: `${dbAcademy.id}-${branch.id}`, // 고유 ID 생성
+  return {
+    id: dbAcademy.id,
     name_kr: dbAcademy.name_kr,
     name_en: dbAcademy.name_en,
     tags: dbAcademy.tags,
-    logo_url: branch.image_url || dbAcademy.logo_url,
+    logo_url: dbAcademy.logo_url,
     name,
-    branch: branch.name,
     dist: undefined,
     rating: undefined,
     price: minPrice > 0 ? minPrice : undefined,
     badges: [],
-    img: branch.image_url || dbAcademy.logo_url || undefined,
-    // 원본 데이터 저장 (필요시 사용)
+    img: imageUrl || undefined,
     academyId: dbAcademy.id,
-    branchId: branch.id,
-  }));
+    address: dbAcademy.address,
+  };
 }
 
 export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
@@ -75,15 +59,15 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
           .from('academies')
           .select(`
             *,
-            branches (*),
+            academy_images (*),
             classes (*)
           `)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
         
-        // 각 학원의 모든 지점을 별도 항목으로 변환
-        const transformed = (data || []).flatMap(transformAcademyWithBranches);
+        // 각 학원을 변환
+        const transformed = (data || []).map(transformAcademy);
         setAcademies(transformed);
       } catch (error) {
         console.error('Error loading academies:', error);
@@ -134,13 +118,17 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
                 onClick={() => onAcademyClick(academy)} 
                 className="bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 active:scale-[0.98] transition-transform shadow-sm"
               >
-                <div className="h-40 relative overflow-hidden">
-                  <Image 
-                    src={academy.logo_url || `https://picsum.photos/seed/academy${academy.id}/400/160`}
-                    alt={academy.name}
-                    fill
-                    className="object-cover"
-                  />
+                <div className="h-40 relative overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                  {(academy.img || academy.logo_url) ? (
+                    <Image 
+                      src={academy.img || academy.logo_url || ''}
+                      alt={academy.name}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-neutral-100 dark:bg-neutral-800" />
+                  )}
                   {academy.tags && (
                     <div className="absolute top-3 left-3 bg-black/70 backdrop-blur px-2 py-1 rounded-full text-[10px] text-white font-bold">
                       {academy.tags.split(',')[0]?.trim() || ''}
@@ -157,10 +145,10 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex-1 min-w-0">
                       <h3 className="text-lg font-bold text-black dark:text-white truncate">{academy.name}</h3>
-                      {academy.branch && (
+                      {academy.address && (
                         <div className="flex items-center gap-1 text-xs text-neutral-600 dark:text-neutral-400 mt-1">
                           <MapPin size={10} />
-                          <span className="truncate">{academy.branch}</span>
+                          <span className="truncate">{academy.address}</span>
                           {academy.dist && <span>• {academy.dist}</span>}
                         </div>
                       )}

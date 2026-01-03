@@ -35,11 +35,10 @@ function transformSchedule(schedule: any): ClassInfo {
     status,
     price: classData.price || 0,
     class_title: classData.title,
-    branch_name: schedule.branches?.name,
     hall_name: schedule.halls?.name,
     academy: {
-      id: schedule.branches?.academy_id || '',
-      name: schedule.branches?.academies?.name_kr || schedule.branches?.academies?.name_en || '',
+      id: classData.academies?.id || '',
+      name: classData.academies?.name_kr || classData.academies?.name_en || '',
     },
     maxStudents: schedule.max_students,
     currentStudents: schedule.current_students,
@@ -144,44 +143,30 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
         }
 
         // academy ID 추출 (합성 ID에서 원본 추출)
-        const academyId = (academy as any).academyId || academy.id.split('-')[0];
-        
-        // academy의 branches 가져오기
-        const { data: branches, error: branchesError } = await supabase
-          .from('branches')
-          .select('*')
-          .eq('academy_id', academyId);
+        const academyId = (academy as any).academyId || academy.id;
 
-        if (branchesError) throw branchesError;
-        
-        const branchIds = (branches || []).map((b: any) => b.id);
-
-        // 각 branch의 schedules 가져오기
-        const allSchedules: any[] = [];
-        for (const branchId of branchIds) {
-          const { data: branchSchedules, error: schedulesError } = await supabase
-            .from('schedules')
-            .select(`
+        // academy의 schedules 가져오기 (classes를 통해 academy_id 필터링)
+        const { data: schedules, error: schedulesError } = await supabase
+          .from('schedules')
+          .select(`
+            *,
+            classes (
               *,
-              classes (*),
-              branches (*),
-              instructors (*),
-              halls (*)
-            `)
-            .eq('branch_id', branchId)
-            .eq('is_canceled', false)
-            .gte('start_time', startOfWeek.toISOString())
-            .lte('start_time', endOfWeek.toISOString())
-            .order('start_time', { ascending: true });
+              academies (*)
+            ),
+            instructors (*),
+            halls (*)
+          `)
+          .eq('is_canceled', false)
+          .eq('classes.academy_id', academyId)
+          .gte('start_time', startOfWeek.toISOString())
+          .lte('start_time', endOfWeek.toISOString())
+          .order('start_time', { ascending: true });
 
-          if (schedulesError) throw schedulesError;
-          if (branchSchedules) {
-            allSchedules.push(...branchSchedules);
-          }
-        }
+        if (schedulesError) throw schedulesError;
 
-        setSchedules(allSchedules);
-        const grid = buildScheduleGrid(allSchedules);
+        setSchedules(schedules || []);
+        const grid = buildScheduleGrid(schedules || []);
         setScheduleGrid(grid);
       } catch (error) {
         console.error('Error loading schedules:', error);
@@ -234,13 +219,17 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
   return (
     <>
       <div className="bg-white dark:bg-neutral-950 min-h-screen pb-24 animate-in slide-in-from-right duration-300 relative">
-        <div className="relative h-64 overflow-hidden">
-          <Image 
-            src={academy.logo_url || `https://picsum.photos/seed/academy${academy.id}/800/256`}
-            alt={academy.name}
-            fill
-            className="object-cover"
-          />
+        <div className="relative h-64 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+          {(academy.img || academy.logo_url) ? (
+            <Image 
+              src={academy.img || academy.logo_url || ''}
+              alt={academy.name}
+              fill
+              className="object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-neutral-100 dark:bg-neutral-800" />
+          )}
           <button 
             onClick={onBack} 
             className="absolute top-12 left-5 z-20 p-2 bg-black/30 backdrop-blur rounded-full text-white"
@@ -253,7 +242,9 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
               Premium Partner
             </span>
             <h1 className="text-3xl font-black text-black dark:text-white italic">{academy.name}</h1>
-            <p className="text-neutral-600 dark:text-neutral-400 text-sm mt-1">{academy.branch} Branch</p>
+            {academy.address && (
+              <p className="text-neutral-600 dark:text-neutral-400 text-sm mt-1">{academy.address}</p>
+            )}
           </div>
         </div>
         <div className="sticky top-0 bg-white dark:bg-neutral-950 z-20 border-b border-neutral-200 dark:border-neutral-800 flex text-sm font-bold text-neutral-500 dark:text-neutral-500">

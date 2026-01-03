@@ -20,7 +20,7 @@ function transformBooking(booking: any): HistoryLog {
   const schedule = booking.schedules || {};
   const classData = schedule.classes || {};
   const instructor = schedule.instructors || {};
-  const branch = schedule.branches || {};
+  const academy = classData.academies || {};
   const date = booking.created_at ? new Date(booking.created_at) : new Date();
   
   return {
@@ -30,7 +30,7 @@ function transformBooking(booking: any): HistoryLog {
       : '-',
     class: classData.title || '클래스 정보 없음',
     instructor: instructor.name_kr || instructor.name_en || '강사 정보 없음',
-    studio: branch.name || '지점 정보 없음',
+    studio: academy.name || academy.address || '학원 정보 없음',
     status: booking.status === 'CONFIRMED' ? 'ATTENDED' : booking.status as 'ATTENDED' | 'ABSENT' | 'CONFIRMED',
   };
 }
@@ -109,8 +109,10 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
             *,
             schedules (
               *,
-              classes (*),
-              branches (*),
+              classes (
+                *,
+                academies (*)
+              ),
               instructors (*),
               halls (*)
             ),
@@ -330,17 +332,21 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
                     onClick={() => onAcademyClick?.(item)}
                     className="bg-white dark:bg-neutral-900 p-3 rounded-2xl flex gap-3 items-center border border-neutral-200 dark:border-neutral-800 cursor-pointer active:scale-[0.98] transition-transform"
                   >
-                    <div className="w-16 h-16 rounded-xl flex-shrink-0 relative overflow-hidden">
-                      <Image 
-                        src={item.logo_url || `https://picsum.photos/seed/academy${item.id}/64/64`}
-                        alt={item.name}
-                        fill
-                        className="object-cover"
-                      />
+                    <div className="w-16 h-16 rounded-xl flex-shrink-0 relative overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                      {(item.img || item.logo_url) ? (
+                        <Image 
+                          src={item.img || item.logo_url || ''}
+                          alt={item.name}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-neutral-100 dark:bg-neutral-800" />
+                      )}
                     </div>
                     <div className="flex-1">
                       <h3 className="text-black dark:text-white font-bold text-sm">{item.name}</h3>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-500">{item.branch || '지점 정보 없음'}</p>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-500">{item.address || '주소 정보 없음'}</p>
                     </div>
                     <button className="text-primary dark:text-[#CCFF00] p-2">
                       <Heart fill="currentColor" size={18} />

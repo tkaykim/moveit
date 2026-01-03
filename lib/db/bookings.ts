@@ -10,8 +10,10 @@ export async function getBookings(userId?: string) {
       *,
       schedules (
         *,
-        classes (*),
-        branches (*),
+        classes (
+          *,
+          academies (*)
+        ),
         instructors (*),
         halls (*)
       ),
@@ -37,8 +39,10 @@ export async function getBookingById(id: string) {
       *,
       schedules (
         *,
-        classes (*),
-        branches (*),
+        classes (
+          *,
+          academies (*)
+        ),
         instructors (*),
         halls (*)
       ),

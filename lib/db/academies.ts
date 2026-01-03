@@ -8,8 +8,9 @@ export async function getAcademies() {
     .from('academies')
     .select(`
       *,
-      branches (*),
-      classes (*)
+      academy_images (*),
+      classes (*),
+      halls (*)
     `)
     .order('created_at', { ascending: false });
 
@@ -21,7 +22,12 @@ export async function getAcademyById(id: string) {
   const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('academies')
-    .select('*')
+    .select(`
+      *,
+      academy_images (*),
+      classes (*),
+      halls (*)
+    `)
     .eq('id', id)
     .single();
 

@@ -41,8 +41,10 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
           .from('schedules')
           .select(`
             *,
-            classes (*),
-            branches (*),
+            classes (
+              *,
+              academies (*)
+            ),
             instructors (*),
             halls (*)
           `)
@@ -69,7 +71,7 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
     <div className="bg-white dark:bg-neutral-950 min-h-screen pb-24 animate-in slide-in-from-right duration-300">
       <div className="relative h-80 overflow-hidden">
         <Image 
-          src={`https://picsum.photos/seed/dancer${dancer.id}/800/320`}
+          src={dancer.img || `https://picsum.photos/seed/dancer${dancer.id}/800/320`}
           alt={dancer.name}
           fill
           className="object-cover"
@@ -142,8 +144,7 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
                 const dayName = dayNames[startTime.getDay()];
                 const time = startTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
                 const classData = schedule.classes || {};
-                const branch = schedule.branches || {};
-                const academy = branch.academy_id ? { name: '학원 정보 없음' } : { name: '학원 정보 없음' };
+                const academy = classData.academies || { name: '학원 정보 없음' };
 
                 return (
                   <div 
@@ -160,7 +161,7 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
                           {classData.title || `${dancer.genre || 'ALL'} 클래스`}
                         </div>
                         <div className="text-xs text-neutral-500 dark:text-neutral-500">
-                          {branch.name || '지점 정보 없음'}
+                          {academy.name || '학원 정보 없음'}
                         </div>
                       </div>
                     </div>

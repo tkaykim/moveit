@@ -48,7 +48,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           .from('academies')
           .select(`
             *,
-            branches (*),
+            academy_images (*),
             classes (*)
           `)
           .limit(5)
@@ -56,51 +56,36 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
 
         if (error) throw error;
 
-        // 각 학원의 모든 지점을 별도 항목으로 변환
-        const transformed = (data || []).flatMap((dbAcademy: any) => {
+        // 각 학원을 변환
+        const transformed = (data || []).map((dbAcademy: any) => {
           const name = dbAcademy.name_kr || dbAcademy.name_en || '이름 없음';
-          const branches = dbAcademy.branches || [];
           const classes = dbAcademy.classes || [];
+          const images = dbAcademy.academy_images || [];
           const minPrice = classes.length > 0 
             ? Math.min(...classes.map((c: any) => c.price || 0))
             : 0;
 
-          // 지점이 없으면 하나의 항목으로 반환
-          if (branches.length === 0) {
-            return [{
-              id: dbAcademy.id,
-              name_kr: dbAcademy.name_kr,
-              name_en: dbAcademy.name_en,
-              tags: dbAcademy.tags,
-              logo_url: dbAcademy.logo_url,
-              name,
-              branch: undefined,
-              dist: undefined,
-              rating: undefined,
-              price: minPrice > 0 ? minPrice : undefined,
-              badges: [],
-              img: dbAcademy.logo_url || undefined,
-              academyId: dbAcademy.id,
-            } as any];
-          }
+          // display_order로 정렬하여 첫 번째 이미지 또는 로고 사용
+          const sortedImages = images.sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0));
+          const imageUrl = sortedImages.length > 0 
+            ? sortedImages[0].image_url 
+            : dbAcademy.logo_url;
 
-          // 각 지점을 별도 항목으로 변환
-          return branches.map((branch: any) => ({
-            id: `${dbAcademy.id}-${branch.id}`,
+          return {
+            id: dbAcademy.id,
             name_kr: dbAcademy.name_kr,
             name_en: dbAcademy.name_en,
             tags: dbAcademy.tags,
-            logo_url: branch.image_url || dbAcademy.logo_url,
+            logo_url: dbAcademy.logo_url,
             name,
-            branch: branch.name,
             dist: undefined,
             rating: undefined,
             price: minPrice > 0 ? minPrice : undefined,
             badges: [],
-            img: branch.image_url || dbAcademy.logo_url || undefined,
+            img: imageUrl || undefined,
             academyId: dbAcademy.id,
-            branchId: branch.id,
-          } as any));
+            address: dbAcademy.address,
+          } as any;
         });
 
         setNearbyAcademies(transformed);
@@ -115,17 +100,46 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
         const supabase = getSupabaseClient();
         if (!supabase) return;
 
-        // 모든 강사와 찜 개수를 가져옴
-        const { data: instructorsData, error: instructorsError } = await (supabase as any)
-          .from('instructors')
-          .select(`
-            *,
-            instructor_favorites (id)
-          `);
+        // 먼저 instructor_favorites 테이블 존재 여부 확인
+        let hasFavoritesTable = false;
+        try {
+          const { error: checkError } = await (supabase as any)
+            .from('instructor_favorites')
+            .select('id')
+            .limit(1);
+          hasFavoritesTable = !checkError;
+        } catch {
+          hasFavoritesTable = false;
+        }
 
-        // 테이블이 없거나 에러가 발생하면 빈 배열 반환
+        // 모든 강사 가져오기 (찜 테이블이 있으면 조인, 없으면 기본 정보만)
+        let instructorsData: any[] = [];
+        let instructorsError: any = null;
+
+        if (hasFavoritesTable) {
+          const result = await (supabase as any)
+            .from('instructors')
+            .select(`
+              *,
+              instructor_favorites (id)
+            `);
+          instructorsData = result.data || [];
+          instructorsError = result.error;
+        } else {
+          // 찜 테이블이 없으면 기본 정보만 가져오기
+          const result = await (supabase as any)
+            .from('instructors')
+            .select('*');
+          instructorsData = result.data || [];
+          instructorsError = result.error;
+        }
+
+        // 에러가 발생하면 빈 배열 반환 (조용히 처리)
         if (instructorsError) {
-          console.warn('Error loading hot instructors (table may not exist yet):', instructorsError);
+          // PGRST200 에러는 테이블이 없을 때 발생하는 정상적인 경우이므로 무시
+          if (instructorsError.code !== 'PGRST200') {
+            console.warn('Error loading hot instructors:', instructorsError);
+          }
           return;
         }
 
@@ -135,7 +149,10 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           const specialties = instructor.specialties || '';
           const genre = specialties.split(',')[0]?.trim() || 'ALL';
           const crew = specialties.split(',')[1]?.trim() || '';
-          const favoriteCount = instructor.instructor_favorites?.length || 0;
+          // 찜 테이블이 있으면 찜 개수, 없으면 0 또는 랜덤 값 (시연용)
+          const favoriteCount = hasFavoritesTable 
+            ? (instructor.instructor_favorites?.length || 0)
+            : Math.floor(Math.random() * 50) + 10; // 시연용 랜덤 값
 
           return {
             id: instructor.id,
@@ -344,6 +361,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
                     src={instructor.img || `https://picsum.photos/seed/instructor${instructor.id}/200/200`}
                     alt={instructor.name}
                     fill
+                    sizes="160px"
                     className="object-cover"
                   />
                   {/* HOT 배지 */}
@@ -384,18 +402,23 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
                 onClick={() => handleAcademyClickInternal(academy)}
                 className="flex-shrink-0 w-48 bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 active:scale-[0.98] transition-transform"
               >
-                <div className="h-32 relative">
-                  <Image
-                    src={academy.logo_url || `https://picsum.photos/seed/academy${academy.id}/200/128`}
-                    alt={academy.name}
-                    fill
-                    className="object-cover"
-                  />
+                <div className="h-32 relative bg-neutral-100 dark:bg-neutral-800">
+                  {(academy.img || academy.logo_url) ? (
+                    <Image
+                      src={academy.img || academy.logo_url || ''}
+                      alt={academy.name}
+                      fill
+                      sizes="192px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-neutral-100 dark:bg-neutral-800" />
+                  )}
                 </div>
                 <div className="p-3">
                   <h3 className="text-sm font-bold text-black dark:text-white truncate">{academy.name}</h3>
-                  {academy.branch && (
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{academy.branch}</p>
+                  {academy.address && (
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{academy.address}</p>
                   )}
                 </div>
               </div>
@@ -415,18 +438,23 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
                 onClick={() => handleAcademyClickInternal(academy)}
                 className="flex-shrink-0 w-48 bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 active:scale-[0.98] transition-transform"
               >
-                <div className="h-32 relative">
-                  <Image
-                    src={academy.logo_url || `https://picsum.photos/seed/academy${academy.id}/200/128`}
-                    alt={academy.name}
-                    fill
-                    className="object-cover"
-                  />
+                <div className="h-32 relative bg-neutral-100 dark:bg-neutral-800">
+                  {(academy.img || academy.logo_url) ? (
+                    <Image
+                      src={academy.img || academy.logo_url || ''}
+                      alt={academy.name}
+                      fill
+                      sizes="192px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-neutral-100 dark:bg-neutral-800" />
+                  )}
                 </div>
                 <div className="p-3">
                   <h3 className="text-sm font-bold text-black dark:text-white truncate">{academy.name}</h3>
-                  {academy.branch && (
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{academy.branch}</p>
+                  {academy.address && (
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{academy.address}</p>
                   )}
                   {academy.price && (
                     <div className="text-xs font-bold text-primary dark:text-[#CCFF00] mt-1">

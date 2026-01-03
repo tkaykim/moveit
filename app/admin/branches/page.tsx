@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
-import { Branch, Academy } from '@/lib/supabase/types';
+import { Academy } from '@/lib/supabase/types';
 import type { Database } from '@/types/database';
 
 export default function BranchesPage() {
-  const [branches, setBranches] = useState<(Branch & { academies: Academy | null })[]>([]);
+  const [branches, setBranches] = useState<(any & { academies: Academy | null })[]>([]);
   const [academies, setAcademies] = useState<Academy[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -108,7 +108,7 @@ export default function BranchesPage() {
     }
   };
 
-  const handleEdit = (branch: Branch) => {
+  const handleEdit = (branch: any) => {
     setEditingId(branch.id);
     setFormData({
       academy_id: branch.academy_id || '',

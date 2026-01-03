@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Users, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
-import { Class, Academy, Branch, Hall, Instructor, Schedule, Booking, User } from '@/lib/supabase/types';
+import { Class, Academy, Hall, Instructor, Schedule, Booking, User } from '@/lib/supabase/types';
 
 const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)'] as const;
 
@@ -12,7 +12,6 @@ type ClassWithRelations = Class & {
   academies: Academy | null;
   instructors: Instructor | null;
   schedules: (Schedule & {
-    branches: Branch | null;
     halls: Hall | null;
     instructors: Instructor | null;
     bookings: (Booking & { users: User | null })[];
@@ -23,7 +22,6 @@ export default function ClassesPage() {
   const router = useRouter();
   const [classes, setClasses] = useState<ClassWithRelations[]>([]);
   const [academies, setAcademies] = useState<Academy[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
   const [halls, setHalls] = useState<Hall[]>([]);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +32,6 @@ export default function ClassesPage() {
   const [formData, setFormData] = useState({
     // 클래스 정보
     academy_id: '',
-    branch_id: '',
     hall_id: '',
     instructor_id: '',
     difficulty_level: '',
@@ -44,6 +41,7 @@ export default function ClassesPage() {
     title: '',
     description: '',
     thumbnail_url: '',
+    song: '',
     // 시간표 정보
     start_time: '',
     end_time: '',
@@ -56,22 +54,12 @@ export default function ClassesPage() {
 
   useEffect(() => {
     if (formData.academy_id) {
-      loadBranches(formData.academy_id);
-    } else {
-      setBranches([]);
-      setHalls([]);
-      setFormData((prev) => ({ ...prev, branch_id: '', hall_id: '', max_students: 20 }));
-    }
-  }, [formData.academy_id]);
-
-  useEffect(() => {
-    if (formData.branch_id) {
-      loadHalls(formData.branch_id);
+      loadHalls(formData.academy_id);
     } else {
       setHalls([]);
       setFormData((prev) => ({ ...prev, hall_id: '', max_students: 20 }));
     }
-  }, [formData.branch_id]);
+  }, [formData.academy_id]);
 
   useEffect(() => {
     if (formData.hall_id && halls.length > 0) {
@@ -99,7 +87,6 @@ export default function ClassesPage() {
             instructors(*),
             schedules(
               *,
-              branches(*),
               halls(*),
               instructors(*),
               bookings(
@@ -134,26 +121,7 @@ export default function ClassesPage() {
     }
   };
 
-  const loadBranches = async (academyId: string) => {
-    const supabase = getSupabaseClient() as any;
-    if (!supabase) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('branches')
-        .select('*')
-        .eq('academy_id', academyId)
-        .eq('is_active', true)
-        .order('name', { ascending: true });
-
-      if (error) throw error;
-      setBranches(data || []);
-    } catch (error) {
-      console.error('Error loading branches:', error);
-    }
-  };
-
-  const loadHalls = async (branchId: string) => {
+  const loadHalls = async (academyId: string) => {
     const supabase = getSupabaseClient() as any;
     if (!supabase) return;
 
@@ -161,7 +129,7 @@ export default function ClassesPage() {
       const { data, error } = await supabase
         .from('halls')
         .select('*')
-        .eq('branch_id', branchId)
+        .eq('academy_id', academyId)
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -177,9 +145,11 @@ export default function ClassesPage() {
     if (!supabase) return;
 
     try {
-      const classData = {
+      const classData: any = {
         academy_id: formData.academy_id,
         instructor_id: formData.instructor_id || null,
+        hall_id: formData.hall_id || null,
+        song: formData.song || null,
         title: formData.title || (() => {
           const instructor = instructors.find(i => i.id === formData.instructor_id);
           if (instructor) {
@@ -193,7 +163,7 @@ export default function ClassesPage() {
         description: formData.description || null,
         difficulty_level: formData.difficulty_level || null,
         genre: formData.selectedGenres.length > 0 ? formData.selectedGenres.join(', ') : null,
-        class_type: formData.class_type,
+        class_type: formData.class_type || 'regular',
         thumbnail_url: formData.thumbnail_url || null,
         price: formData.price || 0,
       };
@@ -217,11 +187,10 @@ export default function ClassesPage() {
         if (classError) throw classError;
 
         // 시간표 생성
-        const scheduleData = {
+        const scheduleData: any = {
           class_id: newClass.id,
-          branch_id: formData.branch_id,
-          hall_id: formData.hall_id,
-          instructor_id: formData.instructor_id,
+          hall_id: formData.hall_id || null,
+          instructor_id: formData.instructor_id || null,
           start_time: formData.start_time,
           end_time: formData.end_time,
           max_students: Number(formData.max_students),
@@ -249,7 +218,6 @@ export default function ClassesPage() {
   const resetForm = () => {
     setFormData({
       academy_id: '',
-      branch_id: '',
       hall_id: '',
       instructor_id: '',
       difficulty_level: '',
@@ -259,11 +227,11 @@ export default function ClassesPage() {
       title: '',
       description: '',
       thumbnail_url: '',
+      song: '',
       start_time: '',
       end_time: '',
       max_students: 20,
     });
-    setBranches([]);
     setHalls([]);
   };
 
@@ -276,9 +244,8 @@ export default function ClassesPage() {
 
     setFormData({
       academy_id: classItem.academy_id || '',
-      branch_id: firstSchedule?.branch_id || '',
       hall_id: firstSchedule?.hall_id || '',
-      instructor_id: firstSchedule?.instructor_id || '',
+      instructor_id: firstSchedule?.instructor_id || classItem.instructor_id || '',
       difficulty_level: classItem.difficulty_level || '',
       selectedGenres: genres,
       class_type: classItem.class_type || '',
@@ -286,16 +253,14 @@ export default function ClassesPage() {
       title: classItem.title || '',
       description: classItem.description || '',
       thumbnail_url: classItem.thumbnail_url || '',
+      song: (classItem as any).song || '',
       start_time: (firstSchedule && firstSchedule.start_time) ? new Date(firstSchedule.start_time).toISOString().slice(0, 16) : '',
       end_time: (firstSchedule && firstSchedule.end_time) ? new Date(firstSchedule.end_time).toISOString().slice(0, 16) : '',
       max_students: firstSchedule?.max_students || 20,
     });
 
     if (classItem.academy_id) {
-      loadBranches(classItem.academy_id);
-    }
-    if (firstSchedule?.branch_id) {
-      loadHalls(firstSchedule.branch_id);
+      loadHalls(classItem.academy_id);
     }
 
     setShowForm(true);
@@ -433,7 +398,7 @@ export default function ClassesPage() {
               <select
                 required
                 value={formData.academy_id}
-                onChange={(e) => setFormData({ ...formData, academy_id: e.target.value, branch_id: '', hall_id: '', max_students: 20 })}
+                onChange={(e) => setFormData({ ...formData, academy_id: e.target.value, hall_id: '', max_students: 20 })}
                 className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
               >
                 <option value="">학원 선택</option>
@@ -452,39 +417,13 @@ export default function ClassesPage() {
               </select>
             </div>
 
-            {/* 2. 지점 선택 */}
-            <div>
-              <label className="block text-sm font-medium text-black dark:text-white mb-2">
-                2. 지점 *
-              </label>
-              <select
-                required
-                value={formData.branch_id}
-                onChange={(e) => setFormData({ ...formData, branch_id: e.target.value, hall_id: '', max_students: 20 })}
-                disabled={!formData.academy_id || branches.length === 0}
-                className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white disabled:opacity-50"
-              >
-                <option value="">지점 선택</option>
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
-              {!formData.academy_id && (
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                  학원을 먼저 선택하세요
-                </p>
-              )}
-            </div>
 
             {/* 3. 홀 선택 */}
             <div>
               <label className="block text-sm font-medium text-black dark:text-white mb-2">
-                3. 홀 *
+                3. 홀
               </label>
               <select
-                required
                 value={formData.hall_id}
                 onChange={(e) => {
                   const selectedHall = halls.find(h => h.id === e.target.value);
@@ -494,19 +433,19 @@ export default function ClassesPage() {
                     max_students: selectedHall?.capacity || 20
                   });
                 }}
-                disabled={!formData.branch_id || halls.length === 0}
+                disabled={!formData.academy_id || halls.length === 0}
                 className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white disabled:opacity-50"
               >
-                <option value="">홀 선택</option>
+                <option value="">홀 선택 (선택사항)</option>
                 {halls.map((hall) => (
                   <option key={hall.id} value={hall.id}>
                     {hall.name} {hall.capacity && hall.capacity > 0 && `(${hall.capacity}명)`}
                   </option>
                 ))}
               </select>
-              {!formData.branch_id && (
+              {!formData.academy_id && (
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                  지점을 먼저 선택하세요
+                  먼저 학원을 선택해주세요
                 </p>
               )}
             </div>
@@ -702,6 +641,18 @@ export default function ClassesPage() {
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     placeholder="자동 생성되거나 수동 입력"
+                    className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-2">
+                    노래
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.song}
+                    onChange={(e) => setFormData({ ...formData, song: e.target.value })}
+                    placeholder="노래 제목"
                     className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
                   />
                 </div>

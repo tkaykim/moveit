@@ -4,11 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
-import { Schedule, Class, Branch, Hall, Instructor } from '@/lib/supabase/types';
+import { Schedule, Class, Academy, Hall, Instructor } from '@/lib/supabase/types';
 
 type ScheduleWithRelations = Schedule & {
-  classes: Class | null;
-  branches: Branch | null;
+  classes: (Class & { academies: Academy | null }) | null;
   halls: Hall | null;
   instructors: Instructor | null;
 };
@@ -16,7 +15,7 @@ type ScheduleWithRelations = Schedule & {
 export default function SchedulesPage() {
   const [schedules, setSchedules] = useState<ScheduleWithRelations[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
+  const [academies, setAcademies] = useState<Academy[]>([]);
   const [halls, setHalls] = useState<Hall[]>([]);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +23,7 @@ export default function SchedulesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     class_id: '',
-    branch_id: '',
+    academy_id: '',
     hall_id: '',
     instructor_id: '',
     start_time: '',
@@ -42,19 +41,19 @@ export default function SchedulesPage() {
     }
 
     try {
-      const [schedulesRes, classesRes, branchesRes, instructorsRes] = await Promise.all([
+      const [schedulesRes, classesRes, academiesRes, instructorsRes] = await Promise.all([
         supabase
           .from('schedules')
-          .select('*, classes(*), branches(*), halls(*), instructors(*)')
+          .select('*, classes(*, academies(*)), halls(*), instructors(*)')
           .order('start_time', { ascending: true }),
         supabase
           .from('classes')
           .select('*')
           .order('title', { ascending: true }),
         supabase
-          .from('branches')
+          .from('academies')
           .select('*')
-          .order('name', { ascending: true }),
+          .order('name_kr', { ascending: true }),
         supabase
           .from('instructors')
           .select('*')
@@ -63,12 +62,12 @@ export default function SchedulesPage() {
 
       if (schedulesRes.error) throw schedulesRes.error;
       if (classesRes.error) throw classesRes.error;
-      if (branchesRes.error) throw branchesRes.error;
+      if (academiesRes.error) throw academiesRes.error;
       if (instructorsRes.error) throw instructorsRes.error;
 
       setSchedules(schedulesRes.data || []);
       setClasses(classesRes.data || []);
-      setBranches(branchesRes.data || []);
+      setAcademies(academiesRes.data || []);
       setInstructors(instructorsRes.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -78,7 +77,7 @@ export default function SchedulesPage() {
     }
   }, []);
 
-  const loadHalls = useCallback(async (branchId: string) => {
+  const loadHalls = useCallback(async (academyId: string) => {
     const supabase = getSupabaseClient() as any;
     if (!supabase) return;
 
@@ -86,7 +85,7 @@ export default function SchedulesPage() {
       const { data, error } = await supabase
         .from('halls')
         .select('*')
-        .eq('branch_id', branchId)
+        .eq('academy_id', academyId)
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -101,12 +100,12 @@ export default function SchedulesPage() {
   }, [loadData]);
 
   useEffect(() => {
-    if (formData.branch_id) {
-      loadHalls(formData.branch_id);
+    if (formData.academy_id) {
+      loadHalls(formData.academy_id);
     } else {
       setHalls([]);
     }
-  }, [formData.branch_id, loadHalls]);
+  }, [formData.academy_id, loadHalls]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,10 +113,15 @@ export default function SchedulesPage() {
     if (!supabase) return;
 
     try {
-      const submitData = {
-        ...formData,
+      const submitData: any = {
+        class_id: formData.class_id,
+        hall_id: formData.hall_id || null,
+        instructor_id: formData.instructor_id || null,
+        start_time: formData.start_time,
+        end_time: formData.end_time,
         max_students: Number(formData.max_students),
         current_students: Number(formData.current_students) || 0,
+        is_canceled: formData.is_canceled,
       };
 
       if (editingId) {
@@ -140,7 +144,7 @@ export default function SchedulesPage() {
       setEditingId(null);
       setFormData({
         class_id: '',
-        branch_id: '',
+        academy_id: '',
         hall_id: '',
         instructor_id: '',
         start_time: '',
@@ -158,9 +162,10 @@ export default function SchedulesPage() {
 
   const handleEdit = (schedule: ScheduleWithRelations) => {
     setEditingId(schedule.id);
+    const academyId = schedule.classes?.academies?.id || '';
     setFormData({
       class_id: schedule.class_id || '',
-      branch_id: schedule.branch_id || '',
+      academy_id: academyId,
       hall_id: schedule.hall_id || '',
       instructor_id: schedule.instructor_id || '',
       start_time: schedule.start_time ? new Date(schedule.start_time).toISOString().slice(0, 16) : '',
@@ -169,7 +174,9 @@ export default function SchedulesPage() {
       current_students: schedule.current_students || 0,
       is_canceled: schedule.is_canceled || false,
     });
-    loadHalls(schedule.branch_id || '');
+    if (academyId) {
+      loadHalls(academyId);
+    }
     setShowForm(true);
   };
 
@@ -224,7 +231,7 @@ export default function SchedulesPage() {
               setEditingId(null);
               setFormData({
                 class_id: '',
-                branch_id: '',
+                academy_id: '',
                 hall_id: '',
                 instructor_id: '',
                 start_time: '',
@@ -270,18 +277,22 @@ export default function SchedulesPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-black dark:text-white mb-2">
-                  지점 *
+                  학원 *
                 </label>
                 <select
                   required
-                  value={formData.branch_id}
-                  onChange={(e) => setFormData({ ...formData, branch_id: e.target.value, hall_id: '' })}
+                  value={formData.academy_id}
+                  onChange={(e) => {
+                    const selectedClass = classes.find(c => c.id === formData.class_id);
+                    const academyId = selectedClass?.academy_id || e.target.value;
+                    setFormData({ ...formData, academy_id: academyId, hall_id: '' });
+                  }}
                   className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
                 >
-                  <option value="">지점 선택</option>
-                  {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id}>
-                      {branch.name}
+                  <option value="">학원 선택</option>
+                  {academies.map((academy) => (
+                    <option key={academy.id} value={academy.id}>
+                      {academy.name_kr || academy.name_en || '이름 없음'}
                     </option>
                   ))}
                 </select>
@@ -296,7 +307,7 @@ export default function SchedulesPage() {
                   required
                   value={formData.hall_id}
                   onChange={(e) => setFormData({ ...formData, hall_id: e.target.value })}
-                  disabled={!formData.branch_id || halls.length === 0}
+                  disabled={!formData.academy_id || halls.length === 0}
                   className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white disabled:opacity-50"
                 >
                   <option value="">강의실 선택</option>
@@ -306,9 +317,9 @@ export default function SchedulesPage() {
                     </option>
                   ))}
                 </select>
-                {!formData.branch_id && (
+                {!formData.academy_id && (
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                    지점을 먼저 선택하세요
+                    먼저 학원을 선택해주세요.
                   </p>
                 )}
               </div>
@@ -425,7 +436,7 @@ export default function SchedulesPage() {
                   강사
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-                  지점/강의실
+                  학원/강의실
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
                   시간
@@ -471,7 +482,7 @@ export default function SchedulesPage() {
                         })()}
                       </td>
                       <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">
-                        <div>{(schedule.branches as Branch | null)?.name || '-'}</div>
+                        <div>{(schedule.classes as any)?.academies?.name_kr || (schedule.classes as any)?.academies?.name_en || '-'}</div>
                         <div className="text-xs text-neutral-500 dark:text-neutral-500">
                           {(schedule.halls as Hall | null)?.name || '-'}
                         </div>

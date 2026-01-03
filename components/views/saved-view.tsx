@@ -106,7 +106,7 @@ export const SavedView = ({ onNavigate }: SavedViewProps) => {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-black dark:text-white font-bold text-sm">{item.name}</h3>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-500">{item.branch || '지점 정보 없음'}</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-500">{item.address || '주소 정보 없음'}</p>
                 </div>
                 <button className="text-primary dark:text-[#CCFF00] p-2">
                   <Heart fill="currentColor" size={18} />

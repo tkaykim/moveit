@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import { Branch } from '@/lib/supabase/types';
 import { Database } from '@/types/database';
 
 export async function getBranches(academyId?: string) {

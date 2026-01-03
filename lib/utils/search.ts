@@ -21,7 +21,7 @@ export async function searchAll(query: string): Promise<SearchResult> {
       .from('academies')
       .select(`
         *,
-        branches (*),
+        academy_images (*),
         classes (*)
       `)
       .or(`name_kr.ilike.%${searchTerm}%,name_en.ilike.%${searchTerm}%,tags.ilike.%${searchTerm}%`)
@@ -50,51 +50,36 @@ export async function searchAll(query: string): Promise<SearchResult> {
 
     if (classesError) throw classesError;
 
-    // Academy 변환 - 각 지점을 별도 항목으로
-    const academies: Academy[] = (academiesData || []).flatMap((dbAcademy: any) => {
+    // Academy 변환
+    const academies: Academy[] = (academiesData || []).map((dbAcademy: any) => {
       const name = dbAcademy.name_kr || dbAcademy.name_en || '이름 없음';
-      const branches = dbAcademy.branches || [];
       const classes = dbAcademy.classes || [];
+      const images = dbAcademy.academy_images || [];
       const minPrice = classes.length > 0 
         ? Math.min(...classes.map((c: any) => c.price || 0))
         : 0;
 
-      // 지점이 없으면 하나의 항목으로 반환
-      if (branches.length === 0) {
-        return [{
-          id: dbAcademy.id,
-          name_kr: dbAcademy.name_kr,
-          name_en: dbAcademy.name_en,
-          tags: dbAcademy.tags,
-          logo_url: dbAcademy.logo_url,
-          name,
-          branch: undefined,
-          dist: undefined,
-          rating: undefined,
-          price: minPrice > 0 ? minPrice : undefined,
-          badges: [],
-          img: dbAcademy.logo_url || undefined,
-          academyId: dbAcademy.id,
-        } as any];
-      }
+      // display_order로 정렬하여 첫 번째 이미지 또는 로고 사용
+      const sortedImages = images.sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0));
+      const imageUrl = sortedImages.length > 0 
+        ? sortedImages[0].image_url 
+        : dbAcademy.logo_url;
 
-      // 각 지점을 별도 항목으로 변환
-      return branches.map((branch: any) => ({
-        id: `${dbAcademy.id}-${branch.id}`,
+      return {
+        id: dbAcademy.id,
         name_kr: dbAcademy.name_kr,
         name_en: dbAcademy.name_en,
         tags: dbAcademy.tags,
-        logo_url: branch.image_url || dbAcademy.logo_url,
+        logo_url: dbAcademy.logo_url,
         name,
-        branch: branch.name,
         dist: undefined,
         rating: undefined,
         price: minPrice > 0 ? minPrice : undefined,
         badges: [],
-        img: branch.image_url || dbAcademy.logo_url || undefined,
+        img: imageUrl || undefined,
         academyId: dbAcademy.id,
-        branchId: branch.id,
-      } as any));
+        address: dbAcademy.address,
+      } as any;
     });
 
     // Instructor 변환
@@ -145,7 +130,10 @@ export async function searchByGenre(genre: string): Promise<SearchResult> {
       .from('classes')
       .select(`
         *,
-        academies (*, branches (*)),
+        academies (
+          *,
+          academy_images (*)
+        ),
         instructors (*)
       `)
       .ilike('genre', `%${genre}%`)
@@ -179,48 +167,33 @@ export async function searchByGenre(genre: string): Promise<SearchResult> {
       }
     });
 
-    // 각 학원의 모든 지점을 별도 항목으로 변환
-    const academies: Academy[] = Array.from(academyMap.values()).flatMap((dbAcademy: any) => {
+    // Academy 변환
+    const academies: Academy[] = Array.from(academyMap.values()).map((dbAcademy: any) => {
       const name = dbAcademy.name_kr || dbAcademy.name_en || '이름 없음';
-      const branches = dbAcademy.branches || [];
+      const images = dbAcademy.academy_images || [];
       const minPrice = academyPriceMap.get(dbAcademy.id) || 0;
 
-      // 지점이 없으면 하나의 항목으로 반환
-      if (branches.length === 0) {
-        return [{
-          id: dbAcademy.id,
-          name_kr: dbAcademy.name_kr,
-          name_en: dbAcademy.name_en,
-          tags: dbAcademy.tags,
-          logo_url: dbAcademy.logo_url,
-          name,
-          branch: undefined,
-          dist: undefined,
-          rating: undefined,
-          price: minPrice > 0 ? minPrice : undefined,
-          badges: [],
-          img: dbAcademy.logo_url || undefined,
-          academyId: dbAcademy.id,
-        } as any];
-      }
+      // display_order로 정렬하여 첫 번째 이미지 또는 로고 사용
+      const sortedImages = images.sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0));
+      const imageUrl = sortedImages.length > 0 
+        ? sortedImages[0].image_url 
+        : dbAcademy.logo_url;
 
-      // 각 지점을 별도 항목으로 변환
-      return branches.map((branch: any) => ({
-        id: `${dbAcademy.id}-${branch.id}`,
+      return {
+        id: dbAcademy.id,
         name_kr: dbAcademy.name_kr,
         name_en: dbAcademy.name_en,
         tags: dbAcademy.tags,
-        logo_url: branch.image_url || dbAcademy.logo_url,
+        logo_url: dbAcademy.logo_url,
         name,
-        branch: branch.name,
         dist: undefined,
         rating: undefined,
         price: minPrice > 0 ? minPrice : undefined,
         badges: [],
-        img: branch.image_url || dbAcademy.logo_url || undefined,
+        img: imageUrl || undefined,
         academyId: dbAcademy.id,
-        branchId: branch.id,
-      } as any));
+        address: dbAcademy.address,
+      } as any;
     });
 
     // Instructor 변환

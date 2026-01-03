@@ -16,6 +16,23 @@ export async function getInstructors() {
   return data;
 }
 
+export async function getInstructorsByAcademy(academyId: string) {
+  const supabase = await createClient() as any;
+  const { data, error } = await supabase
+    .from('instructors')
+    .select(`
+      *,
+      classes!inner (
+        academy_id
+      )
+    `)
+    .eq('classes.academy_id', academyId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
 export async function getInstructorById(id: string) {
   const supabase = await createClient() as any;
   const { data, error } = await supabase

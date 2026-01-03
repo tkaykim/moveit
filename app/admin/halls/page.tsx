@@ -4,19 +4,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
-import { Hall, Branch } from '@/lib/supabase/types';
+import { Hall, Academy } from '@/lib/supabase/types';
 
 export default function HallsPage() {
-  const [halls, setHalls] = useState<(Hall & { branches: Branch | null })[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
+  const [halls, setHalls] = useState<(Hall & { academies: Academy | null })[]>([]);
+  const [academies, setAcademies] = useState<Academy[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    branch_id: '',
+    academy_id: '',
     name: '',
     capacity: 0,
-    floor_info: '',
   });
 
   const loadData = useCallback(async () => {
@@ -27,22 +26,22 @@ export default function HallsPage() {
     }
 
     try {
-      const [hallsRes, branchesRes] = await Promise.all([
+      const [hallsRes, academiesRes] = await Promise.all([
         supabase
           .from('halls')
-          .select('*, branches(*)')
+          .select('*, academies(*)')
           .order('name', { ascending: true }),
         supabase
-          .from('branches')
+          .from('academies')
           .select('*')
-          .order('name', { ascending: true }),
+          .order('name_kr', { ascending: true }),
       ]);
 
       if (hallsRes.error) throw hallsRes.error;
-      if (branchesRes.error) throw branchesRes.error;
+      if (academiesRes.error) throw academiesRes.error;
 
       setHalls(hallsRes.data || []);
-      setBranches(branchesRes.data || []);
+      setAcademies(academiesRes.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
       alert('데이터를 불러오는데 실패했습니다.');
@@ -62,9 +61,9 @@ export default function HallsPage() {
 
     try {
       const submitData = {
-        ...formData,
+        academy_id: formData.academy_id,
+        name: formData.name,
         capacity: Number(formData.capacity) || 0,
-        floor_info: formData.floor_info || null,
       };
 
       if (editingId) {
@@ -86,10 +85,9 @@ export default function HallsPage() {
       setShowForm(false);
       setEditingId(null);
       setFormData({
-        branch_id: '',
+        academy_id: '',
         name: '',
         capacity: 0,
-        floor_info: '',
       });
     } catch (error) {
       console.error('Error saving hall:', error);
@@ -97,13 +95,12 @@ export default function HallsPage() {
     }
   };
 
-  const handleEdit = (hall: Hall) => {
+  const handleEdit = (hall: Hall & { academy_id?: string }) => {
     setEditingId(hall.id);
     setFormData({
-      branch_id: hall.branch_id || '',
+      academy_id: (hall as any).academy_id || '',
       name: hall.name || '',
       capacity: hall.capacity || 0,
-      floor_info: hall.floor_info || '',
     });
     setShowForm(true);
   };
@@ -147,10 +144,9 @@ export default function HallsPage() {
               setShowForm(!showForm);
               setEditingId(null);
               setFormData({
-                branch_id: '',
+                academy_id: '',
                 name: '',
                 capacity: 0,
-                floor_info: '',
               });
             }}
             className="px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-2"
@@ -169,18 +165,18 @@ export default function HallsPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-black dark:text-white mb-2">
-                지점 *
+                학원 *
               </label>
               <select
                 required
-                value={formData.branch_id}
-                onChange={(e) => setFormData({ ...formData, branch_id: e.target.value })}
+                value={formData.academy_id}
+                onChange={(e) => setFormData({ ...formData, academy_id: e.target.value })}
                 className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
               >
-                <option value="">지점 선택</option>
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name}
+                <option value="">학원 선택</option>
+                {academies.map((academy) => (
+                  <option key={academy.id} value={academy.id}>
+                    {academy.name_kr || academy.name_en || '이름 없음'}
                   </option>
                 ))}
               </select>
@@ -197,31 +193,17 @@ export default function HallsPage() {
                 className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-black dark:text-white mb-2">
-                  수용 인원
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.capacity}
-                  onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
-                  className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-black dark:text-white mb-2">
-                  층 정보
-                </label>
-                <input
-                  type="text"
-                  value={formData.floor_info}
-                  onChange={(e) => setFormData({ ...formData, floor_info: e.target.value })}
-                  placeholder="예: 2층, 지하1층"
-                  className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-black dark:text-white mb-2">
+                수용 인원
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formData.capacity}
+                onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
+                className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
+              />
             </div>
             <button
               type="submit"
@@ -239,16 +221,13 @@ export default function HallsPage() {
             <thead className="bg-neutral-100 dark:bg-neutral-800">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-                  지점
+                  학원
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
                   강의실명
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
                   수용 인원
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-                  층 정보
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
                   작업
@@ -258,7 +237,7 @@ export default function HallsPage() {
             <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
               {halls.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-neutral-500 dark:text-neutral-400">
+                  <td colSpan={4} className="px-6 py-12 text-center text-neutral-500 dark:text-neutral-400">
                     등록된 강의실이 없습니다.
                   </td>
                 </tr>
@@ -266,16 +245,13 @@ export default function HallsPage() {
                 halls.map((hall) => (
                   <tr key={hall.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black dark:text-white">
-                      {(hall.branches as Branch | null)?.name || '-'}
+                      {(hall.academies as Academy | null)?.name_kr || (hall.academies as Academy | null)?.name_en || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black dark:text-white">
                       {hall.name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
                       {hall.capacity}명
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
-                      {hall.floor_info || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-2">

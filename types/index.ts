@@ -20,16 +20,16 @@ export interface Academy {
   name_en: string | null;
   tags: string | null;
   logo_url: string | null;
+  address?: string | null;
+  contact_number?: string | null;
   // UI용 계산된 필드
   name: string; // name_kr 또는 name_en
-  branch?: string; // 첫 번째 branch 이름
   dist?: string; // 거리 (추후 계산)
   rating?: number; // 평점 (추후 계산)
   price?: number; // 최소 가격 (classes에서 계산)
   badges?: string[]; // 배지 (추후 계산)
-  img?: string; // logo_url 또는 기본 이미지
+  img?: string; // logo_url 또는 academy_images 첫 번째 이미지
   academyId?: string; // 원본 학원 ID
-  branchId?: string; // 지점 ID
 }
 
 // Dancer 타입: Instructor 기반
@@ -62,11 +62,11 @@ export interface ClassInfo {
   startTime?: string;
   endTime?: string;
   class_title?: string | null;
-  branch_name?: string | null;
   hall_name?: string | null;
   academy?: {
     id: string;
     name: string;
+    address?: string | null;
   };
   maxStudents?: number;
   currentStudents?: number;

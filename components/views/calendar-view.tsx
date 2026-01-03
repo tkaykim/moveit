@@ -25,8 +25,7 @@ function transformSchedule(schedule: any): ClassInfo & { academy?: Academy; time
   const status = isFull ? 'FULL' : isAlmostFull ? 'ALMOST_FULL' : 'AVAILABLE';
 
   // Academy 정보 생성
-  const branch = schedule.branches || {};
-  const academyData = (branch as any).academies;
+  const academyData = classData.academies;
   const academy: Academy | undefined = academyData ? {
     id: academyData.id,
     name_kr: academyData.name_kr,
@@ -51,7 +50,6 @@ function transformSchedule(schedule: any): ClassInfo & { academy?: Academy; time
     status,
     price: classData.price || 0,
     class_title: classData.title,
-    branch_name: branch.name,
     hall_name: schedule.halls?.name,
     academy,
     time: startTimeStr,
@@ -131,8 +129,7 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
           .from('schedules')
           .select(`
             *,
-            classes (*),
-            branches (
+            classes (
               *,
               academies (*)
             ),
@@ -318,7 +315,7 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
                         {classInfo.class_title || `${classInfo.genre} 클래스`}
                       </h4>
                       <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                        {classInfo.academy?.name || '학원 정보 없음'} • {classInfo.branch_name || '지점 정보 없음'}
+                        {classInfo.academy?.name || '학원 정보 없음'} {classInfo.academy?.address && `• ${classInfo.academy.address}`}
                       </p>
                       <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
                         {classInfo.instructor} • {classInfo.hall_name || '홀 정보 없음'}

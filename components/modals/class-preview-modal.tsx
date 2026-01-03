@@ -38,7 +38,7 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
             {classInfo.academy && (
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
                 {classInfo.academy.name || '학원 정보 없음'}
-                {classInfo.branch_name && ` • ${classInfo.branch_name}`}
+                {classInfo.academy?.address && ` • ${classInfo.academy.address}`}
               </p>
             )}
             <div className="flex items-center gap-2 mt-2 text-xs text-primary dark:text-[#CCFF00]">

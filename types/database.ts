@@ -19,6 +19,8 @@ export interface Database {
           name_kr: string | null
           name_en: string | null
           tags: string | null
+          address: string | null
+          contact_number: string | null
         }
         Insert: {
           id?: string
@@ -29,6 +31,8 @@ export interface Database {
           name_kr?: string | null
           name_en?: string | null
           tags?: string | null
+          address?: string | null
+          contact_number?: string | null
         }
         Update: {
           id?: string
@@ -39,6 +43,8 @@ export interface Database {
           name_kr?: string | null
           name_en?: string | null
           tags?: string | null
+          address?: string | null
+          contact_number?: string | null
         }
       }
       branches: {
@@ -79,7 +85,6 @@ export interface Database {
       instructors: {
         Row: {
           id: string
-          user_id: string | null
           bio: string | null
           instagram_url: string | null
           specialties: string | null
@@ -90,7 +95,6 @@ export interface Database {
         }
         Insert: {
           id?: string
-          user_id?: string | null
           bio?: string | null
           instagram_url?: string | null
           specialties?: string | null
@@ -101,7 +105,6 @@ export interface Database {
         }
         Update: {
           id?: string
-          user_id?: string | null
           bio?: string | null
           instagram_url?: string | null
           specialties?: string | null
@@ -247,6 +250,7 @@ export interface Database {
           nickname: string | null
           phone: string | null
           profile_image: string | null
+          role: 'SUPER_ADMIN' | 'ACADEMY_OWNER' | 'ACADEMY_MANAGER' | 'INSTRUCTOR' | 'USER' | null
           created_at: string | null
           updated_at: string | null
         }
@@ -257,6 +261,7 @@ export interface Database {
           nickname?: string | null
           phone?: string | null
           profile_image?: string | null
+          role?: 'SUPER_ADMIN' | 'ACADEMY_OWNER' | 'ACADEMY_MANAGER' | 'INSTRUCTOR' | 'USER' | null
           created_at?: string | null
           updated_at?: string | null
         }
@@ -267,6 +272,7 @@ export interface Database {
           nickname?: string | null
           phone?: string | null
           profile_image?: string | null
+          role?: 'SUPER_ADMIN' | 'ACADEMY_OWNER' | 'ACADEMY_MANAGER' | 'INSTRUCTOR' | 'USER' | null
           created_at?: string | null
           updated_at?: string | null
         }
@@ -375,7 +381,7 @@ export interface Database {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_role: 'SUPER_ADMIN' | 'ACADEMY_OWNER' | 'ACADEMY_MANAGER' | 'INSTRUCTOR' | 'USER'
     }
   }
 }

@@ -69,14 +69,16 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
           return;
         }
 
-        // 스케줄을 통해 강사와 클래스, 지점 정보를 가져옴
+        // 스케줄을 통해 강사와 클래스, 학원 정보를 가져옴
         const { data: schedulesData, error: schedulesError } = await supabase
           .from('schedules')
           .select(`
             *,
             instructors (*),
-            classes (*),
-            branches (*)
+            classes (
+              *,
+              academies (*)
+            )
           `)
           .eq('is_canceled', false)
           .gte('start_time', new Date().toISOString())
@@ -94,7 +96,7 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
             instructorMap.set(instructorId, {
               instructor: schedule.instructors,
               classes: [],
-              branches: new Set<string>(),
+              academies: new Set<string>(),
             });
           }
 
@@ -102,15 +104,17 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
           if (schedule.classes) {
             entry.classes.push(schedule.classes);
           }
-          if (schedule.branches && schedule.branches.address_primary) {
-            entry.branches.add(schedule.branches.address_primary);
+          if (schedule.classes?.academies?.address) {
+            entry.academies.add(schedule.classes.academies.address);
           }
         });
 
         // 변환
-        const transformed = Array.from(instructorMap.values()).map(({ instructor, classes, branches }) => {
-          const location = Array.from(branches)[0] as string || '서울 마포구 합정동';
-          return transformInstructor(instructor, classes);
+        const transformed = Array.from(instructorMap.values()).map(({ instructor, classes, academies }) => {
+          const location = Array.from(academies)[0] as string || '서울 마포구 합정동';
+          const instructorData = transformInstructor(instructor, classes);
+          instructorData.location = location;
+          return instructorData;
         });
 
         setDancers(transformed);

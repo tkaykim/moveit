@@ -16,21 +16,21 @@ export const BANNERS = [
 
 export const ACADEMIES: Academy[] = [
   { 
-    id: "1", name: "JustJerk Academy", branch: "Hapjeong", 
+    id: "1", name: "JustJerk Academy", 
     name_kr: "저스트절크 아카데미", name_en: "JustJerk Academy",
     tags: "Hip-hop, Choreography", dist: "1.2km", rating: 4.9, 
     price: 35000, badges: ["주차가능", "촬영가능"],
     img: "bg-neutral-800", logo_url: null
   },
   { 
-    id: "2", name: "1MILLION Dance", branch: "Seongsu", 
+    id: "2", name: "1MILLION Dance", 
     name_kr: "원밀리언 댄스 스튜디오", name_en: "1MILLION Dance",
     tags: "K-POP, Jazz", dist: "3.5km", rating: 4.8, 
     price: 40000, badges: ["탈의실", "라운지"],
     img: "bg-neutral-800", logo_url: null
   },
   { 
-    id: "3", name: "YGX Academy", branch: "Hongdae", 
+    id: "3", name: "YGX Academy", 
     name_kr: "YGX 아카데미", name_en: "YGX Academy",
     tags: "K-POP, Street", dist: "0.8km", rating: 4.7, 
     price: 30000, badges: ["촬영가능"],

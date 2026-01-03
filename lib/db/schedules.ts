@@ -4,8 +4,9 @@ import { Database } from '@/types/database';
 
 export async function getSchedules(filters?: {
   class_id?: string;
-  branch_id?: string;
+  academy_id?: string;
   instructor_id?: string;
+  hall_id?: string;
   start_date?: string;
   end_date?: string;
 }) {
@@ -14,8 +15,10 @@ export async function getSchedules(filters?: {
     .from('schedules')
     .select(`
       *,
-      classes (*),
-      branches (*),
+      classes (
+        *,
+        academies (*)
+      ),
       instructors (*),
       halls (*)
     `)
@@ -25,11 +28,15 @@ export async function getSchedules(filters?: {
   if (filters?.class_id) {
     query = query.eq('class_id', filters.class_id);
   }
-  if (filters?.branch_id) {
-    query = query.eq('branch_id', filters.branch_id);
+  if (filters?.academy_id) {
+    // classes를 통해 academy_id 필터링
+    query = query.eq('classes.academy_id', filters.academy_id);
   }
   if (filters?.instructor_id) {
     query = query.eq('instructor_id', filters.instructor_id);
+  }
+  if (filters?.hall_id) {
+    query = query.eq('hall_id', filters.hall_id);
   }
   if (filters?.start_date) {
     query = query.gte('start_time', filters.start_date);
@@ -49,8 +56,10 @@ export async function getScheduleById(id: string) {
     .from('schedules')
     .select(`
       *,
-      classes (*),
-      branches (*),
+      classes (
+        *,
+        academies (*)
+      ),
       instructors (*),
       halls (*)
     `)

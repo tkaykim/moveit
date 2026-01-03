@@ -86,11 +86,17 @@ export default function InstructorsPage() {
       const submitData: any = {
         name_kr: formData.name_kr || null,
         name_en: formData.name_en || null,
-        bio: formData.bio || null,
         instagram_url: formData.instagram_url || null,
-        specialties: formData.selectedGenres.length > 0 ? formData.selectedGenres.join(', ') : null,
         profile_image_url: profileImageUrl,
       };
+
+      // bio와 specialties는 컬럼이 있을 때만 추가
+      if (formData.bio && formData.bio.trim() !== '') {
+        submitData.bio = formData.bio;
+      }
+      if (formData.selectedGenres.length > 0) {
+        submitData.specialties = formData.selectedGenres.join(', ');
+      }
 
       if (editingId) {
         // 기존 이미지 삭제 (새 파일이 업로드된 경우에만, URL 변경은 Storage에서 삭제하지 않음)

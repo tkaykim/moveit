@@ -123,13 +123,17 @@ export const SearchResultsView = ({ query, onBack, onAcademyClick, onDancerClick
                       onClick={() => onAcademyClick(academy)}
                       className="bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 active:scale-[0.98] transition-transform"
                     >
-                      <div className="h-32 relative overflow-hidden">
-                        <Image
-                          src={academy.logo_url || `https://picsum.photos/seed/academy${academy.id}/400/128`}
-                          alt={academy.name}
-                          fill
-                          className="object-cover"
-                        />
+                      <div className="h-32 relative overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                        {(academy.img || academy.logo_url) ? (
+                          <Image
+                            src={academy.img || academy.logo_url || ''}
+                            alt={academy.name}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-neutral-100 dark:bg-neutral-800" />
+                        )}
                         {academy.tags && (
                           <div className="absolute top-3 left-3 bg-black/60 backdrop-blur px-2 py-1 rounded text-[10px] text-white font-bold">
                             {academy.tags.split(',')[0]?.trim() || ''}
@@ -140,10 +144,10 @@ export const SearchResultsView = ({ query, onBack, onAcademyClick, onDancerClick
                         <div className="flex justify-between items-start mb-2">
                           <div>
                             <h4 className="text-lg font-bold text-black dark:text-white">{academy.name}</h4>
-                            {academy.branch && (
+                            {academy.address && (
                               <div className="flex items-center gap-1 text-xs text-neutral-600 dark:text-neutral-400 mt-1">
                                 <MapPin size={12} />
-                                {academy.branch}
+                                {academy.address}
                               </div>
                             )}
                           </div>

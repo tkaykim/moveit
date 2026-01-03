@@ -3,9 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
-import { Academy, Branch, Hall } from '@/lib/supabase/types';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@/types/database';
+import { Academy, Hall } from '@/lib/supabase/types';
 import { AcademyFormModal } from './components/academy-form-modal';
 import { uploadFile, deleteFile, extractFilePathFromUrl } from '@/lib/utils/storage';
 
@@ -13,27 +11,24 @@ interface HallData {
   id?: string;
   name: string;
   capacity: number;
-  floor_info: string;
 }
 
-interface BranchData {
+interface AcademyImageData {
   id?: string;
-  name: string;
-  address_primary: string;
-  address_detail: string;
-  contact_number: string;
-  halls: HallData[];
+  image_url: string;
   imageFile?: File | null;
-  image_url?: string | null;
+  display_order: number;
 }
 
 interface AcademyFormData {
   name_kr: string | null;
   name_en: string | null;
   tags: string[];
-  business_registration_number: string | null;
+  address: string | null;
+  contact_number: string | null;
   logo_url: string | null;
-  branches: BranchData[];
+  halls: HallData[];
+  academy_images: AcademyImageData[];
 }
 
 export default function AcademiesPage() {
@@ -57,10 +52,12 @@ export default function AcademiesPage() {
     }
 
     try {
-      console.log('Loading academies from database...');
       const { data, error } = await (supabase as any)
         .from('academies')
-        .select('*')
+        .select(`
+          *,
+          academy_images (*)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -68,7 +65,6 @@ export default function AcademiesPage() {
         throw error;
       }
 
-      console.log('Academies loaded:', data);
       setAcademies(data || []);
     } catch (error: any) {
       console.error('Error loading academies:', error);
@@ -82,7 +78,6 @@ export default function AcademiesPage() {
   const handleSubmit = async (formData: AcademyFormData) => {
     const supabaseClient = getSupabaseClient();
     if (!supabaseClient) return;
-    // TypeScript 타입 추론을 위한 타입 단언
     const supabase = supabaseClient as any;
 
     try {
@@ -90,203 +85,106 @@ export default function AcademiesPage() {
 
       // 1. 학원 정보 저장/업데이트
       if (editingId) {
-        // 수정 모드: 학원 정보 업데이트
         const submitData: any = {
           name_kr: formData.name_kr || null,
           name_en: formData.name_en || null,
           tags: formData.tags.length > 0 ? formData.tags.join(', ') : null,
-          business_registration_number: formData.business_registration_number || null,
+          address: formData.address || null,
+          contact_number: formData.contact_number || null,
           logo_url: formData.logo_url || null,
         };
 
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from('academies')
           .update(submitData)
           .eq('id', editingId);
 
-        if (error) {
-          console.error('Update error details:', error);
-          throw error;
-        }
-
+        if (error) throw error;
         academyId = editingId;
       } else {
-        // 생성 모드: 새 학원 생성
         const submitData: any = {
           name_kr: formData.name_kr || null,
           name_en: formData.name_en || null,
           tags: formData.tags.length > 0 ? formData.tags.join(', ') : null,
-          business_registration_number: formData.business_registration_number || null,
+          address: formData.address || null,
+          contact_number: formData.contact_number || null,
           logo_url: formData.logo_url || null,
-          owner_id: 'system',
         };
 
-        const { data: newAcademy, error } = await (supabase as any)
+        const { data: newAcademy, error } = await supabase
           .from('academies')
           .insert([submitData])
           .select()
           .single();
 
-        if (error) {
-          console.error('Insert error details:', error);
-          throw error;
-        }
-
+        if (error) throw error;
         academyId = newAcademy.id;
       }
 
-      // 2. 유효한 지점 필터링 (id가 있는 기존 지점과 id가 없는 새 지점 구분)
-      const validBranches = formData.branches.filter(
-        (branch: any) => branch.name && branch.address_primary
-      );
-
-      if (validBranches.length === 0) {
-        throw new Error('최소 1개의 지점 정보(지점명, 주소)를 입력해주세요.');
-      }
-
-      // 디버깅: 유효한 지점 정보 로그
-      console.log('유효한 지점 개수:', validBranches.length);
-      console.log('기존 지점 (id 있음):', validBranches.filter((b: any) => b.id).map((b: any) => b.id));
-      console.log('새 지점 (id 없음):', validBranches.filter((b: any) => !b.id).length);
-
-      // 3. 수정 모드일 때만: 지점 삭제 처리
+      // 2. 학원 이미지 처리
       if (editingId) {
-        // DB에서 기존 지점들 모두 가져오기
-        const { data: existingBranches, error: loadError } = await (supabase as any)
-          .from('branches')
+        // 기존 이미지 로드
+        const { data: existingImages } = await supabase
+          .from('academy_images')
           .select('id, image_url')
           .eq('academy_id', academyId);
 
-        if (loadError) {
-          console.error('Error loading existing branches:', loadError);
-          throw loadError;
-        }
+        const existingImageIds = (existingImages || []).map((img: any) => img.id);
+        const formImageIds = formData.academy_images
+          .filter((img) => img.id)
+          .map((img) => img.id!);
 
-        const existingBranchIds = (existingBranches || []).map((b: any) => b.id);
-        const formBranchIds = validBranches
-          .filter((b: any) => b.id && b.name && b.address_primary) // 유효하고 id가 있는 지점만
-          .map((b: any) => b.id!);
-
-        console.log('DB에 있는 지점 IDs:', existingBranchIds);
-        console.log('폼에 있는 지점 IDs:', formBranchIds);
-
-        // 삭제할 지점 찾기 (DB에 있지만 formData에 없는 지점)
-        const deletedBranchIds = existingBranchIds.filter(
-          (id: any) => !formBranchIds.includes(id)
+        // 삭제할 이미지 찾기
+        const deletedImageIds = existingImageIds.filter(
+          (id: string) => !formImageIds.includes(id)
         );
 
-        console.log('삭제할 지점 개수:', deletedBranchIds.length);
-
-        // 삭제할 지점이 있으면 개별 삭제 (409 에러 방지를 위해)
-        if (deletedBranchIds.length > 0) {
-          console.log(`삭제할 지점 IDs:`, deletedBranchIds);
-          
-          // 각 지점을 개별적으로 삭제 (409 에러 방지)
-          for (const branchId of deletedBranchIds) {
+        // 삭제할 이미지 삭제
+        for (const imageId of deletedImageIds) {
+          const imageToDelete = existingImages?.find((img: any) => img.id === imageId);
+          if (imageToDelete?.image_url && imageToDelete.image_url.includes('supabase.co/storage')) {
             try {
-              // 1. 해당 지점의 모든 홀 삭제
-              const { error: hallsDeleteError } = await (supabase as any)
-                .from('halls')
-                .delete()
-                .eq('branch_id', branchId);
-
-              if (hallsDeleteError) {
-                console.error(`지점 ${branchId}의 홀 삭제 실패:`, hallsDeleteError);
-                throw new Error(`지점 ${branchId}의 홀 삭제에 실패했습니다: ${hallsDeleteError.message}`);
+              const filePath = extractFilePathFromUrl(imageToDelete.image_url);
+              if (filePath) {
+                await deleteFile('academy-images', filePath);
               }
-
-              // 2. 이미지 삭제
-              const branchToDelete = existingBranches?.find((b: any) => b.id === branchId);
-              if (branchToDelete && branchToDelete.image_url) {
-                const existingUrl = branchToDelete.image_url;
-                if (existingUrl && existingUrl.includes('supabase.co/storage')) {
-                  try {
-                    const filePath = extractFilePathFromUrl(existingUrl);
-                    if (filePath) {
-                      await deleteFile('academy-branches', filePath);
-                    }
-                  } catch (error) {
-                    console.error('Failed to delete old image:', error);
-                    // 이미지 삭제 실패해도 계속 진행
-                  }
-                }
-              }
-
-              // 3. 지점 삭제
-              const { error: branchDeleteError } = await (supabase as any)
-                .from('branches')
-                .delete()
-                .eq('id', branchId);
-
-              if (branchDeleteError) {
-                console.error(`지점 ${branchId} 삭제 실패:`, branchDeleteError);
-                throw new Error(`지점 ${branchId} 삭제에 실패했습니다: ${branchDeleteError.message}`);
-              }
-
-              console.log(`지점 ${branchId} 삭제 완료`);
-            } catch (error: any) {
-              console.error(`지점 ${branchId} 삭제 중 오류:`, error);
-              throw error;
+            } catch (error) {
+              console.error('Failed to delete image from storage:', error);
             }
           }
-
-          console.log(`${deletedBranchIds.length}개 지점이 모두 삭제되었습니다.`);
-          
-          // 삭제 후 DB 상태 확인
-          const { data: verifyBranches } = await (supabase as any)
-            .from('branches')
-            .select('id')
-            .eq('academy_id', academyId);
-          
-          console.log('삭제 후 DB에 남은 지점 개수:', verifyBranches?.length || 0);
-          console.log('삭제 후 DB에 남은 지점 IDs:', verifyBranches?.map((b: any) => b.id) || []);
+          await supabase.from('academy_images').delete().eq('id', imageId);
         }
       }
 
-      // 4. 지점 저장/업데이트
-      console.log('지점 저장/업데이트 시작. 처리할 지점 개수:', validBranches.length);
-      
-      // 삭제 후 다시 DB 상태 확인 (중복 생성 방지)
-      if (editingId) {
-        const { data: currentBranches } = await (supabase as any)
-          .from('branches')
-          .select('id')
-          .eq('academy_id', academyId);
-        
-        const currentBranchIds = (currentBranches || []).map((b: any) => b.id);
-        console.log('저장 전 DB에 있는 지점 IDs:', currentBranchIds);
-        
-        // formData에 있는 지점 중 DB에 없는 것만 새로 생성
-        for (const branch of validBranches) {
-          // id가 없거나, id가 있지만 DB에 없는 경우만 새로 생성
-          if (!branch.id || !currentBranchIds.includes(branch.id)) {
-            if (branch.id) {
-              console.warn(`경고: 지점 ${branch.id}가 DB에 없습니다. 새로 생성합니다.`);
-            }
-          }
-        }
-      }
-      
-      for (const branch of validBranches) {
-        // 이미지 처리
-        let imageUrl: string | null = null;
+      // 이미지 업로드 및 저장
+      let validImageIndex = 0;
+      for (let i = 0; i < formData.academy_images.length; i++) {
+        const image = formData.academy_images[i];
+        let imageUrl = image.image_url;
 
-        if (branch.imageFile) {
-          // 새 파일이 업로드된 경우
+        console.log(`Processing image ${i + 1}:`, {
+          hasImageFile: !!image.imageFile,
+          imageUrl: imageUrl,
+          hasImageId: !!image.id,
+          image: image, // 전체 이미지 객체 로그
+        });
+
+        // 새 파일이 업로드된 경우 (파일이 있으면 우선)
+        if (image.imageFile) {
           try {
-            // 기존 지점이고 기존 이미지가 있으면 삭제
-            if (branch.id && editingId) {
-              const { data: existingBranch } = await (supabase as any)
-                .from('branches')
+            // 기존 이미지가 있으면 삭제
+            if (image.id && editingId) {
+              const { data: existingImage } = await supabase
+                .from('academy_images')
                 .select('image_url')
-                .eq('id', branch.id)
+                .eq('id', image.id)
                 .single();
 
-              if (existingBranch?.image_url && existingBranch.image_url.includes('supabase.co/storage')) {
+              if (existingImage?.image_url && existingImage.image_url.includes('supabase.co/storage')) {
                 try {
-                  const filePath = extractFilePathFromUrl(existingBranch.image_url);
+                  const filePath = extractFilePathFromUrl(existingImage.image_url);
                   if (filePath) {
-                    await deleteFile('academy-branches', filePath);
+                    await deleteFile('academy-images', filePath);
                   }
                 } catch (error) {
                   console.error('Failed to delete old image:', error);
@@ -295,189 +193,112 @@ export default function AcademiesPage() {
             }
 
             imageUrl = await uploadFile(
-              'academy-branches',
-              branch.imageFile,
-              `branches/${academyId}`
+              'academy-images',
+              image.imageFile,
+              `academies/${academyId}`
             );
           } catch (error: any) {
             console.error('Image upload error:', error);
-            throw new Error(`지점 이미지 업로드에 실패했습니다: ${error.message}`);
+            throw new Error(`이미지 업로드에 실패했습니다: ${error.message}`);
           }
-        } else if (branch.id && editingId) {
-          // 기존 지점이고 새 파일이 없는 경우: 기존 이미지 URL 유지
-          const { data: existingBranch } = await (supabase as any)
-            .from('branches')
-            .select('image_url')
-            .eq('id', branch.id)
-            .single();
-
-          imageUrl = existingBranch?.image_url || branch.image_url || null;
-        } else if (branch.image_url) {
-          // 새 지점이고 URL이 직접 입력된 경우
-          imageUrl = branch.image_url;
         }
 
-        if (branch.id && editingId) {
-          // 기존 지점 업데이트 (id가 있고 수정 모드인 경우만)
-          // 먼저 DB에 해당 지점이 실제로 존재하는지 확인
-          const { data: checkBranch } = await (supabase as any)
-            .from('branches')
-            .select('id')
-            .eq('id', branch.id)
-            .single();
+        // imageUrl이 유효한 경우에만 저장 (파일 업로드 성공했거나 유효한 URL이 있는 경우)
+        // 파일이 있었지만 업로드 실패한 경우는 위에서 에러가 발생했을 것
+        // 여기서는 업로드 성공 후 imageUrl이 설정되었거나, 원래 유효한 URL이 있는 경우만 저장
+        if (!imageUrl || (typeof imageUrl === 'string' && imageUrl.trim() === '')) {
+          console.warn(`이미지 ${i + 1}번째 항목에 유효한 URL 또는 파일이 없어 건너뜁니다.`, {
+            hasImageFile: !!image.imageFile,
+            imageUrl: imageUrl,
+            originalImageUrl: image.image_url,
+          });
+          continue;
+        }
 
-          if (!checkBranch) {
-            console.error(`오류: 지점 ${branch.id}가 DB에 존재하지 않습니다.`);
-            throw new Error(`지점 ${branch.id}가 DB에 존재하지 않습니다.`);
+        // URL 유효성 검사 (파일이 아닌 경우 URL 형식인지 확인)
+        if (!image.imageFile) {
+          try {
+            const urlObj = new URL(imageUrl);
+            console.log(`Valid URL detected: ${urlObj.href}`);
+          } catch (urlError) {
+            console.warn(`이미지 ${i + 1}번째 항목의 URL이 유효하지 않아 건너뜁니다: ${imageUrl}`, urlError);
+            continue;
           }
+        }
 
-          console.log('기존 지점 업데이트:', branch.id, branch.name);
-          
-          const branchData: any = {
-            name: branch.name,
-            address_primary: branch.address_primary,
-            address_detail: branch.address_detail || null,
-            contact_number: branch.contact_number || null,
-            image_url: imageUrl,
-            is_active: true,
-          };
+        // 이미지 저장 또는 업데이트
+        const imageData = {
+          image_url: imageUrl,
+          display_order: validImageIndex,
+        };
 
-          const { error: branchUpdateError } = await (supabase as any)
-            .from('branches')
-            .update(branchData)
-            .eq('id', branch.id);
+        if (image.id && editingId) {
+          console.log(`Updating image with id: ${image.id}`, imageData);
+          const { data: updateData, error: updateError } = await supabase
+            .from('academy_images')
+            .update(imageData)
+            .eq('id', image.id)
+            .select();
 
-          if (branchUpdateError) {
-            console.error('Branch update error:', branchUpdateError);
-            throw branchUpdateError;
+          if (updateError) {
+            console.error('Error updating image:', updateError);
+            throw new Error(`이미지 업데이트에 실패했습니다: ${updateError.message}`);
           }
-          
-          console.log('지점 업데이트 완료:', branch.id);
-
-          // 기존 홀 정보 로드
-          const { data: existingHalls } = await (supabase as any)
-            .from('halls')
-            .select('id')
-            .eq('branch_id', branch.id);
-
-          const existingHallIds = (existingHalls || []).map((h: any) => h.id);
-          const formHallIds = branch.halls
-            .filter((h: any) => h.id)
-            .map((h: any) => h.id!);
-
-          // 삭제된 홀 삭제
-          const deletedHallIds = existingHallIds.filter(
-            (id: any) => !formHallIds.includes(id)
-          );
-
-          if (deletedHallIds.length > 0) {
-            const { error: deleteHallsError } = await (supabase as any)
-              .from('halls')
-              .delete()
-              .in('id', deletedHallIds);
-
-            if (deleteHallsError) {
-              console.error('Error deleting halls:', deleteHallsError);
-              throw deleteHallsError;
-            }
-          }
-
-          // 홀 업데이트 또는 생성
-          for (const hall of branch.halls) {
-            if (!hall.name || hall.capacity <= 0) {
-              continue;
-            }
-
-            const hallData: any = {
-              branch_id: branch.id,
-              name: hall.name,
-              capacity: hall.capacity,
-              floor_info: hall.floor_info || null,
-            };
-
-            if (hall.id) {
-              // 기존 홀 업데이트
-              const { error: hallUpdateError } = await (supabase as any)
-                .from('halls')
-                .update(hallData)
-                .eq('id', hall.id);
-
-              if (hallUpdateError) {
-                console.error('Hall update error:', hallUpdateError);
-                throw hallUpdateError;
-              }
-            } else {
-              // 새 홀 생성
-              const hallInsertData: any = {
-                branch_id: branch.id,
-                name: hall.name,
-                capacity: hall.capacity,
-                floor_info: hall.floor_info || null,
-              };
-              const { error: hallInsertError } = await (supabase as any)
-                .from('halls')
-                .insert([hallInsertData]);
-
-              if (hallInsertError) {
-                console.error('Hall insert error:', hallInsertError);
-                throw hallInsertError;
-              }
-            }
-          }
+          console.log('Image updated successfully:', updateData);
         } else {
-          // 새 지점 생성 (id가 없거나, id가 있지만 DB에 없는 경우)
-          // 수정 모드에서는 id가 없는 지점만 새로 생성해야 함
-          if (editingId && branch.id) {
-            // 수정 모드에서 id가 있는데 여기로 온 경우는 문제임
-            console.error(`오류: 지점 ${branch.id}가 업데이트되지 않고 새로 생성되려고 합니다.`);
-            throw new Error(`지점 처리 중 오류가 발생했습니다. 지점 ID: ${branch.id}`);
-          }
-          
-          console.log('새 지점 생성:', branch.name, editingId ? '(수정 모드)' : '(생성 모드)');
-
-          const branchData: any = {
+          const insertData = {
             academy_id: academyId,
-            name: branch.name,
-            address_primary: branch.address_primary,
-            address_detail: branch.address_detail || null,
-            contact_number: branch.contact_number || null,
-            image_url: imageUrl,
-            is_active: true,
+            ...imageData,
           };
+          console.log(`Inserting new image for academy: ${academyId}`, insertData);
+          const { data: insertDataResult, error: insertError } = await supabase.from('academy_images').insert([insertData]).select();
 
-          const { data: newBranch, error: branchInsertError } = await (supabase as any)
-            .from('branches')
-            .insert([branchData])
-            .select()
-            .single();
-
-          if (branchInsertError) {
-            console.error('Branch insert error:', branchInsertError);
-            throw branchInsertError;
+          if (insertError) {
+            console.error('Error inserting image:', insertError);
+            throw new Error(`이미지 저장에 실패했습니다: ${insertError.message}`);
           }
+          console.log('Image inserted successfully:', insertDataResult);
+        }
 
-          // 새 지점의 홀 생성
-          for (const hall of branch.halls) {
-            if (!hall.name || hall.capacity <= 0) {
-              continue;
-            }
+        validImageIndex++;
+      }
 
-            const hallData: any = {
-              branch_id: newBranch.id,
-              name: hall.name,
-              capacity: hall.capacity,
-              floor_info: hall.floor_info || null,
-            };
+      // 3. 홀 처리
+      if (editingId) {
+        // 기존 홀 로드
+        const { data: existingHalls } = await supabase
+          .from('halls')
+          .select('id')
+          .eq('academy_id', academyId);
 
-            const { error: hallInsertError } = await (supabase as any)
-              .from('halls')
-              .insert([hallData]);
+        const existingHallIds = (existingHalls || []).map((h: any) => h.id);
+        const formHallIds = formData.halls.filter((h) => h.id).map((h) => h.id!);
 
-            if (hallInsertError) {
-              console.error('Hall insert error:', hallInsertError);
-              throw hallInsertError;
-            }
-          }
+        // 삭제할 홀 찾기
+        const deletedHallIds = existingHallIds.filter(
+          (id: string) => !formHallIds.includes(id)
+        );
+
+        // 삭제할 홀 삭제
+        if (deletedHallIds.length > 0) {
+          await supabase.from('halls').delete().in('id', deletedHallIds);
+        }
+      }
+
+      // 홀 저장 또는 업데이트
+      for (const hall of formData.halls) {
+        if (!hall.name || hall.capacity <= 0) continue;
+
+        const hallData: any = {
+          academy_id: academyId,
+          name: hall.name,
+          capacity: hall.capacity,
+        };
+
+        if (hall.id && editingId) {
+          await supabase.from('halls').update(hallData).eq('id', hall.id);
+        } else {
+          await supabase.from('halls').insert([hallData]);
         }
       }
 
@@ -498,86 +319,28 @@ export default function AcademiesPage() {
     const supabase = supabaseClient as any;
 
     try {
-      // 1. 지점 데이터 먼저 로드
-      const { data: branches, error: branchesError } = await (supabase as any)
-        .from('branches')
+      // 홀 데이터 로드
+      const { data: halls, error: hallsError } = await supabase
+        .from('halls')
         .select('*')
         .eq('academy_id', academy.id)
         .order('created_at', { ascending: true });
 
-      if (branchesError) {
-        console.error('Error loading branches:', branchesError);
-        throw branchesError;
+      if (hallsError) {
+        console.error('Error loading halls:', hallsError);
+        throw hallsError;
       }
 
-      // 2. 지점이 있으면 각 지점의 홀을 별도로 로드
-      const branchData: BranchData[] = [];
-      
-      if (branches && branches.length > 0) {
-        const branchIds = branches.filter((b: any) => b.id).map((b: any) => b.id!);
-        
-        // 홀 로드 (배치 처리, 최대 100개씩 처리)
-        const hallsByBranchId = new Map<string, Hall[]>();
-        
-        if (branchIds.length > 0) {
-          try {
-            // Supabase의 in() 쿼리는 최대 100개까지 지원하므로 배치로 나눔
-            const batchSize = 100;
-            for (let i = 0; i < branchIds.length; i += batchSize) {
-              const batch = branchIds.slice(i, i + batchSize);
-              
-              const { data: batchHalls, error: hallsError } = await (supabase as any)
-                .from('halls')
-                .select('*')
-                .in('branch_id', batch)
-                .order('created_at', { ascending: true });
+      // 이미지 데이터 로드
+      const { data: images, error: imagesError } = await supabase
+        .from('academy_images')
+        .select('*')
+        .eq('academy_id', academy.id)
+        .order('display_order', { ascending: true });
 
-              if (hallsError) {
-                console.error('Error loading halls batch:', hallsError);
-                // 홀 로드 실패해도 지점은 표시
-                continue;
-              }
-
-              if (batchHalls) {
-                batchHalls.forEach((hall: Hall) => {
-                  if (hall.branch_id) {
-                    if (!hallsByBranchId.has(hall.branch_id)) {
-                      hallsByBranchId.set(hall.branch_id, []);
-                    }
-                    hallsByBranchId.get(hall.branch_id)!.push(hall);
-                  }
-                });
-              }
-            }
-          } catch (error) {
-            console.error('Error loading halls:', error);
-            // 홀 로드 실패해도 지점은 표시
-          }
-        }
-
-        // 지점 데이터 매핑
-        for (const branch of (branches || [])) {
-          if (!(branch as any).id) continue; // id가 없는 지점은 건너뛰기
-          
-          const branchHalls = hallsByBranchId.get((branch as any).id) || [];
-          
-          branchData.push({
-            id: (branch as any).id,
-            name: (branch as any).name,
-            address_primary: (branch as any).address_primary,
-            address_detail: (branch as any).address_detail || '',
-            contact_number: (branch as any).contact_number || '',
-            image_url: (branch as any).image_url || null,
-            halls: branchHalls
-              .filter((hall: any) => hall.id) // id가 있는 홀만
-              .map((hall: any) => ({
-                id: hall.id,
-                name: hall.name,
-                capacity: hall.capacity || 0,
-                floor_info: hall.floor_info || '',
-              })),
-          });
-        }
+      if (imagesError) {
+        console.error('Error loading images:', imagesError);
+        throw imagesError;
       }
 
       const tags = academy.tags
@@ -588,9 +351,19 @@ export default function AcademiesPage() {
         name_kr: academy.name_kr || '',
         name_en: academy.name_en || '',
         tags,
-        business_registration_number: academy.business_registration_number || '',
+        address: (academy as any).address || '',
+        contact_number: (academy as any).contact_number || '',
         logo_url: academy.logo_url || '',
-        branches: branchData,
+        halls: (halls || []).map((hall: any) => ({
+          id: hall.id,
+          name: hall.name,
+          capacity: hall.capacity || 0,
+        })),
+        academy_images: (images || []).map((img: any) => ({
+          id: img.id,
+          image_url: img.image_url || '',
+          display_order: img.display_order || 0,
+        })),
       });
       setEditingId(academy.id);
       setShowModal(true);
@@ -602,7 +375,7 @@ export default function AcademiesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('정말 삭제하시겠습니까? 관련된 지점, 홀, 클래스 등도 함께 삭제됩니다.')) return;
+    if (!confirm('정말 삭제하시겠습니까? 관련된 홀, 클래스 등도 함께 삭제됩니다.')) return;
 
     const supabaseClient = getSupabaseClient();
     if (!supabaseClient) return;
@@ -610,100 +383,69 @@ export default function AcademiesPage() {
 
     try {
       // 관련 데이터 확인
-      const [branchesRes, classesRes] = await Promise.all([
-        (supabase as any).from('branches').select('id').eq('academy_id', id).limit(1),
-        (supabase as any).from('classes').select('id').eq('academy_id', id).limit(1),
-      ]);
+      const { data: classes } = await supabase
+        .from('classes')
+        .select('id')
+        .eq('academy_id', id)
+        .limit(1);
 
-      const hasBranches = branchesRes.data && branchesRes.data.length > 0;
-      const hasClasses = classesRes.data && classesRes.data.length > 0;
-
-      if (hasBranches || hasClasses) {
-        const confirmMessage = `이 학원에 연결된 데이터가 있습니다.\n` +
-          `${hasBranches ? '- 지점이 있습니다\n' : ''}` +
-          `${hasClasses ? '- 클래스가 있습니다\n' : ''}` +
-          `정말 삭제하시겠습니까? (관련 데이터도 함께 삭제됩니다)`;
-        
-        if (!confirm(confirmMessage)) return;
+      if (classes && classes.length > 0) {
+        if (!confirm('이 학원에 연결된 클래스가 있습니다. 정말 삭제하시겠습니까?')) return;
       }
 
-      // 관련 데이터 삭제 (CASCADE 대신 수동 삭제)
-      // 1. 클래스 관련 삭제 (schedules -> bookings -> classes)
-      const { data: classes } = await (supabase as any)
+      // 관련 데이터 삭제
+      // 1. 클래스 관련 삭제
+      const { data: classesData } = await supabase
         .from('classes')
         .select('id')
         .eq('academy_id', id);
 
-      if (classes && classes.length > 0) {
-        const classIds = classes.map((c: any) => c.id);
-        
-        // 각 클래스의 schedules 찾기
-        const { data: schedules } = await (supabase as any)
-        .from('schedules')
+      if (classesData && classesData.length > 0) {
+        const classIds = classesData.map((c: any) => c.id);
+
+        const { data: schedules } = await supabase
+          .from('schedules')
           .select('id')
           .in('class_id', classIds);
 
         if (schedules && schedules.length > 0) {
           const scheduleIds = schedules.map((s: any) => s.id);
-          
-          // bookings 삭제
-          await (supabase as any)
-        .from('bookings')
-            .delete()
-            .in('schedule_id', scheduleIds);
+          await supabase.from('bookings').delete().in('schedule_id', scheduleIds);
         }
 
-        // schedules 삭제
-        await (supabase as any)
-        .from('schedules')
-          .delete()
-          .in('class_id', classIds);
-
-        // classes 삭제
-        await (supabase as any)
-          .from('classes')
-          .delete()
-          .eq('academy_id', id);
+        await supabase.from('schedules').delete().in('class_id', classIds);
+        await supabase.from('classes').delete().eq('academy_id', id);
       }
 
-      // 2. 지점 관련 삭제 (halls -> branches)
-      const { data: branches } = await (supabase as any)
-        .from('branches')
-        .select('id')
+      // 2. 이미지 삭제
+      const { data: images } = await supabase
+        .from('academy_images')
+        .select('image_url')
         .eq('academy_id', id);
 
-      if (branches && branches.length > 0) {
-        const branchIds = branches.map((b: any) => b.id);
-        
-        // halls 삭제
-        await (supabase as any)
-          .from('halls')
-          .delete()
-          .in('branch_id', branchIds);
-
-        // branches 삭제
-        await (supabase as any)
-          .from('branches')
-          .delete()
-          .eq('academy_id', id);
+      if (images) {
+        for (const image of images) {
+          if (image.image_url && image.image_url.includes('supabase.co/storage')) {
+            try {
+              const filePath = extractFilePathFromUrl(image.image_url);
+              if (filePath) {
+                await deleteFile('academy-images', filePath);
+              }
+            } catch (error) {
+              console.error('Failed to delete image:', error);
+            }
+          }
+        }
       }
+      await supabase.from('academy_images').delete().eq('academy_id', id);
 
-      // 3. academy_instructors 삭제
-      await (supabase as any)
-        .from('academy_instructors')
-        .delete()
-        .eq('academy_id', id);
+      // 3. 홀 삭제
+      await supabase.from('halls').delete().eq('academy_id', id);
 
       // 4. 학원 삭제
-      const { error } = await (supabase as any)
-        .from('academies')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('academies').delete().eq('id', id);
 
-      if (error) {
-        console.error('Delete error details:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       await loadAcademies();
     } catch (error: any) {
@@ -785,10 +527,13 @@ export default function AcademiesPage() {
                   학원명
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-                  태그
+                  주소
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-                  사업자 등록번호
+                  연락처
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
+                  태그
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
                   등록일
@@ -801,7 +546,7 @@ export default function AcademiesPage() {
             <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
               {academies.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-neutral-500 dark:text-neutral-400">
+                  <td colSpan={6} className="px-6 py-12 text-center text-neutral-500 dark:text-neutral-400">
                     등록된 학원이 없습니다.
                   </td>
                 </tr>
@@ -812,6 +557,12 @@ export default function AcademiesPage() {
                     <tr key={academy.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
                       <td className="px-6 py-4 text-sm font-medium text-black dark:text-white">
                         {getDisplayName(academy)}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">
+                        {academy.address || '-'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">
+                        {academy.contact_number || '-'}
                       </td>
                       <td className="px-6 py-4">
                         {tags.length > 0 ? (
@@ -828,9 +579,6 @@ export default function AcademiesPage() {
                         ) : (
                           <span className="text-neutral-400 dark:text-neutral-500 text-sm">-</span>
                         )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
-                        {academy.business_registration_number || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
                         {academy.created_at ? new Date(academy.created_at).toLocaleDateString('ko-KR') : '-'}

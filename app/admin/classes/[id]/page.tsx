@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
-import { Class, Academy, Branch, Hall, Instructor, Schedule, Booking, User, UserTicket, Ticket } from '@/lib/supabase/types';
+import { Class, Academy, Hall, Instructor, Schedule, Booking, User, UserTicket, Ticket } from '@/lib/supabase/types';
 
 type BookingWithFullDetails = Booking & {
   users: User | null;
@@ -12,7 +12,6 @@ type BookingWithFullDetails = Booking & {
     tickets: Ticket | null;
   }) | null;
   schedules: (Schedule & {
-    branches: Branch | null;
     halls: Hall | null;
     instructors: Instructor | null;
   }) | null;
@@ -22,7 +21,6 @@ type ClassWithRelations = Class & {
   academies: Academy | null;
   instructors: Instructor | null;
   schedules: (Schedule & {
-    branches: Branch | null;
     halls: Hall | null;
     instructors: Instructor | null;
   })[];
@@ -54,7 +52,6 @@ export default function ClassDetailPage() {
           instructors(*),
           schedules(
             *,
-            branches(*),
             halls(*),
             instructors(*)
           )
@@ -81,7 +78,10 @@ export default function ClassDetailPage() {
             ),
             schedules(
               *,
-              branches(*),
+              classes(
+                *,
+                academies(*)
+              ),
               halls(*),
               instructors(*)
             )
@@ -300,7 +300,6 @@ export default function ClassDetailPage() {
                   const userTicket = booking.user_tickets as (UserTicket & { tickets: Ticket | null }) | null;
                   const ticket = userTicket?.tickets || null;
                   const schedule = booking.schedules as (Schedule & {
-                    branches: Branch | null;
                     halls: Hall | null;
                     instructors: Instructor | null;
                   }) | null;

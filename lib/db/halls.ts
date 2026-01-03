@@ -1,15 +1,15 @@
 import { createClient } from '@/lib/supabase/server';
-import { Hall } from '@/lib/supabase/types';
+import { Database } from '@/types/database';
 
-export async function getHalls(branchId?: string) {
+export async function getHalls(academyId?: string) {
   const supabase = await createClient() as any;
   let query = supabase
     .from('halls')
     .select('*')
     .order('name', { ascending: true });
 
-  if (branchId) {
-    query = query.eq('branch_id', branchId);
+  if (academyId) {
+    query = query.eq('academy_id', academyId);
   }
 
   const { data, error } = await query;
@@ -17,14 +17,21 @@ export async function getHalls(branchId?: string) {
   return data;
 }
 
-export async function createHall(hall: {
-  branch_id: string;
-  name: string;
-  capacity?: number;
-  floor_info?: string;
-}) {
+export async function getHallById(id: string) {
   const supabase = await createClient() as any;
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
+    .from('halls')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function createHall(hall: Database['public']['Tables']['halls']['Insert']) {
+  const supabase = await createClient() as any;
+  const { data, error } = await supabase
     .from('halls')
     .insert(hall)
     .select()
@@ -32,5 +39,28 @@ export async function createHall(hall: {
 
   if (error) throw error;
   return data;
+}
+
+export async function updateHall(id: string, updates: Database['public']['Tables']['halls']['Update']) {
+  const supabase = await createClient() as any;
+  const { data, error } = await supabase
+    .from('halls')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteHall(id: string) {
+  const supabase = await createClient() as any;
+  const { error } = await supabase
+    .from('halls')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
 }
 

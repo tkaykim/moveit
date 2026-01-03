@@ -7,6 +7,7 @@ import {
   User,
   BookOpen,
   ChevronRight,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -33,6 +34,11 @@ const menuItems: MenuItem[] = [
     title: '클래스 관리',
     icon: BookOpen,
     href: '/admin/classes',
+  },
+  {
+    title: '사용자 관리',
+    icon: Users,
+    href: '/admin/users',
   },
 ];
 

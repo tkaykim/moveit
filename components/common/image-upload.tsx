@@ -33,6 +33,10 @@ export function ImageUpload({
     if (currentImageUrl) {
       setPreview(currentImageUrl);
       setUrlInput(currentImageUrl);
+      // HTTP/HTTPS URL이면 자동으로 URL 모드로 전환
+      if (currentImageUrl.startsWith('http://') || currentImageUrl.startsWith('https://')) {
+        setMode('url');
+      }
     } else {
       setPreview(null);
       setUrlInput('');
@@ -63,10 +67,9 @@ export function ImageUpload({
     reader.readAsDataURL(file);
 
     onImageChange(file);
-    // 파일 업로드 모드일 때는 URL 초기화
-    if (onImageUrlChange) {
-      onImageUrlChange(null);
-    }
+    // 파일을 선택했을 때는 URL을 초기화하지 않음
+    // (기존 URL이 있으면 유지하고, 파일 업로드 시 파일이 우선)
+    // 단, URL 입력 필드는 초기화
     setUrlInput('');
   };
 
@@ -74,10 +77,12 @@ export function ImageUpload({
     setUrlInput(url);
     
     if (url.trim()) {
-      // URL 유효성 검사
+      // URL 유효성 검사 (형식만 확인, 이미지 로드 가능 여부는 확인하지 않음)
       try {
-        new URL(url);
+        const urlObj = new URL(url);
+        // URL 형식이 유효하면 저장 (미리보기는 시도하지만 실패해도 URL은 유효)
         setPreview(url);
+        // URL이 유효하면 항상 저장 (미리보기 실패와 무관하게)
         if (onImageUrlChange) {
           onImageUrlChange(url);
         }
@@ -87,7 +92,7 @@ export function ImageUpload({
           fileInputRef.current.value = '';
         }
       } catch {
-        // 유효하지 않은 URL이면 미리보기 제거
+        // 유효하지 않은 URL 형식이면 미리보기 제거
         setPreview(null);
         if (onImageUrlChange) {
           onImageUrlChange(null);
@@ -261,9 +266,11 @@ export function ImageUpload({
                 fill
                 className="object-cover"
                 unoptimized
-                onError={() => {
-                  setPreview(null);
-                  alert('이미지를 불러올 수 없습니다. URL을 확인해주세요.');
+                onError={(e) => {
+                  // 미리보기 실패해도 URL은 유효하므로 preview는 유지
+                  // 단지 이미지 로드만 실패한 것이므로 경고만 표시
+                  console.warn('이미지 미리보기를 불러올 수 없습니다. URL은 저장됩니다:', preview);
+                  // preview를 제거하지 않고 유지 (URL은 유효하므로)
                 }}
               />
               <button
@@ -276,8 +283,8 @@ export function ImageUpload({
             </div>
           )}
           {!preview && urlInput && (
-            <p className="text-xs text-red-500 dark:text-red-400">
-              유효한 이미지 URL을 입력해주세요.
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              URL을 입력하면 미리보기가 표시됩니다.
             </p>
           )}
         </div>
