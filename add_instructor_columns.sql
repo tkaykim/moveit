@@ -15,3 +15,4 @@ ADD COLUMN IF NOT EXISTS specialties character varying;
 -- SELECT id, name_kr, name_en, bio, specialties FROM public.instructors LIMIT 10;
 
 
+

@@ -5,7 +5,17 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { ClassInfo, Academy } from '@/types';
 import { ClassPreviewModal } from '@/components/modals/class-preview-modal';
-import { formatKSTTime } from '@/lib/utils/kst-time';
+import { 
+  formatKSTTime, 
+  getKSTWeekStart, 
+  getKSTDay, 
+  getKSTDateParts,
+  formatKSTDateRange,
+  isKSTToday,
+  getKSTDayOfMonth,
+  getKSTNow,
+  convertKSTInputToUTC
+} from '@/lib/utils/kst-time';
 
 interface CalendarViewProps {
   onAcademyClick?: (academy: Academy) => void;
@@ -15,14 +25,13 @@ interface CalendarViewProps {
 const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const DAY_NAMES = ["월", "화", "수", "목", "금", "토", "일"];
 
-// Schedule을 ClassInfo로 변환
-function transformSchedule(schedule: any): ClassInfo & { academy?: Academy; time?: string; startTime?: string; endTime?: string; maxStudents?: number; currentStudents?: number } {
-  const instructor = schedule.instructors?.name_kr || schedule.instructors?.name_en || '강사 정보 없음';
-  const classData = schedule.classes || {};
+// Class를 ClassInfo로 변환
+function transformClass(classData: any): ClassInfo & { academy?: Academy; time?: string; startTime?: string; endTime?: string; maxStudents?: number; currentStudents?: number } {
+  const instructor = classData.instructors?.name_kr || classData.instructors?.name_en || '강사 정보 없음';
   const genre = classData.genre || 'ALL';
   const level = classData.difficulty_level || 'All Level';
-  const maxStudents = schedule.max_students || classData.max_students || 0;
-  const currentStudents = schedule.current_students || classData.current_students || 0;
+  const maxStudents = classData.max_students || 0;
+  const currentStudents = classData.current_students || 0;
   const isFull = maxStudents > 0 && currentStudents >= maxStudents;
   const isAlmostFull = maxStudents > 0 && currentStudents >= maxStudents * 0.8;
   const status = isFull ? 'FULL' : isAlmostFull ? 'ALMOST_FULL' : 'AVAILABLE';
@@ -40,73 +49,60 @@ function transformSchedule(schedule: any): ClassInfo & { academy?: Academy; time
   } : undefined;
 
   // 시간 정보 (UTC를 KST로 변환하여 표시)
-  const startTimeStr = schedule.start_time ? formatKSTTime(schedule.start_time) : '';
-  const endTimeStr = schedule.end_time ? formatKSTTime(schedule.end_time) : '';
+  const startTimeStr = classData.start_time ? formatKSTTime(classData.start_time) : '';
+  const endTimeStr = classData.end_time ? formatKSTTime(classData.end_time) : '';
 
   return {
-    id: schedule.id || classData.id,
-    schedule_id: schedule.id || classData.id,
+    id: classData.id,
+    schedule_id: classData.id,
     instructor,
     genre,
     level,
     status,
     price: classData.price || 0,
     class_title: classData.title,
-    hall_name: schedule.halls?.name || classData.halls?.name,
+    hall_name: classData.halls?.name,
     academy,
     time: startTimeStr,
-    startTime: schedule.start_time || classData.start_time,
-    endTime: schedule.end_time || classData.end_time,
+    startTime: classData.start_time,
+    endTime: classData.end_time,
     maxStudents,
     currentStudents,
   };
 }
 
-// Class를 Schedule 형태로 변환 (schedules가 없을 때 사용)
-function transformClassToSchedule(classData: any): any {
-  return {
-    id: classData.id,
-    class_id: classData.id,
-    start_time: classData.start_time,
-    end_time: classData.end_time,
-    max_students: classData.max_students || 0,
-    current_students: classData.current_students || 0,
-    is_canceled: classData.is_canceled || false,
-    classes: {
-      ...classData,
-      academies: classData.academies,
-    },
-    instructors: classData.instructors,
-    halls: classData.halls,
-  };
-}
-
-// 주간 스케줄을 그리드로 변환
-function buildScheduleGrid(schedules: any[]) {
-  const grid: Record<string, (ClassInfo & { academy?: Academy; time?: string })[]> = {
+// 주간 클래스를 그리드로 변환
+function buildClassGrid(classes: any[]) {
+  const grid: Record<string, (ClassInfo & { academy?: Academy; time?: string; kstStartTime?: number })[]> = {
     MON: [], TUE: [], WED: [], THU: [], FRI: [], SAT: [], SUN: []
   };
 
-  schedules.forEach((schedule: any) => {
-    if (!schedule.start_time) return;
-    const startTime = new Date(schedule.start_time);
-    const dayIndex = (startTime.getDay() + 6) % 7; // 월요일을 0으로
+  classes.forEach((classData: any) => {
+    if (!classData.start_time) return;
+    const startTime = new Date(classData.start_time);
+    // KST 기준으로 요일 계산
+    const dayIndex = (getKSTDay(startTime) + 6) % 7; // 월요일을 0으로
     const day = DAYS[dayIndex];
     // UTC를 KST로 변환하여 시간 표시
-    const time = formatKSTTime(schedule.start_time);
+    const time = formatKSTTime(classData.start_time);
     
-    const classInfo = transformSchedule(schedule);
+    // KST 기준 시작 시간 (밀리초) - 정렬용
+    const kstStartTime = startTime.getTime() + (9 * 60 * 60 * 1000);
+    
+    const classInfo = transformClass(classData);
     classInfo.time = time;
+    (classInfo as any).kstStartTime = kstStartTime;
     
     grid[day].push(classInfo);
   });
 
-  // 시간순으로 정렬
+  // KST 기준 시간순으로 정렬
   Object.keys(grid).forEach((day: string) => {
     grid[day].sort((a, b) => {
-      const timeA = a.time || '00:00';
-      const timeB = b.time || '00:00';
-      return timeA.localeCompare(timeB);
+      // KST 기준 시작 시간으로 정렬
+      const timeA = (a as any).kstStartTime || 0;
+      const timeB = (b as any).kstStartTime || 0;
+      return timeA - timeB;
     });
   });
 
@@ -114,7 +110,7 @@ function buildScheduleGrid(schedules: any[]) {
 }
 
 export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps) => {
-  const [schedules, setSchedules] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const [scheduleGrid, setScheduleGrid] = useState<Record<string, (ClassInfo & { academy?: Academy; time?: string })[]>>({
     MON: [], TUE: [], WED: [], THU: [], FRI: [], SAT: [], SUN: []
   });
@@ -122,23 +118,36 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [previewClass, setPreviewClass] = useState<(ClassInfo & { time?: string }) | null>(null);
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
-    const now = new Date();
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay() + 1); // 월요일
-    startOfWeek.setHours(0, 0, 0, 0);
-    return startOfWeek;
+    // KST 기준으로 주의 시작(월요일) 계산
+    return getKSTWeekStart();
   });
 
   useEffect(() => {
-    async function loadSchedules() {
+    async function loadClasses() {
       try {
-        // 이번 주의 시작과 끝 날짜 계산
-        const startOfWeek = new Date(currentWeekStart);
-        startOfWeek.setHours(0, 0, 0, 0);
+        // KST 기준으로 이번 주의 시작과 끝 날짜 계산 (academy-admin과 동일한 방식)
+        const kstStartParts = getKSTDateParts(currentWeekStart);
+        const kstEndDate = new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+        const kstEndParts = getKSTDateParts(kstEndDate);
         
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6); // 일요일
-        endOfWeek.setHours(23, 59, 59, 999);
+        // 일요일 다음 날 계산 (월 넘어감 처리)
+        const kstNextDayDate = new Date(kstEndDate.getTime() + 24 * 60 * 60 * 1000);
+        const kstNextDayParts = getKSTDateParts(kstNextDayDate);
+        
+        // KST 기준 날짜/시간 문자열 생성 (academy-admin의 convertKSTInputToUTC와 동일한 형식)
+        // 월요일 00:00:00 ~ 일요일 23:59:59.999 (다음 날 00:00:00 미만)
+        const kstStartString = `${kstStartParts.year}-${String(kstStartParts.month).padStart(2, '0')}-${String(kstStartParts.day).padStart(2, '0')}T00:00`;
+        const kstNextDayString = `${kstNextDayParts.year}-${String(kstNextDayParts.month).padStart(2, '0')}-${String(kstNextDayParts.day).padStart(2, '0')}T00:00`;
+        
+        // academy-admin과 동일한 방식으로 UTC 변환
+        const utcStart = convertKSTInputToUTC(kstStartString);
+        const utcEndNextDay = convertKSTInputToUTC(kstNextDayString);
+
+        if (!utcStart || !utcEndNextDay) {
+          console.error('날짜 변환 실패');
+          setLoading(false);
+          return;
+        }
 
         const supabase = getSupabaseClient();
         if (!supabase) {
@@ -146,101 +155,95 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
           return;
         }
 
-        // 먼저 schedules 테이블에서 가져오기 시도
-        const { data: allSchedules, error: schedulesError } = await (supabase as any)
-          .from('schedules')
+        // classes 테이블에서 직접 가져오기 (start_time 기준, UTC로 변환된 날짜 범위 사용)
+        // 정렬은 클라이언트에서 KST 기준으로 수행하므로 DB 정렬 제거
+        const { data: allClasses, error: classesError } = await (supabase as any)
+          .from('classes')
           .select(`
             *,
-            classes (
-              *,
-              academies (*)
-            ),
+            academies (*),
             instructors (*),
             halls (*)
           `)
           .eq('is_canceled', false)
-          .gte('start_time', startOfWeek.toISOString())
-          .lte('start_time', endOfWeek.toISOString())
-          .order('start_time', { ascending: true });
+          .not('start_time', 'is', null)
+          .gte('start_time', utcStart)
+          .lt('start_time', utcEndNextDay); // 일요일 23:59:59.999까지 포함
 
-        let finalSchedules: any[] = [];
-
-        if (schedulesError) {
-          console.error('Error loading schedules:', schedulesError);
-        } else if (allSchedules && allSchedules.length > 0) {
-          // schedules 테이블에 데이터가 있으면 사용
-          finalSchedules = allSchedules;
+        if (classesError) {
+          console.error('Error loading classes:', classesError);
+          setClasses([]);
         } else {
-          // schedules 테이블이 비어있으면 classes 테이블에서 직접 가져오기
-          const { data: allClasses, error: classesError } = await (supabase as any)
-            .from('classes')
-            .select(`
-              *,
-              academies (*),
-              instructors (*),
-              halls (*)
-            `)
-            .eq('is_canceled', false)
-            .not('start_time', 'is', null)
-            .gte('start_time', startOfWeek.toISOString())
-            .lte('start_time', endOfWeek.toISOString())
-            .order('start_time', { ascending: true });
-
-          if (classesError) {
-            console.error('Error loading classes:', classesError);
-          } else if (allClasses && allClasses.length > 0) {
-            // classes 데이터를 schedule 형태로 변환
-            finalSchedules = allClasses.map((classData: any) => transformClassToSchedule(classData));
-          }
+          // KST 기준으로 정렬 (academy-admin과 동일한 방식)
+          const sortedClasses = (allClasses || []).sort((a: any, b: any) => {
+            if (!a.start_time || !b.start_time) return 0;
+            // UTC 시간을 KST로 변환하여 비교
+            const aKST = new Date(a.start_time).getTime() + (9 * 60 * 60 * 1000);
+            const bKST = new Date(b.start_time).getTime() + (9 * 60 * 60 * 1000);
+            return aKST - bKST;
+          });
+          
+          setClasses(sortedClasses);
+          const grid = buildClassGrid(sortedClasses);
+          setScheduleGrid(grid);
         }
-
-        setSchedules(finalSchedules);
-        const grid = buildScheduleGrid(finalSchedules);
-        setScheduleGrid(grid);
       } catch (error) {
-        console.error('Error loading schedules:', error);
+        console.error('Error loading classes:', error);
+        setClasses([]);
       } finally {
         setLoading(false);
       }
     }
-    loadSchedules();
+    loadClasses();
   }, [currentWeekStart]);
 
   const goToPreviousWeek = () => {
-    const newDate = new Date(currentWeekStart);
-    newDate.setDate(newDate.getDate() - 7);
-    setCurrentWeekStart(newDate);
+    // KST 기준으로 이전 주 계산
+    const kstStart = new Date(currentWeekStart.getTime() + (9 * 60 * 60 * 1000));
+    kstStart.setUTCDate(kstStart.getUTCDate() - 7);
+    kstStart.setUTCHours(0, 0, 0, 0);
+    setCurrentWeekStart(new Date(kstStart.getTime() - (9 * 60 * 60 * 1000)));
   };
 
   const goToNextWeek = () => {
-    const newDate = new Date(currentWeekStart);
-    newDate.setDate(newDate.getDate() + 7);
-    setCurrentWeekStart(newDate);
+    // KST 기준으로 다음 주 계산
+    const kstStart = new Date(currentWeekStart.getTime() + (9 * 60 * 60 * 1000));
+    kstStart.setUTCDate(kstStart.getUTCDate() + 7);
+    kstStart.setUTCHours(0, 0, 0, 0);
+    setCurrentWeekStart(new Date(kstStart.getTime() - (9 * 60 * 60 * 1000)));
   };
 
   const goToToday = () => {
-    const now = new Date();
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay() + 1);
-    startOfWeek.setHours(0, 0, 0, 0);
-    setCurrentWeekStart(startOfWeek);
+    // KST 기준으로 오늘의 주 시작(월요일) 계산
+    setCurrentWeekStart(getKSTWeekStart());
   };
 
   const getWeekDates = () => {
+    // KST 기준으로 주의 날짜들 계산
     const dates = [];
+    const kstStart = new Date(currentWeekStart.getTime() + (9 * 60 * 60 * 1000));
+    
     for (let i = 0; i < 7; i++) {
-      const date = new Date(currentWeekStart);
-      date.setDate(currentWeekStart.getDate() + i);
-      dates.push(date);
+      const kstDate = new Date(kstStart);
+      kstDate.setUTCDate(kstStart.getUTCDate() + i);
+      kstDate.setUTCHours(0, 0, 0, 0);
+      // UTC로 변환하여 반환
+      dates.push(new Date(kstDate.getTime() - (9 * 60 * 60 * 1000)));
     }
     return dates;
   };
 
   const getDisplayDateRange = () => {
+    // KST 기준으로 날짜 범위 표시
     const start = currentWeekStart;
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    return `${start.getMonth() + 1}/${start.getDate()} - ${end.getMonth() + 1}/${end.getDate()}`;
+    const kstStart = new Date(start.getTime() + (9 * 60 * 60 * 1000));
+    const kstEnd = new Date(kstStart);
+    kstEnd.setUTCDate(kstStart.getUTCDate() + 6);
+    
+    return formatKSTDateRange(
+      new Date(kstStart.getTime() - (9 * 60 * 60 * 1000)),
+      new Date(kstEnd.getTime() - (9 * 60 * 60 * 1000))
+    );
   };
 
   const handleClassClick = (classInfo: ClassInfo & { academy?: Academy; time?: string }) => {
@@ -271,8 +274,8 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
     ? scheduleGrid[selectedDay] || []
     : Object.values(scheduleGrid).flat();
 
-  // 시간대별로 그룹화
-  const classesByTime: Record<string, (ClassInfo & { academy?: Academy; time?: string })[]> = {};
+  // 시간대별로 그룹화 (KST 기준)
+  const classesByTime: Record<string, (ClassInfo & { academy?: Academy; time?: string; kstStartTime?: number })[]> = {};
   displayClasses.forEach((cls: any) => {
     const time = cls.time || '00:00';
     if (!classesByTime[time]) {
@@ -281,7 +284,14 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
     classesByTime[time].push(cls);
   });
 
-  const timeSlots = Object.keys(classesByTime).sort();
+  // KST 기준 시간순으로 정렬 (시간 문자열을 숫자로 변환하여 정렬)
+  const timeSlots = Object.keys(classesByTime).sort((a, b) => {
+    const [hoursA, minutesA] = a.split(':').map(Number);
+    const [hoursB, minutesB] = b.split(':').map(Number);
+    const timeA = hoursA * 60 + minutesA;
+    const timeB = hoursB * 60 + minutesB;
+    return timeA - timeB;
+  });
 
   return (
     <div className="h-full pt-12 px-5 pb-24 animate-in fade-in">
@@ -316,9 +326,10 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
       <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide pb-2">
         {DAYS.map((day, index) => {
           const date = weekDates[index];
-          const isToday = date.toDateString() === new Date().toDateString();
+          const isToday = isKSTToday(date);
           const isSelected = selectedDay === day;
           const classCount = scheduleGrid[day]?.length || 0;
+          const dayOfMonth = getKSTDayOfMonth(date);
 
           return (
             <button
@@ -333,7 +344,7 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
               }`}
             >
               <span className="text-xs">{DAY_NAMES[index]}</span>
-              <span className="text-sm">{date.getDate()}</span>
+              <span className="text-sm">{dayOfMonth}</span>
               {classCount > 0 && (
                 <span className={`text-[10px] ${isSelected ? 'text-black' : 'text-primary dark:text-[#CCFF00]'}`}>
                   {classCount}

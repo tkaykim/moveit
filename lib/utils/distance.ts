@@ -93,3 +93,4 @@ export function formatDistance(distanceKm: number): string {
   return `${distanceKm.toFixed(1)}km`;
 }
 
+

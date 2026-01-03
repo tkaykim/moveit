@@ -313,11 +313,17 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
 
         {/* 빠른 메뉴 */}
         <div className="grid grid-cols-4 gap-3 mb-6">
-          <button className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex flex-col items-center gap-2 active:scale-[0.98] transition-transform">
+          <button 
+            onClick={() => onNavigate?.('TICKETS')}
+            className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex flex-col items-center gap-2 active:scale-[0.98] transition-transform"
+          >
             <User className="text-neutral-600 dark:text-neutral-400" size={20} />
             <span className="text-xs font-bold text-black dark:text-white">회원권</span>
           </button>
-          <button className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex flex-col items-center gap-2 active:scale-[0.98] transition-transform">
+          <button 
+            onClick={() => onNavigate?.('PAYMENT_HISTORY')}
+            className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex flex-col items-center gap-2 active:scale-[0.98] transition-transform"
+          >
             <CreditCard className="text-neutral-600 dark:text-neutral-400" size={20} />
             <span className="text-xs font-bold text-black dark:text-white">결제내역</span>
           </button>
@@ -348,15 +354,24 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
             <span className="text-sm font-bold text-black dark:text-white">1:1 문의</span>
             <ChevronLeft className="rotate-180 text-neutral-400" size={16} />
           </button>
-          <button className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-left flex items-center justify-between active:scale-[0.98] transition-transform">
+          <button 
+            onClick={() => onNavigate?.('FAQ')}
+            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-left flex items-center justify-between active:scale-[0.98] transition-transform"
+          >
             <span className="text-sm font-bold text-black dark:text-white">FAQ</span>
             <ChevronLeft className="rotate-180 text-neutral-400" size={16} />
           </button>
-          <button className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-left flex items-center justify-between active:scale-[0.98] transition-transform">
+          <button 
+            onClick={() => onNavigate?.('NOTICES')}
+            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-left flex items-center justify-between active:scale-[0.98] transition-transform"
+          >
             <span className="text-sm font-bold text-black dark:text-white">공지/이벤트</span>
             <ChevronLeft className="rotate-180 text-neutral-400" size={16} />
           </button>
-          <button className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-left flex items-center justify-between active:scale-[0.98] transition-transform">
+          <button 
+            onClick={() => onNavigate?.('SETTINGS')}
+            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-left flex items-center justify-between active:scale-[0.98] transition-transform"
+          >
             <span className="text-sm font-bold text-black dark:text-white">설정</span>
             <ChevronLeft className="rotate-180 text-neutral-400" size={16} />
           </button>

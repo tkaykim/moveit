@@ -219,3 +219,4 @@ export function DiscountModal({ academyId, discount, onClose }: DiscountModalPro
   );
 }
 
+

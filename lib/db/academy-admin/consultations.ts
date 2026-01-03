@@ -62,3 +62,4 @@ export async function deleteConsultation(id: string) {
   if (error) throw error;
 }
 
+

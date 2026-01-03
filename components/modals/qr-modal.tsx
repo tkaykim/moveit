@@ -39,3 +39,4 @@ export const QrModal = ({ isOpen, onClose }: QrModalProps) => {
 };
 
 
+

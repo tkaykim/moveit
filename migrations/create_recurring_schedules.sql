@@ -56,3 +56,4 @@ COMMENT ON COLUMN public.recurring_schedules.start_time IS '수업 시작 시간
 COMMENT ON COLUMN public.recurring_schedules.end_time IS '수업 종료 시간 (시간만, 날짜 없음)';
 COMMENT ON COLUMN public.schedules.recurring_schedule_id IS '이 스케줄이 생성된 정기 수업 템플릿의 ID. NULL이면 일반 수업입니다.';
 
+

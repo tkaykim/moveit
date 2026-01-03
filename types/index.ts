@@ -11,7 +11,12 @@ export type ViewState =
   | 'PAYMENT' 
   | 'PAYMENT_SUCCESS' 
   | 'DETAIL_DANCER'
-  | 'SEARCH_RESULTS';
+  | 'SEARCH_RESULTS'
+  | 'TICKETS'
+  | 'PAYMENT_HISTORY'
+  | 'SETTINGS'
+  | 'FAQ'
+  | 'NOTICES';
 
 // Academy 타입: DB 스키마 기반
 export interface Academy {

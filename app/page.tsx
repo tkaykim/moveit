@@ -12,6 +12,11 @@ import { PaymentView } from '@/components/views/payment-view';
 import { PaymentSuccessView } from '@/components/views/payment-success-view';
 import { MyPageView } from '@/components/views/my-page-view';
 import { SearchResultsView } from '@/components/views/search-results-view';
+import { TicketsView } from '@/components/views/tickets-view';
+import { PaymentHistoryView } from '@/components/views/payment-history-view';
+import { SettingsView } from '@/components/views/settings-view';
+import { FAQView } from '@/components/views/faq-view';
+import { NoticesView } from '@/components/views/notices-view';
 import { BottomNav } from '@/components/navigation/bottom-nav';
 
 export default function Home() {
@@ -135,6 +140,31 @@ export default function Home() {
             <CalendarView 
               onAcademyClick={handleAcademyClick}
               onClassBook={handleClassBooking}
+            />
+          )}
+          {activeTab === 'TICKETS' && (
+            <TicketsView 
+              onBack={goBack}
+            />
+          )}
+          {activeTab === 'PAYMENT_HISTORY' && (
+            <PaymentHistoryView 
+              onBack={goBack}
+            />
+          )}
+          {activeTab === 'SETTINGS' && (
+            <SettingsView 
+              onBack={goBack}
+            />
+          )}
+          {activeTab === 'FAQ' && (
+            <FAQView 
+              onBack={goBack}
+            />
+          )}
+          {activeTab === 'NOTICES' && (
+            <NoticesView 
+              onBack={goBack}
             />
           )}
         </main>

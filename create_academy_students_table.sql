@@ -16,3 +16,4 @@ CREATE TABLE IF NOT EXISTS public.academy_students (
 CREATE INDEX IF NOT EXISTS idx_academy_students_academy_id ON public.academy_students(academy_id);
 CREATE INDEX IF NOT EXISTS idx_academy_students_user_id ON public.academy_students(user_id);
 
+

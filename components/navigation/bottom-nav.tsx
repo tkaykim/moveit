@@ -23,7 +23,7 @@ export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
            (tabId === 'DANCER' && activeTab === 'DETAIL_DANCER');
   };
 
-  const hiddenTabs = ['PAYMENT', 'PAYMENT_SUCCESS', 'DETAIL_DANCER', 'SEARCH_RESULTS'];
+  const hiddenTabs = ['PAYMENT', 'PAYMENT_SUCCESS', 'DETAIL_DANCER', 'SEARCH_RESULTS', 'TICKETS', 'PAYMENT_HISTORY', 'SETTINGS', 'FAQ', 'NOTICES'];
   if (hiddenTabs.includes(activeTab)) return null;
 
   return (

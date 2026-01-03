@@ -58,3 +58,4 @@ ALTER TABLE public.users ALTER COLUMN name DROP NOT NULL;
 -- All columns already nullable in currentDB.sql
 
 
+

@@ -73,3 +73,4 @@ export async function updateDailyLog(id: string, updates: Partial<DailyLog>) {
   return data as DailyLog;
 }
 
+

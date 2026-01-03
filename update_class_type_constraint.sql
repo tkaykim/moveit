@@ -24,3 +24,4 @@ CHECK (class_type::text = ANY (ARRAY[
 -- SELECT id, title, class_type FROM public.classes LIMIT 10;
 
 
+

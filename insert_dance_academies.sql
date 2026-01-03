@@ -84,3 +84,4 @@ INSERT INTO public.academies (name_kr, name_en, address, contact_number, logo_ur
 ('안양 댄스 센터', 'Anyang Dance Center', '경기도 안양시 만안구 안양로 100', '031-901-2345', NULL, 'K-POP,힙합,스트릿댄스'),
 ('댄스 안양', 'Dance Anyang', '경기도 안양시 동안구 평촌대로 200', '031-012-3456', NULL, 'K-POP,컨템포러리,모던댄스');
 
+

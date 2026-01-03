@@ -61,3 +61,4 @@ export async function deleteDiscount(id: string) {
   if (error) throw error;
 }
 
+

@@ -93,6 +93,8 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
   const [selectedDay, setSelectedDay] = useState<string>('');
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [selectedHallId, setSelectedHallId] = useState<string | null>(null);
+  const [recentVideos, setRecentVideos] = useState<any[]>([]);
+  const [videosLoading, setVideosLoading] = useState(false);
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
     const now = new Date();
     const startOfWeek = new Date(now);
@@ -191,6 +193,57 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
   useEffect(() => {
     loadSchedules();
   }, [loadSchedules]);
+
+  // 최근 수업 영상 로드
+  const loadRecentVideos = useCallback(async () => {
+    if (!academy) return;
+    
+    try {
+      setVideosLoading(true);
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        setVideosLoading(false);
+        return;
+      }
+
+      // academy ID 추출 (합성 ID에서 원본 추출)
+      const academyId = (academy as any).academyId || academy.id;
+
+      // 최근 수업 영상 가져오기 (video_url이 있는 것만, start_time 기준 최신순)
+      const { data: videos, error: videosError } = await supabase
+        .from('classes')
+        .select(`
+          id,
+          title,
+          video_url,
+          start_time,
+          thumbnail_url,
+          genre,
+          difficulty_level,
+          instructor_id,
+          instructors (
+            name_kr,
+            name_en
+          )
+        `)
+        .eq('academy_id', academyId)
+        .not('video_url', 'is', null)
+        .neq('video_url', '')
+        .order('start_time', { ascending: false, nullsLast: true })
+        .limit(10);
+
+      if (videosError) throw videosError;
+      setRecentVideos(videos || []);
+    } catch (error) {
+      console.error('Error loading recent videos:', error);
+    } finally {
+      setVideosLoading(false);
+    }
+  }, [academy]);
+
+  useEffect(() => {
+    loadRecentVideos();
+  }, [loadRecentVideos]);
 
   if (!academy) return null;
 
@@ -335,6 +388,96 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                     </span>
                   ))}
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* 최근 수업 영상 섹션 */}
+          <div className="mt-6">
+            <h3 className="text-black dark:text-white font-bold text-lg mb-4">최근 수업 영상</h3>
+            {videosLoading ? (
+              <div className="text-center py-8 text-neutral-500">로딩 중...</div>
+            ) : recentVideos.length === 0 ? (
+              <div className="text-center py-8 text-neutral-500">등록된 수업 영상이 없습니다.</div>
+            ) : (
+              <div className="space-y-3">
+                {recentVideos.map((video) => {
+                  const instructorName = video.instructors?.name_kr || video.instructors?.name_en || '강사 정보 없음';
+                  const videoDate = video.start_time 
+                    ? new Date(video.start_time).toLocaleDateString('ko-KR', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })
+                    : '날짜 정보 없음';
+
+                  return (
+                    <div 
+                      key={video.id}
+                      className="bg-neutral-100 dark:bg-neutral-900 rounded-2xl p-4 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+                    >
+                      <a
+                        href={video.video_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block"
+                      >
+                        <div className="flex gap-3">
+                          {video.thumbnail_url ? (
+                            <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-neutral-200 dark:bg-neutral-800">
+                              <Image
+                                src={video.thumbnail_url}
+                                alt={video.title || '수업 영상'}
+                                fill
+                                className="object-cover"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                <svg 
+                                  className="w-8 h-8 text-white" 
+                                  fill="currentColor" 
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                                </svg>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-24 h-24 flex-shrink-0 rounded-lg bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center">
+                              <svg 
+                                className="w-8 h-8 text-neutral-400" 
+                                fill="currentColor" 
+                                viewBox="0 0 20 20"
+                              >
+                                <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                              </svg>
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-bold text-black dark:text-white mb-1 line-clamp-2">
+                              {video.title || '제목 없음'}
+                            </h4>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-1">
+                              {instructorName}
+                            </p>
+                            <div className="flex items-center gap-2 mb-1">
+                              {video.genre && (
+                                <span className="text-[10px] bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-2 py-0.5 rounded">
+                                  {video.genre}
+                                </span>
+                              )}
+                              {video.difficulty_level && (
+                                <LevelBadge level={video.difficulty_level} simple />
+                              )}
+                            </div>
+                            <p className="text-[10px] text-neutral-500 dark:text-neutral-500">
+                              {videoDate}
+                            </p>
+                          </div>
+                        </div>
+                      </a>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

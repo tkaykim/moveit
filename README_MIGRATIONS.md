@@ -43,3 +43,4 @@ CREATE INDEX IF NOT EXISTS idx_classes_price ON public.classes(price);
 - 필요시 기존 데이터를 업데이트하세요.
 
 
+
