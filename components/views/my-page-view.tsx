@@ -2,6 +2,8 @@
 
 import { Bell, User, QrCode, ChevronLeft, Gift, Ticket, Heart, Share2, MessageCircle, HelpCircle, Megaphone, Settings, CreditCard, FileText, LogIn, LogOut } from 'lucide-react';
 import { QrModal } from '@/components/modals/qr-modal';
+import { SignupModal } from '@/components/auth/signup-modal';
+import { LoginModal } from '@/components/auth/login-modal';
 import { useState, useEffect } from 'react';
 import { HistoryLog, Academy, Dancer, ViewState } from '@/types';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -89,6 +91,8 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
   const { user, profile, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
   const [isQrOpen, setIsQrOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
   const [historyLogs, setHistoryLogs] = useState<HistoryLog[]>([]);
   const [userName, setUserName] = useState('사용자');
   const [userEmail, setUserEmail] = useState('');
@@ -107,11 +111,13 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
   useEffect(() => {
     // AuthContext에서 사용자 정보 가져오기
     if (profile) {
-      setUserName(profile.name || profile.nickname || user?.email?.split('@')[0] || '사용자');
+      const name = profile.name || profile.nickname || user?.email?.split('@')[0] || '사용자';
+      setUserName(name);
       setUserEmail(profile.email || user?.email || '');
       setUserProfileImage(profile.profile_image || null);
     } else if (user) {
-      setUserName(user.email?.split('@')[0] || '사용자');
+      const name = user.email?.split('@')[0] || '사용자';
+      setUserName(name);
       setUserEmail(user.email || '');
     } else {
       setUserName('사용자');
@@ -219,7 +225,18 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
   }, [user, profile]);
 
   const handleLogin = () => {
-    router.push('/auth/login?redirect=/');
+    setIsSignupModalOpen(false);
+    setIsLoginModalOpen(true);
+  };
+
+  const handleSignup = () => {
+    setIsLoginModalOpen(false);
+    setIsSignupModalOpen(true);
+  };
+
+  const handleAuthSuccess = () => {
+    // 인증 성공 후 페이지 새로고침
+    router.refresh();
   };
 
   const handleLogout = async () => {
@@ -251,24 +268,33 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
         </div>
 
         {/* 로그인 안내 */}
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 text-center mb-6">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px] mx-auto mb-4">
-            <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center">
-              <User className="text-black dark:text-white" size={32} />
-            </div>
-          </div>
-          <h3 className="text-lg font-bold text-black dark:text-white mb-2">
-            로그인이 필요합니다
-          </h3>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">
-            로그인하여 모든 기능을 이용하세요
-          </p>
+        <div className="space-y-3 mb-6">
           <button
             onClick={handleLogin}
-            className="w-full bg-primary dark:bg-[#CCFF00] text-black font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors active:scale-[0.98]"
           >
-            <LogIn size={20} />
-            로그인하기
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px]">
+                <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center">
+                  <LogIn className="text-black dark:text-white" size={24} />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-black dark:text-white mb-1">
+                  로그인하세요
+                </h3>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  로그인하여 모든 기능을 이용하세요
+                </p>
+              </div>
+              <ChevronLeft className="rotate-180 text-neutral-400" size={16} />
+            </div>
+          </button>
+          <button
+            onClick={handleSignup}
+            className="w-full bg-primary dark:bg-[#CCFF00] text-black font-semibold rounded-2xl p-4 text-center hover:bg-primary/90 dark:hover:bg-[#CCFF00]/90 transition-colors active:scale-[0.98]"
+          >
+            회원가입
           </button>
         </div>
 
@@ -306,9 +332,9 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
         </div>
 
         {/* 프로필 */}
-        <div 
-          className="flex items-center gap-4 mb-6 cursor-pointer active:scale-[0.98] transition-transform"
+        <button
           onClick={() => onNavigate?.('SETTINGS')}
+          className="w-full flex items-center gap-4 mb-6 p-3 rounded-2xl hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors active:scale-[0.98]"
         >
           <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px]">
             <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center overflow-hidden">
@@ -325,16 +351,16 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
               )}
             </div>
           </div>
-          <div className="flex-1">
+          <div className="flex-1 text-left">
             <div className="flex items-center gap-2 mb-1">
               <h2 className="text-lg font-bold text-black dark:text-white">
-                {userName || user?.email?.split('@')[0] || '사용자'}
+                {userName}
               </h2>
               <ChevronLeft className="rotate-180 text-neutral-400" size={16} />
             </div>
-            {(userEmail || user?.email) && (
+            {userEmail && (
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                {userEmail || user?.email || ''}
+                {userEmail}
               </p>
             )}
           </div>
@@ -350,7 +376,7 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
             <LogOut size={16} />
             <span className="text-xs font-medium">로그아웃</span>
           </button>
-        </div>
+        </button>
 
         {/* 통계 */}
         <div className="grid grid-cols-3 gap-3 mb-6">
@@ -617,6 +643,20 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
         </button>
       </div>
       <QrModal isOpen={isQrOpen} onClose={() => setIsQrOpen(false)} />
+      <LoginModal 
+        isOpen={isLoginModalOpen} 
+        onClose={() => setIsLoginModalOpen(false)}
+        enableLogging={false}
+        onSuccess={handleAuthSuccess}
+        onSwitchToSignup={handleSignup}
+      />
+      <SignupModal 
+        isOpen={isSignupModalOpen} 
+        onClose={() => setIsSignupModalOpen(false)}
+        enableLogging={false}
+        onSuccess={handleAuthSuccess}
+        onSwitchToLogin={handleLogin}
+      />
     </>
   );
 };
