@@ -124,7 +124,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
           return;
         }
 
-        // 필요한 필드만 선택하여 성능 최적화
+        // 필요한 필드만 선택하여 성능 최적화 (중첩 쿼리 제거)
         const { data, error } = await supabase
           .from('academies')
           .select(`
@@ -135,21 +135,53 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
             logo_url,
             address,
             images,
-            created_at,
-            classes (
-              id,
-              price
-            )
+            created_at
           `)
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .limit(200); // 최대 200개만
 
         if (error) throw error;
         
         if (!isMounted) return;
         
-        // 각 학원을 변환
-        const transformed = (data || []).map(transformAcademy);
-        setAcademies(transformed);
+        // 가격 정보를 별도로 병렬 로드
+        const academyIds = (data || []).map((a: any) => a.id);
+        let priceMap = new Map<string, number>();
+        
+        if (academyIds.length > 0) {
+          const { data: classesData } = await supabase
+            .from('classes')
+            .select('academy_id, price')
+            .in('academy_id', academyIds)
+            .not('price', 'is', null)
+            .gt('price', 0)
+            .limit(500); // 최대 500개만
+          
+          if (!isMounted) return;
+          
+          (classesData || []).forEach((cls: any) => {
+            if (cls.academy_id && cls.price) {
+              const current = priceMap.get(cls.academy_id);
+              if (!current || cls.price < current) {
+                priceMap.set(cls.academy_id, cls.price);
+              }
+            }
+          });
+        }
+        
+        // 각 학원을 변환 (가격 정보 포함)
+        const transformed = (data || []).map((dbAcademy: any) => {
+          const academy = transformAcademy({ ...dbAcademy, classes: [] });
+          const minPrice = priceMap.get(dbAcademy.id);
+          if (minPrice) {
+            academy.price = minPrice;
+          }
+          return academy;
+        });
+        
+        if (isMounted) {
+          setAcademies(transformed);
+        }
       } catch (error) {
         console.error('Error loading academies:', error);
       } finally {

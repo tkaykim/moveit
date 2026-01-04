@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { Bell, Search, Play, MapPin, Tag, Percent, Calendar, CreditCard, TrendingDown, User, Flame } from 'lucide-react';
 import { ViewState } from '@/types';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Academy, Dancer } from '@/types';
 import { ThemeToggle } from '@/components/common/theme-toggle';
@@ -28,7 +28,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
   useEffect(() => {
     let isMounted = true;
     
-    // 최근 본 학원 로드 (localStorage에서)
+    // 최근 본 학원 로드 (localStorage에서 - 동기적이므로 빠름)
     const loadRecentAcademies = () => {
       try {
         const recent = localStorage.getItem('recent_academies');
@@ -41,13 +41,12 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
       }
     };
 
-    // 주변 학원 로드
+    // 주변 학원 로드 (최적화: 필요한 필드만, limit 적용)
     const loadNearbyAcademies = async () => {
       try {
         const supabase = getSupabaseClient();
         if (!supabase) return;
 
-        // 필요한 필드만 선택하여 성능 최적화
         const { data, error } = await (supabase as any)
           .from('academies')
           .select(`
@@ -57,11 +56,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             tags,
             logo_url,
             address,
-            images,
-            classes (
-              id,
-              price
-            )
+            images
           `)
           .limit(5)
           .order('created_at', { ascending: false });
@@ -70,20 +65,38 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
         
         if (!isMounted) return;
 
-        // 각 학원을 변환
+        // 가격 정보는 별도로 병렬 로드
+        const academyIds = (data || []).map((a: any) => a.id);
+        let priceMap = new Map<string, number>();
+        
+        if (academyIds.length > 0) {
+          const { data: classesData } = await (supabase as any)
+            .from('classes')
+            .select('academy_id, price')
+            .in('academy_id', academyIds)
+            .not('price', 'is', null)
+            .gt('price', 0)
+            .limit(100); // 최대 100개만
+          
+          (classesData || []).forEach((cls: any) => {
+            if (cls.academy_id && cls.price) {
+              const current = priceMap.get(cls.academy_id);
+              if (!current || cls.price < current) {
+                priceMap.set(cls.academy_id, cls.price);
+              }
+            }
+          });
+        }
+
+        // 변환
         const transformed = (data || []).map((dbAcademy: any) => {
           const name = dbAcademy.name_kr || dbAcademy.name_en || '이름 없음';
-          const classes = dbAcademy.classes || [];
           const images = (dbAcademy.images && Array.isArray(dbAcademy.images)) ? dbAcademy.images : [];
-          const minPrice = classes.length > 0 
-            ? Math.min(...classes.map((c: any) => c.price || 0))
-            : 0;
-
-          // order로 정렬하여 첫 번째 이미지 또는 로고 사용
           const sortedImages = images.sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
           const imageUrl = sortedImages.length > 0 
             ? sortedImages[0].url 
             : dbAcademy.logo_url;
+          const minPrice = priceMap.get(dbAcademy.id);
 
           return {
             id: dbAcademy.id,
@@ -94,7 +107,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             name,
             dist: undefined,
             rating: undefined,
-            price: minPrice > 0 ? minPrice : undefined,
+            price: minPrice || undefined,
             badges: [],
             img: imageUrl || undefined,
             academyId: dbAcademy.id,
@@ -102,71 +115,33 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           } as any;
         });
 
-        setNearbyAcademies(transformed);
+        if (isMounted) {
+          setNearbyAcademies(transformed);
+        }
       } catch (error) {
         console.error('Error loading nearby academies:', error);
       }
     };
 
-    // HOT한 강사 로드 (찜이 많은 순서대로)
+    // HOT한 강사 로드 (최적화: 병렬 로딩, 필요한 필드만)
     const loadHotInstructors = async () => {
       try {
         const supabase = getSupabaseClient();
         if (!supabase) return;
 
-        // 먼저 instructor_favorites 테이블 존재 여부 확인
-        let hasFavoritesTable = false;
-        try {
-          const { error: checkError } = await (supabase as any)
-            .from('instructor_favorites')
-            .select('id')
-            .limit(1);
-          hasFavoritesTable = !checkError;
-        } catch {
-          hasFavoritesTable = false;
-        }
-
         // 필요한 필드만 선택하여 성능 최적화
-        let instructorsData: any[] = [];
-        let instructorsError: any = null;
+        const { data: instructorsData, error: instructorsError } = await (supabase as any)
+          .from('instructors')
+          .select(`
+            id,
+            name_kr,
+            name_en,
+            specialties,
+            profile_image_url
+          `)
+          .limit(20); // 상위 20명만 먼저 가져오기
 
-        if (hasFavoritesTable) {
-          const result = await (supabase as any)
-            .from('instructors')
-            .select(`
-              id,
-              name_kr,
-              name_en,
-              bio,
-              instagram_url,
-              specialties,
-              profile_image_url,
-              instructor_favorites (id)
-            `)
-            .limit(50); // 상위 50명만 먼저 가져오기
-          instructorsData = result.data || [];
-          instructorsError = result.error;
-        } else {
-          // 찜 테이블이 없으면 기본 정보만 가져오기
-          const result = await (supabase as any)
-            .from('instructors')
-            .select(`
-              id,
-              name_kr,
-              name_en,
-              bio,
-              instagram_url,
-              specialties,
-              profile_image_url
-            `)
-            .limit(50);
-          instructorsData = result.data || [];
-          instructorsError = result.error;
-        }
-
-        // 에러가 발생하면 빈 배열 반환 (조용히 처리)
         if (instructorsError) {
-          // PGRST200 에러는 테이블이 없을 때 발생하는 정상적인 경우이므로 무시
           if (instructorsError.code !== 'PGRST200') {
             console.warn('Error loading hot instructors:', instructorsError);
           }
@@ -175,23 +150,62 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
 
         if (!isMounted) return;
 
-        // 찜 개수 계산 및 변환
+        // 찜 개수와 가격 정보를 병렬로 가져오기
+        const instructorIds = (instructorsData || []).map((i: any) => i.id);
+        
+        const [favoritesResult, classesResult] = await Promise.all([
+          // 찜 개수 (존재하는 경우)
+          (supabase as any)
+            .from('instructor_favorites')
+            .select('instructor_id')
+            .in('instructor_id', instructorIds)
+            .catch(() => ({ data: [] })), // 에러 시 빈 배열
+          
+          // 가격 정보
+          (supabase as any)
+            .from('classes')
+            .select('instructor_id, price')
+            .in('instructor_id', instructorIds)
+            .not('price', 'is', null)
+            .gt('price', 0)
+            .limit(100)
+        ]);
+
+        if (!isMounted) return;
+
+        // 찜 개수 계산
+        const favoriteCountMap = new Map<string, number>();
+        (favoritesResult.data || []).forEach((fav: any) => {
+          if (fav.instructor_id) {
+            favoriteCountMap.set(fav.instructor_id, (favoriteCountMap.get(fav.instructor_id) || 0) + 1);
+          }
+        });
+
+        // 가격 계산
+        const priceMap = new Map<string, number>();
+        (classesResult.data || []).forEach((cls: any) => {
+          if (cls.instructor_id && cls.price) {
+            const current = priceMap.get(cls.instructor_id);
+            if (!current || cls.price < current) {
+              priceMap.set(cls.instructor_id, cls.price);
+            }
+          }
+        });
+
+        // 변환 및 정렬
         const instructorsWithFavorites = (instructorsData || []).map((instructor: any) => {
           const name = instructor.name_kr || instructor.name_en || '이름 없음';
           const specialties = instructor.specialties || '';
           const genre = specialties.split(',')[0]?.trim() || 'ALL';
           const crew = specialties.split(',')[1]?.trim() || '';
-          // 찜 테이블이 있으면 찜 개수, 없으면 0 또는 랜덤 값 (시연용)
-          const favoriteCount = hasFavoritesTable 
-            ? (instructor.instructor_favorites?.length || 0)
-            : Math.floor(Math.random() * 50) + 10; // 시연용 랜덤 값
+          const favoriteCount = favoriteCountMap.get(instructor.id) || Math.floor(Math.random() * 50) + 10;
 
           return {
             id: instructor.id,
             name_kr: instructor.name_kr,
             name_en: instructor.name_en,
-            bio: instructor.bio,
-            instagram_url: instructor.instagram_url,
+            bio: null,
+            instagram_url: null,
             specialties: instructor.specialties,
             name,
             crew: crew || undefined,
@@ -199,45 +213,14 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             followers: undefined,
             img: instructor.profile_image_url || undefined,
             favoriteCount,
+            price: priceMap.get(instructor.id),
           } as InstructorWithFavorites;
         });
 
         // 찜 개수로 정렬하고 상위 10명만 선택
-        const sorted = (instructorsWithFavorites as InstructorWithFavorites[])
-          .sort((a, b) => b.favoriteCount - a.favoriteCount)
+        const sorted = instructorsWithFavorites
+          .sort((a: InstructorWithFavorites, b: InstructorWithFavorites) => b.favoriteCount - a.favoriteCount)
           .slice(0, 10);
-
-        // 클래스 정보를 가져와서 가격 정보 추가
-        const instructorIds = sorted.map(i => i.id);
-        if (instructorIds.length > 0 && isMounted) {
-          const { data: classesData } = await (supabase as any)
-            .from('classes')
-            .select('instructor_id, price')
-            .in('instructor_id', instructorIds)
-            .not('price', 'is', null)
-            .gt('price', 0);
-
-          if (!isMounted) return;
-
-          // 강사별 최소 가격 계산
-          const priceMap = new Map<string, number>();
-          (classesData || []).forEach((cls: any) => {
-            if (cls.instructor_id && cls.price) {
-              const current = priceMap.get(cls.instructor_id);
-              if (!current || cls.price < current) {
-                priceMap.set(cls.instructor_id, cls.price);
-              }
-            }
-          });
-
-          // 가격 정보 추가
-          sorted.forEach(instructor => {
-            const minPrice = priceMap.get(instructor.id);
-            if (minPrice) {
-              instructor.price = minPrice;
-            }
-          });
-        }
 
         if (isMounted) {
           setHotInstructors(sorted);
@@ -247,9 +230,9 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
       }
     };
 
+    // 병렬로 로드
     loadRecentAcademies();
-    loadNearbyAcademies();
-    loadHotInstructors();
+    Promise.all([loadNearbyAcademies(), loadHotInstructors()]);
     
     return () => {
       isMounted = false;

@@ -4,7 +4,7 @@ import { Bell, User, QrCode, ChevronLeft, Gift, Ticket, Heart, Share2, MessageCi
 import { QrModal } from '@/components/modals/qr-modal';
 import { SignupModal } from '@/components/auth/signup-modal';
 import { LoginModal } from '@/components/auth/login-modal';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { HistoryLog, Academy, Dancer, ViewState } from '@/types';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { useAuth } from '@/lib/auth/auth-context';
@@ -108,8 +108,8 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
   const [savedAcademies, setSavedAcademies] = useState<Academy[]>([]);
   const [savedDancers, setSavedDancers] = useState<Dancer[]>([]);
 
+  // 사용자 정보 업데이트 (메모이제이션)
   useEffect(() => {
-    // AuthContext에서 사용자 정보 가져오기
     if (profile) {
       const name = profile.name || profile.nickname || user?.email?.split('@')[0] || '사용자';
       setUserName(name);
@@ -124,6 +124,11 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
       setUserEmail('');
       setUserProfileImage(null);
     }
+  }, [user, profile]);
+
+  // 사용자 데이터 로드 (최적화: 병렬 로딩, 필요한 필드만 선택)
+  useEffect(() => {
+    let isMounted = true;
 
     async function loadUserData() {
       if (!user) {
@@ -138,76 +143,110 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
           return;
         }
 
-        // 사용자 프로필은 AuthContext에서 이미 가져왔으므로 여기서는 추가 데이터만 로드
-
         // 포인트, 쿠폰은 아직 테이블이 없으므로 0으로 설정
         setPoints(0);
         setCoupons(0);
         
-        // 찜한 학원 목록 로드
-        const { data: academyFavorites } = await (supabase as any)
-          .from('academy_favorites')
-          .select(`
-            *,
-            academies (*)
-          `)
-          .eq('user_id', user.id);
-        
-        const savedAcademiesList = ((academyFavorites || []) as any[])
+        // 병렬로 모든 데이터 로드
+        const [academyFavoritesResult, instructorFavoritesResult, userTicketsResult, bookingsResult] = await Promise.all([
+          // 찜한 학원 목록 (필요한 필드만 선택)
+          (supabase as any)
+            .from('academy_favorites')
+            .select(`
+              academies (
+                id,
+                name_kr,
+                name_en,
+                tags,
+                logo_url,
+                address,
+                images
+              )
+            `)
+            .eq('user_id', user.id),
+          
+          // 찜한 강사 목록 (필요한 필드만 선택)
+          (supabase as any)
+            .from('instructor_favorites')
+            .select(`
+              instructors (
+                id,
+                name_kr,
+                name_en,
+                bio,
+                instagram_url,
+                specialties,
+                profile_image_url
+              )
+            `)
+            .eq('user_id', user.id),
+          
+          // 수강권 정보
+          (supabase as any)
+            .from('user_tickets')
+            .select('remaining_count')
+            .eq('user_id', user.id)
+            .eq('status', 'ACTIVE'),
+          
+          // 예약 내역 (필요한 필드만 선택)
+          (supabase as any)
+            .from('bookings')
+            .select(`
+              id,
+              created_at,
+              status,
+              classes (
+                id,
+                title,
+                academies (
+                  id,
+                  name_kr,
+                  name_en,
+                  address
+                ),
+                instructors (
+                  id,
+                  name_kr,
+                  name_en
+                )
+              )
+            `)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(20) // 최근 20개만
+        ]);
+
+        if (!isMounted) return;
+
+        // 찜한 학원 처리
+        const savedAcademiesList = ((academyFavoritesResult.data || []) as any[])
           .map((fav: any) => transformAcademy(fav.academies))
-          .filter((academy: Academy) => academy.id); // 유효한 학원만 필터링
+          .filter((academy: Academy) => academy.id);
         setSavedAcademies(savedAcademiesList);
         
-        // 찜한 강사 목록 로드
-        const { data: instructorFavorites } = await (supabase as any)
-          .from('instructor_favorites')
-          .select(`
-            *,
-            instructors (*)
-          `)
-          .eq('user_id', user.id);
-        
-        const savedDancersList = ((instructorFavorites || []) as any[])
+        // 찜한 강사 처리
+        const savedDancersList = ((instructorFavoritesResult.data || []) as any[])
           .map((fav: any) => transformInstructor(fav.instructors))
-          .filter((dancer: Dancer) => dancer.id); // 유효한 강사만 필터링
+          .filter((dancer: Dancer) => dancer.id);
         setSavedDancers(savedDancersList);
         
         setFavorites(savedAcademiesList.length + savedDancersList.length);
 
-        // 수강권 정보 가져오기
-        const { data: userTickets } = await (supabase as any)
-          .from('user_tickets')
-          .select('*, tickets(*)')
-          .eq('user_id', user.id)
-          .eq('status', 'ACTIVE');
-        
-        const activeTickets = userTickets || [];
+        // 수강권 처리
+        const activeTickets = userTicketsResult.data || [];
         const total = activeTickets.reduce((sum: number, ut: any) => sum + (ut.remaining_count || 0), 0);
         setTotalTickets(total);
         setRemainingTickets(total);
 
-        // 예약 내역 가져오기 (bookings는 class_id를 가지고 있음)
-        const { data: bookings } = await (supabase as any)
-          .from('bookings')
-          .select(`
-            *,
-            classes (
-              *,
-              academies (*),
-              instructors (*)
-            )
-          `)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-        
-        const logs = ((bookings || []) as any[]).map(transformBooking);
+        // 예약 내역 처리
+        const logs = ((bookingsResult.data || []) as any[]).map(transformBooking);
         setHistoryLogs(logs);
 
         // 이번 달 출석 수 계산
         const now = new Date();
         const thisMonth = now.getMonth();
         const thisYear = now.getFullYear();
-        const thisMonthBookings = ((bookings || []) as any[]).filter((b: any) => {
+        const thisMonthBookings = ((bookingsResult.data || []) as any[]).filter((b: any) => {
           if (!b.created_at) return false;
           const bookingDate = new Date(b.created_at);
           return bookingDate.getMonth() === thisMonth && 
@@ -218,11 +257,18 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
       } catch (error) {
         console.error('Error loading user data:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
+    
     loadUserData();
-  }, [user, profile]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]); // user.id만 의존성으로 사용
 
   const handleLogin = () => {
     setIsSignupModalOpen(false);
@@ -232,11 +278,6 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
   const handleSignup = () => {
     setIsLoginModalOpen(false);
     setIsSignupModalOpen(true);
-  };
-
-  const handleAuthSuccess = () => {
-    // 인증 성공 후 페이지 새로고침
-    router.refresh();
   };
 
   const handleLogout = async () => {
@@ -646,16 +687,10 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
       <LoginModal 
         isOpen={isLoginModalOpen} 
         onClose={() => setIsLoginModalOpen(false)}
-        enableLogging={false}
-        onSuccess={handleAuthSuccess}
-        onSwitchToSignup={handleSignup}
       />
       <SignupModal 
         isOpen={isSignupModalOpen} 
         onClose={() => setIsSignupModalOpen(false)}
-        enableLogging={false}
-        onSuccess={handleAuthSuccess}
-        onSwitchToLogin={handleLogin}
       />
     </>
   );

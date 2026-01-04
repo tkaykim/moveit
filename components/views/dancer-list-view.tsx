@@ -64,6 +64,8 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
+    let isMounted = true;
+
     async function loadInstructors() {
       try {
         const supabase = getSupabaseClient();
@@ -72,70 +74,115 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
           return;
         }
 
-        // instructors 테이블에서 직접 데이터를 가져옴
+        // 필요한 필드만 선택하여 성능 최적화
         const { data: instructorsData, error: instructorsError } = await supabase
           .from('instructors')
           .select(`
-            *,
-            classes (
-              id,
-              price,
-              academy_id,
-              schedules (
-                id,
-                start_time,
-                is_canceled
-              )
-            )
+            id,
+            name_kr,
+            name_en,
+            bio,
+            instagram_url,
+            specialties,
+            profile_image_url
           `)
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .limit(100); // 최대 100명만
 
         if (instructorsError) {
           console.error('Error loading instructors:', instructorsError);
           throw instructorsError;
         }
 
+        if (!isMounted) return;
+
+        // 강사 ID 목록
+        const instructorIds = (instructorsData || []).map((i: any) => i.id);
+
+        // 가격 정보와 스케줄 정보를 병렬로 가져오기
+        const [classesResult, schedulesResult] = await Promise.all([
+          // 가격 정보만
+          supabase
+            .from('classes')
+            .select('instructor_id, price')
+            .in('instructor_id', instructorIds)
+            .not('price', 'is', null)
+            .gt('price', 0)
+            .limit(500), // 최대 500개만
+          
+          // 진행 예정인 스케줄만
+          supabase
+            .from('schedules')
+            .select('class_id, start_time, is_canceled')
+            .gte('start_time', new Date().toISOString())
+            .eq('is_canceled', false)
+            .limit(1000) // 최대 1000개만
+        ]);
+
+        if (!isMounted) return;
+
+        // 클래스 ID로 강사 매핑
+        const classToInstructorMap = new Map<string, string>();
+        (classesResult.data || []).forEach((cls: any) => {
+          if (cls.instructor_id) {
+            classToInstructorMap.set(cls.class_id || '', cls.instructor_id);
+          }
+        });
+
+        // 강사별 가격 계산
+        const priceMap = new Map<string, number>();
+        (classesResult.data || []).forEach((cls: any) => {
+          if (cls.instructor_id && cls.price) {
+            const current = priceMap.get(cls.instructor_id);
+            if (!current || cls.price < current) {
+              priceMap.set(cls.instructor_id, cls.price);
+            }
+          }
+        });
+
+        // 강사별 진행 예정 수업 개수 계산
+        const upcomingCountMap = new Map<string, number>();
+        (schedulesResult.data || []).forEach((schedule: any) => {
+          const instructorId = classToInstructorMap.get(schedule.class_id);
+          if (instructorId) {
+            upcomingCountMap.set(instructorId, (upcomingCountMap.get(instructorId) || 0) + 1);
+          }
+        });
+
         // 데이터 변환
         const transformed = (instructorsData || []).map((instructor: any) => {
-          const classes = instructor.classes || [];
-          
-          // 가격 정보 추출
-          const prices = classes
-            .filter((c: any) => c.price && c.price > 0)
-            .map((c: any) => c.price);
-          const minPrice = prices.length > 0 ? Math.min(...prices) : undefined;
-
-          // 진행 예정인 수업 개수 계산
-          const now = new Date();
-          const upcomingClassesCount = classes.reduce((count: number, c: any) => {
-            const schedules = c.schedules || [];
-            const upcoming = schedules.filter((s: any) => {
-              if (s.is_canceled) return false;
-              const startTime = new Date(s.start_time);
-              return startTime > now;
-            });
-            return count + upcoming.length;
-          }, 0);
-
-          // 메인 장르 추출
+          const minPrice = priceMap.get(instructor.id);
+          const upcomingClassesCount = upcomingCountMap.get(instructor.id) || 0;
           const specialties = instructor.specialties || '';
           const mainGenre = specialties.split(',')[0]?.trim() || '';
 
-          const instructorData = transformInstructor(instructor, classes);
+          const instructorData = transformInstructor(instructor, []);
+          instructorData.price = minPrice;
           instructorData.mainGenre = mainGenre;
           instructorData.upcomingClassesCount = upcomingClassesCount;
           return instructorData;
         });
 
-        setDancers(transformed);
+        if (isMounted) {
+          setDancers(transformed);
+        }
       } catch (error) {
         console.error('Error loading instructors:', error);
-        setDancers([]);
+        if (isMounted) {
+          setDancers([]);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
+    
     loadInstructors();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const filteredDancers = dancers.filter(d => {

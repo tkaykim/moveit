@@ -116,15 +116,13 @@ export function LoginModal({ isOpen, onClose, enableLogging = false, onSuccess, 
           }
           // 성공 콜백 호출
           if (onSuccess) {
-            setTimeout(() => {
-              onSuccess();
-              onClose();
-            }, 1000);
+            onSuccess();
           } else {
-            // 성공 메시지 표시 후 모달 닫기
+            // onSuccess가 없으면 모달을 닫고 페이지 새로고침
+            onClose();
             setTimeout(() => {
-              onClose();
-            }, 1000);
+              window.location.reload();
+            }, 500);
           }
         } else {
           if (enableLogging) {

@@ -128,10 +128,13 @@ export function SignupModal({ isOpen, onClose, enableLogging = false, onSuccess,
         }
         // 성공 콜백 호출
         if (onSuccess) {
+          onSuccess();
+        } else {
+          // onSuccess가 없으면 모달을 닫고 페이지 새로고침
+          onClose();
           setTimeout(() => {
-            onSuccess();
-            onClose();
-          }, 1000);
+            window.location.reload();
+          }, 500);
         }
       } else {
         const errorMsg = '회원가입에 실패했습니다. 다시 시도해주세요.';

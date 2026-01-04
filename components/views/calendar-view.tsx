@@ -155,20 +155,42 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
           return;
         }
 
-        // classes 테이블에서 직접 가져오기 (start_time 기준, UTC로 변환된 날짜 범위 사용)
-        // 정렬은 클라이언트에서 KST 기준으로 수행하므로 DB 정렬 제거
+        // classes 테이블에서 직접 가져오기 (필요한 필드만 선택하여 성능 최적화)
         const { data: allClasses, error: classesError } = await (supabase as any)
           .from('classes')
           .select(`
-            *,
-            academies (*),
-            instructors (*),
-            halls (*)
+            id,
+            title,
+            price,
+            genre,
+            difficulty_level,
+            max_students,
+            current_students,
+            start_time,
+            end_time,
+            academies (
+              id,
+              name_kr,
+              name_en,
+              tags,
+              logo_url,
+              address
+            ),
+            instructors (
+              id,
+              name_kr,
+              name_en
+            ),
+            halls (
+              id,
+              name
+            )
           `)
           .eq('is_canceled', false)
           .not('start_time', 'is', null)
           .gte('start_time', utcStart)
-          .lt('start_time', utcEndNextDay); // 일요일 23:59:59.999까지 포함
+          .lt('start_time', utcEndNextDay) // 일요일 23:59:59.999까지 포함
+          .limit(200); // 최대 200개만
 
         if (classesError) {
           console.error('Error loading classes:', classesError);
