@@ -53,8 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   });
 
-  // 프로필 정보 가져오기
-  const fetchProfile = async (userId: string) => {
+  // 프로필 정보 가져오기 (비동기, 실패해도 앱은 정상 작동)
+  const fetchProfile = async (userId: string, authUser?: SupabaseUser) => {
     if (!supabase) return;
     try {
       const { data, error } = await supabase
@@ -63,11 +63,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // 프로필이 없어도 앱은 정상 작동하도록 에러만 로그
+        console.warn('Profile not found or error (non-critical):', error);
+        // user 정보로 기본 프로필 생성 (이미 있는 user 사용)
+        if (authUser) {
+          setProfile({
+            id: authUser.id,
+            nickname: null,
+            name: authUser.email?.split('@')[0] || null,
+            name_en: null,
+            email: authUser.email || null,
+            phone: null,
+            profile_image: null,
+            role: 'USER',
+            created_at: authUser.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+        } else {
+          // user가 없으면 null로 설정 (앱은 계속 작동)
+          setProfile(null);
+        }
+        return;
+      }
       setProfile(data as UserProfile);
     } catch (error) {
-      console.error('Error fetching profile:', error);
-      setProfile(null);
+      // 프로필 가져오기 실패해도 앱은 정상 작동
+      console.warn('Error fetching profile (non-critical):', error);
+      // user 정보로 기본 프로필 생성
+      if (authUser) {
+        setProfile({
+          id: authUser.id,
+          nickname: null,
+          name: authUser.email?.split('@')[0] || null,
+          name_en: null,
+          email: authUser.email || null,
+          phone: null,
+          profile_image: null,
+          role: 'USER',
+          created_at: authUser.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      } else {
+        setProfile(null);
+      }
     }
   };
 
@@ -81,7 +120,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUser(session.user);
-        await fetchProfile(session.user.id);
+        // 프로필은 비동기로 가져오고, 실패해도 앱은 계속 작동
+        fetchProfile(session.user.id, session.user).catch(() => {
+          // 프로필 로딩 실패는 무시 (앱은 계속 작동)
+        });
       }
     } catch (error) {
       console.error('Error checking session:', error);
@@ -136,8 +178,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: profileError };
       }
 
-      // 3. 프로필 정보 가져오기
-      await fetchProfile(authData.user.id);
+      // 3. 프로필 정보 가져오기 (비동기, 실패해도 계속 진행)
+      fetchProfile(authData.user.id, authData.user).catch(() => {
+        // 프로필 로딩 실패는 무시 (앱은 계속 작동)
+      });
 
       return { error: null };
     } catch (error: any) {
@@ -161,10 +205,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error };
       }
 
-      // 2. 세션 확인 후 프로필 가져오기
+      // 2. 세션 확인 후 프로필 가져오기 (비동기, 실패해도 계속 진행)
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        await fetchProfile(session.user.id);
+        setUser(session.user);
+        fetchProfile(session.user.id, session.user).catch(() => {
+          // 프로필 로딩 실패는 무시 (앱은 계속 작동)
+        });
       }
 
       return { error: null };
@@ -189,7 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // 프로필 새로고침
   const refreshProfile = async () => {
     if (user) {
-      await fetchProfile(user.id);
+      await fetchProfile(user.id, user);
     }
   };
 
@@ -208,7 +255,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         setUser(session.user);
-        await fetchProfile(session.user.id);
+        // 프로필은 비동기로 가져오고, 실패해도 앱은 계속 작동
+        fetchProfile(session.user.id, session.user).catch(() => {
+          // 프로필 로딩 실패는 무시 (앱은 계속 작동)
+        });
       } else {
         setUser(null);
         setProfile(null);

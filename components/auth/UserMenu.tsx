@@ -32,11 +32,14 @@ export function UserMenu() {
     setIsOpen(false);
   };
 
-  if (!user || !profile) {
+  if (!user) {
     return null;
   }
 
-  const displayName = profile.nickname || profile.name || profile.email || '사용자';
+  // profile이 없어도 user 정보로 기본값 사용
+  const displayName = profile?.nickname || profile?.name || user.email?.split('@')[0] || '사용자';
+  const profileImage = profile?.profile_image || null;
+  const userEmail = profile?.email || user.email || null;
 
   return (
     <div className="relative" ref={menuRef}>
@@ -46,9 +49,9 @@ export function UserMenu() {
       >
         <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px]">
           <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center overflow-hidden">
-            {profile.profile_image ? (
+            {profileImage ? (
               <img
-                src={profile.profile_image}
+                src={profileImage}
                 alt={displayName}
                 className="w-full h-full object-cover"
               />
@@ -72,9 +75,9 @@ export function UserMenu() {
         <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-lg z-50">
           <div className="p-4 border-b border-neutral-200 dark:border-neutral-800">
             <p className="text-sm font-bold text-black dark:text-white">{displayName}</p>
-            {profile.email && (
+            {userEmail && (
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                {profile.email}
+                {userEmail}
               </p>
             )}
           </div>

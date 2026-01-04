@@ -22,7 +22,10 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const { user, profile, loading } = useAuth();
 
-  const displayName = profile?.nickname || profile?.name || profile?.email || '사용자';
+  // profile이 없어도 user 정보로 기본값 사용
+  const displayName = profile?.nickname || profile?.name || user?.email?.split('@')[0] || '사용자';
+  const profileImage = profile?.profile_image || null;
+  const userEmail = profile?.email || user?.email || null;
 
   return (
     <>
@@ -31,7 +34,7 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
           <h2 className="text-xl font-bold text-black dark:text-white">마이 무브</h2>
           <div className="flex gap-3 items-center">
             <ThemeToggle />
-            {user && profile ? (
+            {user ? (
               <UserMenu />
             ) : (
               <Bell className="text-neutral-500 dark:text-neutral-500" />
@@ -47,16 +50,16 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
               <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse w-24 mb-2" />
             </div>
           </div>
-        ) : user && profile ? (
+        ) : user ? (
           <button
             onClick={() => onNavigate?.('SETTINGS')}
             className="w-full flex items-center gap-4 mb-6 p-3 rounded-2xl hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors active:scale-[0.98]"
           >
             <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px]">
               <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center overflow-hidden">
-                {profile.profile_image ? (
+                {profileImage ? (
                   <img
-                    src={profile.profile_image}
+                    src={profileImage}
                     alt={displayName}
                     className="w-full h-full object-cover"
                   />
@@ -72,9 +75,9 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
                 </h2>
                 <ChevronLeft className="rotate-180 text-neutral-400" size={16} />
               </div>
-              {profile.email && (
+              {userEmail && (
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                  {profile.email}
+                  {userEmail}
                 </p>
               )}
             </div>
