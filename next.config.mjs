@@ -1,3 +1,9 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -8,6 +14,18 @@ const nextConfig = {
   // 브라우저 호환성 개선
   experimental: {
     optimizePackageImports: ['lucide-react', '@supabase/supabase-js'],
+  },
+  
+  // CSS 최적화 및 로딩 보장
+  optimizeFonts: true,
+  
+  // 컴파일 성능 최적화
+  swcMinify: true,
+  
+  // 개발 모드 최적화
+  onDemandEntries: {
+    maxInactiveAge: 60 * 1000, // 60초
+    pagesBufferLength: 5,
   },
   
   // 이미지 최적화 설정
@@ -57,7 +75,7 @@ const nextConfig = {
     if (dev && !isServer) {
       config.watchOptions = {
         poll: 1000, // 1초마다 체크 (Windows에서 더 안정적)
-        aggregateTimeout: 300, // 300ms 동안 변경사항을 모아서 한 번만 재컴파일
+        aggregateTimeout: 500, // 500ms 동안 변경사항을 모아서 한 번만 재컴파일
         ignored: [
           '**/node_modules/**',
           '**/.git/**',
@@ -70,6 +88,37 @@ const nextConfig = {
           '**/build/**',
         ],
       };
+      
+      // 개발 모드 최적화 - 단일 번들로 빠른 컴파일
+      config.optimization = {
+        ...config.optimization,
+        removeAvailableModules: false,
+        removeEmptyChunks: false,
+        // 개발 모드에서는 splitChunks를 최소화하여 컴파일 속도 향상
+        splitChunks: false,
+      };
+      
+      // 캐시 설정 개선 (Windows 호환성)
+      // 파일 시스템 캐시를 사용하되, 오류 발생 시 자동으로 메모리 캐시로 전환
+      try {
+        config.cache = {
+          type: 'filesystem',
+          buildDependencies: {
+            config: [__filename],
+          },
+          cacheDirectory: path.join(process.cwd(), '.next', 'cache', 'webpack'),
+          compression: false, // Windows에서 압축 오류 방지
+          maxAge: 1000 * 60 * 60 * 24 * 7, // 7일
+          // Windows 파일 시스템 오류 처리
+          store: 'pack',
+        };
+      } catch (error) {
+        // 파일 시스템 캐시 실패 시 메모리 캐시 사용
+        console.warn('파일 시스템 캐시 설정 실패, 메모리 캐시 사용:', error.message);
+        config.cache = {
+          type: 'memory',
+        };
+      }
     }
     
     // 프로덕션 빌드 최적화

@@ -333,7 +333,7 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
             onClick={goToToday}
             className="text-xs px-3 py-1 bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white rounded-full font-bold"
           >
-            오늘
+            이번주
           </button>
         </div>
         <button

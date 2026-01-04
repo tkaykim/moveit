@@ -13,11 +13,9 @@ import {
   Ticket,
   CreditCard,
   Settings,
-  LogOut,
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { useAuth } from '@/lib/auth/auth-context';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 
 interface SidebarItemProps {
@@ -54,7 +52,6 @@ interface AcademyAdminSidebarProps {
 
 export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdminSidebarProps) {
   const pathname = usePathname();
-  const { user, profile, signOut } = useAuth();
   const [academyName, setAcademyName] = useState<string | null>(null);
 
   const menuItems = [
@@ -196,51 +193,6 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
           ))}
         </nav>
 
-        <div className="p-4 border-t border-neutral-200 dark:border-neutral-800">
-          {user && profile ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-                <div className="w-9 h-9 rounded-full bg-slate-800 dark:bg-slate-700 text-white flex items-center justify-center font-bold text-sm">
-                  {(() => {
-                    const displayName = profile.name || profile.nickname || user.email || 'U';
-                    // 한국어인 경우 첫 글자만, 영어인 경우 첫 두 글자
-                    const firstChar = displayName.charAt(0);
-                    const secondChar = /[a-zA-Z]/.test(firstChar) ? displayName.charAt(1)?.toUpperCase() || '' : '';
-                    return firstChar.toUpperCase() + secondChar;
-                  })()}
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <p className="text-sm font-bold truncate text-neutral-900 dark:text-white">
-                    {profile.name || profile.nickname || user.email || '사용자'}
-                  </p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
-                    {profile.role || '사용자'}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={async () => {
-                  await signOut();
-                  window.location.href = '/';
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
-              >
-                <LogOut size={16} />
-                <span>로그아웃</span>
-              </button>
-            </div>
-          ) : (
-            <div className="text-center py-2">
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">로그인이 필요합니다</p>
-              <Link
-                href="/auth/login"
-                className="mt-2 inline-block text-xs text-primary dark:text-[#CCFF00] hover:underline"
-              >
-                로그인하기
-              </Link>
-            </div>
-          )}
-        </div>
       </aside>
     </>
   );

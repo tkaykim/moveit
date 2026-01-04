@@ -5,10 +5,13 @@
   "scripts": {
     "dev": "node --max-old-space-size=4096 node_modules/next/dist/bin/next dev",
     "dev:high": "node --max-old-space-size=8192 node_modules/next/dist/bin/next dev",
+    "dev:clean": "node scripts/clear-cache.js && node --max-old-space-size=4096 node_modules/next/dist/bin/next dev",
     "build": "node --max-old-space-size=4096 node_modules/next/dist/bin/next build",
     "build:high": "node --max-old-space-size=8192 node_modules/next/dist/bin/next build",
+    "build:clean": "node scripts/clear-cache.js && node --max-old-space-size=4096 node_modules/next/dist/bin/next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "clear-cache": "node scripts/clear-cache.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.1.0",

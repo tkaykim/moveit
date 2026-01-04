@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Shield, Search, Edit2, X } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
-import { useAuth } from '@/lib/auth/auth-context';
 
 type UserRole = 'SUPER_ADMIN' | 'ACADEMY_OWNER' | 'ACADEMY_MANAGER' | 'INSTRUCTOR' | 'USER';
 
@@ -34,20 +33,11 @@ const ROLE_COLORS: Record<UserRole, string> = {
 };
 
 export default function UsersPage() {
-  const { profile } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<UserRole>('USER');
-
-  // SUPER_ADMIN만 접근 가능
-  useEffect(() => {
-    if (profile && profile.role !== 'SUPER_ADMIN') {
-      alert('관리자 권한이 필요합니다.');
-      window.location.href = '/admin';
-    }
-  }, [profile]);
 
   const loadUsers = async () => {
     try {
@@ -118,13 +108,6 @@ export default function UsersPage() {
     return <div className="text-center py-12">로딩 중...</div>;
   }
 
-  if (profile?.role !== 'SUPER_ADMIN') {
-    return (
-      <div className="text-center py-12">
-        <p className="text-neutral-600 dark:text-neutral-400">관리자 권한이 필요합니다.</p>
-      </div>
-    );
-  }
 
   return (
     <div>

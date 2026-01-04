@@ -1,5 +1,7 @@
 "use client";
 
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Home, MapPin, User, Calendar } from 'lucide-react';
 import { ViewState } from '@/types';
 
@@ -9,18 +11,23 @@ interface BottomNavProps {
 }
 
 const tabs = [
-  { id: 'HOME' as ViewState, icon: Home, label: '홈' },
-  { id: 'ACADEMY' as ViewState, icon: MapPin, label: '학원' },
-  { id: 'DANCER' as ViewState, icon: User, label: '강사' },
-  { id: 'SAVED' as ViewState, icon: Calendar, label: '일정' },
-  { id: 'MY' as ViewState, icon: User, label: '마이' },
+  { id: 'HOME' as ViewState, icon: Home, label: '홈', href: '/home' },
+  { id: 'ACADEMY' as ViewState, icon: MapPin, label: '학원', href: '/academy' },
+  { id: 'DANCER' as ViewState, icon: User, label: '강사', href: '/instructor' },
+  { id: 'SAVED' as ViewState, icon: Calendar, label: '일정', href: '/schedule' },
+  { id: 'MY' as ViewState, icon: User, label: '마이', href: '/my' },
 ];
 
 export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
-  const isActive = (tabId: ViewState) => {
-    return activeTab === tabId || 
-           (tabId === 'ACADEMY' && activeTab === 'DETAIL_ACADEMY') || 
-           (tabId === 'DANCER' && activeTab === 'DETAIL_DANCER');
+  const pathname = usePathname();
+  
+  const isActive = (tabId: ViewState, href: string) => {
+    if (tabId === 'HOME' && (pathname === '/' || pathname === '/home')) return true;
+    if (tabId === 'ACADEMY' && pathname.startsWith('/academy')) return true;
+    if (tabId === 'DANCER' && pathname.startsWith('/instructor')) return true;
+    if (tabId === 'SAVED' && pathname === '/schedule') return true;
+    if (tabId === 'MY' && pathname.startsWith('/my')) return true;
+    return false;
   };
 
   const hiddenTabs = ['PAYMENT', 'PAYMENT_SUCCESS', 'DETAIL_DANCER', 'SEARCH_RESULTS', 'TICKETS', 'PAYMENT_HISTORY', 'SETTINGS', 'FAQ', 'NOTICES'];
@@ -30,10 +37,11 @@ export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] bg-white/90 dark:bg-neutral-950/90 backdrop-blur-xl border-t border-neutral-200 dark:border-neutral-800 pb-safe pt-2 px-6 flex justify-between items-center z-40 h-[80px]">
       {tabs.map((tab) => {
         const Icon = tab.icon;
-        const active = isActive(tab.id);
+        const active = isActive(tab.id, tab.href);
         return (
-          <button
+          <Link
             key={tab.id}
+            href={tab.href}
             onClick={() => onTabChange(tab.id)}
             className={`flex flex-col items-center gap-1 transition-all duration-300 w-12 ${
               active 
@@ -43,7 +51,7 @@ export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
           >
             <Icon size={24} strokeWidth={active ? 2.5 : 2} />
             <span className="text-[10px] font-medium">{tab.label}</span>
-          </button>
+          </Link>
         );
       })}
     </nav>

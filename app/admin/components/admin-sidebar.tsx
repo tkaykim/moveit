@@ -7,14 +7,11 @@ import {
   User,
   ChevronRight,
   Users,
-  LogIn,
-  LogOut,
   Menu,
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/auth/auth-context';
+import { useState, useEffect, useMemo } from 'react';
 
 interface MenuItem {
   title: string;
@@ -22,24 +19,6 @@ interface MenuItem {
   href?: string;
   children?: MenuItem[];
 }
-
-const menuItems: MenuItem[] = [
-  {
-    title: '학원 관리',
-    icon: Building2,
-    href: '/admin/academies',
-  },
-  {
-    title: '강사 관리',
-    icon: User,
-    href: '/admin/instructors',
-  },
-  {
-    title: '사용자 관리',
-    icon: Users,
-    href: '/admin/users',
-  },
-];
 
 interface AdminSidebarProps {
   isOpen: boolean;
@@ -49,7 +28,25 @@ interface AdminSidebarProps {
 export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
-  const { user, profile, signOut } = useAuth();
+
+  // 컴포넌트 내부에서 메뉴 항목 정의
+  const menuItems: MenuItem[] = useMemo(() => [
+    {
+      title: '학원 관리',
+      icon: Building2,
+      href: '/admin/academies',
+    },
+    {
+      title: '강사 관리',
+      icon: User,
+      href: '/admin/instructors',
+    },
+    {
+      title: '사용자 관리',
+      icon: Users,
+      href: '/admin/users',
+    },
+  ], []);
 
   // 모바일에서 메뉴 클릭 시 드로어 닫기
   useEffect(() => {
@@ -198,51 +195,6 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         })}
       </nav>
 
-      {/* 좌측 하단: 로그인 상태 및 권한 표시 */}
-      <div className="mt-auto p-4 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-        {user && profile ? (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-neutral-700 dark:text-neutral-300 font-medium">
-                로그인됨
-              </span>
-            </div>
-            <div className="text-xs text-neutral-600 dark:text-neutral-400">
-              <div className="font-medium">{profile.name || profile.nickname || user.email}</div>
-              <div className="mt-1">
-                권한: <span className="font-semibold">{profile.role || '없음'}</span>
-              </div>
-            </div>
-            <button
-              onClick={async () => {
-                await signOut();
-                window.location.href = '/';
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
-            >
-              <LogOut size={16} />
-              <span>로그아웃</span>
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              <span className="text-neutral-700 dark:text-neutral-300 font-medium">
-                로그인 안 됨
-              </span>
-            </div>
-            <Link
-              href="/auth/login"
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-primary dark:bg-[#CCFF00] text-black rounded-lg transition-colors hover:bg-primary/90 dark:hover:bg-[#CCFF00]/90 font-medium"
-            >
-              <LogIn size={16} />
-              <span>로그인</span>
-            </Link>
-          </div>
-        )}
-      </div>
     </div>
     </>
   );

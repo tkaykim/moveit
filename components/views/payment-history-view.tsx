@@ -33,52 +33,10 @@ export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
           return;
         }
 
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setLoading(false);
-          return;
-        }
-
-        // bookings에서 결제 내역 가져오기
-        const { data: bookings } = await (supabase as any)
-          .from('bookings')
-          .select(`
-            *,
-            classes (
-              title,
-              price,
-              academies (
-                name_kr,
-                name_en
-              ),
-              instructors (
-                name_kr,
-                name_en
-              )
-            )
-          `)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (bookings) {
-          const transformedPayments = bookings.map((booking: any) => {
-            const classData = booking.classes || {};
-            const academy = classData.academies || {};
-            const instructor = classData.instructors || {};
-            
-            return {
-              id: booking.id,
-              date: booking.created_at,
-              class_name: classData.title || '클래스 정보 없음',
-              academy_name: academy.name_kr || academy.name_en || '학원 정보 없음',
-              instructor_name: instructor.name_kr || instructor.name_en || '강사 정보 없음',
-              amount: classData.price || 0,
-              status: booking.status || 'PENDING',
-              payment_method: '수강권',
-            };
-          });
-          setPayments(transformedPayments);
-        }
+        // 인증 기능 제거로 인해 빈 배열로 설정
+        setPayments([]);
+        setLoading(false);
+        return;
       } catch (error) {
         console.error('Error loading payments:', error);
       } finally {
@@ -237,6 +195,8 @@ export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
     </div>
   );
 };
+
+
 
 
 

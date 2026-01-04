@@ -250,6 +250,7 @@ export interface Database {
           id: string
           email: string | null
           name: string | null
+          name_en: string | null
           nickname: string | null
           phone: string | null
           profile_image: string | null
@@ -261,6 +262,7 @@ export interface Database {
           id?: string
           email?: string | null
           name?: string | null
+          name_en?: string | null
           nickname?: string | null
           phone?: string | null
           profile_image?: string | null
@@ -272,6 +274,7 @@ export interface Database {
           id?: string
           email?: string | null
           name?: string | null
+          name_en?: string | null
           nickname?: string | null
           phone?: string | null
           profile_image?: string | null

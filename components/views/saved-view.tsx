@@ -17,31 +17,10 @@ export const SavedView = ({ onNavigate }: SavedViewProps) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadSavedItems() {
-      try {
-        const supabase = getSupabaseClient();
-        if (!supabase) {
-          setLoading(false);
-          return;
-        }
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setLoading(false);
-          return;
-        }
-
-        // TODO: 실제로는 saved_academies, saved_instructors 같은 테이블이 필요합니다
-        // 현재는 빈 배열로 설정
-        setSavedAcademies([]);
-        setSavedDancers([]);
-      } catch (error) {
-        console.error('Error loading saved items:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadSavedItems();
+    // 인증 기능 제거로 인해 빈 배열로 설정
+    setSavedAcademies([]);
+    setSavedDancers([]);
+    setLoading(false);
   }, []);
 
   if (loading) {

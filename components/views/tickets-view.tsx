@@ -33,47 +33,9 @@ export const TicketsView = ({ onBack }: TicketsViewProps) => {
           return;
         }
 
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setLoading(false);
-          return;
-        }
-
-        const { data: userTickets } = await (supabase as any)
-          .from('user_tickets')
-          .select(`
-            *,
-            tickets (
-              name,
-              academy_id
-            ),
-            academies:academy_id (
-              name_kr,
-              name_en
-            )
-          `)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (userTickets) {
-          const transformedTickets = userTickets.map((ut: any) => {
-            const ticket = ut.tickets || {};
-            const academy = ut.academies || {};
-            const academyName = academy.name_kr || academy.name_en || '전체 학원';
-            
-            return {
-              id: ut.id,
-              ticket_name: ticket.name || '수강권',
-              remaining_count: ut.remaining_count || 0,
-              total_count: ut.remaining_count || 0, // total_count는 tickets 테이블에 있을 수 있음
-              start_date: ut.start_date,
-              expiry_date: ut.expiry_date,
-              status: ut.status || 'ACTIVE',
-              academy_name: academyName,
-            };
-          });
-          setTickets(transformedTickets);
-        }
+        // 인증 기능 제거로 인해 빈 배열로 설정
+        setTickets([]);
+        setLoading(false);
       } catch (error) {
         console.error('Error loading tickets:', error);
       } finally {
@@ -244,6 +206,8 @@ export const TicketsView = ({ onBack }: TicketsViewProps) => {
     </div>
   );
 };
+
+
 
 
 

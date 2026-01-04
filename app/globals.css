@@ -6,6 +6,22 @@
   :root {
     --primary: #CCFF00;
   }
+  
+  /* 기본 레이아웃 보호 */
+  * {
+    box-sizing: border-box;
+  }
+  
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+  }
 }
 
 @layer utilities {
