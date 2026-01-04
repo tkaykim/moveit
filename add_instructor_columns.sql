@@ -17,3 +17,4 @@ ADD COLUMN IF NOT EXISTS specialties character varying;
 
 
 
+

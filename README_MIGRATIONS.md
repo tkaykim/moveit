@@ -45,3 +45,4 @@ CREATE INDEX IF NOT EXISTS idx_classes_price ON public.classes(price);
 
 
 
+

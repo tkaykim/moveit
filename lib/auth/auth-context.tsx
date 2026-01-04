@@ -33,24 +33,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // 초기 세션 확인
     const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        setUser(session.user);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        // 프로필 가져오기
-        const { data: profileData } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (profileData) {
-          setProfile(profileData as UserProfile);
+        if (error) {
+          console.error('세션 가져오기 오류:', error);
+          setLoading(false);
+          return;
         }
+        
+        if (session?.user) {
+          setUser(session.user);
+          
+          // 프로필 가져오기
+          try {
+            const { data: profileData, error: profileError } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+            
+            if (profileError) {
+              console.error('프로필 가져오기 오류:', profileError);
+            } else if (profileData) {
+              setProfile(profileData as UserProfile);
+            }
+          } catch (err) {
+            console.error('프로필 조회 중 오류:', err);
+          }
+        }
+      } catch (err) {
+        console.error('세션 확인 중 오류:', err);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
 
     getSession();
@@ -58,17 +74,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 세션 변경 감지
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
+        
         if (session?.user) {
           setUser(session.user);
           
-          const { data: profileData } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (profileData) {
-            setProfile(profileData as UserProfile);
+          try {
+            const { data: profileData } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+            
+            if (profileData) {
+              setProfile(profileData as UserProfile);
+            }
+          } catch (err) {
+            console.error('프로필 조회 중 오류:', err);
           }
         } else {
           setUser(null);

@@ -58,3 +58,4 @@ COMMENT ON COLUMN public.schedules.recurring_schedule_id IS '이 스케줄이 �
 
 
 
+

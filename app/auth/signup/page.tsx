@@ -11,49 +11,81 @@ export default function SignupPage() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    setSuccess(false);
+    setNeedsEmailVerification(false);
 
+    // 입력 검증
     if (password.length < 6) {
       setError('비밀번호는 최소 6자 이상이어야 합니다.');
       setLoading(false);
       return;
     }
 
-    const supabase = createClient();
-
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: email.trim().toLowerCase(),
-      password,
-      options: {
-        data: {
-          name: name.trim() || null,
-        },
-      },
-    });
-
-    if (authError) {
-      setError(authError.message);
+    if (!email.trim()) {
+      setError('이메일을 입력해주세요.');
       setLoading(false);
       return;
     }
 
-    // 사용자 프로필 생성
-    if (authData.user) {
-      await (supabase as any).from('users').upsert({
-        id: authData.user.id,
-        email: authData.user.email,
-        name: name.trim() || null,
-      });
-    }
+    const supabase = createClient();
 
-    // 회원가입 성공
-    router.push('/admin');
-    router.refresh();
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: {
+          data: {
+            name: name.trim() || null,
+          },
+          emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/admin`,
+        },
+      });
+
+      if (authError) {
+        // 에러 메시지 한글화
+        let errorMessage = authError.message;
+        if (authError.message.includes('already registered')) {
+          errorMessage = '이미 등록된 이메일입니다.';
+        } else if (authError.message.includes('Invalid email')) {
+          errorMessage = '유효하지 않은 이메일 형식입니다.';
+        } else if (authError.message.includes('Password')) {
+          errorMessage = '비밀번호가 너무 짧습니다.';
+        }
+        setError(errorMessage);
+        setLoading(false);
+        return;
+      }
+
+      // 회원가입 성공
+      // handle_new_user() 트리거가 자동으로 public.users 테이블에 프로필을 생성합니다.
+      
+      // 이메일 인증이 필요한 경우
+      if (authData.user && !authData.session) {
+        setNeedsEmailVerification(true);
+        setSuccess(true);
+      } else if (authData.session && authData.user) {
+        // 이메일 인증이 필요 없는 경우 (설정에 따라)
+        setSuccess(true);
+        // 로그인 성공 - 리다이렉트
+        router.push('/admin');
+        router.refresh();
+      } else {
+        setError('회원가입에 실패했습니다. 다시 시도해주세요.');
+      }
+    } catch (err: any) {
+      console.error('회원가입 오류:', err);
+      setError('회원가입 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -68,6 +100,21 @@ export default function SignupPage() {
             {error && (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
                 {error}
+              </div>
+            )}
+
+            {success && needsEmailVerification && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 px-4 py-3 rounded">
+                <p className="font-semibold mb-1">이메일 인증이 필요합니다</p>
+                <p className="text-sm">
+                  {email}로 인증 링크를 보냈습니다. 이메일을 확인하고 링크를 클릭해주세요.
+                </p>
+              </div>
+            )}
+
+            {success && !needsEmailVerification && (
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded">
+                회원가입이 완료되었습니다!
               </div>
             )}
 
@@ -118,12 +165,42 @@ export default function SignupPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || success}
               className="w-full bg-primary hover:bg-primary/90 text-black font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? '가입 중...' : '회원가입'}
+              {loading ? '가입 중...' : success ? '가입 완료' : '회원가입'}
             </button>
           </form>
+
+          {success && needsEmailVerification && (
+            <div className="mt-4 text-center">
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-2">
+                이메일을 받지 못하셨나요?
+              </p>
+              <button
+                type="button"
+                onClick={async () => {
+                  const supabase = createClient();
+                  const { error } = await supabase.auth.resend({
+                    type: 'signup',
+                    email: email.trim().toLowerCase(),
+                    options: {
+                      emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/admin`,
+                    },
+                  });
+                  if (error) {
+                    setError('이메일 재전송 중 오류가 발생했습니다.');
+                  } else {
+                    setError('');
+                    alert('인증 이메일을 다시 보냈습니다.');
+                  }
+                }}
+                className="text-sm text-primary hover:underline font-medium"
+              >
+                인증 이메일 다시 보내기
+              </button>
+            </div>
+          )}
 
           <div className="mt-6 text-center">
             <p className="text-sm text-neutral-600 dark:text-neutral-400">

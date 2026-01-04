@@ -26,3 +26,4 @@ CHECK (class_type::text = ANY (ARRAY[
 
 
 
+

@@ -26,11 +26,13 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
   const [hotInstructors, setHotInstructors] = useState<InstructorWithFavorites[]>([]);
 
   useEffect(() => {
+    let isMounted = true;
+    
     // 최근 본 학원 로드 (localStorage에서)
     const loadRecentAcademies = () => {
       try {
         const recent = localStorage.getItem('recent_academies');
-        if (recent) {
+        if (recent && isMounted) {
           const parsed = JSON.parse(recent);
           setRecentAcademies(parsed.slice(0, 5));
         }
@@ -45,16 +47,28 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
         const supabase = getSupabaseClient();
         if (!supabase) return;
 
+        // 필요한 필드만 선택하여 성능 최적화
         const { data, error } = await (supabase as any)
           .from('academies')
           .select(`
-            *,
-            classes (*)
+            id,
+            name_kr,
+            name_en,
+            tags,
+            logo_url,
+            address,
+            images,
+            classes (
+              id,
+              price
+            )
           `)
           .limit(5)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
+        
+        if (!isMounted) return;
 
         // 각 학원을 변환
         const transformed = (data || []).map((dbAcademy: any) => {
@@ -112,7 +126,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           hasFavoritesTable = false;
         }
 
-        // 모든 강사 가져오기 (찜 테이블이 있으면 조인, 없으면 기본 정보만)
+        // 필요한 필드만 선택하여 성능 최적화
         let instructorsData: any[] = [];
         let instructorsError: any = null;
 
@@ -120,16 +134,32 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           const result = await (supabase as any)
             .from('instructors')
             .select(`
-              *,
+              id,
+              name_kr,
+              name_en,
+              bio,
+              instagram_url,
+              specialties,
+              profile_image_url,
               instructor_favorites (id)
-            `);
+            `)
+            .limit(50); // 상위 50명만 먼저 가져오기
           instructorsData = result.data || [];
           instructorsError = result.error;
         } else {
           // 찜 테이블이 없으면 기본 정보만 가져오기
           const result = await (supabase as any)
             .from('instructors')
-            .select('*');
+            .select(`
+              id,
+              name_kr,
+              name_en,
+              bio,
+              instagram_url,
+              specialties,
+              profile_image_url
+            `)
+            .limit(50);
           instructorsData = result.data || [];
           instructorsError = result.error;
         }
@@ -142,6 +172,8 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           }
           return;
         }
+
+        if (!isMounted) return;
 
         // 찜 개수 계산 및 변환
         const instructorsWithFavorites = (instructorsData || []).map((instructor: any) => {
@@ -177,13 +209,15 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
 
         // 클래스 정보를 가져와서 가격 정보 추가
         const instructorIds = sorted.map(i => i.id);
-        if (instructorIds.length > 0) {
+        if (instructorIds.length > 0 && isMounted) {
           const { data: classesData } = await (supabase as any)
             .from('classes')
             .select('instructor_id, price')
             .in('instructor_id', instructorIds)
             .not('price', 'is', null)
             .gt('price', 0);
+
+          if (!isMounted) return;
 
           // 강사별 최소 가격 계산
           const priceMap = new Map<string, number>();
@@ -205,7 +239,9 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           });
         }
 
-        setHotInstructors(sorted);
+        if (isMounted) {
+          setHotInstructors(sorted);
+        }
       } catch (error) {
         console.error('Error loading hot instructors:', error);
       }
@@ -214,6 +250,10 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
     loadRecentAcademies();
     loadNearbyAcademies();
     loadHotInstructors();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {

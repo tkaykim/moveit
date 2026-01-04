@@ -33,3 +33,4 @@ export const LevelBadge = ({ level, simple = false }: LevelBadgeProps) => {
 
 
 
+

@@ -19,22 +19,66 @@ function LoginForm() {
     setError('');
     setLoading(true);
 
-    const supabase = createClient();
-
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password,
-    });
-
-    if (authError) {
-      setError(authError.message);
+    // 입력 검증
+    if (!email.trim()) {
+      setError('이메일을 입력해주세요.');
       setLoading(false);
       return;
     }
 
-    // 로그인 성공 - 전체 페이지 새로고침으로 리다이렉트
-    const redirectTo = searchParams.get('redirect') || '/admin';
-    window.location.href = redirectTo;
+    if (!password) {
+      setError('비밀번호를 입력해주세요.');
+      setLoading(false);
+      return;
+    }
+
+    const supabase = createClient();
+
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (authError) {
+        // 에러 메시지 한글화
+        let errorMessage = authError.message;
+        if (authError.message.includes('Invalid login credentials') || authError.message.includes('invalid')) {
+          errorMessage = '이메일 또는 비밀번호가 올바르지 않습니다.';
+        } else if (authError.message.includes('Email not confirmed') || authError.message.includes('not confirmed')) {
+          errorMessage = '이메일 인증이 필요합니다. 이메일을 확인해주세요.';
+        } else if (authError.message.includes('User not found')) {
+          errorMessage = '등록되지 않은 이메일입니다.';
+        }
+        setError(errorMessage);
+        setLoading(false);
+        return;
+      }
+
+      // 로그인 성공 확인
+      if (data.session && data.user) {
+        // 세션 저장 확인
+        const { data: { session: confirmedSession } } = await supabase.auth.getSession();
+        
+        if (confirmedSession) {
+          const redirectTo = searchParams.get('redirect') || '/admin';
+          // 리다이렉트
+          router.push(redirectTo);
+          router.refresh();
+        } else {
+          // 세션이 저장되지 않은 경우 - 강제 리다이렉트로 재시도
+          const redirectTo = searchParams.get('redirect') || '/admin';
+          window.location.href = redirectTo;
+        }
+      } else {
+        setError('로그인에 실패했습니다. 다시 시도해주세요.');
+        setLoading(false);
+      }
+    } catch (err: any) {
+      console.error('로그인 오류:', err);
+      setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+      setLoading(false);
+    }
   };
 
   return (

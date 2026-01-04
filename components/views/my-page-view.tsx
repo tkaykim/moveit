@@ -1,10 +1,12 @@
 "use client";
 
-import { Bell, User, QrCode, ChevronLeft, Gift, Ticket, Heart, Share2, MessageCircle, HelpCircle, Megaphone, Settings, CreditCard, FileText } from 'lucide-react';
+import { Bell, User, QrCode, ChevronLeft, Gift, Ticket, Heart, Share2, MessageCircle, HelpCircle, Megaphone, Settings, CreditCard, FileText, LogIn, LogOut } from 'lucide-react';
 import { QrModal } from '@/components/modals/qr-modal';
 import { useState, useEffect } from 'react';
 import { HistoryLog, Academy, Dancer, ViewState } from '@/types';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import { useAuth } from '@/lib/auth/auth-context';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ThemeToggle } from '@/components/common/theme-toggle';
 
@@ -84,6 +86,8 @@ function transformBooking(booking: any): HistoryLog {
 }
 
 export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, onDancerClick }: MyPageViewProps) => {
+  const { user, profile, loading: authLoading, signOut } = useAuth();
+  const router = useRouter();
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [historyLogs, setHistoryLogs] = useState<HistoryLog[]>([]);
   const [userName, setUserName] = useState('사용자');
@@ -101,7 +105,26 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
   const [savedDancers, setSavedDancers] = useState<Dancer[]>([]);
 
   useEffect(() => {
+    // AuthContext에서 사용자 정보 가져오기
+    if (profile) {
+      setUserName(profile.name || profile.nickname || user?.email?.split('@')[0] || '사용자');
+      setUserEmail(profile.email || user?.email || '');
+      setUserProfileImage(profile.profile_image || null);
+    } else if (user) {
+      setUserName(user.email?.split('@')[0] || '사용자');
+      setUserEmail(user.email || '');
+    } else {
+      setUserName('사용자');
+      setUserEmail('');
+      setUserProfileImage(null);
+    }
+
     async function loadUserData() {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const supabase = getSupabaseClient();
         if (!supabase) {
@@ -109,28 +132,7 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
           return;
         }
 
-        // 현재 사용자 정보 가져오기
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setLoading(false);
-          return;
-        }
-
-        // 사용자 프로필 가져오기
-        const { data: userProfile } = await (supabase as any)
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (userProfile) {
-          setUserName(userProfile.name || userProfile.nickname || '사용자');
-          setUserEmail(user.email || '');
-          setUserProfileImage(userProfile.profile_image || null);
-        } else {
-          setUserName(user.email?.split('@')[0] || '사용자');
-          setUserEmail(user.email || '');
-        }
+        // 사용자 프로필은 AuthContext에서 이미 가져왔으므로 여기서는 추가 데이터만 로드
 
         // 포인트, 쿠폰은 아직 테이블이 없으므로 0으로 설정
         setPoints(0);
@@ -214,9 +216,21 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
       }
     }
     loadUserData();
-  }, []);
+  }, [user, profile]);
 
-  if (loading) {
+  const handleLogin = () => {
+    router.push('/auth/login?redirect=/');
+  };
+
+  const handleLogout = async () => {
+    if (confirm('로그아웃 하시겠습니까?')) {
+      await signOut();
+      router.push('/');
+      router.refresh();
+    }
+  };
+
+  if (authLoading || loading) {
     return (
       <div className="pt-12 px-5 pb-24 animate-in fade-in">
         <div className="text-center py-12 text-neutral-500">로딩 중...</div>
@@ -224,6 +238,62 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
     );
   }
 
+  // 로그인되지 않은 경우
+  if (!user) {
+    return (
+      <div className="pt-12 px-5 pb-24 animate-in fade-in">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-black dark:text-white">마이 무브</h2>
+          <div className="flex gap-3 items-center">
+            <ThemeToggle />
+            <Bell className="text-neutral-500 dark:text-neutral-500" />
+          </div>
+        </div>
+
+        {/* 로그인 안내 */}
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 text-center mb-6">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px] mx-auto mb-4">
+            <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center">
+              <User className="text-black dark:text-white" size={32} />
+            </div>
+          </div>
+          <h3 className="text-lg font-bold text-black dark:text-white mb-2">
+            로그인이 필요합니다
+          </h3>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">
+            로그인하여 모든 기능을 이용하세요
+          </p>
+          <button
+            onClick={handleLogin}
+            className="w-full bg-primary dark:bg-[#CCFF00] text-black font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+          >
+            <LogIn size={20} />
+            로그인하기
+          </button>
+        </div>
+
+        {/* 비회원도 볼 수 있는 메뉴 */}
+        <div className="space-y-1 mb-6">
+          <button 
+            onClick={() => onNavigate?.('FAQ')}
+            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-left flex items-center justify-between active:scale-[0.98] transition-transform"
+          >
+            <span className="text-sm font-bold text-black dark:text-white">FAQ</span>
+            <ChevronLeft className="rotate-180 text-neutral-400" size={16} />
+          </button>
+          <button 
+            onClick={() => onNavigate?.('NOTICES')}
+            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-left flex items-center justify-between active:scale-[0.98] transition-transform"
+          >
+            <span className="text-sm font-bold text-black dark:text-white">공지/이벤트</span>
+            <ChevronLeft className="rotate-180 text-neutral-400" size={16} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 로그인된 경우
   return (
     <>
       <div className="pt-12 px-5 pb-24 animate-in fade-in">
@@ -236,7 +306,10 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
         </div>
 
         {/* 프로필 */}
-        <div className="flex items-center gap-4 mb-6">
+        <div 
+          className="flex items-center gap-4 mb-6 cursor-pointer active:scale-[0.98] transition-transform"
+          onClick={() => onNavigate?.('SETTINGS')}
+        >
           <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px]">
             <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center overflow-hidden">
               {userProfileImage ? (
@@ -254,13 +327,29 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-lg font-bold text-black dark:text-white">{userName}</h2>
+              <h2 className="text-lg font-bold text-black dark:text-white">
+                {userName || user?.email?.split('@')[0] || '사용자'}
+              </h2>
               <ChevronLeft className="rotate-180 text-neutral-400" size={16} />
             </div>
-            {userEmail && (
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">{userEmail}</p>
+            {(userEmail || user?.email) && (
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                {userEmail || user?.email || ''}
+              </p>
             )}
           </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleLogout();
+            }}
+            className="px-3 py-2 text-sm text-neutral-600 dark:text-neutral-400 hover:text-red-500 dark:hover:text-red-400 transition-colors flex items-center gap-1.5 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:border-red-300 dark:hover:border-red-700"
+            title="로그아웃"
+            aria-label="로그아웃"
+          >
+            <LogOut size={16} />
+            <span className="text-xs font-medium">로그아웃</span>
+          </button>
         </div>
 
         {/* 통계 */}

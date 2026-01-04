@@ -86,3 +86,4 @@ INSERT INTO public.academies (name_kr, name_en, address, contact_number, logo_ur
 
 
 
+

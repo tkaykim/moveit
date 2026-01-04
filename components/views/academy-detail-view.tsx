@@ -108,22 +108,31 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
 
   // 스크롤 감지하여 탭 업데이트
   useEffect(() => {
+    let ticking = false;
+    
     const handleScroll = () => {
-      const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      const homeTop = homeRef.current?.offsetTop || 0;
-      const scheduleTop = scheduleRef.current?.offsetTop || 0;
-      const reviewsTop = reviewsRef.current?.offsetTop || 0;
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const scrollTop = window.scrollY || document.documentElement.scrollTop;
+          const homeTop = homeRef.current?.offsetTop || 0;
+          const scheduleTop = scheduleRef.current?.offsetTop || 0;
+          const reviewsTop = reviewsRef.current?.offsetTop || 0;
 
-      if (reviewsRef.current && scrollTop >= reviewsTop - 150) {
-        setActiveTab('reviews');
-      } else if (scheduleRef.current && scrollTop >= scheduleTop - 150) {
-        setActiveTab('schedule');
-      } else if (homeRef.current && scrollTop >= homeTop - 150) {
-        setActiveTab('home');
+          if (reviewsRef.current && scrollTop >= reviewsTop - 150) {
+            setActiveTab('reviews');
+          } else if (scheduleRef.current && scrollTop >= scheduleTop - 150) {
+            setActiveTab('schedule');
+          } else if (homeRef.current && scrollTop >= homeTop - 150) {
+            setActiveTab('home');
+          }
+          
+          ticking = false;
+        });
+        ticking = true;
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -138,7 +147,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
     }
   }, []);
 
-  const loadSchedules = useCallback(async () => {
+  const loadSchedules = useCallback(async (signal?: AbortSignal) => {
     if (!academy) return;
     
     try {
@@ -160,17 +169,38 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
         // academy ID 추출 (합성 ID에서 원본 추출)
         const academyId = (academy as any).academyId || academy.id;
 
-        // academy의 schedules 가져오기 (classes를 통해 academy_id 필터링)
+        // 필요한 필드만 선택하여 성능 최적화
         const { data: schedules, error: schedulesError } = await supabase
           .from('schedules')
           .select(`
-            *,
+            id,
+            class_id,
+            instructor_id,
+            hall_id,
+            start_time,
+            end_time,
+            is_canceled,
             classes (
-              *,
-              academies (*)
+              id,
+              name_kr,
+              name_en,
+              price,
+              academy_id,
+              academies (
+                id,
+                name_kr,
+                name_en
+              )
             ),
-            instructors (*),
-            halls (*)
+            instructors (
+              id,
+              name_kr,
+              name_en
+            ),
+            halls (
+              id,
+              name
+            )
           `)
           .eq('is_canceled', false)
           .eq('classes.academy_id', academyId)
@@ -179,19 +209,30 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
           .order('start_time', { ascending: true });
 
         if (schedulesError) throw schedulesError;
+        
+        // AbortSignal 체크
+        if (signal?.aborted) return;
 
         setSchedules(schedules || []);
         const grid = buildScheduleGrid(schedules || []);
         setScheduleGrid(grid);
       } catch (error) {
+        if (signal?.aborted) return;
         console.error('Error loading schedules:', error);
       } finally {
-        setLoading(false);
+        if (!signal?.aborted) {
+          setLoading(false);
+        }
       }
   }, [academy, currentWeekStart]);
 
   useEffect(() => {
-    loadSchedules();
+    const abortController = new AbortController();
+    loadSchedules(abortController.signal);
+    
+    return () => {
+      abortController.abort();
+    };
   }, [loadSchedules]);
 
   // 최근 수업 영상 로드

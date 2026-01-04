@@ -64,20 +64,41 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
   useEffect(() => {
     if (sortOption === 'distance' && !userLocation) {
       setLocationLoading(true);
+      let isMounted = true;
+      
       if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            setUserLocation({
-              lat: position.coords.latitude,
-              lon: position.coords.longitude,
-            });
-            setLocationLoading(false);
-          },
-          (error) => {
-            console.error('Error getting location:', error);
-            // 위치를 가져올 수 없으면 서울 중심 좌표 사용
+        const timeoutId = setTimeout(() => {
+          if (isMounted) {
+            // 타임아웃 시 서울 중심 좌표 사용
             setUserLocation({ lat: 37.5665, lon: 126.9780 });
             setLocationLoading(false);
+          }
+        }, 5000); // 5초 타임아웃
+        
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            clearTimeout(timeoutId);
+            if (isMounted) {
+              setUserLocation({
+                lat: position.coords.latitude,
+                lon: position.coords.longitude,
+              });
+              setLocationLoading(false);
+            }
+          },
+          (error) => {
+            clearTimeout(timeoutId);
+            if (isMounted) {
+              console.error('Error getting location:', error);
+              // 위치를 가져올 수 없으면 서울 중심 좌표 사용
+              setUserLocation({ lat: 37.5665, lon: 126.9780 });
+              setLocationLoading(false);
+            }
+          },
+          {
+            timeout: 5000,
+            maximumAge: 60000, // 1분간 캐시 사용
+            enableHighAccuracy: false, // 배터리 절약
           }
         );
       } else {
@@ -85,27 +106,46 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
         setUserLocation({ lat: 37.5665, lon: 126.9780 });
         setLocationLoading(false);
       }
+      
+      return () => {
+        isMounted = false;
+      };
     }
   }, [sortOption, userLocation]);
 
   useEffect(() => {
+    let isMounted = true;
+    
     async function loadAcademies() {
       try {
         const supabase = getSupabaseClient();
         if (!supabase) {
-          setLoading(false);
+          if (isMounted) setLoading(false);
           return;
         }
 
+        // 필요한 필드만 선택하여 성능 최적화
         const { data, error } = await supabase
           .from('academies')
           .select(`
-            *,
-            classes (*)
+            id,
+            name_kr,
+            name_en,
+            tags,
+            logo_url,
+            address,
+            images,
+            created_at,
+            classes (
+              id,
+              price
+            )
           `)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
+        
+        if (!isMounted) return;
         
         // 각 학원을 변환
         const transformed = (data || []).map(transformAcademy);
@@ -113,10 +153,15 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
       } catch (error) {
         console.error('Error loading academies:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     }
+    
     loadAcademies();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // 사용 가능한 태그 추출

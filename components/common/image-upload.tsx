@@ -202,7 +202,9 @@ export function ImageUpload({
                 alt="Preview"
                 fill
                 className="object-cover"
-                unoptimized
+                sizes="(max-width: 768px) 100vw, 50vw"
+                unoptimized={preview.startsWith('data:')}
+                loading="lazy"
               />
               <button
                 type="button"
@@ -265,7 +267,8 @@ export function ImageUpload({
                 alt="Preview"
                 fill
                 className="object-cover"
-                unoptimized
+                sizes="(max-width: 768px) 100vw, 50vw"
+                loading="lazy"
                 onError={(e) => {
                   // 미리보기 실패해도 URL은 유효하므로 preview는 유지
                   // 단지 이미지 로드만 실패한 것이므로 경고만 표시
