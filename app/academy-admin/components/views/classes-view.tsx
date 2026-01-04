@@ -103,54 +103,30 @@ export function ClassesView({ academyId }: ClassesViewProps) {
       const endOfMonth = new Date(year, month + 1, 0);
       endOfMonth.setHours(23, 59, 59, 999);
 
-      // 먼저 academy_id에 해당하는 클래스 ID 목록 가져오기
+      // classes 테이블에서 직접 데이터 가져오기 (schedules와는 전혀 관여하지 않음)
       const { data: classesData, error: classesError } = await supabase
         .from('classes')
-        .select('id')
-        .eq('academy_id', academyId);
-
-      if (classesError) throw classesError;
-      const classIds = (classesData || []).map((c: any) => c.id);
-
-      // schedules 테이블에서 데이터 가져오기 (실제 스케줄)
-      const { data: schedulesData, error: schedulesError } = await supabase
-        .from('schedules')
         .select(`
           *,
-          classes (
-            *,
-            instructors (
-              id,
-              name_kr,
-              name_en
-            ),
-            halls (
-              id,
-              name
-            )
+          instructors (
+            id,
+            name_kr,
+            name_en
+          ),
+          halls (
+            id,
+            name
           )
         `)
+        .eq('academy_id', academyId)
         .eq('is_canceled', false)
-        .in('class_id', classIds.length > 0 ? classIds : [''])
         .gte('start_time', startOfMonth.toISOString())
         .lte('start_time', endOfMonth.toISOString())
         .order('start_time', { ascending: true });
 
-      if (schedulesError) throw schedulesError;
+      if (classesError) throw classesError;
       
-      // schedules 데이터를 classes 형태로 변환 (기존 코드와의 호환성)
-      const transformedData = (schedulesData || []).map((schedule: any) => ({
-        ...schedule.classes,
-        start_time: schedule.start_time,
-        end_time: schedule.end_time,
-        schedule_id: schedule.id,
-        id: schedule.id, // schedule id를 id로 사용 (편집 시 필요)
-        instructor_id: schedule.instructor_id || schedule.classes?.instructor_id,
-        hall_id: schedule.hall_id || schedule.classes?.hall_id,
-        max_students: schedule.max_students || schedule.classes?.max_students,
-      }));
-      
-      setClasses(transformedData);
+      setClasses(classesData || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
