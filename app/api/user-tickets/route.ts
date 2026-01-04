@@ -18,10 +18,11 @@ export async function GET(request: Request) {
 
     if (authError || !authUser) {
       // 데모 버전: 인증 없이도 진행
-      const { data: demoUsersList } = await supabase
+      const result = await supabase
         .from('users')
         .select('id')
         .limit(1);
+      const demoUsersList = result.data as Array<{ id: string }> | null;
       
       if (demoUsersList && demoUsersList.length > 0) {
         user = { id: demoUsersList[0].id };

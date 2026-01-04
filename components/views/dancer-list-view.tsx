@@ -200,7 +200,7 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
         const response = await fetch('/api/favorites?type=instructor');
         if (response.ok) {
           const data = await response.json();
-          const favoriteIds = new Set((data.data || []).map((item: any) => item.instructors?.id).filter(Boolean));
+          const favoriteIds = new Set<string>((data.data || []).map((item: any) => item.instructors?.id).filter((id: any): id is string => Boolean(id)));
           setFavoritedInstructors(favoriteIds);
         }
       } catch (error) {

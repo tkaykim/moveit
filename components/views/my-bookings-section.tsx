@@ -212,13 +212,13 @@ export const MyBookingsSection = ({ onAcademyClick, initialTab = 'upcoming', sec
                           <User size={12} />
                           <span>{instructorName}</span>
                         </div>
-                        {dateTime.date !== '-' && (
+                        {typeof dateTime !== 'string' && dateTime.date !== '-' && (
                           <div className="flex items-center gap-1.5">
                             <Calendar size={12} />
                             <span>{dateTime.date}</span>
                           </div>
                         )}
-                        {dateTime.time !== '-' && (
+                        {typeof dateTime !== 'string' && dateTime.time !== '-' && (
                           <div className="flex items-center gap-1.5">
                             <Clock size={12} />
                             <span>{dateTime.time}</span>

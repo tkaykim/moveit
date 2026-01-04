@@ -29,7 +29,7 @@ export async function getBranchById(id: string) {
   return data;
 }
 
-export async function createBranch(branch: Database['public']['Tables']['branches']['Insert']) {
+export async function createBranch(branch: any) {
   const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('branches')
@@ -41,7 +41,7 @@ export async function createBranch(branch: Database['public']['Tables']['branche
   return data;
 }
 
-export async function updateBranch(id: string, updates: Database['public']['Tables']['branches']['Update']) {
+export async function updateBranch(id: string, updates: any) {
   const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('branches')

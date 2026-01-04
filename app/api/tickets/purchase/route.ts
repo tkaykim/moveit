@@ -15,10 +15,11 @@ export async function POST(request: Request) {
     if (authError || !authUser) {
       // 데모 버전: 인증 없이도 진행 (임시 사용자 ID 사용)
       // 실제 프로덕션에서는 이 부분을 제거해야 함
-      const { data: demoUsersList } = await supabase
+      const result = await supabase
         .from('users')
         .select('id')
         .limit(1);
+      const demoUsersList = result.data as Array<{ id: string }> | null;
       
       if (demoUsersList && demoUsersList.length > 0) {
         user = { id: demoUsersList[0].id };

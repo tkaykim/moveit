@@ -212,7 +212,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
         const response = await fetch('/api/favorites?type=academy');
         if (response.ok) {
           const data = await response.json();
-          const favoriteIds = new Set((data.data || []).map((item: any) => item.academies?.id).filter(Boolean));
+          const favoriteIds = new Set<string>((data.data || []).map((item: any) => item.academies?.id).filter((id: any): id is string => Boolean(id)));
           setFavoritedAcademies(favoriteIds);
         }
       } catch (error) {

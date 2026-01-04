@@ -66,10 +66,15 @@ export const SavedView = ({ onNavigate }: SavedViewProps) => {
             const instructor = item.instructors;
             return {
               id: instructor.id,
+              name_kr: instructor.name_kr,
+              name_en: instructor.name_en,
+              bio: instructor.bio,
+              instagram_url: instructor.instagram_url,
+              specialties: instructor.specialties,
               name: instructor.name_kr || instructor.name_en || '이름 없음',
               img: instructor.profile_image_url,
               genre: instructor.specialties || 'ALL',
-              crew: null,
+              crew: undefined,
               favoriteId: item.id,
             } as SavedDancer;
           });
@@ -133,10 +138,15 @@ export const SavedView = ({ onNavigate }: SavedViewProps) => {
                 const instructor = item.instructors;
                 return {
                   id: instructor.id,
+                  name_kr: instructor.name_kr,
+                  name_en: instructor.name_en,
+                  bio: instructor.bio,
+                  instagram_url: instructor.instagram_url,
+                  specialties: instructor.specialties,
                   name: instructor.name_kr || instructor.name_en || '이름 없음',
                   img: instructor.profile_image_url,
                   genre: instructor.specialties || 'ALL',
-                  crew: null,
+                  crew: undefined,
                   favoriteId: item.id,
                 } as SavedDancer;
               });
