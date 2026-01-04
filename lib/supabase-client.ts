@@ -24,3 +24,4 @@ export function createClient() {
   return supabaseInstance
 }
 
+

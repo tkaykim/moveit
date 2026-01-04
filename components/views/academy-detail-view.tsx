@@ -1,15 +1,16 @@
 "use client";
 
 import Image from 'next/image';
-import { ChevronLeft, Plus } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { LevelBadge } from '@/components/common/level-badge';
 import { ClassPreviewModal } from '@/components/modals/class-preview-modal';
 import { AddClassModal } from '@/components/modals/add-class-modal';
 import { Academy, ClassInfo, ViewState } from '@/types';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
-import { formatKSTTime } from '@/lib/utils/kst-time';
 import { ThemeToggle } from '@/components/common/theme-toggle';
+import { AcademyWeeklyScheduleView } from './academy-weekly-schedule-view';
+import { AcademyMonthlyScheduleView } from './academy-monthly-schedule-view';
 
 interface AcademyDetailViewProps {
   academy: Academy | null;
@@ -17,78 +18,10 @@ interface AcademyDetailViewProps {
   onClassBook: (classInfo: ClassInfo & { time?: string; price?: number }) => void;
 }
 
-const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-
-// Schedule을 ClassInfo로 변환
-function transformSchedule(schedule: any): ClassInfo {
-  const instructor = schedule.instructors?.name_kr || schedule.instructors?.name_en || '강사 정보 없음';
-  const classData = schedule.classes || {};
-  const genre = classData.genre || 'ALL';
-  const level = classData.difficulty_level || 'All Level';
-  const isFull = schedule.current_students >= (schedule.max_students || 0);
-  const isAlmostFull = schedule.current_students >= (schedule.max_students || 0) * 0.8;
-  const status = isFull ? 'FULL' : isAlmostFull ? 'ALMOST_FULL' : 'AVAILABLE';
-
-  return {
-    id: schedule.id,
-    schedule_id: schedule.id,
-    instructor,
-    genre,
-    level,
-    status,
-    price: classData.price || 0,
-    class_title: classData.title,
-    hall_name: schedule.halls?.name,
-    academy: {
-      id: classData.academies?.id || '',
-      name: classData.academies?.name_kr || classData.academies?.name_en || '',
-    },
-    maxStudents: schedule.max_students,
-    currentStudents: schedule.current_students,
-    endTime: schedule.end_time,
-  };
-}
-
-// 주간 스케줄을 그리드로 변환
-function buildScheduleGrid(schedules: any[]) {
-  const grid: Record<string, ClassInfo[]> = {
-    MON: [], TUE: [], WED: [], THU: [], FRI: [], SAT: [], SUN: []
-  };
-
-  schedules.forEach((schedule: any) => {
-    if (!schedule.start_time) return;
-    const startTime = new Date(schedule.start_time);
-    const dayIndex = (startTime.getDay() + 6) % 7; // 월요일을 0으로
-    const day = DAYS[dayIndex];
-    // UTC를 KST로 변환하여 시간 표시
-    const time = formatKSTTime(schedule.start_time);
-    
-    const classInfo = transformSchedule(schedule);
-    classInfo.time = time;
-    
-    grid[day].push(classInfo);
-  });
-
-  // 시간순으로 정렬
-  Object.keys(grid).forEach((day: string) => {
-    grid[day].sort((a, b) => {
-      const timeA = a.time || '00:00';
-      const timeB = b.time || '00:00';
-      return timeA.localeCompare(timeB);
-    });
-  });
-
-  return grid;
-}
-
 export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetailViewProps) => {
   const [previewClass, setPreviewClass] = useState<(ClassInfo & { time?: string }) | null>(null);
-  const [schedules, setSchedules] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'home' | 'schedule' | 'reviews'>('schedule');
-  const [scheduleGrid, setScheduleGrid] = useState<Record<string, ClassInfo[]>>({
-    MON: [], TUE: [], WED: [], THU: [], FRI: [], SAT: [], SUN: []
-  });
+  const [scheduleViewMode, setScheduleViewMode] = useState<'week' | 'month'>('week');
   const [showAddClassModal, setShowAddClassModal] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string>('');
   const [selectedTime, setSelectedTime] = useState<string>('');
@@ -147,93 +80,6 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
     }
   }, []);
 
-  const loadSchedules = useCallback(async (signal?: AbortSignal) => {
-    if (!academy) return;
-    
-    try {
-      setLoading(true);
-      // 현재 주의 시작과 끝 날짜 계산
-      const startOfWeek = new Date(currentWeekStart);
-      startOfWeek.setHours(0, 0, 0, 0);
-      
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6); // 일요일
-      endOfWeek.setHours(23, 59, 59, 999);
-
-        const supabase = getSupabaseClient();
-        if (!supabase) {
-          setLoading(false);
-          return;
-        }
-
-        // academy ID 추출 (합성 ID에서 원본 추출)
-        const academyId = (academy as any).academyId || academy.id;
-
-        // 필요한 필드만 선택하여 성능 최적화
-        const { data: schedules, error: schedulesError } = await supabase
-          .from('schedules')
-          .select(`
-            id,
-            class_id,
-            instructor_id,
-            hall_id,
-            start_time,
-            end_time,
-            is_canceled,
-            classes (
-              id,
-              name_kr,
-              name_en,
-              price,
-              academy_id,
-              academies (
-                id,
-                name_kr,
-                name_en
-              )
-            ),
-            instructors (
-              id,
-              name_kr,
-              name_en
-            ),
-            halls (
-              id,
-              name
-            )
-          `)
-          .eq('is_canceled', false)
-          .eq('classes.academy_id', academyId)
-          .gte('start_time', startOfWeek.toISOString())
-          .lte('start_time', endOfWeek.toISOString())
-          .order('start_time', { ascending: true });
-
-        if (schedulesError) throw schedulesError;
-        
-        // AbortSignal 체크
-        if (signal?.aborted) return;
-
-        setSchedules(schedules || []);
-        const grid = buildScheduleGrid(schedules || []);
-        setScheduleGrid(grid);
-      } catch (error) {
-        if (signal?.aborted) return;
-        console.error('Error loading schedules:', error);
-      } finally {
-        if (!signal?.aborted) {
-          setLoading(false);
-        }
-      }
-  }, [academy, currentWeekStart]);
-
-  useEffect(() => {
-    const abortController = new AbortController();
-    loadSchedules(abortController.signal);
-    
-    return () => {
-      abortController.abort();
-    };
-  }, [loadSchedules]);
 
   // 최근 수업 영상 로드
   const loadRecentVideos = useCallback(async () => {
@@ -288,8 +134,8 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
 
   if (!academy) return null;
 
-  const handleClassClick = (classInfo: ClassInfo, time: string) => {
-    setPreviewClass({ ...classInfo, time });
+  const handleClassClick = (classInfo: ClassInfo & { time?: string }) => {
+    setPreviewClass(classInfo);
   };
 
   const handleBook = (classInfo: ClassInfo & { time?: string }) => {
@@ -310,37 +156,8 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
   };
 
   const handleAddClassSubmit = () => {
-    loadSchedules();
+    // 스케줄 뷰가 자동으로 새로고침됨
   };
-
-  // 시간대 추출 (모든 스케줄에서) - 기본 시간대도 포함
-  const existingTimeSlots = Array.from(new Set(
-    schedules
-      .filter((s: any) => s.start_time)
-      .map((s: any) => formatKSTTime(s.start_time))
-  )).sort();
-  
-  // 기본 시간대 추가 (09:00 ~ 22:00, 1시간 간격)
-  const defaultTimeSlots: string[] = [];
-  for (let hour = 9; hour <= 22; hour++) {
-    defaultTimeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
-  }
-  
-  // 기존 시간대와 기본 시간대 합치기
-  const allTimeSlots = Array.from(new Set([...existingTimeSlots, ...defaultTimeSlots])).sort();
-
-  // 각 요일별로 시간대별로 그룹화된 스케줄 생성 (같은 시간대에 여러 수업 가능)
-  const scheduleByTimeAndDay: Record<string, Record<string, ClassInfo[]>> = {};
-  allTimeSlots.forEach((time: string) => {
-    scheduleByTimeAndDay[time] = {};
-    DAYS.forEach((day: string) => {
-      const daySchedules = scheduleGrid[day] || [];
-      const schedules = daySchedules.filter((s: ClassInfo) => s.time === time);
-      if (schedules.length > 0) {
-        scheduleByTimeAndDay[time][day] = schedules;
-      }
-    });
-  });
 
   return (
     <>
@@ -526,100 +343,42 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
 
         {/* 시간표 섹션 */}
         <div ref={scheduleRef} className="p-5 scroll-mt-20">
-          <h3 className="text-black dark:text-white font-bold text-lg mb-4">주간 시간표</h3>
-          {loading ? (
-            <div className="text-center py-12 text-neutral-500">로딩 중...</div>
-          ) : (
-            <div className="overflow-hidden">
-              <div className="flex mb-2">
-                <div className="w-12 flex-shrink-0"></div>
-                {DAYS.map((day: string) => (
-                  <div key={day} className="flex-1 text-center text-xs font-bold text-neutral-500 dark:text-neutral-500 py-2 min-w-0">
-                    {day}
-                  </div>
-                ))}
-              </div>
-              {allTimeSlots.length === 0 ? (
-                <div className="text-center py-12 text-neutral-500">이번 주 스케줄이 없습니다.</div>
-              ) : (
-                allTimeSlots.map((time: string) => (
-                  <div key={time} className="flex mb-2">
-                    <div className="w-12 flex-shrink-0 flex flex-col items-center justify-center text-[10px] font-bold text-neutral-600 dark:text-neutral-400 bg-neutral-100/50 dark:bg-neutral-900/50 rounded-l-lg border-y border-l border-neutral-200 dark:border-neutral-800">
-                      {time}
-                    </div>
-                    {DAYS.map((day: string) => {
-                      const classInfos = scheduleByTimeAndDay[time]?.[day] || [];
-                      const isEmpty = classInfos.length === 0;
-                      // 첫 번째 수업의 홀 ID 가져오기
-                      let firstHallId: string | null = null;
-                      if (classInfos.length > 0) {
-                        const firstSchedule = schedules.find((s: any) => {
-                          if (!s.start_time) return false;
-                          const sTime = new Date(s.start_time);
-                          const sDayIndex = (sTime.getDay() + 6) % 7;
-                          const sTimeStr = formatKSTTime(s.start_time);
-                          return DAYS[sDayIndex] === day && sTimeStr === time && s.id === classInfos[0].id;
-                        });
-                        firstHallId = firstSchedule?.hall_id || null;
-                      }
-
-                      return (
-                        <div key={`${day}-${time}`} className="flex-1 p-0.5 min-w-0 flex flex-col gap-0.5">
-                          {isEmpty ? (
-                            <button
-                              onClick={() => handleAddClassClick(day, time)}
-                              className="h-full min-h-[40px] bg-neutral-100/30 dark:bg-neutral-900/30 rounded-lg border border-neutral-200/50 dark:border-neutral-800/50 hover:bg-neutral-100/50 dark:hover:bg-neutral-900/50 hover:border-neutral-800 dark:hover:border-[#CCFF00] transition-all flex items-center justify-center group"
-                            >
-                              <Plus size={16} className="text-neutral-400 dark:text-neutral-600 group-hover:text-neutral-800 dark:group-hover:text-[#CCFF00] transition-colors" />
-                            </button>
-                          ) : (
-                            <>
-                              {classInfos.map((classInfo, index) => {
-                                const isFull = classInfo.status === 'FULL';
-                                // 각 수업의 홀 ID 찾기
-                                const schedule = schedules.find((s: any) => s.id === classInfo.id);
-                                const hallId = schedule?.hall_id || null;
-                                
-                                return (
-                                  <button 
-                                    key={`${classInfo.id}-${index}`}
-                                    onClick={() => handleClassClick(classInfo, time)}
-                                    className={`w-full min-h-[40px] rounded-lg border p-1.5 flex items-center gap-1.5 text-left transition-all active:scale-95 ${
-                                      isFull 
-                                        ? 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 opacity-60' 
-                                        : 'bg-neutral-200 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 hover:border-neutral-800 dark:hover:border-[#CCFF00] hover:bg-neutral-300 dark:hover:bg-neutral-700'
-                                    }`}
-                                  >
-                                    <span className={`text-[9px] font-bold truncate flex-1 ${isFull ? 'text-neutral-500 dark:text-neutral-500' : 'text-black dark:text-white'}`}>
-                                      {classInfo.instructor}
-                                    </span>
-                                    <LevelBadge level={classInfo.level} simple />
-                                    <span className="text-[8px] text-neutral-500 dark:text-neutral-500 truncate max-w-[50px]">
-                                      {classInfo.genre}
-                                    </span>
-                                    {isFull && (
-                                      <span className="text-[8px] text-red-500 dark:text-red-400 font-bold whitespace-nowrap">
-                                        FULL
-                                      </span>
-                                    )}
-                                  </button>
-                                );
-                              })}
-                              <button
-                                onClick={() => handleAddClassClick(day, time, firstHallId)}
-                                className="w-full min-h-[24px] bg-neutral-100/50 dark:bg-neutral-900/50 rounded border border-neutral-200/50 dark:border-neutral-800/50 hover:bg-neutral-100 dark:hover:bg-neutral-900 hover:border-neutral-800 dark:hover:border-[#CCFF00] transition-all flex items-center justify-center group"
-                              >
-                                <Plus size={12} className="text-neutral-400 dark:text-neutral-600 group-hover:text-neutral-800 dark:group-hover:text-[#CCFF00] transition-colors" />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))
-              )}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-black dark:text-white font-bold text-lg">시간표</h3>
+            <div className="flex gap-2 bg-neutral-100 dark:bg-neutral-900 rounded-lg p-1">
+              <button
+                onClick={() => setScheduleViewMode('week')}
+                className={`px-3 py-1.5 text-xs font-bold rounded transition-colors ${
+                  scheduleViewMode === 'week'
+                    ? 'bg-white dark:bg-neutral-800 text-black dark:text-white shadow-sm'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+                }`}
+              >
+                주간
+              </button>
+              <button
+                onClick={() => setScheduleViewMode('month')}
+                className={`px-3 py-1.5 text-xs font-bold rounded transition-colors ${
+                  scheduleViewMode === 'month'
+                    ? 'bg-white dark:bg-neutral-800 text-black dark:text-white shadow-sm'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+                }`}
+              >
+                월간
+              </button>
             </div>
+          </div>
+          {scheduleViewMode === 'week' ? (
+            <AcademyWeeklyScheduleView
+              academyId={(academy as any).academyId || academy.id}
+              onClassClick={handleClassClick}
+              onAddClassClick={handleAddClassClick}
+            />
+          ) : (
+            <AcademyMonthlyScheduleView
+              academyId={(academy as any).academyId || academy.id}
+              onClassClick={handleClassClick}
+            />
           )}
         </div>
 

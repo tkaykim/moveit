@@ -22,3 +22,4 @@ cacheDirs.forEach(dir => {
 console.log('캐시 정리 완료!');
 
 
+

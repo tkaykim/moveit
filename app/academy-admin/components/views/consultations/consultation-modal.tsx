@@ -239,3 +239,4 @@ export function ConsultationModal({ academyId, consultation, onClose }: Consulta
 
 
 
+

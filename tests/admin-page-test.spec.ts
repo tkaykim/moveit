@@ -24,3 +24,4 @@ test('admin page should load without errors', async ({ page }) => {
   await expect(page.locator('text=관리자 대시보드')).toBeVisible({ timeout: 10000 });
 });
 
+

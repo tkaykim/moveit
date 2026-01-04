@@ -222,3 +222,4 @@ export const NoticesView = ({ onBack }: NoticesViewProps) => {
 
 
 
+
