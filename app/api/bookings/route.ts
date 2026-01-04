@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
     if (authError || !authUser) {
       // 데모 버전: 인증 없이도 진행
-      const { data: demoUsersList } = await supabase
+      const { data: demoUsersList } = await (supabase as any)
         .from('users')
         .select('id')
         .limit(1);
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
 
     if (authError || !authUser) {
       // 데모 버전: 인증 없이도 진행
-      const { data: demoUsersList } = await supabase
+      const { data: demoUsersList } = await (supabase as any)
         .from('users')
         .select('id')
         .limit(1);
@@ -197,7 +197,7 @@ export async function POST(request: Request) {
       status: 'CONFIRMED',
     };
 
-    const { data: booking, error: bookingError } = await supabase
+    const { data: booking, error: bookingError } = await (supabase as any)
       .from('bookings')
       .insert(bookingData)
       .select()
