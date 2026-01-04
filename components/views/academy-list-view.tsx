@@ -1,13 +1,14 @@
 "use client";
 
 import Image from 'next/image';
-import { Star, MapPin, Search, X } from 'lucide-react';
+import { Star, MapPin, Search, X, Heart } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Academy, ViewState } from '@/types';
 import { ThemeToggle } from '@/components/common/theme-toggle';
 import { AcademyFilterModal, AcademyFilter } from '@/components/modals/academy-filter-modal';
 import { calculateDistance, parseAddressToCoordinates, formatDistance } from '@/lib/utils/distance';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AcademyListViewProps {
   onAcademyClick: (academy: Academy) => void;
@@ -59,6 +60,8 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
   });
   const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [favoritedAcademies, setFavoritedAcademies] = useState<Set<string>>(new Set());
+  const { user } = useAuth();
 
   // 사용자 위치 가져오기
   useEffect(() => {
@@ -137,6 +140,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
             images,
             created_at
           `)
+          .eq('is_active', true)
           .order('created_at', { ascending: false })
           .limit(200); // 최대 200개만
 
@@ -195,6 +199,60 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
       isMounted = false;
     };
   }, []);
+
+  // 찜한 학원 목록 로드
+  useEffect(() => {
+    const loadFavoritedAcademies = async () => {
+      if (!user) {
+        setFavoritedAcademies(new Set());
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/favorites?type=academy');
+        if (response.ok) {
+          const data = await response.json();
+          const favoriteIds = new Set((data.data || []).map((item: any) => item.academies?.id).filter(Boolean));
+          setFavoritedAcademies(favoriteIds);
+        }
+      } catch (error) {
+        console.error('Error loading favorited academies:', error);
+      }
+    };
+
+    loadFavoritedAcademies();
+  }, [user]);
+
+  // 찜 토글 함수
+  const handleToggleFavorite = async (e: React.MouseEvent, academyId: string) => {
+    e.stopPropagation();
+    if (!user) return;
+
+    try {
+      const response = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type: 'academy', id: academyId }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.isFavorited) {
+          setFavoritedAcademies(prev => new Set([...prev, academyId]));
+        } else {
+          setFavoritedAcademies(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(academyId);
+            return newSet;
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
 
   // 사용 가능한 태그 추출
   const availableTags = useMemo(() => {
@@ -425,9 +483,22 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
                       {academy.tags.split(',')[0]?.trim() || ''}
                     </div>
                   )}
+                  {/* 찜 버튼 */}
+                  {user && (
+                    <button
+                      onClick={(e) => handleToggleFavorite(e, (academy as any).academyId || academy.id)}
+                      className="absolute top-3 right-3 p-2 bg-black/30 backdrop-blur rounded-full text-white hover:bg-black/50 transition-colors"
+                    >
+                      <Heart 
+                        size={18} 
+                        fill={favoritedAcademies.has((academy as any).academyId || academy.id) ? 'currentColor' : 'none'}
+                        className={favoritedAcademies.has((academy as any).academyId || academy.id) ? 'text-red-500' : ''}
+                      />
+                    </button>
+                  )}
                   {/* 할인 배지 */}
                   {hasDiscount && (
-                    <div className="absolute top-3 right-3 bg-neutral-900 dark:bg-neutral-800 text-white text-[10px] font-bold px-2 py-1 rounded-full">
+                    <div className={`absolute ${user ? 'top-12' : 'top-3'} right-3 bg-neutral-900 dark:bg-neutral-800 text-white text-[10px] font-bold px-2 py-1 rounded-full`}>
                       특가
                     </div>
                   )}

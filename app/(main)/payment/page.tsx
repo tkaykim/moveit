@@ -14,17 +14,17 @@ function PaymentContent() {
   const academyId = searchParams.get('academyId');
   const [academy, setAcademy] = useState<Academy | null>(null);
   const [classInfo, setClassInfo] = useState<(ClassInfo & { time?: string; price?: number }) | null>(null);
-  const [myTickets, setMyTickets] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const supabase = getSupabaseClient();
-        if (!supabase) return;
 
-        // 인증 기능 제거로 인해 티켓 수를 0으로 설정
-        setMyTickets(0);
+        const supabase = getSupabaseClient();
+        if (!supabase) {
+          setLoading(false);
+          return;
+        }
 
         // 학원 정보 로드
         if (academyId) {
@@ -98,11 +98,40 @@ function PaymentContent() {
     router.back();
   };
 
-  const handlePayment = () => {
-    setTimeout(() => {
-      setMyTickets(prev => prev - 1);
-      router.push('/payment/success');
-    }, 1500);
+  const handlePayment = async (paymentMethod: string, userTicketId?: string) => {
+    try {
+      if (paymentMethod === 'general_ticket' || paymentMethod === 'academy_ticket') {
+        // 수강권 차감 및 예약 생성
+        if (!classId || !userTicketId) {
+          alert('필수 정보가 누락되었습니다.');
+          return;
+        }
+
+        const response = await fetch('/api/bookings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            classId,
+            userTicketId,
+          }),
+        });
+
+        if (response.ok) {
+          router.push('/payment/success');
+        } else {
+          const error = await response.json();
+          alert(error.error || '예약에 실패했습니다.');
+        }
+      } else {
+        // 카드/계좌이체 결제 (아직 구현되지 않음)
+        alert('카드/계좌이체 결제는 아직 구현되지 않았습니다.');
+      }
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      alert('결제 처리 중 오류가 발생했습니다.');
+    }
   };
 
   if (loading) {
@@ -117,7 +146,6 @@ function PaymentContent() {
     <PaymentView 
       academy={academy}
       classInfo={classInfo}
-      myTickets={myTickets}
       onBack={handleBack}
       onPayment={handlePayment}
     />

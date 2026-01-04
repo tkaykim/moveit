@@ -1,33 +1,29 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2 } from 'lucide-react';
-import Link from 'next/link';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Edit, Trash2, Ticket } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
-import { Academy } from '@/lib/supabase/types';
-import type { Database } from '@/types/database';
+import { Database } from '@/types/database';
 
-export default function BranchesPage() {
-  const [branches, setBranches] = useState<(any & { academies: Academy | null })[]>([]);
-  const [academies, setAcademies] = useState<Academy[]>([]);
+type Ticket = Database['public']['Tables']['tickets']['Row'] & {
+  academies: any | null;
+};
+
+export default function TicketsPage() {
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    academy_id: '',
     name: '',
-    address_primary: '',
-    address_detail: '',
-    contact_number: '',
-    image_url: '',
-    is_active: true,
+    price: 0,
+    ticket_type: '1회권' as string,
+    total_count: 1,
+    valid_days: 30,
+    is_on_sale: true,
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     const supabase = getSupabaseClient() as any;
     if (!supabase) {
       setLoading(false);
@@ -35,29 +31,27 @@ export default function BranchesPage() {
     }
 
     try {
-      const [branchesRes, academiesRes] = await Promise.all([
-        supabase
-          .from('branches')
-          .select('*, academies(*)')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('academies')
-          .select('*')
-          .order('name_kr', { ascending: true }),
-      ]);
+      // /admin에서는 is_general=true인 전체 수강권만 조회
+      const ticketsRes = await supabase
+        .from('tickets')
+        .select('*, academies(*)')
+        .eq('is_general', true)
+        .order('created_at', { ascending: false });
 
-      if (branchesRes.error) throw branchesRes.error;
-      if (academiesRes.error) throw academiesRes.error;
+      if (ticketsRes.error) throw ticketsRes.error;
 
-      setBranches(branchesRes.data || []);
-      setAcademies(academiesRes.data || []);
+      setTickets(ticketsRes.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
       alert('데이터를 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,26 +59,28 @@ export default function BranchesPage() {
     if (!supabase) return;
 
     try {
-      const submitData: any = {
-        academy_id: formData.academy_id,
+      // /admin에서는 전체 수강권만 생성 (is_general=true, academy_id=NULL)
+      const submitData: Database['public']['Tables']['tickets']['Insert'] = {
+        is_general: true,
+        academy_id: null, // 전체 수강권은 academy_id가 NULL
         name: formData.name,
-        address_primary: formData.address_primary,
-        address_detail: formData.address_detail || null,
-        contact_number: formData.contact_number || null,
-        image_url: formData.image_url || null,
-        is_active: formData.is_active,
+        price: formData.price,
+        ticket_type: formData.ticket_type,
+        total_count: formData.total_count,
+        valid_days: formData.valid_days,
+        is_on_sale: formData.is_on_sale,
       };
 
       if (editingId) {
-        const { error } = await (supabase as any)
-          .from('branches')
+        const { error } = await supabase
+          .from('tickets')
           .update(submitData)
           .eq('id', editingId);
 
         if (error) throw error;
       } else {
-        const { error } = await (supabase as any)
-          .from('branches')
+        const { error } = await supabase
+          .from('tickets')
           .insert([submitData]);
 
         if (error) throw error;
@@ -94,30 +90,28 @@ export default function BranchesPage() {
       setShowForm(false);
       setEditingId(null);
       setFormData({
-        academy_id: '',
         name: '',
-        address_primary: '',
-        address_detail: '',
-        contact_number: '',
-        image_url: '',
-        is_active: true,
+        price: 0,
+        ticket_type: '1회권',
+        total_count: 1,
+        valid_days: 30,
+        is_on_sale: true,
       });
     } catch (error) {
-      console.error('Error saving branch:', error);
-      alert('지점 저장에 실패했습니다.');
+      console.error('Error saving ticket:', error);
+      alert('수강권 저장에 실패했습니다.');
     }
   };
 
-  const handleEdit = (branch: any) => {
-    setEditingId(branch.id);
+  const handleEdit = (ticket: Ticket) => {
+    setEditingId(ticket.id);
     setFormData({
-      academy_id: branch.academy_id || '',
-      name: branch.name || '',
-      address_primary: branch.address_primary || '',
-      address_detail: branch.address_detail || '',
-      contact_number: branch.contact_number || '',
-      image_url: branch.image_url || '',
-      is_active: branch.is_active || false,
+      name: ticket.name || '',
+      price: ticket.price || 0,
+      ticket_type: ticket.ticket_type || '1회권',
+      total_count: ticket.total_count || 1,
+      valid_days: ticket.valid_days || 30,
+      is_on_sale: ticket.is_on_sale ?? true,
     });
     setShowForm(true);
   };
@@ -130,15 +124,15 @@ export default function BranchesPage() {
 
     try {
       const { error } = await supabase
-        .from('branches')
+        .from('tickets')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
       await loadData();
     } catch (error) {
-      console.error('Error deleting branch:', error);
-      alert('지점 삭제에 실패했습니다.');
+      console.error('Error deleting ticket:', error);
+      alert('수강권 삭제에 실패했습니다.');
     }
   };
 
@@ -150,9 +144,9 @@ export default function BranchesPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-black dark:text-white">지점 관리</h1>
+          <h1 className="text-2xl font-bold text-black dark:text-white">수강권 관리</h1>
           <p className="text-neutral-600 dark:text-neutral-400 mt-1">
-            지점을 등록하고 관리할 수 있습니다.
+            전체 수강권을 등록하고 관리할 수 있습니다. (학원 전용 수강권은 각 학원 관리 페이지에서 관리)
           </p>
         </div>
         <div className="flex gap-2">
@@ -161,19 +155,18 @@ export default function BranchesPage() {
               setShowForm(!showForm);
               setEditingId(null);
               setFormData({
-                academy_id: '',
                 name: '',
-                address_primary: '',
-                address_detail: '',
-                contact_number: '',
-                image_url: '',
-                is_active: true,
+                price: 0,
+                ticket_type: '1회권',
+                total_count: 1,
+                valid_days: 30,
+                is_on_sale: true,
               });
             }}
             className="px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-2"
           >
             <Plus size={20} />
-            {showForm ? '취소' : '지점 추가'}
+            {showForm ? '취소' : '수강권 추가'}
           </button>
         </div>
       </div>
@@ -181,101 +174,90 @@ export default function BranchesPage() {
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white dark:bg-neutral-900 rounded-xl p-6 border border-neutral-200 dark:border-neutral-800 mb-6">
           <h2 className="text-xl font-bold text-black dark:text-white mb-4">
-            {editingId ? '지점 수정' : '새 지점 등록'}
+            {editingId ? '수강권 수정' : '새 수강권 등록'}
           </h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-black dark:text-white mb-2">
-                학원 *
-              </label>
-              <select
-                required
-                value={formData.academy_id}
-                onChange={(e) => setFormData({ ...formData, academy_id: e.target.value })}
-                className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
-              >
-                <option value="">학원 선택</option>
-                {academies.map((academy) => {
-                  const nameKr = academy.name_kr;
-                  const nameEn = academy.name_en;
-                  const displayName = nameKr && nameEn 
-                    ? `${nameKr} (${nameEn})` 
-                    : nameKr || nameEn || '-';
-                  return (
-                    <option key={academy.id} value={academy.id}>
-                      {displayName}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-black dark:text-white mb-2">
-                지점명 *
+                수강권명 *
               </label>
               <input
                 type="text"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="예: 전체 1회권, 전체 10회권"
                 className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-black dark:text-white mb-2">
-                주소 *
+                수강권 유형 *
               </label>
-              <input
-                type="text"
+              <select
                 required
-                value={formData.address_primary}
-                onChange={(e) => setFormData({ ...formData, address_primary: e.target.value })}
+                value={formData.ticket_type}
+                onChange={(e) => setFormData({ ...formData, ticket_type: e.target.value })}
+                className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
+              >
+                <option value="1회권">1회권</option>
+                <option value="10회권">10회권</option>
+                <option value="20회권">20회권</option>
+                <option value="30회권">30회권</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-black dark:text-white mb-2">
+                가격 (원) *
+              </label>
+              <input
+                type="number"
+                required
+                min="0"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
                 className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-black dark:text-white mb-2">
-                상세 주소
+                사용 가능 횟수 *
               </label>
               <input
-                type="text"
-                value={formData.address_detail}
-                onChange={(e) => setFormData({ ...formData, address_detail: e.target.value })}
+                type="number"
+                required
+                min="1"
+                value={formData.total_count}
+                onChange={(e) => setFormData({ ...formData, total_count: Number(e.target.value) })}
                 className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-black dark:text-white mb-2">
-                연락처
+                유효기간 (일) *
               </label>
               <input
-                type="tel"
-                value={formData.contact_number}
-                onChange={(e) => setFormData({ ...formData, contact_number: e.target.value })}
+                type="number"
+                required
+                min="1"
+                value={formData.valid_days}
+                onChange={(e) => setFormData({ ...formData, valid_days: Number(e.target.value) })}
                 className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-black dark:text-white mb-2">
-                이미지 URL
-              </label>
-              <input
-                type="text"
-                value={formData.image_url}
-                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
-              />
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                구매일로부터 사용 가능한 일수
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
-                id="is_active"
-                checked={formData.is_active}
-                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                id="is_on_sale"
+                checked={formData.is_on_sale}
+                onChange={(e) => setFormData({ ...formData, is_on_sale: e.target.checked })}
                 className="w-4 h-4"
               />
-              <label htmlFor="is_active" className="text-sm text-black dark:text-white">
-                활성화
+              <label htmlFor="is_on_sale" className="text-sm font-medium text-black dark:text-white">
+                판매 중
               </label>
             </div>
             <button
@@ -294,13 +276,19 @@ export default function BranchesPage() {
             <thead className="bg-neutral-100 dark:bg-neutral-800">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-                  학원
+                  수강권명
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-                  지점명
+                  유형
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-                  주소
+                  가격
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
+                  사용 가능 횟수
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
+                  유효기간
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
                   상태
@@ -311,50 +299,49 @@ export default function BranchesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-              {branches.length === 0 ? (
+              {tickets.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-neutral-500 dark:text-neutral-400">
-                    등록된 지점이 없습니다.
+                  <td colSpan={7} className="px-6 py-12 text-center text-neutral-500 dark:text-neutral-400">
+                    등록된 수강권이 없습니다.
                   </td>
                 </tr>
               ) : (
-                branches.map((branch) => (
-                  <tr key={branch.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+                tickets.map((ticket) => (
+                  <tr key={ticket.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black dark:text-white">
-                      {(() => {
-                        const academy = branch.academies as Academy | null;
-                        if (!academy) return '-';
-                        const nameKr = academy.name_kr;
-                        const nameEn = academy.name_en;
-                        if (nameKr && nameEn) return `${nameKr} (${nameEn})`;
-                        return nameKr || nameEn || '-';
-                      })()}
+                      {ticket.name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black dark:text-white">
-                      {branch.name}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
+                      {ticket.ticket_type}
                     </td>
-                    <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">
-                      {branch.address_primary}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
+                      {ticket.price?.toLocaleString()}원
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        branch.is_active 
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400' 
-                          : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
+                      {ticket.total_count}회
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
+                      {ticket.valid_days}일
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                        ticket.is_on_sale
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
+                          : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
                       }`}>
-                        {branch.is_active ? '활성' : '비활성'}
+                        {ticket.is_on_sale ? '판매 중' : '판매 중지'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-2">
                         <button
-                          onClick={() => handleEdit(branch)}
+                          onClick={() => handleEdit(ticket)}
                           className="text-primary dark:text-[#CCFF00] hover:opacity-80"
                         >
                           <Edit size={18} />
                         </button>
                         <button
-                          onClick={() => handleDelete(branch.id)}
+                          onClick={() => handleDelete(ticket.id)}
                           className="text-red-500 hover:opacity-80"
                         >
                           <Trash2 size={18} />

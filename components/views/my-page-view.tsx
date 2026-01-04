@@ -1,13 +1,16 @@
 "use client";
 
-import { Bell, User, QrCode, ChevronLeft, Gift, MessageCircle, CreditCard, FileText } from 'lucide-react';
+import { Bell, User, QrCode, ChevronLeft, Gift, MessageCircle, CreditCard, FileText, Plus } from 'lucide-react';
 import { QrModal } from '@/components/modals/qr-modal';
-import { useState } from 'react';
+import { TicketRechargeModal } from '@/components/modals/ticket-recharge-modal';
+import { MyBookingsSection } from '@/components/views/my-bookings-section';
+import { useState, useEffect, useRef } from 'react';
 import { ViewState } from '@/types';
 import { ThemeToggle } from '@/components/common/theme-toggle';
 import { useAuth } from '@/contexts/AuthContext';
 import { MyTab } from '@/components/auth/MyTab';
 import { UserMenu } from '@/components/auth/UserMenu';
+import { useRouter } from 'next/navigation';
 
 interface MyPageViewProps {
   myTickets: number;
@@ -15,17 +18,84 @@ interface MyPageViewProps {
   onNavigate?: (view: ViewState) => void;
   onAcademyClick?: (academy: any) => void;
   onDancerClick?: (dancer: any) => void;
+  onTicketsRefresh?: () => void;
 }
 
-export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, onDancerClick }: MyPageViewProps) => {
+export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, onDancerClick, onTicketsRefresh }: MyPageViewProps) => {
+  const router = useRouter();
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isTicketRechargeOpen, setIsTicketRechargeOpen] = useState(false);
   const { user, profile, loading } = useAuth();
+  const [upcomingCount, setUpcomingCount] = useState(0);
+  const [completedCount, setCompletedCount] = useState(0);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [bookingsTab, setBookingsTab] = useState<'upcoming' | 'completed' | null>(null);
+  const bookingsSectionRef = useRef<HTMLDivElement>(null);
 
   // profile이 없어도 user 정보로 기본값 사용
   const displayName = profile?.nickname || profile?.name || user?.email?.split('@')[0] || '사용자';
   const profileImage = profile?.profile_image || null;
   const userEmail = profile?.email || user?.email || null;
+
+  const handleAcademyClickFromBookings = (academyId: string) => {
+    router.push(`/academy/${academyId}`);
+  };
+
+  // 통계 정보 로드 (수강 예정/지난 클래스)
+  useEffect(() => {
+    const loadStats = async () => {
+      if (!user) {
+        setUpcomingCount(0);
+        setCompletedCount(0);
+        setLoadingStats(false);
+        return;
+      }
+
+      try {
+        setLoadingStats(true);
+        const response = await fetch('/api/bookings');
+        if (response.ok) {
+          const result = await response.json();
+          const bookings = result.data || [];
+          
+          const now = new Date();
+          let upcoming = 0;
+          let completed = 0;
+
+          bookings.forEach((booking: any) => {
+            if (!booking.classes?.start_time) {
+              if (booking.status === 'COMPLETED') {
+                completed++;
+              }
+              return;
+            }
+
+            const startTime = new Date(booking.classes.start_time);
+            if (startTime > now && booking.status === 'CONFIRMED') {
+              upcoming++;
+            } else if (startTime <= now || booking.status === 'COMPLETED') {
+              completed++;
+            }
+          });
+
+          setUpcomingCount(upcoming);
+          setCompletedCount(completed);
+        } else {
+          setUpcomingCount(0);
+          setCompletedCount(0);
+        }
+      } catch (error) {
+        console.error('Error loading stats:', error);
+        setUpcomingCount(0);
+        setCompletedCount(0);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    loadStats();
+  }, [user]);
 
   return (
     <>
@@ -108,22 +178,68 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
 
         {/* 통계 */}
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-center">
-            <div className="text-2xl font-black text-black dark:text-white mb-1">0</div>
-            <div className="text-xs text-neutral-500 dark:text-neutral-400 font-bold">포인트</div>
-            <div className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1">P</div>
-          </div>
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-center">
-            <div className="text-2xl font-black text-black dark:text-white mb-1">0</div>
-            <div className="text-xs text-neutral-500 dark:text-neutral-400 font-bold">쿠폰</div>
+          <button
+            onClick={() => {
+              setBookingsTab('upcoming');
+              setTimeout(() => {
+                bookingsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }, 100);
+            }}
+            className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-center hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors active:scale-[0.98]"
+          >
+            <div className="text-2xl font-black text-black dark:text-white mb-1">
+              {loadingStats ? '...' : upcomingCount}
+            </div>
+            <div className="text-xs text-neutral-500 dark:text-neutral-400 font-bold">수강 예정</div>
+            <div className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1">클래스</div>
+          </button>
+          <button
+            onClick={() => {
+              setBookingsTab('completed');
+              setTimeout(() => {
+                bookingsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }, 100);
+            }}
+            className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-center hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors active:scale-[0.98]"
+          >
+            <div className="text-2xl font-black text-black dark:text-white mb-1">
+              {loadingStats ? '...' : completedCount}
+            </div>
+            <div className="text-xs text-neutral-500 dark:text-neutral-400 font-bold">지난 클래스</div>
             <div className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1">개</div>
-          </div>
+          </button>
           <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-center">
-            <div className="text-2xl font-black text-black dark:text-white mb-1">0</div>
-            <div className="text-xs text-neutral-500 dark:text-neutral-400 font-bold">찜</div>
-            <div className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1">개</div>
+            <div className="text-2xl font-black text-black dark:text-white mb-1">{myTickets}</div>
+            <div className="text-xs text-neutral-500 dark:text-neutral-400 font-bold">보유 수강권</div>
+            <div className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1">회</div>
           </div>
         </div>
+
+        {/* 예약 내역 섹션 */}
+        {bookingsTab && (
+          <MyBookingsSection 
+            onAcademyClick={handleAcademyClickFromBookings}
+            initialTab={bookingsTab}
+            sectionRef={bookingsSectionRef}
+          />
+        )}
+
+        {/* 수강권 충전 버튼 */}
+        <button 
+          onClick={() => setIsTicketRechargeOpen(true)}
+          className="w-full bg-primary dark:bg-[#CCFF00] text-black rounded-2xl p-4 flex items-center justify-between mb-3 active:scale-[0.98] transition-transform shadow-sm"
+        >
+          <div className="flex items-center gap-3">
+            <div className="bg-black/10 p-2 rounded-xl">
+              <Plus size={20} />
+            </div>
+            <div className="text-left">
+              <div className="text-base font-black">수강권 충전</div>
+              <div className="text-xs text-black/70">현재 보유: {myTickets}회</div>
+            </div>
+          </div>
+          <ChevronLeft className="rotate-180 text-black/50" size={20} />
+        </button>
 
         {/* 주요 버튼 */}
         <button 
@@ -161,7 +277,7 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
             className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex flex-col items-center gap-2 active:scale-[0.98] transition-transform"
           >
             <User className="text-neutral-600 dark:text-neutral-400" size={20} />
-            <span className="text-xs font-bold text-black dark:text-white">회원권</span>
+            <span className="text-xs font-bold text-black dark:text-white">수강권</span>
           </button>
           <button 
             onClick={() => onNavigate?.('PAYMENT_HISTORY')}
@@ -227,6 +343,15 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
         </div>
       </div>
       <QrModal isOpen={isQrOpen} onClose={() => setIsQrOpen(false)} />
+      <TicketRechargeModal 
+        isOpen={isTicketRechargeOpen} 
+        onClose={() => setIsTicketRechargeOpen(false)}
+        onPurchaseSuccess={() => {
+          if (onTicketsRefresh) {
+            onTicketsRefresh();
+          }
+        }}
+      />
       <MyTab isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </>
   );

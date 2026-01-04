@@ -1,7 +1,7 @@
 "use client";
 
 import Image from 'next/image';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Heart } from 'lucide-react';
 import { LevelBadge } from '@/components/common/level-badge';
 import { ClassPreviewModal } from '@/components/modals/class-preview-modal';
 import { AddClassModal } from '@/components/modals/add-class-modal';
@@ -11,6 +11,7 @@ import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { ThemeToggle } from '@/components/common/theme-toggle';
 import { AcademyWeeklyScheduleView } from './academy-weekly-schedule-view';
 import { AcademyMonthlyScheduleView } from './academy-monthly-schedule-view';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AcademyDetailViewProps {
   academy: Academy | null;
@@ -28,6 +29,9 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
   const [selectedHallId, setSelectedHallId] = useState<string | null>(null);
   const [recentVideos, setRecentVideos] = useState<any[]>([]);
   const [videosLoading, setVideosLoading] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const { user } = useAuth();
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
     const now = new Date();
     const startOfWeek = new Date(now);
@@ -132,6 +136,58 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
     loadRecentVideos();
   }, [loadRecentVideos]);
 
+  // 찜 상태 확인
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      if (!user || !academy) {
+        setIsFavorited(false);
+        return;
+      }
+
+      try {
+        const academyId = (academy as any).academyId || academy.id;
+        const response = await fetch('/api/favorites?type=academy');
+        if (response.ok) {
+          const data = await response.json();
+          const isFavorite = (data.data || []).some((item: any) => 
+            item.academies?.id === academyId
+          );
+          setIsFavorited(isFavorite);
+        }
+      } catch (error) {
+        console.error('Error checking favorite status:', error);
+      }
+    };
+
+    checkFavoriteStatus();
+  }, [user, academy]);
+
+  // 찜 토글 함수
+  const handleToggleFavorite = async () => {
+    if (!user || !academy || favoriteLoading) return;
+
+    try {
+      setFavoriteLoading(true);
+      const academyId = (academy as any).academyId || academy.id;
+      const response = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type: 'academy', id: academyId }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setIsFavorited(result.isFavorited);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
+
   if (!academy) return null;
 
   const handleClassClick = (classInfo: ClassInfo & { time?: string }) => {
@@ -180,7 +236,22 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
             >
               <ChevronLeft />
             </button>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              {user && (
+                <button
+                  onClick={handleToggleFavorite}
+                  disabled={favoriteLoading}
+                  className="p-2 bg-black/30 backdrop-blur rounded-full text-white hover:bg-black/50 transition-colors disabled:opacity-50"
+                >
+                  <Heart 
+                    size={20} 
+                    fill={isFavorited ? 'currentColor' : 'none'} 
+                    className={isFavorited ? 'text-red-500' : ''}
+                  />
+                </button>
+              )}
+              <ThemeToggle />
+            </div>
           </div>
           <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white dark:from-neutral-950 to-transparent" />
           <div className="absolute bottom-6 left-6">

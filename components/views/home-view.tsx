@@ -58,6 +58,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             address,
             images
           `)
+          .eq('is_active', true)
           .limit(5)
           .order('created_at', { ascending: false });
 
@@ -308,7 +309,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             <Percent className="text-black dark:text-white" size={24} />
           </div>
           <div className="text-left min-w-0">
-            <div className="text-sm font-bold text-black dark:text-white">회원권</div>
+            <div className="text-sm font-bold text-black dark:text-white">수강권</div>
             <div className="text-xs text-neutral-600 dark:text-neutral-400">정기 수강</div>
           </div>
         </button>

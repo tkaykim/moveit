@@ -9,6 +9,7 @@ import {
   Users,
   Menu,
   X,
+  Ticket,
   type LucideIcon,
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
@@ -45,6 +46,11 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       title: '사용자 관리',
       icon: Users,
       href: '/admin/users',
+    },
+    {
+      title: '수강권 관리',
+      icon: Ticket,
+      href: '/admin/tickets',
     },
   ], []);
 

@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Dancer } from '@/types';
 import { ThemeToggle } from '@/components/common/theme-toggle';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DancerListViewProps {
   onDancerClick: (dancer: Dancer) => void;
@@ -62,6 +63,8 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
   const [loading, setLoading] = useState(true);
   const [dancerFilter, setDancerFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [favoritedInstructors, setFavoritedInstructors] = useState<Set<string>>(new Set());
+  const { user } = useAuth();
 
   useEffect(() => {
     let isMounted = true;
@@ -185,6 +188,60 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
     };
   }, []);
 
+  // 찜한 강사 목록 로드
+  useEffect(() => {
+    const loadFavoritedInstructors = async () => {
+      if (!user) {
+        setFavoritedInstructors(new Set());
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/favorites?type=instructor');
+        if (response.ok) {
+          const data = await response.json();
+          const favoriteIds = new Set((data.data || []).map((item: any) => item.instructors?.id).filter(Boolean));
+          setFavoritedInstructors(favoriteIds);
+        }
+      } catch (error) {
+        console.error('Error loading favorited instructors:', error);
+      }
+    };
+
+    loadFavoritedInstructors();
+  }, [user]);
+
+  // 찜 토글 함수
+  const handleToggleFavorite = async (e: React.MouseEvent, instructorId: string) => {
+    e.stopPropagation();
+    if (!user) return;
+
+    try {
+      const response = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type: 'instructor', id: instructorId }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.isFavorited) {
+          setFavoritedInstructors(prev => new Set([...prev, instructorId]));
+        } else {
+          setFavoritedInstructors(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(instructorId);
+            return newSet;
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
+
   const filteredDancers = dancers.filter(d => {
     if (dancerFilter !== 'ALL' && d.genre?.toUpperCase() !== dancerFilter) {
       return false;
@@ -295,16 +352,19 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
                         </div>
                       )}
                     </div>
-                    {/* 찜 버튼 - 이미지 밖으로 이동 */}
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // 찜 기능 구현
-                      }}
-                      className="flex-shrink-0 w-8 h-8 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                    >
-                      <Heart size={14} className="text-neutral-600 dark:text-neutral-400" />
-                    </button>
+                    {/* 찜 버튼 */}
+                    {user && (
+                      <button 
+                        onClick={(e) => handleToggleFavorite(e, dancer.id)}
+                        className="flex-shrink-0 w-8 h-8 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                      >
+                        <Heart 
+                          size={14} 
+                          fill={favoritedInstructors.has(dancer.id) ? 'currentColor' : 'none'}
+                          className={favoritedInstructors.has(dancer.id) ? 'text-red-500' : 'text-neutral-600 dark:text-neutral-400'}
+                        />
+                      </button>
+                    )}
                   </div>
 
                   {/* 메인 장르와 진행 예정 수업 개수 */}

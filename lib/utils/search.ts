@@ -23,6 +23,7 @@ export async function searchAll(query: string): Promise<SearchResult> {
         *,
         classes (*)
       `)
+      .eq('is_active', true)
       .or(`name_kr.ilike.%${searchTerm}%,name_en.ilike.%${searchTerm}%,tags.ilike.%${searchTerm}%`)
       .limit(20);
 
@@ -141,8 +142,8 @@ export async function searchByGenre(genre: string): Promise<SearchResult> {
     const instructorMap = new Map<string, any>();
 
     (classesData || []).forEach((cls: any) => {
-      // 학원 수집
-      if (cls.academies && !academyMap.has(cls.academies.id)) {
+      // 학원 수집 (is_active가 true인 것만)
+      if (cls.academies && cls.academies.is_active !== false && !academyMap.has(cls.academies.id)) {
         academyMap.set(cls.academies.id, cls.academies);
       }
       // 강사 수집
@@ -151,10 +152,10 @@ export async function searchByGenre(genre: string): Promise<SearchResult> {
       }
     });
 
-    // Academy 변환 (클래스 가격 정보 포함)
+    // Academy 변환 (클래스 가격 정보 포함, is_active가 true인 학원만)
     const academyPriceMap = new Map<string, number>();
     (classesData || []).forEach((cls: any) => {
-      if (cls.academies && cls.price) {
+      if (cls.academies && cls.academies.is_active !== false && cls.price) {
         const academyId = cls.academies.id;
         const currentMin = academyPriceMap.get(academyId) || Infinity;
         if (cls.price < currentMin) {

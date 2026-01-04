@@ -1,0 +1,245 @@
+import { createClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
+import { useUserTicket, getAvailableUserTickets, updateUserTicket } from '@/lib/db/user-tickets';
+import { Database } from '@/types/database';
+
+/**
+ * GET /api/bookings
+ * 사용자의 예약 목록 조회
+ */
+export async function GET(request: Request) {
+  try {
+    const supabase = await createClient();
+
+    // 현재 사용자 확인 (데모 버전: 인증 우회)
+    let user: any = null;
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !authUser) {
+      // 데모 버전: 인증 없이도 진행
+      const { data: demoUsersList } = await supabase
+        .from('users')
+        .select('id')
+        .limit(1);
+      
+      if (demoUsersList && demoUsersList.length > 0) {
+        user = { id: demoUsersList[0].id };
+      } else {
+        return NextResponse.json(
+          { error: '인증이 필요합니다.' },
+          { status: 401 }
+        );
+      }
+    } else {
+      user = authUser;
+    }
+
+    // 예약 목록 조회 (classes와 academies, instructors 조인)
+    const { data: bookings, error } = await (supabase as any)
+      .from('bookings')
+      .select(`
+        id,
+        status,
+        created_at,
+        class_id,
+        classes (
+          id,
+          title,
+          start_time,
+          end_time,
+          academy_id,
+          instructor_id,
+          academies (
+            id,
+            name_kr,
+            name_en,
+            logo_url,
+            address
+          ),
+          instructors (
+            id,
+            name_kr,
+            name_en
+          )
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching bookings:', error);
+      return NextResponse.json(
+        { error: '예약 목록 조회에 실패했습니다.' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      data: bookings || [],
+    });
+  } catch (error: any) {
+    console.error('Error in GET /api/bookings:', error);
+    return NextResponse.json(
+      { error: '예약 목록 조회에 실패했습니다.' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/bookings
+ * 예약 생성 및 수강권 차감
+ * Body: {
+ *   classId: string,
+ *   userTicketId?: string, // 사용할 수강권 ID (선택사항, 제공 안 하면 자동 선택)
+ * }
+ */
+export async function POST(request: Request) {
+  try {
+    const supabase = await createClient();
+
+    // 현재 사용자 확인 (데모 버전: 인증 우회)
+    let user: any = null;
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !authUser) {
+      // 데모 버전: 인증 없이도 진행
+      const { data: demoUsersList } = await supabase
+        .from('users')
+        .select('id')
+        .limit(1);
+      
+      if (demoUsersList && demoUsersList.length > 0) {
+        user = { id: demoUsersList[0].id };
+      } else {
+        return NextResponse.json(
+          { error: '인증이 필요합니다.' },
+          { status: 401 }
+        );
+      }
+    } else {
+      user = authUser;
+    }
+
+    const { classId, userTicketId } = await request.json();
+
+    if (!classId) {
+      return NextResponse.json(
+        { error: 'classId가 필요합니다.' },
+        { status: 400 }
+      );
+    }
+
+    // 클래스 정보 조회 (학원 ID 확인용)
+    const { data: classData, error: classError } = await (supabase as any)
+      .from('classes')
+      .select('academy_id')
+      .eq('id', classId)
+      .single();
+
+    if (classError || !classData) {
+      return NextResponse.json(
+        { error: '클래스 정보를 찾을 수 없습니다.' },
+        { status: 404 }
+      );
+    }
+
+    const academyId = classData.academy_id;
+
+    // 수강권 자동 선택 (userTicketId가 제공되지 않은 경우)
+    let selectedUserTicketId = userTicketId;
+    if (!selectedUserTicketId) {
+      const availableTickets = await getAvailableUserTickets(user.id, academyId);
+      
+      if (availableTickets.length === 0) {
+        return NextResponse.json(
+          { error: '사용 가능한 수강권이 없습니다.' },
+          { status: 400 }
+        );
+      }
+
+      // 학원 전용 수강권 우선, 없으면 전체 수강권 선택
+      const academySpecificTicket = availableTickets.find(
+        (t: any) => t.tickets && !t.tickets.is_general && t.tickets.academy_id === academyId
+      );
+      
+      if (academySpecificTicket) {
+        selectedUserTicketId = academySpecificTicket.id;
+      } else {
+        // 전체 수강권 선택 (is_general이 true이거나 academy_id가 null)
+        const generalTicket = availableTickets.find(
+          (t: any) => t.tickets && (t.tickets.is_general || t.tickets.academy_id === null)
+        );
+        
+        if (generalTicket) {
+          selectedUserTicketId = generalTicket.id;
+        } else {
+          selectedUserTicketId = availableTickets[0].id;
+        }
+      }
+    }
+
+    // 수강권 차감
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const useResult = await useUserTicket(selectedUserTicketId, 1);
+    if (!useResult.success) {
+      return NextResponse.json(
+        { error: useResult.error || '수강권 차감에 실패했습니다.' },
+        { status: 400 }
+      );
+    }
+
+    // 예약 생성
+    const bookingData: Database['public']['Tables']['bookings']['Insert'] = {
+      user_id: user.id,
+      class_id: classId,
+      user_ticket_id: selectedUserTicketId,
+      status: 'CONFIRMED',
+    };
+
+    const { data: booking, error: bookingError } = await supabase
+      .from('bookings')
+      .insert(bookingData)
+      .select()
+      .single();
+
+    if (bookingError) {
+      // 예약 생성 실패 시 수강권 차감 롤백
+      try {
+        const ticketBeforeUse = await (supabase as any)
+          .from('user_tickets')
+          .select('remaining_count, status')
+          .eq('id', selectedUserTicketId)
+          .single();
+
+        if (ticketBeforeUse.data) {
+          const newRemainingCount = (ticketBeforeUse.data.remaining_count || 0) + 1;
+          const newStatus = newRemainingCount > 0 ? 'ACTIVE' : ticketBeforeUse.data.status;
+
+          await updateUserTicket(selectedUserTicketId, {
+            remaining_count: newRemainingCount,
+            status: newStatus,
+          });
+        }
+      } catch (rollbackError) {
+        console.error('Rollback failed:', rollbackError);
+      }
+
+      return NextResponse.json(
+        { error: '예약 생성에 실패했습니다.' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      data: booking,
+      message: '예약이 완료되었습니다.',
+    });
+  } catch (error: any) {
+    console.error('Error in POST /api/bookings:', error);
+    return NextResponse.json(
+      { error: '예약 생성에 실패했습니다.' },
+      { status: 500 }
+    );
+  }
+}

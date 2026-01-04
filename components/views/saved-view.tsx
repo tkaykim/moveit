@@ -3,25 +3,152 @@
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
-import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Academy, Dancer, ViewState } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SavedViewProps {
   onNavigate?: (view: ViewState) => void;
 }
 
+interface SavedAcademy extends Academy {
+  favoriteId?: string;
+}
+
+interface SavedDancer extends Dancer {
+  favoriteId?: string;
+}
+
 export const SavedView = ({ onNavigate }: SavedViewProps) => {
   const [savedTab, setSavedTab] = useState<'ACADEMY' | 'DANCER'>('ACADEMY');
-  const [savedAcademies, setSavedAcademies] = useState<Academy[]>([]);
-  const [savedDancers, setSavedDancers] = useState<Dancer[]>([]);
+  const [savedAcademies, setSavedAcademies] = useState<SavedAcademy[]>([]);
+  const [savedDancers, setSavedDancers] = useState<SavedDancer[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
+  // 찜 목록 로드
   useEffect(() => {
-    // 인증 기능 제거로 인해 빈 배열로 설정
-    setSavedAcademies([]);
-    setSavedDancers([]);
-    setLoading(false);
-  }, []);
+    const loadFavorites = async () => {
+      if (!user) {
+        setSavedAcademies([]);
+        setSavedDancers([]);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+
+        // 학원 찜 목록 로드
+        const academyResponse = await fetch('/api/favorites?type=academy');
+        if (academyResponse.ok) {
+          const academyData = await academyResponse.json();
+          const academies = (academyData.data || []).map((item: any) => {
+            const academy = item.academies;
+            return {
+              id: academy.id,
+              name: academy.name_kr || academy.name_en || '이름 없음',
+              name_kr: academy.name_kr,
+              name_en: academy.name_en,
+              address: academy.address,
+              logo_url: academy.logo_url,
+              tags: academy.tags,
+              favoriteId: item.id,
+            } as SavedAcademy;
+          });
+          setSavedAcademies(academies);
+        }
+
+        // 강사 찜 목록 로드
+        const instructorResponse = await fetch('/api/favorites?type=instructor');
+        if (instructorResponse.ok) {
+          const instructorData = await instructorResponse.json();
+          const dancers = (instructorData.data || []).map((item: any) => {
+            const instructor = item.instructors;
+            return {
+              id: instructor.id,
+              name: instructor.name_kr || instructor.name_en || '이름 없음',
+              img: instructor.profile_image_url,
+              genre: instructor.specialties || 'ALL',
+              crew: null,
+              favoriteId: item.id,
+            } as SavedDancer;
+          });
+          setSavedDancers(dancers);
+        }
+      } catch (error) {
+        console.error('Error loading favorites:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFavorites();
+  }, [user]);
+
+  // 찜 해제 함수
+  const handleToggleFavorite = async (type: 'academy' | 'instructor', id: string) => {
+    if (!user) return;
+
+    try {
+      const response = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type, id }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        // 목록에서 제거
+        if (!result.isFavorited) {
+          if (type === 'academy') {
+            setSavedAcademies(prev => prev.filter(item => item.id !== id));
+          } else {
+            setSavedDancers(prev => prev.filter(item => item.id !== id));
+          }
+        } else {
+          // 다시 로드 (추가된 경우)
+          const favoritesResponse = await fetch(`/api/favorites?type=${type}`);
+          if (favoritesResponse.ok) {
+            const favoritesData = await favoritesResponse.json();
+            if (type === 'academy') {
+              const academies = (favoritesData.data || []).map((item: any) => {
+                const academy = item.academies;
+                return {
+                  id: academy.id,
+                  name: academy.name_kr || academy.name_en || '이름 없음',
+                  name_kr: academy.name_kr,
+                  name_en: academy.name_en,
+                  address: academy.address,
+                  logo_url: academy.logo_url,
+                  tags: academy.tags,
+                  favoriteId: item.id,
+                } as SavedAcademy;
+              });
+              setSavedAcademies(academies);
+            } else {
+              const dancers = (favoritesData.data || []).map((item: any) => {
+                const instructor = item.instructors;
+                return {
+                  id: instructor.id,
+                  name: instructor.name_kr || instructor.name_en || '이름 없음',
+                  img: instructor.profile_image_url,
+                  genre: instructor.specialties || 'ALL',
+                  crew: null,
+                  favoriteId: item.id,
+                } as SavedDancer;
+              });
+              setSavedDancers(dancers);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -87,7 +214,10 @@ export const SavedView = ({ onNavigate }: SavedViewProps) => {
                   <h3 className="text-black dark:text-white font-bold text-sm">{item.name}</h3>
                   <p className="text-xs text-neutral-500 dark:text-neutral-500">{item.address || '주소 정보 없음'}</p>
                 </div>
-                <button className="text-primary dark:text-[#CCFF00] p-2">
+                <button 
+                  onClick={() => handleToggleFavorite('academy', item.id)}
+                  className="text-primary dark:text-[#CCFF00] p-2 hover:opacity-80 transition-opacity"
+                >
                   <Heart fill="currentColor" size={18} />
                 </button>
               </div>
@@ -125,7 +255,10 @@ export const SavedView = ({ onNavigate }: SavedViewProps) => {
                     {item.genre || 'ALL'} {item.crew ? `• ${item.crew}` : ''}
                   </p>
                 </div>
-                <button className="text-primary dark:text-[#CCFF00] p-2">
+                <button 
+                  onClick={() => handleToggleFavorite('instructor', item.id)}
+                  className="text-primary dark:text-[#CCFF00] p-2 hover:opacity-80 transition-opacity"
+                >
                   <Heart fill="currentColor" size={18} />
                 </button>
               </div>

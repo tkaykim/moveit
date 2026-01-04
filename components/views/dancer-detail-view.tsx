@@ -1,10 +1,11 @@
 "use client";
 
 import Image from 'next/image';
-import { ChevronLeft, User, Instagram } from 'lucide-react';
+import { ChevronLeft, User, Instagram, Heart } from 'lucide-react';
 import { Dancer } from '@/types';
 import { useState, useEffect } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DancerDetailViewProps {
   dancer: Dancer | null;
@@ -14,6 +15,9 @@ interface DancerDetailViewProps {
 export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
   const [schedules, setSchedules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     async function loadInstructorSchedules() {
@@ -55,6 +59,56 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
     loadInstructorSchedules();
   }, [dancer]);
 
+  // 찜 상태 확인
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      if (!user || !dancer) {
+        setIsFavorited(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/favorites?type=instructor');
+        if (response.ok) {
+          const data = await response.json();
+          const isFavorite = (data.data || []).some((item: any) => 
+            item.instructors?.id === dancer.id
+          );
+          setIsFavorited(isFavorite);
+        }
+      } catch (error) {
+        console.error('Error checking favorite status:', error);
+      }
+    };
+
+    checkFavoriteStatus();
+  }, [user, dancer]);
+
+  // 찜 토글 함수
+  const handleToggleFavorite = async () => {
+    if (!user || !dancer || favoriteLoading) return;
+
+    try {
+      setFavoriteLoading(true);
+      const response = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type: 'instructor', id: dancer.id }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setIsFavorited(result.isFavorited);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
+
   if (!dancer) return null;
 
   return (
@@ -66,12 +120,27 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
           fill
           className="object-cover"
         />
-        <button 
-          onClick={onBack} 
-          className="absolute top-12 left-5 z-20 p-2 bg-black/30 backdrop-blur rounded-full text-white"
-        >
-          <ChevronLeft />
-        </button>
+        <div className="absolute top-12 left-5 right-5 z-20 flex justify-between items-center">
+          <button 
+            onClick={onBack} 
+            className="p-2 bg-black/30 backdrop-blur rounded-full text-white"
+          >
+            <ChevronLeft />
+          </button>
+          {user && (
+            <button
+              onClick={handleToggleFavorite}
+              disabled={favoriteLoading}
+              className="p-2 bg-black/30 backdrop-blur rounded-full text-white hover:bg-black/50 transition-colors disabled:opacity-50"
+            >
+              <Heart 
+                size={20} 
+                fill={isFavorited ? 'currentColor' : 'none'} 
+                className={isFavorited ? 'text-red-500' : ''}
+              />
+            </button>
+          )}
+        </div>
         <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-neutral-950 via-transparent to-transparent" />
         <div className="absolute bottom-0 left-0 w-full p-6">
           <div className="flex gap-2 mb-2">
