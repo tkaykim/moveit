@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import Link from "next/link";
 import Autoplay from "embla-carousel-autoplay";
 import {
@@ -68,6 +67,24 @@ export function BannerCarousel({
     return null;
   }
 
+  const BannerImage = ({ banner, isFirst }: { banner: Banner; isFirst: boolean }) => (
+    <div className="relative aspect-[16/6] w-full overflow-hidden rounded-2xl bg-neutral-100 dark:bg-neutral-800">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={banner.image_url}
+        alt={banner.title}
+        className="absolute inset-0 w-full h-full object-cover transition-transform hover:scale-105"
+        loading={isFirst ? "eager" : "lazy"}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+      <div className="absolute bottom-3 left-4 right-4">
+        <h3 className="text-white font-bold text-sm md:text-base drop-shadow-md truncate">
+          {banner.title}
+        </h3>
+      </div>
+    </div>
+  );
+
   return (
     <div className={cn("relative w-full", className)}>
       <Carousel
@@ -80,44 +97,14 @@ export function BannerCarousel({
         }}
       >
         <CarouselContent className="-ml-0">
-          {banners.map((banner) => (
+          {banners.map((banner, index) => (
             <CarouselItem key={banner.id} className="pl-0">
               {banner.link_url ? (
                 <Link href={banner.link_url} className="block">
-                  <div className="relative aspect-[16/6] w-full overflow-hidden rounded-2xl bg-neutral-100 dark:bg-neutral-800">
-                    <Image
-                      src={banner.image_url}
-                      alt={banner.title}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 800px"
-                      className="object-cover transition-transform hover:scale-105"
-                      priority={current === 1}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                    <div className="absolute bottom-3 left-4 right-4">
-                      <h3 className="text-white font-bold text-sm md:text-base drop-shadow-md truncate">
-                        {banner.title}
-                      </h3>
-                    </div>
-                  </div>
+                  <BannerImage banner={banner} isFirst={index === 0} />
                 </Link>
               ) : (
-                <div className="relative aspect-[16/6] w-full overflow-hidden rounded-2xl bg-neutral-100 dark:bg-neutral-800">
-                  <Image
-                    src={banner.image_url}
-                    alt={banner.title}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 800px"
-                    className="object-cover"
-                    priority={current === 1}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                  <div className="absolute bottom-3 left-4 right-4">
-                    <h3 className="text-white font-bold text-sm md:text-base drop-shadow-md truncate">
-                      {banner.title}
-                    </h3>
-                  </div>
-                </div>
+                <BannerImage banner={banner} isFirst={index === 0} />
               )}
             </CarouselItem>
           ))}

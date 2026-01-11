@@ -313,19 +313,15 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
       </header>
 
       {/* 배너 캐러셀 */}
-      <div className="px-5 mt-2">
-        {banners.length > 0 ? (
+      {banners.length > 0 && (
+        <div className="px-5 mt-2">
           <BannerCarousel
             banners={banners}
             autoSlideInterval={bannerSettings.auto_slide_interval}
             isAutoSlideEnabled={bannerSettings.is_auto_slide_enabled}
           />
-        ) : (
-          <div className="aspect-[16/6] w-full rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
-            <span className="text-neutral-400 text-sm">배너 로딩 중...</span>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* 카테고리 아이콘 */}
       <div className="px-5 mt-6">
