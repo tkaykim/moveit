@@ -9,24 +9,37 @@ import {
 // 관리자용: 모든 배너 목록 조회
 export async function GET(request: NextRequest) {
   try {
-    const [banners, settings] = await Promise.all([
-      getAllBanners(),
-      getBannerSettings(),
-    ]);
+    let banners: any[] = [];
+    let settings: any = null;
+    
+    try {
+      banners = await getAllBanners();
+    } catch (e) {
+      console.error('Error fetching banners in GET:', e);
+    }
+    
+    try {
+      settings = await getBannerSettings();
+    } catch (e) {
+      console.error('Error fetching settings in GET:', e);
+    }
 
     return NextResponse.json({
-      banners,
+      banners: banners || [],
       settings: settings || {
         auto_slide_interval: 5000,
         is_auto_slide_enabled: true,
       },
     });
   } catch (error) {
-    console.error('Error fetching banners:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch banners' },
-      { status: 500 }
-    );
+    console.error('Error in GET /api/admin/banners:', error);
+    return NextResponse.json({
+      banners: [],
+      settings: {
+        auto_slide_interval: 5000,
+        is_auto_slide_enabled: true,
+      },
+    });
   }
 }
 
@@ -34,6 +47,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    console.log('Creating banner with data:', body);
     
     const { title, image_url, link_url, display_order, is_active, starts_at, ends_at } = body;
 
@@ -55,17 +69,19 @@ export async function POST(request: NextRequest) {
     });
 
     if (!banner) {
+      console.error('createBanner returned null');
       return NextResponse.json(
-        { error: 'Failed to create banner' },
+        { error: 'Failed to create banner - check server logs' },
         { status: 500 }
       );
     }
 
+    console.log('Banner created successfully:', banner);
     return NextResponse.json(banner);
   } catch (error) {
-    console.error('Error creating banner:', error);
+    console.error('Error in POST /api/admin/banners:', error);
     return NextResponse.json(
-      { error: 'Failed to create banner' },
+      { error: `Failed to create banner: ${error instanceof Error ? error.message : 'Unknown error'}` },
       { status: 500 }
     );
   }

@@ -1,11 +1,17 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // 서버 사이드에서만 사용
-const getServerSupabase = () => {
-  return createClient(supabaseUrl, supabaseServiceKey);
+const getServerSupabase = (): SupabaseClient => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vjxnollfggbufpqldxrb.supabase.co';
+  // 서비스 키가 없으면 anon 키 사용 (RLS 비활성화된 테이블용)
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Missing Supabase environment variables');
+    throw new Error('Missing Supabase configuration');
+  }
+  
+  return createClient(supabaseUrl, supabaseKey);
 };
 
 export interface Banner {
