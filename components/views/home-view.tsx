@@ -1,12 +1,13 @@
 "use client";
 
 import Image from 'next/image';
-import { Bell, Search, Play, MapPin, Tag, Percent, Calendar, CreditCard, TrendingDown, User, Flame } from 'lucide-react';
+import { Bell, Search, MapPin, Flame, ChevronRight } from 'lucide-react';
 import { ViewState } from '@/types';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Academy, Dancer } from '@/types';
 import { ThemeToggle } from '@/components/common/theme-toggle';
+import { BannerCarousel } from '@/components/banner/banner-carousel';
 
 interface HomeViewProps {
   onNavigate: (view: ViewState, query?: string) => void;
@@ -19,16 +20,45 @@ interface InstructorWithFavorites extends Dancer {
   price?: number;
 }
 
+interface Banner {
+  id: string;
+  title: string;
+  image_url: string;
+  link_url: string | null;
+}
+
+interface BannerSettings {
+  auto_slide_interval: number;
+  is_auto_slide_enabled: boolean;
+}
+
+// 댄스 장르 카테고리
+const DANCE_CATEGORIES = [
+  { id: 'hiphop', name: 'Hiphop', icon: '🎤' },
+  { id: 'kpop', name: 'K-Pop', icon: '🎵' },
+  { id: 'jazz', name: 'Jazz', icon: '🎷' },
+  { id: 'contemporary', name: 'Contemporary', icon: '🩰' },
+  { id: 'waacking', name: 'Waacking', icon: '💃' },
+  { id: 'popping', name: 'Popping', icon: '🤖' },
+  { id: 'locking', name: 'Locking', icon: '🔒' },
+  { id: 'house', name: 'House', icon: '🏠' },
+];
+
 export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeViewProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [recentAcademies, setRecentAcademies] = useState<Academy[]>([]);
   const [nearbyAcademies, setNearbyAcademies] = useState<Academy[]>([]);
   const [hotInstructors, setHotInstructors] = useState<InstructorWithFavorites[]>([]);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [bannerSettings, setBannerSettings] = useState<BannerSettings>({
+    auto_slide_interval: 5000,
+    is_auto_slide_enabled: true,
+  });
 
   useEffect(() => {
     let isMounted = true;
     
-    // 최근 본 학원 로드 (localStorage에서 - 동기적이므로 빠름)
+    // 최근 본 학원 로드
     const loadRecentAcademies = () => {
       try {
         const recent = localStorage.getItem('recent_academies');
@@ -41,7 +71,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
       }
     };
 
-    // 주변 학원 로드 (최적화: 필요한 필드만, limit 적용)
+    // 주변 학원 로드
     const loadNearbyAcademies = async () => {
       try {
         const supabase = getSupabaseClient();
@@ -49,24 +79,14 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
 
         const { data, error } = await (supabase as any)
           .from('academies')
-          .select(`
-            id,
-            name_kr,
-            name_en,
-            tags,
-            logo_url,
-            address,
-            images
-          `)
+          .select(`id, name_kr, name_en, tags, logo_url, address, images`)
           .eq('is_active', true)
-          .limit(5)
+          .limit(6)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        
         if (!isMounted) return;
 
-        // 가격 정보는 별도로 병렬 로드
         const academyIds = (data || []).map((a: any) => a.id);
         let priceMap = new Map<string, number>();
         
@@ -77,7 +97,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             .in('academy_id', academyIds)
             .not('price', 'is', null)
             .gt('price', 0)
-            .limit(100); // 최대 100개만
+            .limit(100);
           
           (classesData || []).forEach((cls: any) => {
             if (cls.academy_id && cls.price) {
@@ -89,14 +109,11 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           });
         }
 
-        // 변환
         const transformed = (data || []).map((dbAcademy: any) => {
           const name = dbAcademy.name_kr || dbAcademy.name_en || '이름 없음';
           const images = (dbAcademy.images && Array.isArray(dbAcademy.images)) ? dbAcademy.images : [];
           const sortedImages = images.sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
-          const imageUrl = sortedImages.length > 0 
-            ? sortedImages[0].url 
-            : dbAcademy.logo_url;
+          const imageUrl = sortedImages.length > 0 ? sortedImages[0].url : dbAcademy.logo_url;
           const minPrice = priceMap.get(dbAcademy.id);
 
           return {
@@ -106,10 +123,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             tags: dbAcademy.tags,
             logo_url: dbAcademy.logo_url,
             name,
-            dist: undefined,
-            rating: undefined,
             price: minPrice || undefined,
-            badges: [],
             img: imageUrl || undefined,
             academyId: dbAcademy.id,
             address: dbAcademy.address,
@@ -124,23 +138,16 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
       }
     };
 
-    // HOT한 강사 로드 (최적화: 병렬 로딩, 필요한 필드만)
+    // HOT한 강사 로드
     const loadHotInstructors = async () => {
       try {
         const supabase = getSupabaseClient();
         if (!supabase) return;
 
-        // 필요한 필드만 선택하여 성능 최적화
         const { data: instructorsData, error: instructorsError } = await (supabase as any)
           .from('instructors')
-          .select(`
-            id,
-            name_kr,
-            name_en,
-            specialties,
-            profile_image_url
-          `)
-          .limit(20); // 상위 20명만 먼저 가져오기
+          .select(`id, name_kr, name_en, specialties, profile_image_url`)
+          .limit(20);
 
         if (instructorsError) {
           if (instructorsError.code !== 'PGRST200') {
@@ -151,18 +158,14 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
 
         if (!isMounted) return;
 
-        // 찜 개수와 가격 정보를 병렬로 가져오기
         const instructorIds = (instructorsData || []).map((i: any) => i.id);
         
         const [favoritesResult, classesResult] = await Promise.all([
-          // 찜 개수 (존재하는 경우)
           (supabase as any)
             .from('instructor_favorites')
             .select('instructor_id')
             .in('instructor_id', instructorIds)
-            .catch(() => ({ data: [] })), // 에러 시 빈 배열
-          
-          // 가격 정보
+            .catch(() => ({ data: [] })),
           (supabase as any)
             .from('classes')
             .select('instructor_id, price')
@@ -174,7 +177,6 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
 
         if (!isMounted) return;
 
-        // 찜 개수 계산
         const favoriteCountMap = new Map<string, number>();
         (favoritesResult.data || []).forEach((fav: any) => {
           if (fav.instructor_id) {
@@ -182,7 +184,6 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           }
         });
 
-        // 가격 계산
         const priceMap = new Map<string, number>();
         (classesResult.data || []).forEach((cls: any) => {
           if (cls.instructor_id && cls.price) {
@@ -193,7 +194,6 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           }
         });
 
-        // 변환 및 정렬
         const instructorsWithFavorites = (instructorsData || []).map((instructor: any) => {
           const name = instructor.name_kr || instructor.name_en || '이름 없음';
           const specialties = instructor.specialties || '';
@@ -205,20 +205,16 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             id: instructor.id,
             name_kr: instructor.name_kr,
             name_en: instructor.name_en,
-            bio: null,
-            instagram_url: null,
             specialties: instructor.specialties,
             name,
             crew: crew || undefined,
             genre: genre || undefined,
-            followers: undefined,
             img: instructor.profile_image_url || undefined,
             favoriteCount,
             price: priceMap.get(instructor.id),
           } as InstructorWithFavorites;
         });
 
-        // 찜 개수로 정렬하고 상위 10명만 선택
         const sorted = instructorsWithFavorites
           .sort((a: InstructorWithFavorites, b: InstructorWithFavorites) => b.favoriteCount - a.favoriteCount)
           .slice(0, 10);
@@ -231,9 +227,25 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
       }
     };
 
-    // 병렬로 로드
+    // 배너 로드
+    const loadBanners = async () => {
+      try {
+        const response = await fetch('/api/banners');
+        const data = await response.json();
+        console.log('Banners loaded:', data);
+        if (isMounted) {
+          setBanners(data.banners || []);
+          if (data.settings) {
+            setBannerSettings(data.settings);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading banners:', error);
+      }
+    };
+
     loadRecentAcademies();
-    Promise.all([loadNearbyAcademies(), loadHotInstructors()]);
+    Promise.all([loadNearbyAcademies(), loadHotInstructors(), loadBanners()]);
     
     return () => {
       isMounted = false;
@@ -247,8 +259,11 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
     }
   };
 
+  const handleCategoryClick = (categoryId: string) => {
+    onNavigate('SEARCH_RESULTS', categoryId);
+  };
+
   const handleAcademyClickInternal = (academy: Academy) => {
-    // 최근 본 학원에 추가
     try {
       const recent = JSON.parse(localStorage.getItem('recent_academies') || '[]');
       const filtered = recent.filter((a: Academy) => a.id !== academy.id);
@@ -270,8 +285,9 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
   };
 
   return (
-    <div className="space-y-6 pb-24 animate-in fade-in duration-300">
-      <header className="px-5 pt-8 pb-4 sticky top-0 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md z-30 border-b border-neutral-200 dark:border-neutral-800">
+    <div className="pb-24 animate-in fade-in duration-300">
+      {/* 헤더 */}
+      <header className="px-5 pt-8 pb-4 sticky top-0 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md z-30">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-black italic tracking-tighter">
             MOVE<span className="text-neutral-800 dark:text-[#CCFF00]">.</span>IT
@@ -279,136 +295,102 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           <div className="flex gap-3 items-center">
             <ThemeToggle />
             <button className="relative">
-              <Bell className="text-neutral-600 dark:text-neutral-400" />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
-            <button onClick={() => onNavigate('MY')}>
-              <MapPin className="text-neutral-600 dark:text-neutral-400" />
+              <Bell className="text-neutral-600 dark:text-neutral-400" size={22} />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
           </div>
         </div>
         <form onSubmit={handleSearch} className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 dark:text-neutral-500" size={18} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
           <input 
             type="text" 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="장르, 강사, 학원 검색" 
-            className="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full py-3 pl-10 pr-4 text-sm text-black dark:text-white focus:border-neutral-800 dark:focus:border-[#CCFF00] outline-none" 
+            className="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl py-3 pl-11 pr-4 text-sm text-black dark:text-white focus:border-neutral-400 dark:focus:border-[#CCFF00] outline-none transition-colors" 
           />
         </form>
       </header>
 
-      {/* 카테고리 버튼 */}
-      <div className="grid grid-cols-2 gap-3 px-5">
-        <button 
-          onClick={() => onNavigate('ACADEMY')} 
-          className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex items-center gap-3 active:scale-[0.98] transition-transform h-full"
-        >
-          <div className="w-12 h-12 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center flex-shrink-0">
-            <Percent className="text-black dark:text-white" size={24} />
+      {/* 배너 캐러셀 */}
+      <div className="px-5 mt-2">
+        {banners.length > 0 ? (
+          <BannerCarousel
+            banners={banners}
+            autoSlideInterval={bannerSettings.auto_slide_interval}
+            isAutoSlideEnabled={bannerSettings.is_auto_slide_enabled}
+          />
+        ) : (
+          <div className="aspect-[16/6] w-full rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+            <span className="text-neutral-400 text-sm">배너 로딩 중...</span>
           </div>
-          <div className="text-left min-w-0">
-            <div className="text-sm font-bold text-black dark:text-white">수강권</div>
-            <div className="text-xs text-neutral-600 dark:text-neutral-400">정기 수강</div>
-          </div>
-        </button>
-        <button 
-          onClick={() => onNavigate('ACADEMY')} 
-          className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex items-center gap-3 active:scale-[0.98] transition-transform h-full"
-        >
-          <div className="w-12 h-12 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center flex-shrink-0">
-            <Tag className="text-black dark:text-white" size={24} />
-          </div>
-          <div className="text-left min-w-0">
-            <div className="text-sm font-bold text-black dark:text-white">원데이 클래스</div>
-            <div className="text-xs text-neutral-600 dark:text-neutral-400">체험 수업</div>
-          </div>
-        </button>
+        )}
       </div>
 
-      {/* 주요 기능 카드 */}
-      <div className="px-5 grid grid-cols-2 gap-3">
-        <button 
-          onClick={() => onNavigate('ACADEMY')}
-          className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-left active:scale-[0.98] transition-transform h-full"
-        >
-          <div className="text-lg font-bold text-black dark:text-white mb-2">내 주변 댄스학원</div>
-          <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">주변 학원 둘러보기</div>
-          <div className="h-24 bg-neutral-100 dark:bg-neutral-800 rounded-xl flex items-center justify-center">
-            <MapPin className="text-neutral-400" size={32} />
-          </div>
-        </button>
-        <div className="space-y-3 flex flex-col">
-          <button 
-            onClick={() => onNavigate('ACADEMY')}
-            className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-3 text-left active:scale-[0.98] transition-transform flex-1"
-          >
-            <div className="text-sm font-bold text-black dark:text-white">지도에서 찾기</div>
-            <div className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-lg mt-2 flex items-center justify-center">
-              <MapPin className="text-neutral-400" size={20} />
-            </div>
-          </button>
-          <button 
-            onClick={() => onNavigate('DANCER')}
-            className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-3 text-left active:scale-[0.98] transition-transform flex-1"
-          >
-            <div className="text-sm font-bold text-black dark:text-white">강사 찾기</div>
-            <div className="h-16 bg-neutral-100 dark:bg-neutral-800 rounded-lg mt-2 flex items-center justify-center">
-              <User className="text-neutral-400" size={20} />
-            </div>
-          </button>
+      {/* 카테고리 아이콘 */}
+      <div className="px-5 mt-6">
+        <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
+          {DANCE_CATEGORIES.map(category => (
+            <button
+              key={category.id}
+              onClick={() => handleCategoryClick(category.id)}
+              className="flex flex-col items-center gap-2 min-w-[60px] active:scale-95 transition-transform"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-2xl">
+                {category.icon}
+              </div>
+              <span className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300 whitespace-nowrap">
+                {category.name}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* 혜택 배너 */}
-      <div className="mx-5 bg-neutral-900 dark:bg-neutral-800 rounded-2xl p-5 text-white">
-        <div className="text-lg font-bold mb-1">소득공제 신청 가능</div>
-        <div className="text-sm text-neutral-300">댄스 클래스 수강 시 소득공제 혜택을 받아보세요</div>
-      </div>
-
-      {/* 요새 가장 HOT한 강사 */}
+      {/* HOT한 강사 */}
       {hotInstructors.length > 0 && (
-        <div className="px-5">
-          <div className="flex items-center gap-2 mb-3">
-            <Flame className="text-red-500" size={20} />
-            <h2 className="text-lg font-bold text-black dark:text-white">요새 가장 HOT한 강사</h2>
+        <div className="mt-8">
+          <div className="flex items-center justify-between px-5 mb-3">
+            <div className="flex items-center gap-2">
+              <Flame className="text-red-500" size={20} />
+              <h2 className="text-lg font-bold text-black dark:text-white">HOT 강사</h2>
+            </div>
+            <button 
+              onClick={() => onNavigate('DANCER')}
+              className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400"
+            >
+              전체보기 <ChevronRight size={14} />
+            </button>
           </div>
-          <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-            {hotInstructors.map(instructor => (
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide px-5 pb-2">
+            {hotInstructors.map((instructor, index) => (
               <div
                 key={instructor.id}
                 onClick={() => handleDancerClickInternal(instructor)}
-                className="flex-shrink-0 w-40 bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 active:scale-[0.98] transition-transform"
+                className="flex-shrink-0 w-32 active:scale-[0.98] transition-transform cursor-pointer"
               >
-                <div className="h-32 relative">
+                <div className="aspect-[3/4] relative rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800">
                   <Image
-                    src={instructor.img || `https://picsum.photos/seed/instructor${instructor.id}/200/200`}
+                    src={instructor.img || `https://picsum.photos/seed/instructor${instructor.id}/200/300`}
                     alt={instructor.name}
                     fill
-                    sizes="160px"
+                    sizes="128px"
                     className="object-cover"
                   />
-                  {/* HOT 배지 */}
-                  <div className="absolute top-1 left-1 bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
-                    <Flame size={8} />
-                    HOT
-                  </div>
-                  {/* 찜 개수 */}
-                  <div className="absolute bottom-1 right-1 bg-black/50 backdrop-blur text-white text-[10px] font-bold px-2 py-1 rounded-full">
-                    찜 {instructor.favoriteCount}
-                  </div>
-                </div>
-                <div className="p-3">
-                  <h3 className="text-sm font-bold text-black dark:text-white truncate mb-1">{instructor.name}</h3>
-                  {instructor.genre && (
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate mb-1">{instructor.genre}</p>
-                  )}
-                  {instructor.price && (
-                    <div className="text-xs font-bold text-neutral-800 dark:text-[#CCFF00]">
-                      {instructor.price.toLocaleString()}원~
+                  {/* 순위 배지 */}
+                  {index < 3 && (
+                    <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                      {index + 1}
                     </div>
                   )}
+                  {/* 하단 그라데이션 */}
+                  <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/80 to-transparent" />
+                  <div className="absolute bottom-2 left-2 right-2">
+                    <h3 className="text-white text-sm font-bold truncate">{instructor.name}</h3>
+                    {instructor.genre && (
+                      <p className="text-white/70 text-[10px] truncate">{instructor.genre}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -416,99 +398,116 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
         </div>
       )}
 
-      {/* 최근 본 댄스학원 */}
+      {/* 최근 본 학원 */}
       {recentAcademies.length > 0 && (
-        <div className="px-5">
-          <h2 className="text-lg font-bold text-black dark:text-white mb-3">최근 본 학원</h2>
-          <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
+        <div className="mt-8">
+          <div className="flex items-center justify-between px-5 mb-3">
+            <h2 className="text-lg font-bold text-black dark:text-white">최근 본 학원</h2>
+            <button 
+              onClick={() => onNavigate('ACADEMY')}
+              className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400"
+            >
+              전체보기 <ChevronRight size={14} />
+            </button>
+          </div>
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide px-5 pb-2">
             {recentAcademies.map(academy => (
               <div
                 key={academy.id}
                 onClick={() => handleAcademyClickInternal(academy)}
-                className="flex-shrink-0 w-48 bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 active:scale-[0.98] transition-transform"
+                className="flex-shrink-0 w-44 bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 active:scale-[0.98] transition-transform cursor-pointer"
               >
-                <div className="h-32 relative bg-neutral-100 dark:bg-neutral-800">
+                <div className="aspect-[4/3] relative bg-neutral-100 dark:bg-neutral-800">
                   {(academy.img || academy.logo_url) ? (
                     <Image
                       src={academy.img || academy.logo_url || ''}
                       alt={academy.name}
                       fill
-                      sizes="192px"
+                      sizes="176px"
                       className="object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-neutral-100 dark:bg-neutral-800" />
-                  )}
-                </div>
-                <div className="p-3">
-                  <h3 className="text-sm font-bold text-black dark:text-white truncate">{academy.name}</h3>
-                  {academy.address && (
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{academy.address}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 내 주변 댄스학원 */}
-      {nearbyAcademies.length > 0 && (
-        <div className="px-5">
-          <h2 className="text-lg font-bold text-black dark:text-white mb-3">내 주변 댄스학원</h2>
-          <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-            {nearbyAcademies.map(academy => (
-              <div
-                key={academy.id}
-                onClick={() => handleAcademyClickInternal(academy)}
-                className="flex-shrink-0 w-48 bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 active:scale-[0.98] transition-transform"
-              >
-                <div className="h-32 relative bg-neutral-100 dark:bg-neutral-800">
-                  {(academy.img || academy.logo_url) ? (
-                    <Image
-                      src={academy.img || academy.logo_url || ''}
-                      alt={academy.name}
-                      fill
-                      sizes="192px"
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-neutral-100 dark:bg-neutral-800" />
-                  )}
-                </div>
-                <div className="p-3">
-                  <h3 className="text-sm font-bold text-black dark:text-white truncate">{academy.name}</h3>
-                  {academy.address && (
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">{academy.address}</p>
-                  )}
-                  {academy.price && (
-                    <div className="text-xs font-bold text-neutral-800 dark:text-[#CCFF00] mt-1">
-                      {academy.price.toLocaleString()}원~
+                    <div className="w-full h-full flex items-center justify-center">
+                      <MapPin className="text-neutral-400" size={24} />
                     </div>
                   )}
                 </div>
+                <div className="p-3">
+                  <h3 className="text-sm font-bold text-black dark:text-white truncate">{academy.name}</h3>
+                  {academy.address && (
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate mt-0.5">{academy.address}</p>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* 추가 혜택 */}
-      <div className="grid grid-cols-3 gap-3 px-5">
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-3 text-center">
-          <TrendingDown className="text-neutral-600 dark:text-neutral-400 mx-auto mb-2" size={20} />
-          <div className="text-xs font-bold text-black dark:text-white">특가 혜택</div>
+      {/* 주변 학원 */}
+      {nearbyAcademies.length > 0 && (
+        <div className="mt-8">
+          <div className="flex items-center justify-between px-5 mb-3">
+            <h2 className="text-lg font-bold text-black dark:text-white">주변 댄스학원</h2>
+            <button 
+              onClick={() => onNavigate('ACADEMY')}
+              className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400"
+            >
+              전체보기 <ChevronRight size={14} />
+            </button>
+          </div>
+          <div className="px-5 space-y-3">
+            {nearbyAcademies.slice(0, 4).map(academy => (
+              <div
+                key={academy.id}
+                onClick={() => handleAcademyClickInternal(academy)}
+                className="flex gap-3 bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 active:scale-[0.99] transition-transform cursor-pointer p-3"
+              >
+                <div className="w-20 h-20 relative rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex-shrink-0">
+                  {(academy.img || academy.logo_url) ? (
+                    <Image
+                      src={academy.img || academy.logo_url || ''}
+                      alt={academy.name}
+                      fill
+                      sizes="80px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <MapPin className="text-neutral-400" size={20} />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                  <h3 className="text-sm font-bold text-black dark:text-white truncate">{academy.name}</h3>
+                  {academy.address && (
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate mt-0.5">{academy.address}</p>
+                  )}
+                  {academy.tags && (
+                    <div className="flex gap-1 mt-2">
+                      {academy.tags.split(',').slice(0, 2).map((tag: string, i: number) => (
+                        <span key={i} className="text-[10px] px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full">
+                          {tag.trim()}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {academy.price && (
+                  <div className="flex-shrink-0 self-center">
+                    <span className="text-sm font-bold text-neutral-800 dark:text-[#CCFF00]">
+                      {academy.price.toLocaleString()}원~
+                    </span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-3 text-center">
-          <Calendar className="text-neutral-600 dark:text-neutral-400 mx-auto mb-2" size={20} />
-          <div className="text-xs font-bold text-black dark:text-white">예약 가능</div>
-        </div>
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-3 text-center">
-          <CreditCard className="text-neutral-600 dark:text-neutral-400 mx-auto mb-2" size={20} />
-          <div className="text-xs font-bold text-black dark:text-white">간편 결제</div>
-        </div>
-      </div>
+      )}
+
+      {/* 하단 여백 */}
+      <div className="h-8" />
     </div>
   );
 };
-

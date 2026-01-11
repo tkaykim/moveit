@@ -1,7 +1,7 @@
 "use client";
 
 import Image from 'next/image';
-import { ChevronLeft, Heart } from 'lucide-react';
+import { ChevronLeft, Heart, X } from 'lucide-react';
 import { LevelBadge } from '@/components/common/level-badge';
 import { ClassPreviewModal } from '@/components/modals/class-preview-modal';
 import { AddClassModal } from '@/components/modals/add-class-modal';
@@ -31,6 +31,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
   const [videosLoading, setVideosLoading] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<{ url: string; thumbnail?: string } | null>(null);
   const { user } = useAuth();
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
     const now = new Date();
@@ -215,6 +216,42 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
     // 스케줄 뷰가 자동으로 새로고침됨
   };
 
+  // 유튜브 URL을 embed URL로 변환
+  const getYoutubeEmbedUrl = (url: string): string | null => {
+    if (!url) return null;
+    
+    // 이미 embed URL인 경우
+    if (url.includes('youtube.com/embed/')) {
+      return url;
+    }
+    
+    // 일반 유튜브 URL에서 video ID 추출
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return `https://www.youtube.com/embed/${match[1]}`;
+      }
+    }
+    
+    return null;
+  };
+
+  const handleVideoClick = (videoUrl: string, thumbnailUrl?: string) => {
+    const embedUrl = getYoutubeEmbedUrl(videoUrl);
+    if (embedUrl) {
+      // autoplay 및 브랜딩 최소화 파라미터 추가
+      const autoplayUrl = embedUrl.includes('?') 
+        ? `${embedUrl}&autoplay=1&rel=0&modestbranding=1&controls=1&showinfo=0&iv_load_policy=3`
+        : `${embedUrl}?autoplay=1&rel=0&modestbranding=1&controls=1&showinfo=0&iv_load_policy=3`;
+      setSelectedVideo({ url: autoplayUrl, thumbnail: thumbnailUrl });
+    }
+  };
+
   return (
     <>
       <div className="bg-white dark:bg-neutral-950 min-h-screen pb-24 animate-in slide-in-from-right duration-300 relative">
@@ -329,84 +366,57 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
             ) : recentVideos.length === 0 ? (
               <div className="text-center py-8 text-neutral-500">등록된 수업 영상이 없습니다.</div>
             ) : (
-              <div className="space-y-3">
-                {recentVideos.map((video) => {
-                  const instructorName = video.instructors?.name_kr || video.instructors?.name_en || '강사 정보 없음';
-                  const videoDate = video.start_time 
-                    ? new Date(video.start_time).toLocaleDateString('ko-KR', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })
-                    : '날짜 정보 없음';
-
-                  return (
-                    <div 
-                      key={video.id}
-                      className="bg-neutral-100 dark:bg-neutral-900 rounded-2xl p-4 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
-                    >
-                      <a
-                        href={video.video_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block"
+              <div 
+                className="overflow-x-auto -mx-5 px-5 scrollbar-hide"
+                style={{ 
+                  WebkitOverflowScrolling: 'touch',
+                  touchAction: 'pan-x'
+                }}
+              >
+                <div className="flex gap-3 pb-2 w-max">
+                  {recentVideos.map((video) => {
+                    const embedUrl = getYoutubeEmbedUrl(video.video_url);
+                    
+                    return (
+                      <div
+                        key={video.id}
+                        className="flex-shrink-0 w-48 h-32 rounded-lg overflow-hidden bg-neutral-200 dark:bg-neutral-800 cursor-pointer"
+                        onClick={() => handleVideoClick(video.video_url, video.thumbnail_url)}
                       >
-                        <div className="flex gap-3">
-                          {video.thumbnail_url ? (
-                            <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-neutral-200 dark:bg-neutral-800">
-                              <Image
-                                src={video.thumbnail_url}
-                                alt={video.title || '수업 영상'}
-                                fill
-                                className="object-cover"
-                              />
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                <svg 
-                                  className="w-8 h-8 text-white" 
-                                  fill="currentColor" 
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                                </svg>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="w-24 h-24 flex-shrink-0 rounded-lg bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center">
-                              <svg 
-                                className="w-8 h-8 text-neutral-400" 
-                                fill="currentColor" 
-                                viewBox="0 0 20 20"
-                              >
-                                <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                              </svg>
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-bold text-black dark:text-white mb-1 line-clamp-2">
-                              {video.title || '제목 없음'}
-                            </h4>
-                            <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-1">
-                              {instructorName}
-                            </p>
-                            <div className="flex items-center gap-2 mb-1">
-                              {video.genre && (
-                                <span className="text-[10px] bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-2 py-0.5 rounded">
-                                  {video.genre}
-                                </span>
-                              )}
-                              {video.difficulty_level && (
-                                <LevelBadge level={video.difficulty_level} simple />
-                              )}
-                            </div>
-                            <p className="text-[10px] text-neutral-500 dark:text-neutral-500">
-                              {videoDate}
-                            </p>
+                        {video.thumbnail_url ? (
+                          <div className="relative w-full h-full">
+                            <Image
+                              src={video.thumbnail_url}
+                              alt={video.title || '수업 영상'}
+                              fill
+                              className="object-cover"
+                            />
                           </div>
-                        </div>
-                      </a>
-                    </div>
-                  );
-                })}
+                        ) : embedUrl ? (
+                          <div className="relative w-full h-full">
+                            <iframe
+                              src={embedUrl}
+                              className="w-full h-full"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              title={video.title || '수업 영상'}
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <svg 
+                              className="w-10 h-10 text-neutral-400" 
+                              fill="currentColor" 
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
@@ -479,6 +489,45 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
         weekStartDate={currentWeekStart}
         defaultHallId={selectedHallId}
       />
+      {/* 유튜브 영상 모달 */}
+      {selectedVideo && (
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setSelectedVideo(null)}
+        >
+          <div 
+            className="relative w-full max-w-4xl mx-4 bg-black rounded-lg overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setSelectedVideo(null)}
+              className="absolute top-4 right-4 z-10 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+            >
+              <X size={24} />
+            </button>
+            <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+              {selectedVideo.thumbnail && (
+                <div className="absolute inset-0 z-0">
+                  <Image
+                    src={selectedVideo.thumbnail}
+                    alt="영상 썸네일"
+                    fill
+                    className="object-cover opacity-0"
+                    style={{ display: 'none' }}
+                  />
+                </div>
+              )}
+              <iframe
+                src={selectedVideo.url}
+                className="absolute top-0 left-0 w-full h-full z-10"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                title="YouTube video player"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

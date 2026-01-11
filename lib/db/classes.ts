@@ -69,4 +69,3 @@ export async function getRecentClassVideos(academyId: string, limit: number = 10
   if (error) throw error;
   return data || [];
 }
-

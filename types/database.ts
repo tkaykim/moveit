@@ -68,6 +68,69 @@ export type Database = {
         }
         Relationships: []
       }
+      banners: {
+        Row: {
+          id: string
+          title: string
+          image_url: string
+          link_url: string | null
+          display_order: number
+          is_active: boolean
+          starts_at: string | null
+          ends_at: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          title: string
+          image_url: string
+          link_url?: string | null
+          display_order?: number
+          is_active?: boolean
+          starts_at?: string | null
+          ends_at?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          title?: string
+          image_url?: string
+          link_url?: string | null
+          display_order?: number
+          is_active?: boolean
+          starts_at?: string | null
+          ends_at?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      banner_settings: {
+        Row: {
+          id: string
+          auto_slide_interval: number
+          is_auto_slide_enabled: boolean
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          auto_slide_interval?: number
+          is_auto_slide_enabled?: boolean
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          auto_slide_interval?: number
+          is_auto_slide_enabled?: boolean
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       academy_favorites: {
         Row: {
           academy_id: string
@@ -100,38 +163,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      academy_images: {
-        Row: {
-          academy_id: string
-          created_at: string | null
-          display_order: number | null
-          id: string
-          image_url: string
-        }
-        Insert: {
-          academy_id: string
-          created_at?: string | null
-          display_order?: number | null
-          id?: string
-          image_url: string
-        }
-        Update: {
-          academy_id?: string
-          created_at?: string | null
-          display_order?: number | null
-          id?: string
-          image_url?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "academy_images_academy_id_fkey"
-            columns: ["academy_id"]
-            isOneToOne: false
-            referencedRelation: "academies"
             referencedColumns: ["id"]
           },
         ]
