@@ -54,10 +54,23 @@ export function DailyScheduleModal({
     }
 
     try {
-      const startOfDay = new Date(selectedDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(selectedDate);
-      endOfDay.setHours(23, 59, 59, 999);
+      // 선택된 날짜의 년/월/일 추출
+      const year = selectedDate.getFullYear();
+      const month = selectedDate.getMonth();
+      const day = selectedDate.getDate();
+      
+      // 해당 날짜의 시작과 끝 (로컬 시간 기준)
+      const startOfDay = new Date(year, month, day, 0, 0, 0, 0);
+      const endOfDay = new Date(year, month, day, 23, 59, 59, 999);
+
+      // 해당 아카데미의 클래스 ID 목록
+      const classIds = classMasters.map((c: any) => c.id);
+      
+      if (classIds.length === 0) {
+        setSessions([]);
+        setLoading(false);
+        return;
+      }
 
       const { data, error } = await supabase
         .from('schedules')
@@ -81,16 +94,18 @@ export function DailyScheduleModal({
             name
           )
         `)
-        .gte('start_time', startOfDay.toISOString())
-        .lte('start_time', endOfDay.toISOString())
+        .in('class_id', classIds)
         .eq('is_canceled', false)
         .order('start_time', { ascending: true });
 
       if (error) throw error;
 
-      // 해당 아카데미의 클래스만 필터링
-      const classIds = classMasters.map((c: any) => c.id);
-      const filteredSessions = (data || []).filter((s: any) => classIds.includes(s.class_id));
+      // 로컬 시간 기준으로 해당 날짜의 세션만 필터링
+      const filteredSessions = (data || []).filter((session: any) => {
+        if (!session.start_time) return false;
+        const sessionDate = new Date(session.start_time);
+        return sessionDate >= startOfDay && sessionDate <= endOfDay;
+      });
       
       setSessions(filteredSessions);
     } catch (error) {
