@@ -1123,6 +1123,42 @@ export type Database = {
           },
         ]
       }
+      ticket_classes: {
+        Row: {
+          id: string
+          ticket_id: string
+          class_id: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          ticket_id: string
+          class_id: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          ticket_id?: string
+          class_id?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_classes_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_classes_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_tickets: {
         Row: {
           created_at: string | null

@@ -64,8 +64,6 @@ export async function getRecentClassVideos(academyId: string, limit: number = 10
     .not('video_url', 'is', null)
     .neq('video_url', '')
     .order('start_time', { ascending: false, nullsLast: true })
-    .limit(limit);
-
-  if (error) throw error;
+    .limit(limit);  if (error) throw error;
   return data || [];
 }

@@ -59,7 +59,5 @@ export async function deleteHall(id: string) {
   const { error } = await supabase
     .from('halls')
     .delete()
-    .eq('id', id);
-
-  if (error) throw error;
+    .eq('id', id);  if (error) throw error;
 }

@@ -1,15 +1,21 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Lock } from 'lucide-react';
+import { X, Ticket, Info } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { InstructorSelector } from '../classes/instructor-selector';
-import { AccessConfig } from '@/types/database';
 
 interface ClassMasterModalProps {
   academyId: string;
   classData?: any;
   onClose: () => void;
+}
+
+interface LinkedTicket {
+  id: string;
+  name: string;
+  ticket_type: string;
+  price: number | null;
 }
 
 const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)'];
@@ -27,19 +33,16 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
     hall_id: '',
     max_students: 20,
     price: 0,
-    // access_config
-    requiredGroup: '',
     allowStandardCoupon: true,
   });
   const [halls, setHalls] = useState<any[]>([]);
-  const [tickets, setTickets] = useState<any[]>([]);
+  const [linkedTickets, setLinkedTickets] = useState<LinkedTicket[]>([]);
   const [loading, setLoading] = useState(false);
-  const [customGroup, setCustomGroup] = useState('');
+  const [loadingTickets, setLoadingTickets] = useState(false);
 
   useEffect(() => {
-    loadData();
+    loadHalls();
     if (classData) {
-      const accessConfig = classData.access_config as AccessConfig | null;
       setFormData({
         title: classData.title || '',
         genre: classData.genre || '',
@@ -50,63 +53,49 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         hall_id: classData.hall_id || '',
         max_students: classData.max_students || 20,
         price: classData.price || 0,
-        requiredGroup: accessConfig?.requiredGroup || '',
-        allowStandardCoupon: accessConfig?.allowStandardCoupon !== false,
+        allowStandardCoupon: classData.access_config?.allowStandardCoupon !== false,
       });
+      loadLinkedTickets(classData.id);
     }
   }, [classData, academyId]);
 
-  const loadData = async () => {
+  const loadHalls = async () => {
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
     try {
-      // 홀 목록
       const { data: hallsData } = await supabase
         .from('halls')
         .select('*')
         .eq('academy_id', academyId);
       setHalls(hallsData || []);
-
-      // 수강권 목록 (access_group 옵션 가져오기)
-      const { data: ticketsData } = await supabase
-        .from('tickets')
-        .select('id, name, access_group')
-        .eq('academy_id', academyId)
-        .not('access_group', 'eq', 'general');
-      setTickets(ticketsData || []);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Error loading halls:', error);
     }
   };
 
-  // 학원의 실제 수강권에서 전용 그룹 목록 추출
-  const getAccessGroupOptions = () => {
-    const options: { value: string; label: string; ticketName?: string }[] = [
-      { value: '', label: '제한 없음 (모든 수강권 허용)' },
-    ];
-    
-    // 실제 학원 수강권에서 전용 그룹 추출
-    const groupMap = new Map<string, string[]>();
-    tickets.forEach((ticket) => {
-      if (ticket.access_group && ticket.access_group !== 'general') {
-        if (!groupMap.has(ticket.access_group)) {
-          groupMap.set(ticket.access_group, []);
-        }
-        groupMap.get(ticket.access_group)!.push(ticket.name);
-      }
-    });
-    
-    // 그룹별로 옵션 추가
-    groupMap.forEach((ticketNames, groupValue) => {
-      options.push({
-        value: groupValue,
-        label: `${ticketNames.join(', ')} 전용`,
-        ticketName: ticketNames.join(', '),
-      });
-    });
-    
-    return options;
+  const loadLinkedTickets = async (classId: string) => {
+    setLoadingTickets(true);
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setLoadingTickets(false);
+      return;
+    }
+
+    try {
+      // 이 클래스에 연결된 수강권 조회
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('id, name, ticket_type, price')
+        .eq('class_id', classId);
+
+      if (error) throw error;
+      setLinkedTickets(data || []);
+    } catch (error) {
+      console.error('Error loading linked tickets:', error);
+    } finally {
+      setLoadingTickets(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -121,12 +110,6 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
     }
 
     try {
-      // access_config 구성
-      const accessConfig: AccessConfig = {
-        requiredGroup: formData.requiredGroup || null,
-        allowStandardCoupon: formData.allowStandardCoupon,
-      };
-
       const dataToSave = {
         academy_id: academyId,
         title: formData.title || null,
@@ -138,14 +121,15 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         hall_id: formData.hall_id || null,
         max_students: formData.max_students,
         price: formData.price,
-        access_config: accessConfig,
-        // Master는 start_time/end_time을 사용하지 않음
+        access_config: {
+          requiredGroup: null,
+          allowStandardCoupon: formData.allowStandardCoupon,
+        },
         start_time: null,
         end_time: null,
       };
 
       if (classData) {
-        // 수정
         const { error } = await supabase
           .from('classes')
           .update(dataToSave)
@@ -154,7 +138,6 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         if (error) throw error;
         alert('클래스가 수정되었습니다.');
       } else {
-        // 신규 등록
         const { error } = await supabase
           .from('classes')
           .insert([dataToSave]);
@@ -343,60 +326,74 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
             />
           </div>
 
-          {/* 수강 권한 설정 */}
-          <div className="border-t dark:border-neutral-800 pt-4 mt-4">
-            <h4 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-              <Lock className="w-5 h-5" /> 수강 권한 설정 (Access Control)
-            </h4>
-            
-            <div className="bg-slate-50 dark:bg-neutral-800 p-4 rounded-lg space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  전용 수강권 지정
-                </label>
-                {getAccessGroupOptions().length > 1 ? (
-                  <>
-                    <select
-                      className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                      value={formData.requiredGroup}
-                      onChange={(e) => setFormData({ ...formData, requiredGroup: e.target.value })}
-                    >
-                      {getAccessGroupOptions().map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      전용 수강권 소유 회원은 쿠폰 차감 없이 무제한 수강 가능합니다.
-                    </p>
-                  </>
-                ) : (
-                  <div className="text-sm text-gray-500 dark:text-gray-400 p-3 bg-gray-100 dark:bg-neutral-800 rounded-lg">
-                    <p>등록된 전용 수강권이 없습니다.</p>
-                    <p className="text-xs mt-1">
-                      수강권/상품 관리에서 전용 그룹이 지정된 수강권을 먼저 등록해주세요.
-                    </p>
-                  </div>
-                )}
-              </div>
+          {/* 연결된 수강권 표시 */}
+          {classData && (
+            <div className="border-t dark:border-neutral-800 pt-4 mt-4">
+              <h4 className="text-lg font-semibold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
+                <Ticket className="w-5 h-5" /> 연결된 수강권
+              </h4>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="allowStandardCoupon"
-                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
-                  checked={formData.allowStandardCoupon}
-                  onChange={(e) => setFormData({ ...formData, allowStandardCoupon: e.target.checked })}
-                />
-                <label htmlFor="allowStandardCoupon" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-                  일반 쿠폰(general) 사용 허용
-                </label>
-              </div>
-              {!formData.allowStandardCoupon && (
-                <p className="text-xs text-red-500 font-medium">
-                  ※ 체크 해제 시, 전용 수강권이 없는 회원은 이 수업을 신청할 수 없습니다.
-                </p>
+              {loadingTickets ? (
+                <div className="text-sm text-gray-500 dark:text-gray-400 p-3 bg-gray-100 dark:bg-neutral-800 rounded-lg">
+                  수강권 정보 불러오는 중...
+                </div>
+              ) : linkedTickets.length > 0 ? (
+                <div className="space-y-2">
+                  {linkedTickets.map((ticket) => (
+                    <div
+                      key={ticket.id}
+                      className="flex items-center justify-between p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg"
+                    >
+                      <div>
+                        <div className="font-medium text-indigo-700 dark:text-indigo-300">
+                          {ticket.name}
+                        </div>
+                        <div className="text-xs text-indigo-600 dark:text-indigo-400">
+                          {ticket.ticket_type === 'COUNT' ? '횟수제' : '기간제'}
+                          {ticket.price && ` • ${ticket.price.toLocaleString()}원`}
+                        </div>
+                      </div>
+                      <span className="text-xs px-2 py-1 bg-indigo-100 dark:bg-indigo-800 text-indigo-600 dark:text-indigo-300 rounded">
+                        전용
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500 dark:text-gray-400 p-3 bg-gray-100 dark:bg-neutral-800 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <Info size={14} className="mt-0.5 shrink-0" />
+                    <div>
+                      <p>이 클래스에 연결된 전용 수강권이 없습니다.</p>
+                      <p className="text-xs mt-1">
+                        수강권/상품 관리에서 이 클래스를 선택하여 전용 수강권을 등록할 수 있습니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
+          )}
+
+          {/* 수강 권한 설정 */}
+          <div className="border-t dark:border-neutral-800 pt-4 mt-4">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="allowStandardCoupon"
+                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                checked={formData.allowStandardCoupon}
+                onChange={(e) => setFormData({ ...formData, allowStandardCoupon: e.target.checked })}
+              />
+              <label htmlFor="allowStandardCoupon" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                일반 수강권 사용 허용
+              </label>
+            </div>
+            {!formData.allowStandardCoupon && (
+              <p className="text-xs text-red-500 font-medium mt-2">
+                ※ 체크 해제 시, 전용 수강권이 없는 회원은 이 수업을 신청할 수 없습니다.
+              </p>
+            )}
           </div>
 
           {/* 버튼 */}
