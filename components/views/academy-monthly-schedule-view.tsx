@@ -13,50 +13,51 @@ interface AcademyMonthlyScheduleViewProps {
 
 const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
 
-// Class를 ClassInfo로 변환
-function transformClass(classData: any): ClassInfo & { time?: string; startTime?: string; endTime?: string } {
-  const instructor = classData.instructors?.name_kr || classData.instructors?.name_en || '강사 정보 없음';
-  const genre = classData.genre || 'ALL';
-  const level = classData.difficulty_level || 'All Level';
-  const maxStudents = classData.max_students || 0;
-  const currentStudents = classData.current_students || 0;
+// Schedule을 ClassInfo로 변환
+function transformSchedule(scheduleData: any): ClassInfo & { time?: string; startTime?: string; endTime?: string } {
+  const classInfo = scheduleData.classes;
+  const instructor = scheduleData.instructors?.name_kr || scheduleData.instructors?.name_en || classInfo?.instructors?.name_kr || classInfo?.instructors?.name_en || '강사 정보 없음';
+  const genre = classInfo?.genre || 'ALL';
+  const level = classInfo?.difficulty_level || 'All Level';
+  const maxStudents = scheduleData.max_students || classInfo?.max_students || 0;
+  const currentStudents = scheduleData.current_students || 0;
   const isFull = maxStudents > 0 && currentStudents >= maxStudents;
   const isAlmostFull = maxStudents > 0 && currentStudents >= maxStudents * 0.8;
   const status = isFull ? 'FULL' : isAlmostFull ? 'ALMOST_FULL' : 'AVAILABLE';
 
-  const time = classData.start_time ? formatKSTTime(classData.start_time) : '';
+  const time = scheduleData.start_time ? formatKSTTime(scheduleData.start_time) : '';
 
   return {
-    id: classData.id,
-    schedule_id: classData.id,
+    id: classInfo?.id || scheduleData.class_id,
+    schedule_id: scheduleData.id,
     instructor,
     genre,
     level,
     status,
     price: 0, // 가격은 수강권에서 관리
-    class_title: classData.title || classData.name_kr || classData.name_en || '',
-    hall_name: classData.halls?.name,
+    class_title: classInfo?.title || classInfo?.name_kr || classInfo?.name_en || '',
+    hall_name: scheduleData.halls?.name || classInfo?.halls?.name,
     academy: {
-      id: classData.academies?.id || '',
-      name: classData.academies?.name_kr || classData.academies?.name_en || '',
+      id: classInfo?.academies?.id || classInfo?.academy_id || '',
+      name: classInfo?.academies?.name_kr || classInfo?.academies?.name_en || '',
     },
     time,
-    startTime: classData.start_time,
-    endTime: classData.end_time,
+    startTime: scheduleData.start_time,
+    endTime: scheduleData.end_time,
     maxStudents,
     currentStudents,
   };
 }
 
 export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyMonthlyScheduleViewProps) => {
-  const [classes, setClasses] = useState<any[]>([]);
+  const [schedules, setSchedules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
 
-  const loadClasses = useCallback(async () => {
+  const loadSchedules = useCallback(async () => {
     try {
       setLoading(true);
       const { getSupabaseClient } = await import('@/lib/utils/supabase-client');
@@ -85,22 +86,59 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
         return;
       }
 
-      const { data: allClasses, error: classesError } = await supabase
+      // 먼저 해당 학원의 클래스 ID들을 가져옴
+      const { data: academyClasses, error: classesError } = await supabase
         .from('classes')
+        .select('id')
+        .eq('academy_id', academyId)
+        .eq('is_active', true);
+
+      if (classesError) throw classesError;
+      
+      const classIds = (academyClasses || []).map((c: { id: string }) => c.id);
+      
+      if (classIds.length === 0) {
+        setSchedules([]);
+        setLoading(false);
+        return;
+      }
+
+      // schedules 테이블에서 해당 클래스들의 스케줄 조회
+      const { data: allSchedules, error: schedulesError } = await supabase
+        .from('schedules')
         .select(`
           id,
-          title,
-          price,
-          genre,
-          difficulty_level,
-          max_students,
-          current_students,
+          class_id,
+          hall_id,
+          instructor_id,
           start_time,
           end_time,
-          academies (
+          max_students,
+          current_students,
+          is_canceled,
+          classes (
             id,
+            title,
             name_kr,
-            name_en
+            name_en,
+            genre,
+            difficulty_level,
+            max_students,
+            academy_id,
+            academies (
+              id,
+              name_kr,
+              name_en
+            ),
+            instructors (
+              id,
+              name_kr,
+              name_en
+            ),
+            halls (
+              id,
+              name
+            )
           ),
           instructors (
             id,
@@ -112,26 +150,25 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
             name
           )
         `)
-        .eq('academy_id', academyId)
+        .in('class_id', classIds)
         .eq('is_canceled', false)
-        .not('start_time', 'is', null)
         .gte('start_time', utcStart)
         .lt('start_time', utcEnd)
         .order('start_time', { ascending: true });
 
-      if (classesError) throw classesError;
-      setClasses(allClasses || []);
+      if (schedulesError) throw schedulesError;
+      setSchedules(allSchedules || []);
     } catch (error) {
-      console.error('Error loading classes:', error);
-      setClasses([]);
+      console.error('Error loading schedules:', error);
+      setSchedules([]);
     } finally {
       setLoading(false);
     }
   }, [academyId, currentMonth]);
 
   useEffect(() => {
-    loadClasses();
-  }, [loadClasses]);
+    loadSchedules();
+  }, [loadSchedules]);
 
   const goToPreviousMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
@@ -167,16 +204,16 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
     return grid;
   };
 
-  // 특정 날짜의 수업 가져오기
-  const getClassesForDate = (date: Date) => {
+  // 특정 날짜의 스케줄 가져오기
+  const getSchedulesForDate = (date: Date) => {
     const dateParts = getKSTDateParts(date);
-    return classes.filter((classData: any) => {
-      if (!classData.start_time) return false;
-      const classDate = new Date(classData.start_time);
-      const classParts = getKSTDateParts(classDate);
-      return classParts.year === dateParts.year &&
-             classParts.month === dateParts.month &&
-             classParts.day === dateParts.day;
+    return schedules.filter((scheduleData: any) => {
+      if (!scheduleData.start_time) return false;
+      const scheduleDate = new Date(scheduleData.start_time);
+      const scheduleParts = getKSTDateParts(scheduleDate);
+      return scheduleParts.year === dateParts.year &&
+             scheduleParts.month === dateParts.month &&
+             scheduleParts.day === dateParts.day;
     });
   };
 
@@ -240,7 +277,7 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
             const isToday = new Date().getFullYear() === dateParts.year &&
                           new Date().getMonth() + 1 === dateParts.month &&
                           new Date().getDate() === dateParts.day;
-            const dayClasses = getClassesForDate(date);
+            const daySchedules = getSchedulesForDate(date);
 
             return (
               <div
@@ -263,12 +300,12 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
                   {dateParts.day}
                 </div>
                 <div className="space-y-1">
-                  {dayClasses.slice(0, 3).map((classData: any) => {
-                    const classInfo = transformClass(classData);
+                  {daySchedules.slice(0, 3).map((scheduleData: any) => {
+                    const classInfo = transformSchedule(scheduleData);
                     const isFull = classInfo.status === 'FULL';
                     return (
                       <button
-                        key={classData.id}
+                        key={scheduleData.id}
                         onClick={() => onClassClick(classInfo)}
                         className={`w-full text-left px-1.5 py-0.5 rounded text-[9px] truncate ${
                           isFull
@@ -283,9 +320,9 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
                       </button>
                     );
                   })}
-                  {dayClasses.length > 3 && (
+                  {daySchedules.length > 3 && (
                     <div className="text-[8px] text-neutral-500 dark:text-neutral-400 px-1.5">
-                      +{dayClasses.length - 3}개 더
+                      +{daySchedules.length - 3}개 더
                     </div>
                   )}
                 </div>

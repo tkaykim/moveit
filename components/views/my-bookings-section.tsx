@@ -11,6 +11,30 @@ interface Booking {
   status: string;
   created_at: string;
   class_id: string;
+  schedule_id: string | null;
+  schedules: {
+    id: string;
+    start_time: string;
+    end_time: string;
+    class_id: string;
+    classes: {
+      id: string;
+      title: string | null;
+      academy_id: string;
+      academies: {
+        id: string;
+        name_kr: string | null;
+        name_en: string | null;
+        logo_url: string | null;
+        address: string | null;
+      } | null;
+      instructors: {
+        id: string;
+        name_kr: string | null;
+        name_en: string | null;
+      } | null;
+    } | null;
+  } | null;
   classes: {
     id: string;
     title: string | null;
@@ -81,17 +105,28 @@ export const MyBookingsSection = ({ onAcademyClick, initialTab = 'upcoming', sec
 
   const now = new Date();
 
+  // 시작 시간 추출 헬퍼 함수 (schedule 우선, class fallback)
+  const getStartTime = (booking: Booking): Date | null => {
+    if (booking.schedules?.start_time) {
+      return new Date(booking.schedules.start_time);
+    }
+    if (booking.classes?.start_time) {
+      return new Date(booking.classes.start_time);
+    }
+    return null;
+  };
+
   // 수강 예정: start_time이 미래이고 status가 CONFIRMED
   const upcomingBookings = bookings.filter((booking) => {
-    if (!booking.classes?.start_time) return false;
-    const startTime = new Date(booking.classes.start_time);
+    const startTime = getStartTime(booking);
+    if (!startTime) return false;
     return startTime > now && booking.status === 'CONFIRMED';
   });
 
   // 수강 완료: start_time이 과거이거나 status가 COMPLETED
   const completedBookings = bookings.filter((booking) => {
-    if (!booking.classes?.start_time) return booking.status === 'COMPLETED';
-    const startTime = new Date(booking.classes.start_time);
+    const startTime = getStartTime(booking);
+    if (!startTime) return booking.status === 'COMPLETED';
     return startTime <= now || booking.status === 'COMPLETED';
   });
 
@@ -107,8 +142,9 @@ export const MyBookingsSection = ({ onAcademyClick, initialTab = 'upcoming', sec
   };
 
   const handleBookingClick = (booking: Booking) => {
-    if (booking.classes?.academy_id && onAcademyClick) {
-      onAcademyClick(booking.classes.academy_id);
+    const academyId = booking.schedules?.classes?.academy_id || booking.classes?.academy_id;
+    if (academyId && onAcademyClick) {
+      onAcademyClick(academyId);
     }
   };
 
@@ -169,7 +205,9 @@ export const MyBookingsSection = ({ onAcademyClick, initialTab = 'upcoming', sec
             </div>
           ) : (
             displayBookings.map((booking) => {
-              const classInfo = booking.classes;
+              // schedule이 있으면 schedule 데이터 우선 사용
+              const scheduleInfo = booking.schedules;
+              const classInfo = scheduleInfo?.classes || booking.classes;
               if (!classInfo) return null;
 
               const academy = classInfo.academies;
@@ -177,7 +215,9 @@ export const MyBookingsSection = ({ onAcademyClick, initialTab = 'upcoming', sec
               const academyName = academy?.name_kr || academy?.name_en || '학원 정보 없음';
               const instructorName = instructor?.name_kr || instructor?.name_en || '강사 정보 없음';
               const className = classInfo.title || '클래스';
-              const dateTime = formatDateTime(classInfo.start_time);
+              // schedule이 있으면 schedule의 start_time 사용
+              const startTime = scheduleInfo?.start_time || (booking.classes?.start_time ?? null);
+              const dateTime = formatDateTime(startTime);
 
               return (
                 <button

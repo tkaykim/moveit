@@ -14,57 +14,58 @@ interface AcademyWeeklyScheduleViewProps {
 
 const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
-// Class를 ClassInfo로 변환
-function transformClass(classData: any): ClassInfo & { time?: string; startTime?: string; endTime?: string } {
-  const instructor = classData.instructors?.name_kr || classData.instructors?.name_en || '강사 정보 없음';
-  const genre = classData.genre || 'ALL';
-  const level = classData.difficulty_level || 'All Level';
-  const maxStudents = classData.max_students || 0;
-  const currentStudents = classData.current_students || 0;
+// Schedule을 ClassInfo로 변환
+function transformSchedule(scheduleData: any): ClassInfo & { time?: string; startTime?: string; endTime?: string } {
+  const classInfo = scheduleData.classes;
+  const instructor = scheduleData.instructors?.name_kr || scheduleData.instructors?.name_en || classInfo?.instructors?.name_kr || classInfo?.instructors?.name_en || '강사 정보 없음';
+  const genre = classInfo?.genre || 'ALL';
+  const level = classInfo?.difficulty_level || 'All Level';
+  const maxStudents = scheduleData.max_students || classInfo?.max_students || 0;
+  const currentStudents = scheduleData.current_students || 0;
   const isFull = maxStudents > 0 && currentStudents >= maxStudents;
   const isAlmostFull = maxStudents > 0 && currentStudents >= maxStudents * 0.8;
   const status = isFull ? 'FULL' : isAlmostFull ? 'ALMOST_FULL' : 'AVAILABLE';
 
-  const time = classData.start_time ? formatKSTTime(classData.start_time) : '';
+  const time = scheduleData.start_time ? formatKSTTime(scheduleData.start_time) : '';
 
   return {
-    id: classData.id,
-    schedule_id: classData.id,
+    id: classInfo?.id || scheduleData.class_id,
+    schedule_id: scheduleData.id,
     instructor,
     genre,
     level,
     status,
     price: 0, // 가격은 수강권에서 관리
-    class_title: classData.title || classData.name_kr || classData.name_en || '',
-    hall_name: classData.halls?.name,
+    class_title: classInfo?.title || classInfo?.name_kr || classInfo?.name_en || '',
+    hall_name: scheduleData.halls?.name || classInfo?.halls?.name,
     academy: {
-      id: classData.academies?.id || '',
-      name: classData.academies?.name_kr || classData.academies?.name_en || '',
+      id: classInfo?.academies?.id || classInfo?.academy_id || '',
+      name: classInfo?.academies?.name_kr || classInfo?.academies?.name_en || '',
     },
     time,
-    startTime: classData.start_time,
-    endTime: classData.end_time,
+    startTime: scheduleData.start_time,
+    endTime: scheduleData.end_time,
     maxStudents,
     currentStudents,
   };
 }
 
-// 주간 클래스를 그리드로 변환
-function buildClassGrid(classes: any[]) {
+// 주간 스케줄을 그리드로 변환
+function buildScheduleGrid(schedules: any[]) {
   const grid: Record<string, ClassInfo[]> = {
     MON: [], TUE: [], WED: [], THU: [], FRI: [], SAT: [], SUN: []
   };
 
-  classes.forEach((classData: any) => {
-    if (!classData.start_time) return;
-    const startTime = new Date(classData.start_time);
+  schedules.forEach((scheduleData: any) => {
+    if (!scheduleData.start_time) return;
+    const startTime = new Date(scheduleData.start_time);
     // KST 기준으로 요일 계산
     const dayIndex = (getKSTDay(startTime) + 6) % 7; // 월요일을 0으로
     const day = DAYS[dayIndex];
     // UTC를 KST로 변환하여 시간 표시
-    const time = formatKSTTime(classData.start_time);
+    const time = formatKSTTime(scheduleData.start_time);
     
-    const classInfo = transformClass(classData);
+    const classInfo = transformSchedule(scheduleData);
     classInfo.time = time;
     
     grid[day].push(classInfo);
@@ -83,7 +84,7 @@ function buildClassGrid(classes: any[]) {
 }
 
 export const AcademyWeeklyScheduleView = ({ academyId, onClassClick, onAddClassClick }: AcademyWeeklyScheduleViewProps) => {
-  const [classes, setClasses] = useState<any[]>([]);
+  const [schedules, setSchedules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [scheduleGrid, setScheduleGrid] = useState<Record<string, ClassInfo[]>>({
     MON: [], TUE: [], WED: [], THU: [], FRI: [], SAT: [], SUN: []
@@ -96,7 +97,7 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick, onAddClassC
     return startOfWeek;
   });
 
-  const loadClasses = useCallback(async (signal?: AbortSignal) => {
+  const loadSchedules = useCallback(async (signal?: AbortSignal) => {
     try {
       setLoading(true);
       // KST 기준으로 이번 주의 시작과 끝 날짜 계산
@@ -124,23 +125,61 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick, onAddClassC
         return;
       }
 
-      const { data: allClasses, error: classesError } = await supabase
+      // 먼저 해당 학원의 클래스 ID들을 가져옴
+      const { data: academyClasses, error: classesError } = await supabase
         .from('classes')
+        .select('id')
+        .eq('academy_id', academyId)
+        .eq('is_active', true);
+
+      if (classesError) throw classesError;
+      
+      const classIds = (academyClasses || []).map((c: { id: string }) => c.id);
+      
+      if (classIds.length === 0) {
+        if (signal?.aborted) return;
+        setSchedules([]);
+        setScheduleGrid({ MON: [], TUE: [], WED: [], THU: [], FRI: [], SAT: [], SUN: [] });
+        setLoading(false);
+        return;
+      }
+
+      // schedules 테이블에서 해당 클래스들의 스케줄 조회
+      const { data: allSchedules, error: schedulesError } = await supabase
+        .from('schedules')
         .select(`
           id,
-          title,
-          price,
-          genre,
-          difficulty_level,
-          max_students,
-          current_students,
+          class_id,
+          hall_id,
+          instructor_id,
           start_time,
           end_time,
-          hall_id,
-          academies (
+          max_students,
+          current_students,
+          is_canceled,
+          classes (
             id,
+            title,
             name_kr,
-            name_en
+            name_en,
+            genre,
+            difficulty_level,
+            max_students,
+            academy_id,
+            academies (
+              id,
+              name_kr,
+              name_en
+            ),
+            instructors (
+              id,
+              name_kr,
+              name_en
+            ),
+            halls (
+              id,
+              name
+            )
           ),
           instructors (
             id,
@@ -152,24 +191,23 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick, onAddClassC
             name
           )
         `)
-        .eq('academy_id', academyId)
+        .in('class_id', classIds)
         .eq('is_canceled', false)
-        .not('start_time', 'is', null)
         .gte('start_time', utcStart)
         .lt('start_time', utcEndNextDay)
         .order('start_time', { ascending: true });
 
-      if (classesError) throw classesError;
+      if (schedulesError) throw schedulesError;
       
       if (signal?.aborted) return;
 
-      setClasses(allClasses || []);
-      const grid = buildClassGrid(allClasses || []);
+      setSchedules(allSchedules || []);
+      const grid = buildScheduleGrid(allSchedules || []);
       setScheduleGrid(grid);
     } catch (error) {
       if (signal?.aborted) return;
-      console.error('Error loading classes:', error);
-      setClasses([]);
+      console.error('Error loading schedules:', error);
+      setSchedules([]);
       setScheduleGrid({
         MON: [], TUE: [], WED: [], THU: [], FRI: [], SAT: [], SUN: []
       });
@@ -182,12 +220,12 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick, onAddClassC
 
   useEffect(() => {
     const abortController = new AbortController();
-    loadClasses(abortController.signal);
+    loadSchedules(abortController.signal);
     
     return () => {
       abortController.abort();
     };
-  }, [loadClasses]);
+  }, [loadSchedules]);
 
   const goToPreviousWeek = () => {
     const newWeekStart = new Date(currentWeekStart);
@@ -211,9 +249,9 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick, onAddClassC
 
   // 실제 수업이 있는 시간대만 추출 (가장 이른 시간부터 가장 늦은 시간까지)
   const existingTimeSlots = Array.from(new Set(
-    classes
-      .filter((c: any) => c.start_time)
-      .map((c: any) => formatKSTTime(c.start_time))
+    schedules
+      .filter((s: any) => s.start_time)
+      .map((s: any) => formatKSTTime(s.start_time))
   )).sort();
   
   // 실제 수업이 있는 시간대만 사용 (기본 시간대 제거)
@@ -303,14 +341,14 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick, onAddClassC
                   // 첫 번째 수업의 홀 ID 가져오기
                   let firstHallId: string | null = null;
                   if (classInfos.length > 0) {
-                    const firstClass = classes.find((c: any) => {
-                      if (!c.start_time) return false;
-                      const cTime = new Date(c.start_time);
-                      const cDayIndex = (getKSTDay(cTime) + 6) % 7;
-                      const cTimeStr = formatKSTTime(c.start_time);
-                      return DAYS[cDayIndex] === day && cTimeStr === time && c.id === classInfos[0].id;
+                    const firstSchedule = schedules.find((s: any) => {
+                      if (!s.start_time) return false;
+                      const sTime = new Date(s.start_time);
+                      const sDayIndex = (getKSTDay(sTime) + 6) % 7;
+                      const sTimeStr = formatKSTTime(s.start_time);
+                      return DAYS[sDayIndex] === day && sTimeStr === time && s.id === classInfos[0].schedule_id;
                     });
-                    firstHallId = firstClass?.hall_id || null;
+                    firstHallId = firstSchedule?.hall_id || null;
                   }
 
                   return (
@@ -331,8 +369,8 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick, onAddClassC
                           {classInfos.map((classInfo, index) => {
                             const isFull = classInfo.status === 'FULL';
                             // 각 수업의 홀 ID 찾기
-                            const classData = classes.find((c: any) => c.id === classInfo.id);
-                            const hallId = classData?.hall_id || null;
+                            const scheduleData = schedules.find((s: any) => s.id === classInfo.schedule_id);
+                            const hallId = scheduleData?.hall_id || null;
                             
                             return (
                               <button 

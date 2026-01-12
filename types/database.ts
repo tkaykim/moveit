@@ -6,11 +6,30 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+/**
+ * 수강권, 쿠폰, 할인정책 개념 정리:
+ * 
+ * 1. 수강권 (Ticket) - tickets 테이블 (is_coupon = false)
+ *    - 정규수업을 들을 수 있는 권한
+ *    - 유형: 횟수권(COUNT), 기간권(PERIOD)
+ *    - user_tickets 테이블에서 사용자 보유 수강권 관리
+ * 
+ * 2. 쿠폰 - tickets 테이블 (is_coupon = true)
+ *    - 쿠폰제 수업(1회성 수업)을 들을 수 있는 권한
+ *    - 1회 수강 가능한 티켓
+ *    - user_tickets 테이블에서 동일하게 관리
+ * 
+ * 3. 할인정책 (Discount) - discounts 테이블
+ *    - 상품(수강권/쿠폰) 구매 시 할인 적용
+ *    - 유형: 정률(PERCENT), 정액(FIXED)
+ *    - 수강권/쿠폰과는 별개의 시스템
+ */
+
 // 클래스 접근 제어 설정 타입
 export interface AccessConfig {
   requiredGroup: string | null;  // 필수 수강권 그룹 (null이면 제한 없음)
-  allowRegularTicket: boolean;   // 일반 수강권 허용 여부 (기존 allowStandardCoupon 대체)
-  allowCoupon: boolean;          // 쿠폰 허용 여부
+  allowRegularTicket: boolean;   // 수강권(is_coupon=false)으로 수업 참여 가능 여부
+  allowCoupon: boolean;          // 쿠폰(is_coupon=true)으로 수업 참여 가능 여부
 }
 
 // 정규 수강생 할인 설정 타입 (팝업/워크샵용)
@@ -274,6 +293,7 @@ export type Database = {
           created_at: string | null
           hall_id: string | null
           id: string
+          schedule_id: string | null
           status: string | null
           user_id: string
           user_ticket_id: string | null
@@ -283,6 +303,7 @@ export type Database = {
           created_at?: string | null
           hall_id?: string | null
           id?: string
+          schedule_id?: string | null
           status?: string | null
           user_id: string
           user_ticket_id?: string | null
@@ -292,6 +313,7 @@ export type Database = {
           created_at?: string | null
           hall_id?: string | null
           id?: string
+          schedule_id?: string | null
           status?: string | null
           user_id?: string
           user_ticket_id?: string | null

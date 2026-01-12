@@ -1,11 +1,13 @@
 "use client";
 
 import Image from 'next/image';
-import { ChevronLeft, User, Instagram, Heart } from 'lucide-react';
-import { Dancer } from '@/types';
+import { ChevronLeft, User, Instagram, Heart, Ticket, Calendar, Clock, MapPin } from 'lucide-react';
+import { Dancer, ClassInfo } from '@/types';
 import { useState, useEffect } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
+import { TicketPurchaseModal } from '@/components/modals/ticket-purchase-modal';
+import { BookingConfirmModal } from '@/components/modals/booking-confirm-modal';
 
 interface DancerDetailViewProps {
   dancer: Dancer | null;
@@ -17,6 +19,11 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
   const [loading, setLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [academyIds, setAcademyIds] = useState<string[]>([]);
+  const [selectedAcademyId, setSelectedAcademyId] = useState<string | null>(null);
+  const [showTicketPurchaseModal, setShowTicketPurchaseModal] = useState(false);
+  const [showBookingConfirmModal, setShowBookingConfirmModal] = useState(false);
+  const [selectedClassForBooking, setSelectedClassForBooking] = useState<(ClassInfo & { time?: string; schedule_id?: string }) | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -50,6 +57,18 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
 
         if (error) throw error;
         setSchedules(instructorSchedules || []);
+        
+        // 학원 ID 수집 (중복 제거)
+        const uniqueAcademyIds = [...new Set(
+          (instructorSchedules || [])
+            .map((s: any) => s.classes?.academy_id)
+            .filter(Boolean)
+        )] as string[];
+        setAcademyIds(uniqueAcademyIds);
+        
+        if (uniqueAcademyIds.length > 0) {
+          setSelectedAcademyId(uniqueAcademyIds[0]);
+        }
       } catch (error) {
         console.error('Error loading instructor schedules:', error);
       } finally {
@@ -188,6 +207,19 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
           </button>
         </div>
 
+        {/* 수강권 구매 버튼 */}
+        {academyIds.length > 0 && (
+          <div className="mb-4">
+            <button
+              onClick={() => setShowTicketPurchaseModal(true)}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-black dark:text-white font-bold hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+            >
+              <Ticket size={18} />
+              수강권 구매하기
+            </button>
+          </div>
+        )}
+
         <div>
           <h3 className="text-black dark:text-white font-bold mb-3">개설된 클래스</h3>
           {loading ? (
@@ -205,26 +237,54 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
                 const classData = schedule.classes || {};
                 const academy = classData.academies || { name: '학원 정보 없음' };
 
+                const handleBookSchedule = () => {
+                  const classInfo: ClassInfo & { time?: string; schedule_id?: string } = {
+                    id: classData.id || schedule.class_id,
+                    schedule_id: schedule.id,
+                    instructor: dancer.name,
+                    genre: dancer.genre || 'ALL',
+                    level: 'All Level',
+                    status: 'AVAILABLE',
+                    price: 0,
+                    class_title: classData.title || `${dancer.genre || 'ALL'} 클래스`,
+                    time: time,
+                    academy: {
+                      id: academy.id || '',
+                      name: academy.name_kr || academy.name_en || academy.name || '학원 정보 없음',
+                    },
+                  };
+                  setSelectedClassForBooking(classInfo);
+                  setSelectedAcademyId(classData.academy_id);
+                  setShowBookingConfirmModal(true);
+                };
+
+                const dateStr = startTime.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+
                 return (
                   <div 
                     key={schedule.id} 
                     className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-4 rounded-2xl flex justify-between items-center"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="text-center">
-                        <div className="text-[10px] text-neutral-500 dark:text-neutral-500">{dayName}</div>
+                      <div className="text-center min-w-[50px]">
+                        <div className="text-[10px] text-neutral-500 dark:text-neutral-500">{dateStr}</div>
+                        <div className="text-xs text-neutral-400">{dayName}</div>
                         <div className="text-lg font-bold text-black dark:text-white">{time}</div>
                       </div>
                       <div>
                         <div className="text-black dark:text-white font-bold">
                           {classData.title || `${dancer.genre || 'ALL'} 클래스`}
                         </div>
-                        <div className="text-xs text-neutral-500 dark:text-neutral-500">
-                          {academy.name || '학원 정보 없음'}
+                        <div className="text-xs text-neutral-500 dark:text-neutral-500 flex items-center gap-1">
+                          <MapPin size={10} />
+                          {academy.name_kr || academy.name_en || academy.name || '학원 정보 없음'}
                         </div>
                       </div>
                     </div>
-                    <button className="bg-primary dark:bg-[#CCFF00] text-black text-xs font-bold px-4 py-2 rounded-full">
+                    <button 
+                      onClick={handleBookSchedule}
+                      className="bg-primary dark:bg-[#CCFF00] text-black text-xs font-bold px-4 py-2 rounded-full hover:bg-primary/90 dark:hover:bg-[#b8e600] transition-colors"
+                    >
                       신청
                     </button>
                   </div>
@@ -234,6 +294,34 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
           )}
         </div>
       </div>
+
+      {/* 수강권 구매 모달 */}
+      {selectedAcademyId && (
+        <TicketPurchaseModal
+          isOpen={showTicketPurchaseModal}
+          onClose={() => setShowTicketPurchaseModal(false)}
+          academyId={selectedAcademyId}
+          onPurchaseComplete={() => {
+            // 구매 완료 후 처리
+          }}
+        />
+      )}
+
+      {/* 예약 확인 모달 */}
+      {selectedAcademyId && (
+        <BookingConfirmModal
+          isOpen={showBookingConfirmModal}
+          onClose={() => {
+            setShowBookingConfirmModal(false);
+            setSelectedClassForBooking(null);
+          }}
+          classInfo={selectedClassForBooking}
+          academyId={selectedAcademyId}
+          onBookingComplete={() => {
+            // 예약 완료 후 처리
+          }}
+        />
+      )}
     </div>
   );
 };

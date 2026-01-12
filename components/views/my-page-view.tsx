@@ -4,6 +4,7 @@ import { Bell, User, QrCode, ChevronLeft, Gift, MessageCircle, CreditCard, FileT
 import { QrModal } from '@/components/modals/qr-modal';
 import { TicketRechargeModal } from '@/components/modals/ticket-recharge-modal';
 import { MyBookingsSection } from '@/components/views/my-bookings-section';
+import { MyTicketsSection } from '@/components/views/my-tickets-section';
 import { useState, useEffect, useRef } from 'react';
 import { ViewState } from '@/types';
 import { ThemeToggle } from '@/components/common/theme-toggle';
@@ -208,12 +209,18 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
             <div className="text-xs text-neutral-500 dark:text-neutral-400 font-bold">지난 클래스</div>
             <div className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1">개</div>
           </button>
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-center">
+          <button
+            onClick={() => onNavigate?.('TICKETS')}
+            className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-center hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors active:scale-[0.98]"
+          >
             <div className="text-2xl font-black text-black dark:text-white mb-1">{myTickets}</div>
             <div className="text-xs text-neutral-500 dark:text-neutral-400 font-bold">보유 수강권</div>
             <div className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1">회</div>
-          </div>
+          </button>
         </div>
+
+        {/* 보유 수강권 상세 */}
+        <MyTicketsSection onAcademyClick={handleAcademyClickFromBookings} />
 
         {/* 예약 내역 섹션 */}
         {bookingsTab && (

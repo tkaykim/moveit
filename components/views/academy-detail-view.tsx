@@ -5,6 +5,8 @@ import { ChevronLeft, Heart, X } from 'lucide-react';
 import { LevelBadge } from '@/components/common/level-badge';
 import { ClassPreviewModal } from '@/components/modals/class-preview-modal';
 import { AddClassModal } from '@/components/modals/add-class-modal';
+import { TicketPurchaseModal } from '@/components/modals/ticket-purchase-modal';
+import { BookingConfirmModal } from '@/components/modals/booking-confirm-modal';
 import { Academy, ClassInfo, ViewState } from '@/types';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -32,6 +34,9 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; thumbnail?: string } | null>(null);
+  const [showTicketPurchaseModal, setShowTicketPurchaseModal] = useState(false);
+  const [showBookingConfirmModal, setShowBookingConfirmModal] = useState(false);
+  const [selectedClassForBooking, setSelectedClassForBooking] = useState<(ClassInfo & { time?: string; schedule_id?: string }) | null>(null);
   const { user } = useAuth();
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
     const now = new Date();
@@ -200,9 +205,13 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
       alert("이미 마감된 클래스입니다.");
       return;
     }
-    const classWithPrice = { ...classInfo, price: classInfo.price || academy.price || 0, startTime: classInfo.time || '' };
+    // 프리뷰 모달을 닫고 예약 확인 모달을 연다
     setPreviewClass(null);
-    onClassBook(classWithPrice);
+    setSelectedClassForBooking({
+      ...classInfo,
+      schedule_id: classInfo.schedule_id,
+    });
+    setShowBookingConfirmModal(true);
   };
 
   const handleAddClassClick = (day: string, time: string, hallId?: string | null) => {
@@ -426,7 +435,14 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
         <div ref={scheduleRef} className="p-5 scroll-mt-20">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-black dark:text-white font-bold text-lg">시간표</h3>
-            <div className="flex gap-2 bg-neutral-100 dark:bg-neutral-900 rounded-lg p-1">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowTicketPurchaseModal(true)}
+                className="px-3 py-1.5 text-xs font-bold bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black rounded-lg hover:bg-neutral-800 dark:hover:bg-[#b8e600] transition-colors"
+              >
+                수강권 구매
+              </button>
+              <div className="flex gap-2 bg-neutral-100 dark:bg-neutral-900 rounded-lg p-1">
               <button
                 onClick={() => setScheduleViewMode('week')}
                 className={`px-3 py-1.5 text-xs font-bold rounded transition-colors ${
@@ -447,6 +463,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
               >
                 월간
               </button>
+              </div>
             </div>
           </div>
           {scheduleViewMode === 'week' ? (
@@ -488,6 +505,27 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
         time={selectedTime}
         weekStartDate={currentWeekStart}
         defaultHallId={selectedHallId}
+      />
+      <TicketPurchaseModal
+        isOpen={showTicketPurchaseModal}
+        onClose={() => setShowTicketPurchaseModal(false)}
+        academyId={(academy as any).academyId || academy.id}
+        academyName={academy.name}
+        onPurchaseComplete={() => {
+          // 구매 완료 후 처리
+        }}
+      />
+      <BookingConfirmModal
+        isOpen={showBookingConfirmModal}
+        onClose={() => {
+          setShowBookingConfirmModal(false);
+          setSelectedClassForBooking(null);
+        }}
+        classInfo={selectedClassForBooking}
+        academyId={(academy as any).academyId || academy.id}
+        onBookingComplete={() => {
+          // 예약 완료 후 처리
+        }}
       />
       {/* 유튜브 영상 모달 */}
       {selectedVideo && (

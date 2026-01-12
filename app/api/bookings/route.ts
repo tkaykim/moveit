@@ -34,7 +34,7 @@ export async function GET(request: Request) {
       user = authUser;
     }
 
-    // 예약 목록 조회 (classes와 academies, instructors 조인)
+    // 예약 목록 조회 (classes, schedules와 academies, instructors 조인)
     const { data: bookings, error } = await (supabase as any)
       .from('bookings')
       .select(`
@@ -42,6 +42,31 @@ export async function GET(request: Request) {
         status,
         created_at,
         class_id,
+        schedule_id,
+        schedules (
+          id,
+          start_time,
+          end_time,
+          class_id,
+          classes (
+            id,
+            title,
+            academy_id,
+            instructor_id,
+            academies (
+              id,
+              name_kr,
+              name_en,
+              logo_url,
+              address
+            ),
+            instructors (
+              id,
+              name_kr,
+              name_en
+            )
+          )
+        ),
         classes (
           id,
           title,
@@ -91,6 +116,7 @@ export async function GET(request: Request) {
  * 예약 생성 및 수강권 차감
  * Body: {
  *   classId: string,
+ *   scheduleId?: string, // 스케줄 ID (세션 단위 예약 시 필요)
  *   userTicketId?: string, // 사용할 수강권 ID (선택사항, 제공 안 하면 자동 선택)
  * }
  */
@@ -121,30 +147,58 @@ export async function POST(request: Request) {
       user = authUser;
     }
 
-    const { classId, userTicketId } = await request.json();
+    const { classId, scheduleId, userTicketId } = await request.json();
 
-    if (!classId) {
+    if (!classId && !scheduleId) {
       return NextResponse.json(
-        { error: 'classId가 필요합니다.' },
+        { error: 'classId 또는 scheduleId가 필요합니다.' },
         { status: 400 }
       );
     }
 
-    // 클래스 정보 조회 (학원 ID 확인용)
-    const { data: classData, error: classError } = await (supabase as any)
-      .from('classes')
-      .select('academy_id')
-      .eq('id', classId)
-      .single();
+    let academyId: string;
+    let resolvedClassId = classId;
 
-    if (classError || !classData) {
-      return NextResponse.json(
-        { error: '클래스 정보를 찾을 수 없습니다.' },
-        { status: 404 }
-      );
+    // scheduleId가 있으면 스케줄에서 classId 가져오기
+    if (scheduleId) {
+      const { data: scheduleData, error: scheduleError } = await (supabase as any)
+        .from('schedules')
+        .select(`
+          id,
+          class_id,
+          classes (
+            academy_id
+          )
+        `)
+        .eq('id', scheduleId)
+        .single();
+
+      if (scheduleError || !scheduleData) {
+        return NextResponse.json(
+          { error: '스케줄 정보를 찾을 수 없습니다.' },
+          { status: 404 }
+        );
+      }
+
+      resolvedClassId = scheduleData.class_id;
+      academyId = scheduleData.classes?.academy_id;
+    } else {
+      // 클래스 정보 조회 (학원 ID 확인용)
+      const { data: classData, error: classError } = await (supabase as any)
+        .from('classes')
+        .select('academy_id')
+        .eq('id', classId)
+        .single();
+
+      if (classError || !classData) {
+        return NextResponse.json(
+          { error: '클래스 정보를 찾을 수 없습니다.' },
+          { status: 404 }
+        );
+      }
+
+      academyId = classData.academy_id;
     }
-
-    const academyId = classData.academy_id;
 
     // 수강권 자동 선택 (userTicketId가 제공되지 않은 경우)
     let selectedUserTicketId = userTicketId;
@@ -192,7 +246,8 @@ export async function POST(request: Request) {
     // 예약 생성
     const bookingData: Database['public']['Tables']['bookings']['Insert'] = {
       user_id: user.id,
-      class_id: classId,
+      class_id: resolvedClassId,
+      schedule_id: scheduleId || null,
       user_ticket_id: selectedUserTicketId,
       status: 'CONFIRMED',
     };

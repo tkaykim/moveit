@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       user = authUser;
     }
 
-    const { ticketId } = await request.json();
+    const { ticketId, startDate: requestedStartDate, discountId } = await request.json();
 
     if (!ticketId) {
       return NextResponse.json(
@@ -58,8 +58,66 @@ export async function POST(request: Request) {
       );
     }
 
-    // 유효기간 계산
-    const startDate = new Date();
+    // 할인정책 적용 처리
+    let discountAmount = 0;
+    let appliedDiscount = null;
+
+    if (discountId) {
+      // 할인정책 유효성 검증
+      const { data: discountData, error: discountError } = await (supabase as any)
+        .from('discounts')
+        .select('*')
+        .eq('id', discountId)
+        .eq('is_active', true)
+        .single();
+
+      if (discountError || !discountData) {
+        return NextResponse.json(
+          { error: '유효하지 않은 할인정책입니다.' },
+          { status: 400 }
+        );
+      }
+
+      // 할인 유효기간 체크
+      const now = new Date().toISOString().split('T')[0];
+      if (discountData.valid_from && discountData.valid_from > now) {
+        return NextResponse.json(
+          { error: '아직 적용할 수 없는 할인정책입니다.' },
+          { status: 400 }
+        );
+      }
+      if (discountData.valid_until && discountData.valid_until < now) {
+        return NextResponse.json(
+          { error: '만료된 할인정책입니다.' },
+          { status: 400 }
+        );
+      }
+
+      // 학원 할인인 경우 학원 ID 체크
+      if (discountData.academy_id && discountData.academy_id !== ticket.academy_id) {
+        return NextResponse.json(
+          { error: '해당 학원에서 사용할 수 없는 할인정책입니다.' },
+          { status: 400 }
+        );
+      }
+
+      // 할인 금액 계산
+      if (discountData.discount_type === 'PERCENT') {
+        discountAmount = Math.floor(ticket.price * discountData.discount_value / 100);
+      } else {
+        discountAmount = discountData.discount_value;
+      }
+
+      // 할인 금액이 원가를 초과할 수 없음
+      discountAmount = Math.min(discountAmount, ticket.price);
+      appliedDiscount = discountData;
+    }
+
+    const originalPrice = ticket.price;
+    const finalPrice = originalPrice - discountAmount;
+
+    // 유효기간 계산 - 사용자가 시작일을 지정한 경우 해당 날짜 사용
+    const startDate = requestedStartDate ? new Date(requestedStartDate) : new Date();
     const expiryDate = new Date(startDate);
     
     if (ticket.valid_days) {
@@ -93,10 +151,37 @@ export async function POST(request: Request) {
       );
     }
 
+    // 거래 기록 생성 (revenue_transactions)
+    if (ticket.academy_id) {
+      await (supabase as any)
+        .from('revenue_transactions')
+        .insert({
+          academy_id: ticket.academy_id,
+          user_id: user.id,
+          ticket_id: ticketId,
+          user_ticket_id: userTicket.id,
+          discount_id: appliedDiscount?.id || null,
+          original_price: originalPrice,
+          discount_amount: discountAmount,
+          final_price: finalPrice,
+          payment_method: 'TEST', // 테스트 결제
+          payment_status: 'COMPLETED',
+        });
+    }
+
+    // 수강권/쿠폰 구분 메시지
+    const productType = ticket.is_coupon ? '쿠폰' : '수강권';
+
     return NextResponse.json({
       success: true,
       data: userTicket,
-      message: '수강권 구매가 완료되었습니다.',
+      payment: {
+        originalPrice,
+        discountAmount,
+        finalPrice,
+        discountApplied: !!appliedDiscount,
+      },
+      message: `${productType} 구매가 완료되었습니다.`,
       demo: !authUser, // 데모 모드인지 표시
     });
   } catch (error: any) {

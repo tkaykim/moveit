@@ -25,15 +25,7 @@ const PERIOD_PRESETS = [
   { label: '12개월', days: 365 },
 ];
 
-// 수강권용 횟수 프리셋 (큰 단위)
-const REGULAR_COUNT_PRESETS = [
-  { label: '10회', count: 10 },
-  { label: '20회', count: 20 },
-  { label: '30회', count: 30 },
-  { label: '50회', count: 50 },
-];
-
-// 쿠폰용 횟수 프리셋 (작은 단위)
+// 쿠폰용 횟수 프리셋
 const COUPON_COUNT_PRESETS = [
   { label: '1회', count: 1 },
   { label: '3회', count: 3 },
@@ -50,7 +42,7 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     price: 0,
-    ticket_type: 'COUNT' as 'COUNT' | 'PERIOD',
+    ticket_type: 'PERIOD' as 'COUNT' | 'PERIOD', // 수강권은 기간제, 쿠폰은 횟수제
     total_count: null as number | null,
     valid_days: null as number | null,
     is_on_sale: true,
@@ -62,7 +54,6 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
   const [useCustomPeriod, setUseCustomPeriod] = useState(false);
   const [useCustomCount, setUseCustomCount] = useState(false);
-  const [hasExpiryForCount, setHasExpiryForCount] = useState(false);
 
   useEffect(() => {
     loadClasses();
@@ -87,17 +78,11 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
       if (ticket.valid_days) {
         setUseCustomPeriod(!PERIOD_PRESETS.some(p => p.days === ticket.valid_days));
       }
-      if (ticket.total_count) {
-        const presets = isCoupon ? COUPON_COUNT_PRESETS : REGULAR_COUNT_PRESETS;
-        setUseCustomCount(!presets.some(p => p.count === ticket.total_count));
+      if (ticket.total_count && isCoupon) {
+        setUseCustomCount(!COUPON_COUNT_PRESETS.some(p => p.count === ticket.total_count));
       }
       
-      // 횟수권에 유효기간이 설정되어 있으면 토글 활성화
-      if (ticket.ticket_type === 'COUNT' && ticket.valid_days) {
-        setHasExpiryForCount(true);
-      }
-      
-      // 기존 연결된 클래스 로드 (일반 수강권인 경우에만)
+      // 기존 연결된 클래스 로드 (수강권인 경우에만)
       if (ticket.id && !isCoupon) {
         loadLinkedClasses(ticket.id);
       }
@@ -196,20 +181,14 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
     }
 
     try {
-      // 유효기간 계산
-      const validDays = formData.ticket_type === 'PERIOD' 
-        ? formData.valid_days 
-        : (hasExpiryForCount ? formData.valid_days : null);
-
+      // 수강권: 기간제(PERIOD), 쿠폰: 횟수제(COUNT)
       const ticketData = {
         academy_id: academyId,
         name: formData.name,
         price: formData.price,
-        ticket_type: productCategory === 'coupon' ? 'COUNT' : formData.ticket_type,
-        total_count: (productCategory === 'coupon' || formData.ticket_type === 'COUNT') 
-          ? formData.total_count 
-          : null,
-        valid_days: validDays,
+        ticket_type: productCategory === 'coupon' ? 'COUNT' : 'PERIOD',
+        total_count: productCategory === 'coupon' ? formData.total_count : null,
+        valid_days: formData.valid_days,
         is_on_sale: formData.is_on_sale,
         is_coupon: productCategory === 'coupon',
         is_general: isGeneral,
@@ -261,9 +240,6 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
   const isAllSelected = classes.length > 0 && selectedClassIds.length === classes.length;
   const isPartialSelected = selectedClassIds.length > 0 && selectedClassIds.length < classes.length;
 
-  // 현재 카테고리에 맞는 횟수 프리셋
-  const countPresets = productCategory === 'coupon' ? COUPON_COUNT_PRESETS : REGULAR_COUNT_PRESETS;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 dark:bg-black/60 backdrop-blur-sm">
       <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden max-h-[90vh] overflow-y-auto">
@@ -293,7 +269,7 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
                 type="button"
                 onClick={() => {
                   setProductCategory('regular');
-                  setFormData({ ...formData, ticket_type: 'COUNT' });
+                  setFormData({ ...formData, ticket_type: 'PERIOD', total_count: null });
                 }}
                 className={`p-4 rounded-lg border flex flex-col items-center gap-2 transition-colors ${
                   productCategory === 'regular'
@@ -302,8 +278,8 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
                 }`}
               >
                 <Ticket className="w-6 h-6" />
-                <span className="font-semibold">일반 수강권</span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">정기권, 패키지</span>
+                <span className="font-semibold">수강권</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">기간제 정규수업</span>
               </button>
               <button
                 type="button"
@@ -354,47 +330,14 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
             />
           </div>
 
-          {/* 일반 수강권: 횟수제/기간제 선택 */}
-          {productCategory === 'regular' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                수강권 유형 *
-              </label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, ticket_type: 'COUNT' })}
-                  className={`flex-1 px-4 py-2 rounded-lg border font-medium transition-colors ${
-                    formData.ticket_type === 'COUNT'
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
-                  }`}
-                >
-                  횟수제
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, ticket_type: 'PERIOD' })}
-                  className={`flex-1 px-4 py-2 rounded-lg border font-medium transition-colors ${
-                    formData.ticket_type === 'PERIOD'
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
-                  }`}
-                >
-                  기간제
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* 횟수 선택 (수강권 횟수제 또는 쿠폰) */}
-          {(productCategory === 'coupon' || formData.ticket_type === 'COUNT') && (
+          {/* 횟수 선택 (쿠폰만) */}
+          {productCategory === 'coupon' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 횟수 선택 *
               </label>
               <div className="flex flex-wrap gap-2 mb-2">
-                {countPresets.map((preset) => (
+                {COUPON_COUNT_PRESETS.map((preset) => (
                   <button
                     key={preset.count}
                     type="button"
@@ -404,7 +347,7 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
                     }}
                     className={`px-4 py-2 rounded-full border font-medium text-sm transition-colors ${
                       !useCustomCount && formData.total_count === preset.count
-                        ? (productCategory === 'coupon' ? 'bg-amber-600 text-white border-amber-600' : 'bg-blue-600 text-white border-blue-600')
+                        ? 'bg-amber-600 text-white border-amber-600'
                         : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
                     }`}
                   >
@@ -416,7 +359,7 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
                   onClick={() => setUseCustomCount(true)}
                   className={`px-4 py-2 rounded-full border font-medium text-sm transition-colors ${
                     useCustomCount
-                      ? (productCategory === 'coupon' ? 'bg-amber-600 text-white border-amber-600' : 'bg-blue-600 text-white border-blue-600')
+                      ? 'bg-amber-600 text-white border-amber-600'
                       : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
                   }`}
                 >
@@ -437,8 +380,8 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
             </div>
           )}
 
-          {/* 기간제 옵션 (수강권만) */}
-          {productCategory === 'regular' && formData.ticket_type === 'PERIOD' && (
+          {/* 기간 선택 (수강권 전용 - 기간제만 지원) */}
+          {productCategory === 'regular' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 기간 선택 *
@@ -490,88 +433,6 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
             </div>
           )}
 
-          {/* 횟수권 유효기간 설정 (수강권 횟수제만) */}
-          {productCategory === 'regular' && formData.ticket_type === 'COUNT' && (
-            <div className="border-t dark:border-neutral-700 pt-4">
-              <div className="flex items-center justify-between mb-3">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  유효기간 설정
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHasExpiryForCount(!hasExpiryForCount);
-                    if (hasExpiryForCount) {
-                      setFormData({ ...formData, valid_days: null });
-                    }
-                  }}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    hasExpiryForCount ? 'bg-blue-600' : 'bg-gray-300 dark:bg-neutral-600'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      hasExpiryForCount ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-              
-              {hasExpiryForCount && (
-                <div>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {PERIOD_PRESETS.map((preset) => (
-                      <button
-                        key={preset.days}
-                        type="button"
-                        onClick={() => {
-                          setFormData({ ...formData, valid_days: preset.days });
-                          setUseCustomPeriod(false);
-                        }}
-                        className={`px-4 py-2 rounded-full border font-medium text-sm transition-colors ${
-                          !useCustomPeriod && formData.valid_days === preset.days
-                            ? 'bg-indigo-600 text-white border-indigo-600'
-                            : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => setUseCustomPeriod(true)}
-                      className={`px-4 py-2 rounded-full border font-medium text-sm transition-colors ${
-                        useCustomPeriod
-                          ? 'bg-indigo-600 text-white border-indigo-600'
-                          : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
-                      }`}
-                    >
-                      직접 입력
-                    </button>
-                  </div>
-                  {useCustomPeriod && (
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder="일수를 입력하세요"
-                      className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                      value={formData.valid_days || ''}
-                      onChange={(e) => setFormData({ ...formData, valid_days: parseInt(e.target.value) || null })}
-                    />
-                  )}
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    {formData.total_count || 0}회권, 구매 시점부터 {formData.valid_days || 0}일 이내 사용
-                  </p>
-                </div>
-              )}
-              
-              {!hasExpiryForCount && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  유효기간 제한 없이 횟수 소진 시까지 사용 가능
-                </p>
-              )}
-            </div>
-          )}
 
           {/* 수강 가능 클래스 (일반 수강권만) */}
           {productCategory === 'regular' && (
