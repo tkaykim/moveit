@@ -46,7 +46,7 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(true);
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
-  const [isAllClasses, setIsAllClasses] = useState(true); // 일반 수강권 = 전체 클래스
+  const [initialIsGeneral, setInitialIsGeneral] = useState(true); // 초기 is_general 값 저장
   const [useCustomPeriod, setUseCustomPeriod] = useState(false);
   const [useCustomCount, setUseCustomCount] = useState(false);
   const [hasExpiryForCount, setHasExpiryForCount] = useState(false); // 횟수권 유효기간 설정 여부
@@ -79,10 +79,10 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
         setHasExpiryForCount(true);
       }
       
-      setIsAllClasses(ticket.is_general);
+      setInitialIsGeneral(ticket.is_general);
       
       // 기존 연결된 클래스 로드
-      if (ticket.id) {
+      if (ticket.id && !ticket.is_general) {
         loadLinkedClasses(ticket.id);
       }
     }
@@ -105,7 +105,13 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
         .order('title');
 
       if (error) throw error;
-      setClasses(data || []);
+      const loadedClasses = data || [];
+      setClasses(loadedClasses);
+      
+      // 신규 생성이거나 is_general인 경우 전체 선택
+      if (!ticket || initialIsGeneral) {
+        setSelectedClassIds(loadedClasses.map((c: ClassItem) => c.id));
+      }
     } catch (error) {
       console.error('Error loading classes:', error);
     } finally {
@@ -131,7 +137,6 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
       
       if (data && data.length > 0) {
         setSelectedClassIds(data.map((d: { class_id: string }) => d.class_id));
-        setIsAllClasses(false);
       }
     } catch (error) {
       console.error('Error loading linked classes:', error);
@@ -157,11 +162,14 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 전용 수강권인데 클래스가 선택되지 않았으면 에러
-    if (!isAllClasses && selectedClassIds.length === 0) {
-      alert('전용 수강권은 최소 1개 이상의 클래스를 선택해주세요.');
+    // 클래스가 하나도 선택되지 않았으면 에러
+    if (selectedClassIds.length === 0) {
+      alert('최소 1개 이상의 클래스를 선택해주세요.');
       return;
     }
+    
+    // 전체 선택 여부 판단
+    const isGeneral = selectedClassIds.length === classes.length;
 
     setLoading(true);
 
@@ -186,9 +194,9 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
         total_count: formData.ticket_type === 'COUNT' ? formData.total_count : null,
         valid_days: validDays,
         is_on_sale: formData.is_on_sale,
-        is_general: isAllClasses,
+        is_general: isGeneral,
         class_id: null, // 기존 단일 class_id는 더 이상 사용하지 않음
-        access_group: isAllClasses ? 'general' : null,
+        access_group: isGeneral ? 'general' : null,
       };
 
       let ticketId: string;
@@ -205,12 +213,11 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
         ticketId = data.id;
       }
 
-      // 전용 수강권이면 ticket_classes 테이블에 연결 저장
-      if (!isAllClasses && selectedClassIds.length > 0) {
-        // 기존 연결 삭제
-        await supabase.from('ticket_classes').delete().eq('ticket_id', ticketId);
-        
-        // 새 연결 추가
+      // 기존 연결 삭제
+      await supabase.from('ticket_classes').delete().eq('ticket_id', ticketId);
+      
+      // 전용 수강권이면 (전체 선택이 아니면) ticket_classes 테이블에 연결 저장
+      if (!isGeneral) {
         const linkData = selectedClassIds.map(classId => ({
           ticket_id: ticketId,
           class_id: classId,
@@ -219,11 +226,7 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
         const { error: linkError } = await supabase.from('ticket_classes').insert(linkData);
         if (linkError) {
           console.error('Error saving ticket_classes:', linkError);
-          // 테이블이 없을 수 있으므로 경고만 표시
         }
-      } else if (isAllClasses && ticket) {
-        // 일반 수강권으로 변경된 경우 기존 연결 삭제
-        await supabase.from('ticket_classes').delete().eq('ticket_id', ticketId);
       }
 
       alert(ticket ? '수강권이 수정되었습니다.' : '수강권이 등록되었습니다.');
@@ -503,124 +506,76 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
             </div>
           )}
 
-          {/* 수강권 사용 범위 */}
+          {/* 수강 가능 클래스 */}
           <div className="border-t dark:border-neutral-800 pt-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-              <Lock size={14} /> 수강 가능 클래스
+              <Lock size={14} /> 이 수강권으로 수강 가능한 클래스
             </label>
 
-            <div className="space-y-3">
-              {/* 일반 수강권 */}
-              <label
-                className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                  isAllClasses
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800'
-                }`}
+            <div className="border dark:border-neutral-700 rounded-lg overflow-hidden">
+              {/* 전체 선택 헤더 */}
+              <div
+                onClick={handleSelectAll}
+                className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-neutral-800 border-b dark:border-neutral-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-neutral-750"
               >
-                <input
-                  type="radio"
-                  name="classScope"
-                  checked={isAllClasses}
-                  onChange={() => {
-                    setIsAllClasses(true);
-                    setSelectedClassIds([]);
-                  }}
-                  className="mt-1"
-                />
-                <div>
-                  <div className="font-medium text-gray-900 dark:text-white">모든 클래스</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    등록된 모든 클래스에서 사용 가능
+                {isAllSelected ? (
+                  <CheckSquare size={20} className="text-blue-600" />
+                ) : isPartialSelected ? (
+                  <div className="w-5 h-5 border-2 border-blue-600 bg-blue-600 rounded flex items-center justify-center">
+                    <div className="w-2.5 h-0.5 bg-white" />
                   </div>
-                </div>
-              </label>
+                ) : (
+                  <Square size={20} className="text-gray-400" />
+                )}
+                <span className="font-medium text-gray-900 dark:text-white">
+                  전체 선택
+                </span>
+                <span className="ml-auto text-sm text-gray-500 dark:text-gray-400">
+                  {selectedClassIds.length} / {classes.length}
+                </span>
+              </div>
 
-              {/* 전용 수강권 */}
-              <label
-                className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                  !isAllClasses
-                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                    : 'border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="classScope"
-                  checked={!isAllClasses}
-                  onChange={() => setIsAllClasses(false)}
-                  className="mt-1"
-                />
-                <div className="flex-1">
-                  <div className="font-medium text-gray-900 dark:text-white">특정 클래스만</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    선택한 클래스에서만 사용 가능
+              {/* 클래스 목록 */}
+              <div className="max-h-48 overflow-y-auto">
+                {loadingClasses ? (
+                  <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                    클래스 목록 불러오는 중...
                   </div>
-                </div>
-              </label>
-            </div>
-
-            {/* 클래스 다중 선택 */}
-            {!isAllClasses && (
-              <div className="mt-4 border dark:border-neutral-700 rounded-lg overflow-hidden">
-                {/* 전체 선택 헤더 */}
-                <div
-                  onClick={handleSelectAll}
-                  className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-neutral-800 border-b dark:border-neutral-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-neutral-750"
-                >
-                  {isAllSelected ? (
-                    <CheckSquare size={20} className="text-indigo-600" />
-                  ) : isPartialSelected ? (
-                    <div className="w-5 h-5 border-2 border-indigo-600 bg-indigo-600 rounded flex items-center justify-center">
-                      <div className="w-2.5 h-0.5 bg-white" />
-                    </div>
-                  ) : (
-                    <Square size={20} className="text-gray-400" />
-                  )}
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    전체 선택
-                  </span>
-                  <span className="ml-auto text-sm text-gray-500 dark:text-gray-400">
-                    {selectedClassIds.length} / {classes.length}
-                  </span>
-                </div>
-
-                {/* 클래스 목록 */}
-                <div className="max-h-48 overflow-y-auto">
-                  {loadingClasses ? (
-                    <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                      클래스 목록 불러오는 중...
-                    </div>
-                  ) : classes.length === 0 ? (
-                    <div className="p-4 text-center text-amber-600 dark:text-amber-400">
-                      <Info size={16} className="inline mr-1" />
-                      등록된 클래스가 없습니다.
-                    </div>
-                  ) : (
-                    classes.map((cls) => (
-                      <div
-                        key={cls.id}
-                        onClick={() => handleToggleClass(cls.id)}
-                        className="flex items-center gap-3 p-3 border-b dark:border-neutral-700 last:border-b-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-neutral-800"
-                      >
-                        {selectedClassIds.includes(cls.id) ? (
-                          <CheckSquare size={18} className="text-indigo-600 shrink-0" />
-                        ) : (
-                          <Square size={18} className="text-gray-400 shrink-0" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-gray-900 dark:text-white truncate">
-                            {cls.title || '제목 없음'}
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {cls.genre || '-'} • {cls.difficulty_level || '-'}
-                          </div>
+                ) : classes.length === 0 ? (
+                  <div className="p-4 text-center text-amber-600 dark:text-amber-400">
+                    <Info size={16} className="inline mr-1" />
+                    등록된 클래스가 없습니다.
+                  </div>
+                ) : (
+                  classes.map((cls) => (
+                    <div
+                      key={cls.id}
+                      onClick={() => handleToggleClass(cls.id)}
+                      className="flex items-center gap-3 p-3 border-b dark:border-neutral-700 last:border-b-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-neutral-800"
+                    >
+                      {selectedClassIds.includes(cls.id) ? (
+                        <CheckSquare size={18} className="text-blue-600 shrink-0" />
+                      ) : (
+                        <Square size={18} className="text-gray-400 shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 dark:text-white truncate">
+                          {cls.title || '제목 없음'}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {cls.genre || '-'} • {cls.difficulty_level || '-'}
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
+                    </div>
+                  ))
+                )}
               </div>
+            </div>
+            
+            {isAllSelected && (
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                모든 클래스에서 사용 가능한 일반 수강권입니다.
+              </p>
             )}
           </div>
 
