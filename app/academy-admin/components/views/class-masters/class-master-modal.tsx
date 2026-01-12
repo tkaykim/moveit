@@ -32,7 +32,6 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
     instructor_id: '',
     hall_id: '',
     max_students: 20,
-    price: 0,
     allowStandardCoupon: true,
   });
   const [halls, setHalls] = useState<any[]>([]);
@@ -52,7 +51,6 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         instructor_id: classData.instructor_id || '',
         hall_id: classData.hall_id || '',
         max_students: classData.max_students || 20,
-        price: classData.price || 0,
         allowStandardCoupon: classData.access_config?.allowStandardCoupon !== false,
       });
       loadLinkedTickets(classData.id);
@@ -120,7 +118,6 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         instructor_id: formData.instructor_id || null,
         hall_id: formData.hall_id || null,
         max_students: formData.max_students,
-        price: formData.price,
         access_config: {
           requiredGroup: null,
           allowStandardCoupon: formData.allowStandardCoupon,
@@ -286,32 +283,17 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                최대 인원
-              </label>
-              <input
-                type="number"
-                min="1"
-                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                value={formData.max_students}
-                onChange={(e) => setFormData({ ...formData, max_students: parseInt(e.target.value) || 20 })}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                가격
-              </label>
-              <input
-                type="number"
-                min="0"
-                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) || 0 })}
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              최대 인원
+            </label>
+            <input
+              type="number"
+              min="1"
+              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+              value={formData.max_students}
+              onChange={(e) => setFormData({ ...formData, max_students: parseInt(e.target.value) || 20 })}
+            />
           </div>
 
           <div>

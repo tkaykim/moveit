@@ -130,21 +130,23 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
         let priceMap = new Map<string, number>();
         
         if (academyIds.length > 0) {
-          const { data: classesData } = await supabase
-            .from('classes')
+          // 수강권 기반 최저가 조회
+          const { data: ticketsData } = await supabase
+            .from('tickets')
             .select('academy_id, price')
             .in('academy_id', academyIds)
+            .eq('is_on_sale', true)
             .not('price', 'is', null)
             .gt('price', 0)
             .limit(500);
           
           if (!isMounted) return;
           
-          (classesData || []).forEach((cls: any) => {
-            if (cls.academy_id && cls.price) {
-              const current = priceMap.get(cls.academy_id);
-              if (!current || cls.price < current) {
-                priceMap.set(cls.academy_id, cls.price);
+          (ticketsData || []).forEach((ticket: any) => {
+            if (ticket.academy_id && ticket.price) {
+              const current = priceMap.get(ticket.academy_id);
+              if (!current || ticket.price < current) {
+                priceMap.set(ticket.academy_id, ticket.price);
               }
             }
           });

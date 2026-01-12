@@ -102,16 +102,14 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
         // 강사 ID 목록
         const instructorIds = (instructorsData || []).map((i: any) => i.id);
 
-        // 가격 정보와 스케줄 정보를 병렬로 가져오기
+        // 클래스 정보와 스케줄 정보를 병렬로 가져오기
         const [classesResult, schedulesResult] = await Promise.all([
-          // 가격 정보만
+          // 강사별 클래스와 학원 정보
           supabase
             .from('classes')
-            .select('instructor_id, price')
+            .select('id, instructor_id, academy_id')
             .in('instructor_id', instructorIds)
-            .not('price', 'is', null)
-            .gt('price', 0)
-            .limit(500), // 최대 500개만
+            .limit(500),
           
           // 진행 예정인 스케줄만
           supabase
@@ -119,7 +117,7 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
             .select('class_id, start_time, is_canceled')
             .gte('start_time', new Date().toISOString())
             .eq('is_canceled', false)
-            .limit(1000) // 최대 1000개만
+            .limit(1000)
         ]);
 
         if (!isMounted) return;
@@ -127,19 +125,60 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
         // 클래스 ID로 강사 매핑
         const classToInstructorMap = new Map<string, string>();
         (classesResult.data || []).forEach((cls: any) => {
-          if (cls.instructor_id) {
-            classToInstructorMap.set(cls.class_id || '', cls.instructor_id);
+          if (cls.instructor_id && cls.id) {
+            classToInstructorMap.set(cls.id, cls.instructor_id);
           }
         });
 
-        // 강사별 가격 계산
-        const priceMap = new Map<string, number>();
+        // 강사별 학원 ID 수집
+        const instructorAcademyMap = new Map<string, Set<string>>();
         (classesResult.data || []).forEach((cls: any) => {
-          if (cls.instructor_id && cls.price) {
-            const current = priceMap.get(cls.instructor_id);
-            if (!current || cls.price < current) {
-              priceMap.set(cls.instructor_id, cls.price);
+          if (cls.instructor_id && cls.academy_id) {
+            if (!instructorAcademyMap.has(cls.instructor_id)) {
+              instructorAcademyMap.set(cls.instructor_id, new Set());
             }
+            instructorAcademyMap.get(cls.instructor_id)!.add(cls.academy_id);
+          }
+        });
+
+        // 모든 관련 학원의 수강권 최저가 조회
+        const allAcademyIds = Array.from(new Set(
+          Array.from(instructorAcademyMap.values()).flatMap(set => Array.from(set))
+        ));
+        
+        const academyPriceMap = new Map<string, number>();
+        if (allAcademyIds.length > 0) {
+          const { data: ticketsData } = await supabase
+            .from('tickets')
+            .select('academy_id, price')
+            .in('academy_id', allAcademyIds)
+            .eq('is_on_sale', true)
+            .not('price', 'is', null)
+            .gt('price', 0)
+            .limit(500);
+          
+          (ticketsData || []).forEach((ticket: any) => {
+            if (ticket.academy_id && ticket.price) {
+              const current = academyPriceMap.get(ticket.academy_id);
+              if (!current || ticket.price < current) {
+                academyPriceMap.set(ticket.academy_id, ticket.price);
+              }
+            }
+          });
+        }
+
+        // 강사별 최저 가격 계산 (소속 학원들의 수강권 중 최저가)
+        const priceMap = new Map<string, number>();
+        instructorAcademyMap.forEach((academyIds, instructorId) => {
+          let minPrice: number | undefined;
+          academyIds.forEach(academyId => {
+            const price = academyPriceMap.get(academyId);
+            if (price && (!minPrice || price < minPrice)) {
+              minPrice = price;
+            }
+          });
+          if (minPrice) {
+            priceMap.set(instructorId, minPrice);
           }
         });
 

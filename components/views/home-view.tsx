@@ -91,19 +91,21 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
         let priceMap = new Map<string, number>();
         
         if (academyIds.length > 0) {
-          const { data: classesData } = await (supabase as any)
-            .from('classes')
+          // 수강권 기반 최저가 조회
+          const { data: ticketsData } = await (supabase as any)
+            .from('tickets')
             .select('academy_id, price')
             .in('academy_id', academyIds)
+            .eq('is_on_sale', true)
             .not('price', 'is', null)
             .gt('price', 0)
             .limit(100);
           
-          (classesData || []).forEach((cls: any) => {
-            if (cls.academy_id && cls.price) {
-              const current = priceMap.get(cls.academy_id);
-              if (!current || cls.price < current) {
-                priceMap.set(cls.academy_id, cls.price);
+          (ticketsData || []).forEach((ticket: any) => {
+            if (ticket.academy_id && ticket.price) {
+              const current = priceMap.get(ticket.academy_id);
+              if (!current || ticket.price < current) {
+                priceMap.set(ticket.academy_id, ticket.price);
               }
             }
           });
@@ -168,10 +170,8 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             .catch(() => ({ data: [] })),
           (supabase as any)
             .from('classes')
-            .select('instructor_id, price')
+            .select('instructor_id, academy_id')
             .in('instructor_id', instructorIds)
-            .not('price', 'is', null)
-            .gt('price', 0)
             .limit(100)
         ]);
 
@@ -184,13 +184,55 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           }
         });
 
-        const priceMap = new Map<string, number>();
+        // 강사별 학원 ID 수집
+        const instructorAcademyMap = new Map<string, Set<string>>();
         (classesResult.data || []).forEach((cls: any) => {
-          if (cls.instructor_id && cls.price) {
-            const current = priceMap.get(cls.instructor_id);
-            if (!current || cls.price < current) {
-              priceMap.set(cls.instructor_id, cls.price);
+          if (cls.instructor_id && cls.academy_id) {
+            if (!instructorAcademyMap.has(cls.instructor_id)) {
+              instructorAcademyMap.set(cls.instructor_id, new Set());
             }
+            instructorAcademyMap.get(cls.instructor_id)!.add(cls.academy_id);
+          }
+        });
+
+        // 모든 관련 학원의 수강권 최저가 조회
+        const allAcademyIds = Array.from(new Set(
+          Array.from(instructorAcademyMap.values()).flatMap(set => Array.from(set))
+        ));
+        
+        const academyPriceMap = new Map<string, number>();
+        if (allAcademyIds.length > 0) {
+          const { data: ticketsData } = await (supabase as any)
+            .from('tickets')
+            .select('academy_id, price')
+            .in('academy_id', allAcademyIds)
+            .eq('is_on_sale', true)
+            .not('price', 'is', null)
+            .gt('price', 0)
+            .limit(100);
+          
+          (ticketsData || []).forEach((ticket: any) => {
+            if (ticket.academy_id && ticket.price) {
+              const current = academyPriceMap.get(ticket.academy_id);
+              if (!current || ticket.price < current) {
+                academyPriceMap.set(ticket.academy_id, ticket.price);
+              }
+            }
+          });
+        }
+
+        // 강사별 최저 가격 계산
+        const priceMap = new Map<string, number>();
+        instructorAcademyMap.forEach((academyIds, instructorId) => {
+          let minPrice: number | undefined;
+          academyIds.forEach(academyId => {
+            const price = academyPriceMap.get(academyId);
+            if (price && (!minPrice || price < minPrice)) {
+              minPrice = price;
+            }
+          });
+          if (minPrice) {
+            priceMap.set(instructorId, minPrice);
           }
         });
 

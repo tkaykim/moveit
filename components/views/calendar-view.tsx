@@ -59,7 +59,7 @@ function transformClass(classData: any): ClassInfo & { academy?: Academy; time?:
     genre,
     level,
     status,
-    price: classData.price || 0,
+    price: 0, // 가격은 수강권에서 관리 (캘린더에서는 표시하지 않음)
     class_title: classData.title,
     hall_name: classData.halls?.name,
     academy,

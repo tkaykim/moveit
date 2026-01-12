@@ -34,7 +34,7 @@ function transformClass(classData: any): ClassInfo & { time?: string; startTime?
     genre,
     level,
     status,
-    price: classData.price || 0,
+    price: 0, // 가격은 수강권에서 관리
     class_title: classData.title || classData.name_kr || classData.name_en || '',
     hall_name: classData.halls?.name,
     academy: {
