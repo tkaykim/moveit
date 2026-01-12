@@ -49,6 +49,7 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
   const [isAllClasses, setIsAllClasses] = useState(true); // 일반 수강권 = 전체 클래스
   const [useCustomPeriod, setUseCustomPeriod] = useState(false);
   const [useCustomCount, setUseCustomCount] = useState(false);
+  const [hasExpiryForCount, setHasExpiryForCount] = useState(false); // 횟수권 유효기간 설정 여부
 
   useEffect(() => {
     loadClasses();
@@ -66,11 +67,16 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
       });
       
       // 프리셋에 없는 값이면 커스텀 모드
-      if (ticket.ticket_type === 'PERIOD' && ticket.valid_days) {
+      if (ticket.valid_days) {
         setUseCustomPeriod(!PERIOD_PRESETS.some(p => p.days === ticket.valid_days));
       }
-      if (ticket.ticket_type === 'COUNT' && ticket.total_count) {
+      if (ticket.total_count) {
         setUseCustomCount(!COUNT_PRESETS.some(p => p.count === ticket.total_count));
+      }
+      
+      // 횟수권에 유효기간이 설정되어 있으면 토글 활성화
+      if (ticket.ticket_type === 'COUNT' && ticket.valid_days) {
+        setHasExpiryForCount(true);
       }
       
       setIsAllClasses(ticket.is_general);
@@ -167,13 +173,18 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
     }
 
     try {
+      // 횟수권도 유효기간을 가질 수 있음
+      const validDays = formData.ticket_type === 'PERIOD' 
+        ? formData.valid_days 
+        : (hasExpiryForCount ? formData.valid_days : null);
+
       const ticketData = {
         academy_id: academyId,
         name: formData.name,
         price: formData.price,
         ticket_type: formData.ticket_type,
         total_count: formData.ticket_type === 'COUNT' ? formData.total_count : null,
-        valid_days: formData.ticket_type === 'PERIOD' ? formData.valid_days : null,
+        valid_days: validDays,
         is_on_sale: formData.is_on_sale,
         is_general: isAllClasses,
         class_id: null, // 기존 단일 class_id는 더 이상 사용하지 않음
@@ -307,51 +318,135 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
 
           {/* 횟수제 옵션 */}
           {formData.ticket_type === 'COUNT' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                횟수 선택 *
-              </label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {COUNT_PRESETS.map((preset) => (
+            <div className="space-y-4">
+              {/* 횟수 선택 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  횟수 선택 *
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {COUNT_PRESETS.map((preset) => (
+                    <button
+                      key={preset.count}
+                      type="button"
+                      onClick={() => {
+                        setFormData({ ...formData, total_count: preset.count });
+                        setUseCustomCount(false);
+                      }}
+                      className={`px-4 py-2 rounded-full border font-medium text-sm transition-colors ${
+                        !useCustomCount && formData.total_count === preset.count
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
                   <button
-                    key={preset.count}
                     type="button"
-                    onClick={() => {
-                      setFormData({ ...formData, total_count: preset.count });
-                      setUseCustomCount(false);
-                    }}
+                    onClick={() => setUseCustomCount(true)}
                     className={`px-4 py-2 rounded-full border font-medium text-sm transition-colors ${
-                      !useCustomCount && formData.total_count === preset.count
+                      useCustomCount
                         ? 'bg-blue-600 text-white border-blue-600'
                         : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
                     }`}
                   >
-                    {preset.label}
+                    직접 입력
                   </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setUseCustomCount(true)}
-                  className={`px-4 py-2 rounded-full border font-medium text-sm transition-colors ${
-                    useCustomCount
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
-                  }`}
-                >
-                  직접 입력
-                </button>
+                </div>
+                {useCustomCount && (
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    placeholder="횟수를 입력하세요"
+                    className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                    value={formData.total_count || ''}
+                    onChange={(e) => setFormData({ ...formData, total_count: parseInt(e.target.value) || null })}
+                  />
+                )}
               </div>
-              {useCustomCount && (
-                <input
-                  type="number"
-                  min="1"
-                  required
-                  placeholder="횟수를 입력하세요"
-                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                  value={formData.total_count || ''}
-                  onChange={(e) => setFormData({ ...formData, total_count: parseInt(e.target.value) || null })}
-                />
-              )}
+
+              {/* 유효기간 설정 토글 */}
+              <div className="border-t dark:border-neutral-700 pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    유효기간 설정
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHasExpiryForCount(!hasExpiryForCount);
+                      if (hasExpiryForCount) {
+                        setFormData({ ...formData, valid_days: null });
+                      }
+                    }}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      hasExpiryForCount ? 'bg-blue-600' : 'bg-gray-300 dark:bg-neutral-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        hasExpiryForCount ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                
+                {hasExpiryForCount && (
+                  <div>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {PERIOD_PRESETS.map((preset) => (
+                        <button
+                          key={preset.days}
+                          type="button"
+                          onClick={() => {
+                            setFormData({ ...formData, valid_days: preset.days });
+                            setUseCustomPeriod(false);
+                          }}
+                          className={`px-4 py-2 rounded-full border font-medium text-sm transition-colors ${
+                            !useCustomPeriod && formData.valid_days === preset.days
+                              ? 'bg-indigo-600 text-white border-indigo-600'
+                              : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setUseCustomPeriod(true)}
+                        className={`px-4 py-2 rounded-full border font-medium text-sm transition-colors ${
+                          useCustomPeriod
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
+                        }`}
+                      >
+                        직접 입력
+                      </button>
+                    </div>
+                    {useCustomPeriod && (
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="일수를 입력하세요"
+                        className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                        value={formData.valid_days || ''}
+                        onChange={(e) => setFormData({ ...formData, valid_days: parseInt(e.target.value) || null })}
+                      />
+                    )}
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      {formData.total_count || 0}회권, 구매 시점부터 {formData.valid_days || 0}일 이내 사용
+                    </p>
+                  </div>
+                )}
+                
+                {!hasExpiryForCount && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    유효기간 제한 없이 횟수 소진 시까지 사용 가능
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
