@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Plus, Settings, Lock, Unlock, BookOpen } from 'lucide-react';
+import { Plus, Settings, Lock, Unlock, BookOpen, ToggleLeft, ToggleRight } from 'lucide-react';
 import { SectionHeader } from '../common/section-header';
 import { ClassMasterModal } from './class-masters/class-master-modal';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -23,11 +23,14 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   ADVANCED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
+type FilterTab = 'all' | 'active' | 'inactive';
+
 export function ClassMastersView({ academyId }: ClassMastersViewProps) {
   const [classMasters, setClassMasters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState<any>(null);
+  const [filterTab, setFilterTab] = useState<FilterTab>('active');
 
   useEffect(() => {
     loadData();
@@ -68,9 +71,53 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
     }
   };
 
+  const toggleClassActive = async (e: React.MouseEvent, classItem: any) => {
+    e.stopPropagation();
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    const newIsActive = !(classItem.is_active !== false);
+
+    try {
+      const { error } = await supabase
+        .from('classes')
+        .update({ is_active: newIsActive })
+        .eq('id', classItem.id);
+
+      if (error) throw error;
+      
+      // 로컬 상태 업데이트
+      setClassMasters((prev) =>
+        prev.map((c) =>
+          c.id === classItem.id ? { ...c, is_active: newIsActive } : c
+        )
+      );
+    } catch (error) {
+      console.error('Error toggling class active status:', error);
+      alert('활성화 상태 변경에 실패했습니다.');
+    }
+  };
+
+  // 필터링된 클래스 목록
+  const filteredClasses = classMasters.filter((classItem) => {
+    const isActive = classItem.is_active !== false; // null이나 true면 활성화로 간주
+    if (filterTab === 'active') return isActive;
+    if (filterTab === 'inactive') return !isActive;
+    return true; // 'all'
+  });
+
+  // 각 탭별 카운트
+  const activeCount = classMasters.filter((c) => c.is_active !== false).length;
+  const inactiveCount = classMasters.filter((c) => c.is_active === false).length;
+
   const getAccessConfigDisplay = (accessConfig: AccessConfig | null) => {
     if (!accessConfig) {
-      return { icon: Unlock, text: '제한 없음', color: 'text-gray-500' };
+      return { 
+        icon: Unlock, 
+        text: '일반 수강권', 
+        color: 'text-gray-500',
+        allowCoupon: false,
+      };
     }
     
     if (accessConfig.requiredGroup) {
@@ -78,18 +125,46 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
         icon: Lock,
         text: `${accessConfig.requiredGroup} 전용`,
         color: 'text-indigo-600 dark:text-indigo-400',
+        allowCoupon: accessConfig.allowCoupon === true,
       };
     }
     
-    if (!accessConfig.allowStandardCoupon) {
+    const allowRegular = accessConfig.allowRegularTicket !== false;
+    const allowCoupon = accessConfig.allowCoupon === true;
+    
+    if (!allowRegular && !allowCoupon) {
       return {
         icon: Lock,
-        text: '쿠폰 불가',
+        text: '전용만',
         color: 'text-red-600 dark:text-red-400',
+        allowCoupon: false,
       };
     }
     
-    return { icon: Unlock, text: '전체 허용', color: 'text-green-600 dark:text-green-400' };
+    if (allowRegular && allowCoupon) {
+      return { 
+        icon: Unlock, 
+        text: '수강권 + 쿠폰', 
+        color: 'text-green-600 dark:text-green-400',
+        allowCoupon: true,
+      };
+    }
+    
+    if (allowCoupon) {
+      return {
+        icon: Unlock,
+        text: '쿠폰 가능',
+        color: 'text-amber-600 dark:text-amber-400',
+        allowCoupon: true,
+      };
+    }
+    
+    return { 
+      icon: Unlock, 
+      text: '수강권만', 
+      color: 'text-blue-600 dark:text-blue-400',
+      allowCoupon: false,
+    };
   };
 
   if (loading) {
@@ -116,57 +191,125 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             클래스(반)는 수업의 기본 정의입니다. 여기서 정의한 클래스를 기반으로 스케줄(세션)을 생성합니다.
           </p>
+
+          {/* 활성화 필터 탭 */}
+          <div className="flex gap-2 mb-6 border-b dark:border-neutral-700 pb-3">
+            <button
+              onClick={() => setFilterTab('active')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                filterTab === 'active'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-700'
+              }`}
+            >
+              활성화 ({activeCount})
+            </button>
+            <button
+              onClick={() => setFilterTab('inactive')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                filterTab === 'inactive'
+                  ? 'bg-gray-600 text-white'
+                  : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-700'
+              }`}
+            >
+              비활성화 ({inactiveCount})
+            </button>
+            <button
+              onClick={() => setFilterTab('all')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                filterTab === 'all'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-700'
+              }`}
+            >
+              전체 ({classMasters.length})
+            </button>
+          </div>
           
-          {classMasters.length === 0 ? (
+          {filteredClasses.length === 0 ? (
             <div className="text-center py-12">
               <BookOpen className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
               <p className="text-gray-500 dark:text-gray-400 mb-4">
-                등록된 클래스가 없습니다.
+                {filterTab === 'active' && '활성화된 클래스가 없습니다.'}
+                {filterTab === 'inactive' && '비활성화된 클래스가 없습니다.'}
+                {filterTab === 'all' && '등록된 클래스가 없습니다.'}
               </p>
-              <button
-                onClick={() => {
-                  setSelectedClass(null);
-                  setShowModal(true);
-                }}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Plus size={16} /> 첫 클래스 만들기
-              </button>
+              {classMasters.length === 0 && (
+                <button
+                  onClick={() => {
+                    setSelectedClass(null);
+                    setShowModal(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus size={16} /> 첫 클래스 만들기
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {classMasters.map((classItem) => {
+              {filteredClasses.map((classItem) => {
                 const accessDisplay = getAccessConfigDisplay(classItem.access_config);
                 const AccessIcon = accessDisplay.icon;
+                const isActive = classItem.is_active !== false;
                 
                 return (
                   <div
                     key={classItem.id}
-                    className="border dark:border-neutral-700 rounded-xl p-4 hover:border-blue-300 dark:hover:border-blue-600 transition-colors bg-white dark:bg-neutral-900 cursor-pointer group"
+                    className={`border rounded-xl p-4 transition-colors cursor-pointer group ${
+                      isActive
+                        ? 'border-gray-200 dark:border-neutral-700 hover:border-blue-300 dark:hover:border-blue-600 bg-white dark:bg-neutral-900'
+                        : 'border-gray-200 dark:border-neutral-800 bg-gray-50 dark:bg-neutral-950 opacity-70'
+                    }`}
                     onClick={() => {
                       setSelectedClass(classItem);
                       setShowModal(true);
                     }}
                   >
                     <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h3 className="font-bold text-gray-900 dark:text-white text-lg">
-                          {classItem.title || '제목 없음'}
-                        </h3>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className={`font-bold text-lg ${
+                            isActive
+                              ? 'text-gray-900 dark:text-white'
+                              : 'text-gray-500 dark:text-gray-500'
+                          }`}>
+                            {classItem.title || '제목 없음'}
+                          </h3>
+                          {!isActive && (
+                            <span className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-neutral-700 text-gray-500 dark:text-gray-400 rounded">
+                              비활성화
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                           {classItem.instructors?.name_kr || classItem.instructors?.name_en || '강사 미지정'}
                         </p>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedClass(classItem);
-                          setShowModal(true);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-opacity"
-                      >
-                        <Settings size={18} />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {/* 활성화 토글 버튼 */}
+                        <button
+                          onClick={(e) => toggleClassActive(e, classItem)}
+                          className={`transition-colors ${
+                            isActive
+                              ? 'text-blue-500 hover:text-blue-600'
+                              : 'text-gray-400 hover:text-gray-500'
+                          }`}
+                          title={isActive ? '비활성화하기' : '활성화하기'}
+                        >
+                          {isActive ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedClass(classItem);
+                            setShowModal(true);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-opacity"
+                        >
+                          <Settings size={18} />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2 mb-3">
@@ -190,8 +333,8 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
                     <div className={`flex items-center gap-1.5 text-xs ${accessDisplay.color}`}>
                       <AccessIcon size={14} />
                       <span>{accessDisplay.text}</span>
-                      {classItem.access_config?.allowStandardCoupon && classItem.access_config?.requiredGroup && (
-                        <span className="text-gray-400">| 쿠폰 가능</span>
+                      {accessDisplay.allowCoupon && (
+                        <span className="text-amber-500 ml-1">🎫</span>
                       )}
                     </div>
 

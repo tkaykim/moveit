@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Ticket, Info } from 'lucide-react';
+import { X, Ticket, Info, ToggleLeft, ToggleRight } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { InstructorSelector } from '../classes/instructor-selector';
 
@@ -32,7 +32,9 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
     instructor_id: '',
     hall_id: '',
     max_students: 20,
-    allowStandardCoupon: true,
+    allowRegularTicket: true,
+    allowCoupon: false,
+    is_active: true,
   });
   const [halls, setHalls] = useState<any[]>([]);
   const [linkedTickets, setLinkedTickets] = useState<LinkedTicket[]>([]);
@@ -51,7 +53,9 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         instructor_id: classData.instructor_id || '',
         hall_id: classData.hall_id || '',
         max_students: classData.max_students || 20,
-        allowStandardCoupon: classData.access_config?.allowStandardCoupon !== false,
+        allowRegularTicket: classData.access_config?.allowRegularTicket !== false,
+        allowCoupon: classData.access_config?.allowCoupon === true,
+        is_active: classData.is_active !== false,
       });
       loadLinkedTickets(classData.id);
     }
@@ -118,9 +122,11 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         instructor_id: formData.instructor_id || null,
         hall_id: formData.hall_id || null,
         max_students: formData.max_students,
+        is_active: formData.is_active,
         access_config: {
           requiredGroup: null,
-          allowStandardCoupon: formData.allowStandardCoupon,
+          allowRegularTicket: formData.allowRegularTicket,
+          allowCoupon: formData.allowCoupon,
         },
         start_time: null,
         end_time: null,
@@ -196,6 +202,39 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* 활성화 상태 토글 */}
+          <div className={`flex items-center justify-between p-3 rounded-lg ${
+            formData.is_active 
+              ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' 
+              : 'bg-gray-100 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700'
+          }`}>
+            <div>
+              <span className={`font-medium ${
+                formData.is_active
+                  ? 'text-blue-700 dark:text-blue-300'
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}>
+                {formData.is_active ? '활성화 상태' : '비활성화 상태'}
+              </span>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {formData.is_active 
+                  ? '이 클래스로 스케줄을 생성할 수 있습니다.' 
+                  : '비활성화된 클래스는 스케줄 생성 목록에서 숨겨집니다.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
+              className={`transition-colors ${
+                formData.is_active
+                  ? 'text-blue-600 dark:text-blue-400 hover:text-blue-700'
+                  : 'text-gray-400 dark:text-gray-500 hover:text-gray-500'
+              }`}
+            >
+              {formData.is_active ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
+            </button>
+          </div>
+
           {/* 기본 정보 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -359,21 +398,47 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
 
           {/* 수강 권한 설정 */}
           <div className="border-t dark:border-neutral-800 pt-4 mt-4">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="allowStandardCoupon"
-                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
-                checked={formData.allowStandardCoupon}
-                onChange={(e) => setFormData({ ...formData, allowStandardCoupon: e.target.checked })}
-              />
-              <label htmlFor="allowStandardCoupon" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-                일반 수강권 사용 허용
-              </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              수강 권한 설정
+            </label>
+            <div className="space-y-3">
+              {/* 일반 수강권 허용 */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="allowRegularTicket"
+                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                  checked={formData.allowRegularTicket}
+                  onChange={(e) => setFormData({ ...formData, allowRegularTicket: e.target.checked })}
+                />
+                <label htmlFor="allowRegularTicket" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                  일반 수강권 허용
+                </label>
+              </div>
+              
+              {/* 쿠폰 허용 */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="allowCoupon"
+                  className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
+                  checked={formData.allowCoupon}
+                  onChange={(e) => setFormData({ ...formData, allowCoupon: e.target.checked })}
+                />
+                <label htmlFor="allowCoupon" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                  쿠폰 허용
+                </label>
+              </div>
             </div>
-            {!formData.allowStandardCoupon && (
-              <p className="text-xs text-red-500 font-medium mt-2">
-                ※ 체크 해제 시, 전용 수강권이 없는 회원은 이 수업을 신청할 수 없습니다.
+            
+            {!formData.allowRegularTicket && !formData.allowCoupon && (
+              <p className="text-xs text-red-500 font-medium mt-3">
+                ※ 둘 다 해제 시, 이 클래스와 연결된 전용 수강권 보유자만 신청할 수 있습니다.
+              </p>
+            )}
+            {formData.allowCoupon && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-3">
+                ※ 쿠폰 허용 시, 쿠폰 보유자도 이 수업을 신청할 수 있습니다.
               </p>
             )}
           </div>

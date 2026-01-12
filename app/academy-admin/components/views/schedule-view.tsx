@@ -5,6 +5,7 @@ import { Plus, ChevronLeft, ChevronRight, Repeat, Zap, Lock } from 'lucide-react
 import { SectionHeader } from '../common/section-header';
 import { RecurringScheduleModal } from './schedule/recurring-schedule-modal';
 import { SessionModal } from './schedule/session-modal';
+import { DailyScheduleModal } from './schedule/daily-schedule-modal';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { formatKSTTime } from '@/lib/utils/kst-time';
 
@@ -39,8 +40,10 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
   const [loading, setLoading] = useState(true);
   const [showRecurringModal, setShowRecurringModal] = useState(false);
   const [showSessionModal, setShowSessionModal] = useState(false);
+  const [showDailyModal, setShowDailyModal] = useState(false);
   const [selectedSession, setSelectedSession] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [clickedDate, setClickedDate] = useState<Date | null>(null);
   const [selectedHallFilter, setSelectedHallFilter] = useState<string>('all');
 
   // 현재 월의 모든 날짜 배열 생성
@@ -298,9 +301,13 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
                   return (
                     <div
                       key={date.toISOString()}
-                      className={`min-h-[100px] sm:min-h-[150px] border border-gray-200 dark:border-neutral-700 rounded-lg p-1 sm:p-2 ${
+                      className={`min-h-[100px] sm:min-h-[150px] border border-gray-200 dark:border-neutral-700 rounded-lg p-1 sm:p-2 cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 transition-colors ${
                         isToday ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' : 'bg-white dark:bg-neutral-900'
                       }`}
+                      onClick={() => {
+                        setClickedDate(date);
+                        setShowDailyModal(true);
+                      }}
                     >
                       <div className={`text-xs sm:text-sm font-bold mb-1 ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>
                         {date.getDate()}
@@ -315,7 +322,8 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
                             <div
                               key={session.id}
                               className={`${color.bg} ${color.border} p-1.5 sm:p-2 rounded border text-left hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden group`}
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setSelectedSession(session);
                                 setShowSessionModal(true);
                               }}
@@ -366,6 +374,20 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
           onClose={() => {
             setShowSessionModal(false);
             setSelectedSession(null);
+            loadData();
+          }}
+        />
+      )}
+
+      {showDailyModal && clickedDate && (
+        <DailyScheduleModal
+          academyId={academyId}
+          selectedDate={clickedDate}
+          classMasters={classMasters}
+          halls={halls}
+          onClose={() => {
+            setShowDailyModal(false);
+            setClickedDate(null);
             loadData();
           }}
         />

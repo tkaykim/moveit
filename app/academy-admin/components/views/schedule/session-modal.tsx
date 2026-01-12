@@ -155,11 +155,15 @@ export function SessionModal({ session, onClose }: SessionModalProps) {
               ) : (
                 <div className="text-green-600 dark:text-green-400">그룹 제한 없음</div>
               )}
-              <div>
-                {accessConfig?.allowStandardCoupon !== false ? (
-                  <span className="text-green-600 dark:text-green-400">🎫 일반 쿠폰 가능</span>
-                ) : (
-                  <span className="text-red-600 dark:text-red-400">❌ 쿠폰 불가</span>
+              <div className="flex gap-2">
+                {accessConfig?.allowRegularTicket !== false && (
+                  <span className="text-blue-600 dark:text-blue-400">🎫 수강권</span>
+                )}
+                {accessConfig?.allowCoupon === true && (
+                  <span className="text-amber-600 dark:text-amber-400">🏷️ 쿠폰</span>
+                )}
+                {accessConfig?.allowRegularTicket === false && accessConfig?.allowCoupon !== true && (
+                  <span className="text-red-600 dark:text-red-400">🔒 전용만</span>
                 )}
               </div>
             </div>

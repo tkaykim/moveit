@@ -9,7 +9,15 @@ export type Json =
 // 클래스 접근 제어 설정 타입
 export interface AccessConfig {
   requiredGroup: string | null;  // 필수 수강권 그룹 (null이면 제한 없음)
-  allowStandardCoupon: boolean;  // 일반 쿠폰(general) 허용 여부
+  allowRegularTicket: boolean;   // 일반 수강권 허용 여부 (기존 allowStandardCoupon 대체)
+  allowCoupon: boolean;          // 쿠폰 허용 여부
+}
+
+// 정규 수강생 할인 설정 타입 (팝업/워크샵용)
+export interface DiscountConfig {
+  enabled: boolean;              // 할인 활성화 여부
+  target_class_ids: string[];    // 할인 대상 정규 클래스 ID 목록
+  discount_amount: number;       // 할인 금액
 }
 
 export type Database = {
@@ -336,10 +344,12 @@ export type Database = {
           hall_id: string | null
           id: string
           instructor_id: string | null
+          is_active: boolean | null
           is_canceled: boolean | null
           max_students: number | null
           present_students: number | null
           price: number | null
+          discount_config: DiscountConfig | null
           song: string | null
           start_time: string | null
           status: string | null
@@ -350,6 +360,7 @@ export type Database = {
         Insert: {
           academy_id: string
           access_config?: AccessConfig | null
+          discount_config?: DiscountConfig | null
           additional_salary_per_student?: number | null
           base_salary?: number
           base_student_count?: number | null
@@ -363,6 +374,7 @@ export type Database = {
           hall_id?: string | null
           id?: string
           instructor_id?: string | null
+          is_active?: boolean | null
           is_canceled?: boolean | null
           max_students?: number | null
           present_students?: number | null
@@ -377,6 +389,7 @@ export type Database = {
         Update: {
           academy_id?: string
           access_config?: AccessConfig | null
+          discount_config?: DiscountConfig | null
           additional_salary_per_student?: number | null
           base_salary?: number
           base_student_count?: number | null
@@ -390,6 +403,7 @@ export type Database = {
           hall_id?: string | null
           id?: string
           instructor_id?: string | null
+          is_active?: boolean | null
           is_canceled?: boolean | null
           max_students?: number | null
           present_students?: number | null
@@ -1070,6 +1084,7 @@ export type Database = {
           class_id: string | null
           created_at: string | null
           id: string
+          is_coupon: boolean
           is_general: boolean
           is_on_sale: boolean | null
           name: string
@@ -1084,6 +1099,7 @@ export type Database = {
           class_id?: string | null
           created_at?: string | null
           id?: string
+          is_coupon?: boolean
           is_general?: boolean
           is_on_sale?: boolean | null
           name: string
@@ -1098,6 +1114,7 @@ export type Database = {
           class_id?: string | null
           created_at?: string | null
           id?: string
+          is_coupon?: boolean
           is_general?: boolean
           is_on_sale?: boolean | null
           name?: string
