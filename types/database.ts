@@ -6,6 +6,12 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+// 클래스 접근 제어 설정 타입
+export interface AccessConfig {
+  requiredGroup: string | null;  // 필수 수강권 그룹 (null이면 제한 없음)
+  allowStandardCoupon: boolean;  // 일반 쿠폰(general) 허용 여부
+}
+
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
@@ -316,6 +322,7 @@ export type Database = {
       classes: {
         Row: {
           academy_id: string
+          access_config: AccessConfig | null
           additional_salary_per_student: number | null
           base_salary: number
           base_student_count: number | null
@@ -342,6 +349,7 @@ export type Database = {
         }
         Insert: {
           academy_id: string
+          access_config?: AccessConfig | null
           additional_salary_per_student?: number | null
           base_salary?: number
           base_student_count?: number | null
@@ -368,6 +376,7 @@ export type Database = {
         }
         Update: {
           academy_id?: string
+          access_config?: AccessConfig | null
           additional_salary_per_student?: number | null
           base_salary?: number
           base_student_count?: number | null
@@ -824,6 +833,7 @@ export type Database = {
           hall_id: string | null
           id: string
           instructor_id: string | null
+          interval_weeks: number | null
           is_active: boolean | null
           max_students: number | null
           start_date: string
@@ -840,6 +850,7 @@ export type Database = {
           hall_id?: string | null
           id?: string
           instructor_id?: string | null
+          interval_weeks?: number | null
           is_active?: boolean | null
           max_students?: number | null
           start_date: string
@@ -856,6 +867,7 @@ export type Database = {
           hall_id?: string | null
           id?: string
           instructor_id?: string | null
+          interval_weeks?: number | null
           is_active?: boolean | null
           max_students?: number | null
           start_date?: string
@@ -1054,6 +1066,7 @@ export type Database = {
       tickets: {
         Row: {
           academy_id: string | null
+          access_group: string | null
           class_id: string | null
           created_at: string | null
           id: string
@@ -1067,6 +1080,7 @@ export type Database = {
         }
         Insert: {
           academy_id?: string | null
+          access_group?: string | null
           class_id?: string | null
           created_at?: string | null
           id?: string
@@ -1080,6 +1094,7 @@ export type Database = {
         }
         Update: {
           academy_id?: string | null
+          access_group?: string | null
           class_id?: string | null
           created_at?: string | null
           id?: string

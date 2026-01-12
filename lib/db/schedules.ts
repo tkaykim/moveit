@@ -95,3 +95,120 @@ export async function updateSchedule(id: string, updates: Database['public']['Ta
   return data;
 }
 
+/**
+ * 학원의 스케줄(세션) 목록 조회 - 달력 뷰용
+ */
+export async function getSchedulesByAcademy(
+  academyId: string,
+  startDate: string,
+  endDate: string
+) {
+  const supabase = await createClient() as any;
+  
+  // 먼저 해당 학원의 클래스 ID 목록을 가져옵니다
+  const { data: classes, error: classError } = await supabase
+    .from('classes')
+    .select('id')
+    .eq('academy_id', academyId);
+  
+  if (classError) throw classError;
+  
+  const classIds = classes?.map((c: any) => c.id) || [];
+  
+  if (classIds.length === 0) {
+    return [];
+  }
+  
+  const { data, error } = await supabase
+    .from('schedules')
+    .select(`
+      *,
+      classes (
+        id,
+        title,
+        genre,
+        difficulty_level,
+        access_config,
+        class_type
+      ),
+      instructors (
+        id,
+        name_kr,
+        name_en
+      ),
+      halls (
+        id,
+        name
+      )
+    `)
+    .in('class_id', classIds)
+    .eq('is_canceled', false)
+    .gte('start_time', startDate)
+    .lte('start_time', endDate)
+    .order('start_time', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * 세션 취소
+ */
+export async function cancelSchedule(id: string) {
+  const supabase = await createClient() as any;
+  const { data, error } = await supabase
+    .from('schedules')
+    .update({ is_canceled: true })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * 세션 삭제
+ */
+export async function deleteSchedule(id: string) {
+  const supabase = await createClient() as any;
+  const { error } = await supabase
+    .from('schedules')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+/**
+ * 단일 세션(팝업/특강) 생성
+ */
+export async function createSingleSession(data: {
+  class_id: string;
+  start_time: string;
+  end_time: string;
+  hall_id?: string | null;
+  instructor_id?: string | null;
+  max_students?: number;
+}) {
+  const supabase = await createClient() as any;
+  const { data: result, error } = await supabase
+    .from('schedules')
+    .insert({
+      class_id: data.class_id,
+      start_time: data.start_time,
+      end_time: data.end_time,
+      hall_id: data.hall_id || null,
+      instructor_id: data.instructor_id || null,
+      max_students: data.max_students || 20,
+      current_students: 0,
+      is_canceled: false,
+      recurring_schedule_id: null, // 단일 세션은 반복 규칙 없음
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return result;
+}
+

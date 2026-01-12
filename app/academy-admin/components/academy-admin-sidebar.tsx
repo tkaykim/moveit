@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Users,
   Calendar,
+  CalendarDays,
   ClipboardList,
   UserCheck,
   MessageSquare,
@@ -14,6 +15,7 @@ import {
   CreditCard,
   Settings,
   X,
+  BookOpen,
   type LucideIcon,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -57,11 +59,12 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
   const menuItems = [
     { icon: LayoutDashboard, label: '대시보드', href: `/academy-admin/${academyId}` },
     { icon: Users, label: '학생 관리', href: `/academy-admin/${academyId}/students` },
-    { icon: Calendar, label: '클래스/시간표', href: `/academy-admin/${academyId}/classes` },
+    { icon: BookOpen, label: '클래스(반) 관리', href: `/academy-admin/${academyId}/class-masters` },
+    { icon: CalendarDays, label: '스케줄 관리', href: `/academy-admin/${academyId}/schedule` },
+    { icon: Ticket, label: '수강권/상품', href: `/academy-admin/${academyId}/products` },
     { icon: ClipboardList, label: '업무/수업 일지', href: `/academy-admin/${academyId}/logs` },
     { icon: UserCheck, label: '강사 관리', href: `/academy-admin/${academyId}/instructors` },
     { icon: MessageSquare, label: '상담 관리', href: `/academy-admin/${academyId}/consultations` },
-    { icon: Ticket, label: '수강권/상품', href: `/academy-admin/${academyId}/products` },
     { icon: CreditCard, label: '매출/정산', href: `/academy-admin/${academyId}/revenue` },
     { icon: Settings, label: '설정', href: `/academy-admin/${academyId}/settings` },
   ];
@@ -165,7 +168,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
 
         <nav className="flex-1 overflow-y-auto py-6 space-y-1">
           <div className="px-6 pt-6 pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
-            운영 관리
+            수업 관리
           </div>
           {menuItems.slice(0, 5).map((item) => (
             <SidebarItem
@@ -179,9 +182,23 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
           ))}
 
           <div className="px-6 pt-6 pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+            운영 관리
+          </div>
+          {menuItems.slice(5, 8).map((item) => (
+            <SidebarItem
+              key={item.href}
+              icon={item.icon}
+              label={item.label}
+              href={item.href}
+              active={isActive(item.href)}
+              onClick={handleLinkClick}
+            />
+          ))}
+
+          <div className="px-6 pt-6 pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             매출 및 설정
           </div>
-          {menuItems.slice(5).map((item) => (
+          {menuItems.slice(8).map((item) => (
             <SidebarItem
               key={item.href}
               icon={item.icon}
