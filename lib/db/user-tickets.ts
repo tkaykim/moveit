@@ -78,7 +78,7 @@ export async function getAvailableUserTickets(userId: string, academyId?: string
  * @param userTicketId user_tickets.id
  * @param count 차감할 횟수 (기본 1)
  */
-export async function useUserTicket(userTicketId: string, count: number = 1) {
+export async function consumeUserTicket(userTicketId: string, count: number = 1) {
   const supabase = await createClient() as any;
 
   // 현재 수강권 정보 조회

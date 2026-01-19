@@ -52,9 +52,7 @@ export async function updateHall(id: string, updates: Database['public']['Tables
 
   if (error) throw error;
   return data;
-}
-
-export async function deleteHall(id: string) {
+}export async function deleteHall(id: string) {
   const supabase = await createClient() as any;
   const { error } = await supabase
     .from('halls')

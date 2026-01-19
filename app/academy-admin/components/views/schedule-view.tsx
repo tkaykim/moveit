@@ -85,13 +85,17 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
         .order('name', { ascending: true });
       setHalls(hallsData || []);
 
-      // 클래스 마스터 목록
+      // 클래스 마스터 목록 (활성화되고 취소되지 않은 클래스만)
       const { data: classesData } = await supabase
         .from('classes')
         .select('id, title, genre, difficulty_level, access_config, instructor_id, instructors(name_kr, name_en)')
         .eq('academy_id', academyId)
-        .eq('is_canceled', false);
-      setClassMasters(classesData || []);
+        .eq('is_canceled', false)
+        .or('is_active.is.null,is_active.eq.true');
+      
+      const validClassMasters = classesData || [];
+      setClassMasters(validClassMasters);
+      const classIds = validClassMasters.map((c: any) => c.id);
 
       // 이번 달의 시작일과 종료일
       const year = selectedDate.getFullYear();
@@ -99,42 +103,43 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
       const startOfMonth = new Date(year, month, 1);
       const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
-      // 세션(schedules) 조회
-      const { data: sessionsData, error } = await supabase
-        .from('schedules')
-        .select(`
-          *,
-          classes (
-            id,
-            title,
-            genre,
-            difficulty_level,
-            access_config,
-            class_type
-          ),
-          instructors (
-            id,
-            name_kr,
-            name_en
-          ),
-          halls (
-            id,
-            name
-          )
-        `)
-        .eq('is_canceled', false)
-        .gte('start_time', startOfMonth.toISOString())
-        .lte('start_time', endOfMonth.toISOString())
-        .order('start_time', { ascending: true });
+      // 해당 학원의 클래스가 있을 때만 스케줄 조회
+      if (classIds.length === 0) {
+        setSessions([]);
+      } else {
+        // 세션(schedules) 조회 - 해당 학원의 클래스 ID로 필터링
+        const { data: sessionsData, error } = await supabase
+          .from('schedules')
+          .select(`
+            *,
+            classes (
+              id,
+              title,
+              genre,
+              difficulty_level,
+              access_config,
+              class_type
+            ),
+            instructors (
+              id,
+              name_kr,
+              name_en
+            ),
+            halls (
+              id,
+              name
+            )
+          `)
+          .in('class_id', classIds)
+          .eq('is_canceled', false)
+          .gte('start_time', startOfMonth.toISOString())
+          .lte('start_time', endOfMonth.toISOString())
+          .order('start_time', { ascending: true });
 
-      if (error) throw error;
-      
-      // academy_id로 필터링 (classes를 통해)
-      const filteredSessions = (sessionsData || []).filter((session: any) => {
-        return classMasters.some((c: any) => c.id === session.class_id);
-      });
-      
-      setSessions(sessionsData || []);
+        if (error) throw error;
+        
+        setSessions(sessionsData || []);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -371,6 +376,7 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
       {showSessionModal && selectedSession && (
         <SessionModal
           session={selectedSession}
+          academyId={academyId}
           onClose={() => {
             setShowSessionModal(false);
             setSelectedSession(null);

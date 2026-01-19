@@ -194,7 +194,13 @@ export function DailyScheduleModal({
                 return (
                   <div
                     key={session.id}
-                    className="bg-gray-50 dark:bg-neutral-800 rounded-xl p-4 hover:shadow-md transition-shadow"
+                    role="button"
+                    tabIndex={0}
+                    className="bg-gray-50 dark:bg-neutral-800 rounded-xl p-4 hover:shadow-md transition-shadow cursor-pointer hover:bg-gray-100 dark:hover:bg-neutral-700"
+                    onClick={() => {
+                      setSelectedSession(session);
+                      setShowEditModal(true);
+                    }}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -254,7 +260,8 @@ export function DailyScheduleModal({
                       {/* 액션 버튼 */}
                       <div className="flex gap-2 ml-4">
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedSession(session);
                             setShowEditModal(true);
                           }}
@@ -264,7 +271,10 @@ export function DailyScheduleModal({
                           <Edit2 size={18} />
                         </button>
                         <button
-                          onClick={() => setDeleteConfirm(session.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteConfirm(session.id);
+                          }}
                           className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                           title="삭제"
                         >
@@ -275,19 +285,28 @@ export function DailyScheduleModal({
 
                     {/* 삭제 확인 */}
                     {deleteConfirm === session.id && (
-                      <div className="mt-3 pt-3 border-t dark:border-neutral-700 flex items-center justify-between">
+                      <div 
+                        className="mt-3 pt-3 border-t dark:border-neutral-700 flex items-center justify-between"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <span className="text-sm text-red-600 dark:text-red-400">
                           정말 삭제하시겠습니까?
                         </span>
                         <div className="flex gap-2">
                           <button
-                            onClick={() => setDeleteConfirm(null)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirm(null);
+                            }}
                             className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded"
                           >
                             취소
                           </button>
                           <button
-                            onClick={() => handleDelete(session.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(session.id);
+                            }}
                             className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
                           >
                             삭제
@@ -331,6 +350,7 @@ export function DailyScheduleModal({
       {showEditModal && selectedSession && (
         <SessionModal
           session={selectedSession}
+          academyId={academyId}
           onClose={() => {
             setShowEditModal(false);
             setSelectedSession(null);

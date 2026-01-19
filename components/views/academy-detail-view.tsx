@@ -2,13 +2,11 @@
 
 import Image from 'next/image';
 import { ChevronLeft, Heart, X } from 'lucide-react';
-import { LevelBadge } from '@/components/common/level-badge';
 import { ClassPreviewModal } from '@/components/modals/class-preview-modal';
-import { AddClassModal } from '@/components/modals/add-class-modal';
 import { TicketPurchaseModal } from '@/components/modals/ticket-purchase-modal';
-import { BookingConfirmModal } from '@/components/modals/booking-confirm-modal';
-import { Academy, ClassInfo, ViewState } from '@/types';
+import { Academy, ClassInfo } from '@/types';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { ThemeToggle } from '@/components/common/theme-toggle';
 import { AcademyWeeklyScheduleView } from './academy-weekly-schedule-view';
@@ -22,29 +20,17 @@ interface AcademyDetailViewProps {
 }
 
 export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetailViewProps) => {
+  const router = useRouter();
   const [previewClass, setPreviewClass] = useState<(ClassInfo & { time?: string }) | null>(null);
   const [activeTab, setActiveTab] = useState<'home' | 'schedule' | 'reviews'>('schedule');
   const [scheduleViewMode, setScheduleViewMode] = useState<'week' | 'month'>('week');
-  const [showAddClassModal, setShowAddClassModal] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<string>('');
-  const [selectedTime, setSelectedTime] = useState<string>('');
-  const [selectedHallId, setSelectedHallId] = useState<string | null>(null);
   const [recentVideos, setRecentVideos] = useState<any[]>([]);
   const [videosLoading, setVideosLoading] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; thumbnail?: string } | null>(null);
   const [showTicketPurchaseModal, setShowTicketPurchaseModal] = useState(false);
-  const [showBookingConfirmModal, setShowBookingConfirmModal] = useState(false);
-  const [selectedClassForBooking, setSelectedClassForBooking] = useState<(ClassInfo & { time?: string; schedule_id?: string }) | null>(null);
   const { user } = useAuth();
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
-    const now = new Date();
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay() + 1); // 월요일
-    startOfWeek.setHours(0, 0, 0, 0);
-    return startOfWeek;
-  });
   const homeRef = useRef<HTMLDivElement>(null);
   const scheduleRef = useRef<HTMLDivElement>(null);
   const reviewsRef = useRef<HTMLDivElement>(null);
@@ -205,24 +191,16 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
       alert("이미 마감된 클래스입니다.");
       return;
     }
-    // 프리뷰 모달을 닫고 예약 확인 모달을 연다
+    // 프리뷰 모달을 닫고 예약 페이지로 이동
     setPreviewClass(null);
-    setSelectedClassForBooking({
-      ...classInfo,
-      schedule_id: classInfo.schedule_id,
-    });
-    setShowBookingConfirmModal(true);
-  };
-
-  const handleAddClassClick = (day: string, time: string, hallId?: string | null) => {
-    setSelectedDay(day);
-    setSelectedTime(time);
-    setSelectedHallId(hallId || null);
-    setShowAddClassModal(true);
-  };
-
-  const handleAddClassSubmit = () => {
-    // 스케줄 뷰가 자동으로 새로고침됨
+    
+    // schedule_id가 있으면 새 예약 페이지로 이동
+    if (classInfo.schedule_id) {
+      router.push(`/book/session/${classInfo.schedule_id}`);
+    } else {
+      // schedule_id가 없는 경우 (구형 클래스) - 기존 콜백 사용
+      onClassBook(classInfo);
+    }
   };
 
   // 유튜브 URL을 embed URL로 변환
@@ -470,7 +448,6 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
             <AcademyWeeklyScheduleView
               academyId={(academy as any).academyId || academy.id}
               onClassClick={handleClassClick}
-              onAddClassClick={handleAddClassClick}
             />
           ) : (
             <AcademyMonthlyScheduleView
@@ -493,19 +470,6 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
         onClose={() => setPreviewClass(null)}
         onBook={handleBook}
       />
-      <AddClassModal
-        isOpen={showAddClassModal}
-        onClose={() => {
-          setShowAddClassModal(false);
-          setSelectedHallId(null);
-        }}
-        onSubmit={handleAddClassSubmit}
-        academy={academy}
-        day={selectedDay}
-        time={selectedTime}
-        weekStartDate={currentWeekStart}
-        defaultHallId={selectedHallId}
-      />
       <TicketPurchaseModal
         isOpen={showTicketPurchaseModal}
         onClose={() => setShowTicketPurchaseModal(false)}
@@ -513,18 +477,6 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
         academyName={academy.name}
         onPurchaseComplete={() => {
           // 구매 완료 후 처리
-        }}
-      />
-      <BookingConfirmModal
-        isOpen={showBookingConfirmModal}
-        onClose={() => {
-          setShowBookingConfirmModal(false);
-          setSelectedClassForBooking(null);
-        }}
-        classInfo={selectedClassForBooking}
-        academyId={(academy as any).academyId || academy.id}
-        onBookingComplete={() => {
-          // 예약 완료 후 처리
         }}
       />
       {/* 유튜브 영상 모달 */}

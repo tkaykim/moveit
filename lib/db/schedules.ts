@@ -105,11 +105,13 @@ export async function getSchedulesByAcademy(
 ) {
   const supabase = await createClient() as any;
   
-  // 먼저 해당 학원의 클래스 ID 목록을 가져옵니다
+  // 먼저 해당 학원의 활성화된 클래스 ID 목록을 가져옵니다
   const { data: classes, error: classError } = await supabase
     .from('classes')
     .select('id')
-    .eq('academy_id', academyId);
+    .eq('academy_id', academyId)
+    .eq('is_canceled', false)
+    .or('is_active.is.null,is_active.eq.true');
   
   if (classError) throw classError;
   
@@ -211,4 +213,3 @@ export async function createSingleSession(data: {
   if (error) throw error;
   return result;
 }
-

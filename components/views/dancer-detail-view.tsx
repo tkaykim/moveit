@@ -4,10 +4,10 @@ import Image from 'next/image';
 import { ChevronLeft, User, Instagram, Heart, Ticket, Calendar, Clock, MapPin } from 'lucide-react';
 import { Dancer, ClassInfo } from '@/types';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { TicketPurchaseModal } from '@/components/modals/ticket-purchase-modal';
-import { BookingConfirmModal } from '@/components/modals/booking-confirm-modal';
 
 interface DancerDetailViewProps {
   dancer: Dancer | null;
@@ -15,6 +15,7 @@ interface DancerDetailViewProps {
 }
 
 export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
+  const router = useRouter();
   const [schedules, setSchedules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
@@ -22,8 +23,6 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
   const [academyIds, setAcademyIds] = useState<string[]>([]);
   const [selectedAcademyId, setSelectedAcademyId] = useState<string | null>(null);
   const [showTicketPurchaseModal, setShowTicketPurchaseModal] = useState(false);
-  const [showBookingConfirmModal, setShowBookingConfirmModal] = useState(false);
-  const [selectedClassForBooking, setSelectedClassForBooking] = useState<(ClassInfo & { time?: string; schedule_id?: string }) | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -238,24 +237,8 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
                 const academy = classData.academies || { name: '학원 정보 없음' };
 
                 const handleBookSchedule = () => {
-                  const classInfo: ClassInfo & { time?: string; schedule_id?: string } = {
-                    id: classData.id || schedule.class_id,
-                    schedule_id: schedule.id,
-                    instructor: dancer.name,
-                    genre: dancer.genre || 'ALL',
-                    level: 'All Level',
-                    status: 'AVAILABLE',
-                    price: 0,
-                    class_title: classData.title || `${dancer.genre || 'ALL'} 클래스`,
-                    time: time,
-                    academy: {
-                      id: academy.id || '',
-                      name: academy.name_kr || academy.name_en || academy.name || '학원 정보 없음',
-                    },
-                  };
-                  setSelectedClassForBooking(classInfo);
-                  setSelectedAcademyId(classData.academy_id);
-                  setShowBookingConfirmModal(true);
+                  // 새 예약 페이지로 이동
+                  router.push(`/book/session/${schedule.id}`);
                 };
 
                 const dateStr = startTime.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
@@ -303,22 +286,6 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
           academyId={selectedAcademyId}
           onPurchaseComplete={() => {
             // 구매 완료 후 처리
-          }}
-        />
-      )}
-
-      {/* 예약 확인 모달 */}
-      {selectedAcademyId && (
-        <BookingConfirmModal
-          isOpen={showBookingConfirmModal}
-          onClose={() => {
-            setShowBookingConfirmModal(false);
-            setSelectedClassForBooking(null);
-          }}
-          classInfo={selectedClassForBooking}
-          academyId={selectedAcademyId}
-          onBookingComplete={() => {
-            // 예약 완료 후 처리
           }}
         />
       )}

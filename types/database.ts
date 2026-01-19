@@ -295,8 +295,11 @@ export type Database = {
           id: string
           schedule_id: string | null
           status: string | null
-          user_id: string
+          user_id: string | null
           user_ticket_id: string | null
+          guest_name: string | null
+          guest_phone: string | null
+          payment_status: string | null
         }
         Insert: {
           class_id?: string | null
@@ -305,8 +308,11 @@ export type Database = {
           id?: string
           schedule_id?: string | null
           status?: string | null
-          user_id: string
+          user_id?: string | null
           user_ticket_id?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
+          payment_status?: string | null
         }
         Update: {
           class_id?: string | null
@@ -315,8 +321,11 @@ export type Database = {
           id?: string
           schedule_id?: string | null
           status?: string | null
-          user_id?: string
+          user_id?: string | null
           user_ticket_id?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
+          payment_status?: string | null
         }
         Relationships: [
           {

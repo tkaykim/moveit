@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { useUserTicket, getAvailableUserTickets, updateUserTicket } from '@/lib/db/user-tickets';
+import { consumeUserTicket, getAvailableUserTickets, updateUserTicket } from '@/lib/db/user-tickets';
 import { Database } from '@/types/database';
 
 /**
@@ -234,11 +234,12 @@ export async function POST(request: Request) {
     }
 
     // 수강권 차감
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const useResult = await useUserTicket(selectedUserTicketId, 1);
-    if (!useResult.success) {
+    try {
+      await consumeUserTicket(selectedUserTicketId, 1);
+    } catch (ticketError: any) {
+      console.error('Ticket usage error:', ticketError);
       return NextResponse.json(
-        { error: useResult.error || '수강권 차감에 실패했습니다.' },
+        { error: ticketError.message || '수강권 차감에 실패했습니다.' },
         { status: 400 }
       );
     }
@@ -250,6 +251,7 @@ export async function POST(request: Request) {
       schedule_id: scheduleId || null,
       user_ticket_id: selectedUserTicketId,
       status: 'CONFIRMED',
+      payment_status: 'PAID',
     };
 
     const { data: booking, error: bookingError } = await (supabase as any)
@@ -259,6 +261,7 @@ export async function POST(request: Request) {
       .single();
 
     if (bookingError) {
+      console.error('Booking creation error:', bookingError);
       // 예약 생성 실패 시 수강권 차감 롤백
       try {
         const ticketBeforeUse = await (supabase as any)
@@ -284,6 +287,28 @@ export async function POST(request: Request) {
         { error: '예약 생성에 실패했습니다.' },
         { status: 500 }
       );
+    }
+
+    // 스케줄이 있으면 current_students 증가
+    if (scheduleId) {
+      await (supabase as any)
+        .from('schedules')
+        .update({ current_students: (supabase as any).rpc('increment_current_students', { row_id: scheduleId }) })
+        .eq('id', scheduleId);
+      
+      // 간단한 방법으로 현재 학생 수 증가
+      const { data: currentSchedule } = await (supabase as any)
+        .from('schedules')
+        .select('current_students')
+        .eq('id', scheduleId)
+        .single();
+      
+      if (currentSchedule) {
+        await (supabase as any)
+          .from('schedules')
+          .update({ current_students: (currentSchedule.current_students || 0) + 1 })
+          .eq('id', scheduleId);
+      }
     }
 
     return NextResponse.json({

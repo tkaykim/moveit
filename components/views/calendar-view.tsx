@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { ClassInfo, Academy } from '@/types';
@@ -110,6 +111,7 @@ function buildClassGrid(classes: any[]) {
 }
 
 export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps) => {
+  const router = useRouter();
   const [classes, setClasses] = useState<any[]>([]);
   const [scheduleGrid, setScheduleGrid] = useState<Record<string, (ClassInfo & { academy?: Academy; time?: string })[]>>({
     MON: [], TUE: [], WED: [], THU: [], FRI: [], SAT: [], SUN: []
@@ -278,7 +280,11 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
       return;
     }
     setPreviewClass(null);
-    if (onClassBook) {
+    
+    // schedule_id가 있으면 새 예약 페이지로 이동
+    if (classInfo.schedule_id) {
+      router.push(`/book/session/${classInfo.schedule_id}`);
+    } else if (onClassBook) {
       onClassBook(classInfo);
     }
   };
