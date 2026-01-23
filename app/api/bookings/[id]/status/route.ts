@@ -69,18 +69,20 @@ export async function PATCH(
 
       // schedules.current_students 업데이트
     if (updateScheduleCount && scheduleId) {
-      // 해당 스케줄의 CONFIRMED 예약 수 계산
-      const { count: confirmedCount, error: countError } = await (supabase as any)
+      // 해당 스케줄의 CONFIRMED + COMPLETED 예약 수 계산 (출석완료와 구입승인 모두 합산)
+      const { data: confirmedBookings, error: confirmedError } = await (supabase as any)
         .from('bookings')
-        .select('*', { count: 'exact', head: true })
+        .select('id')
         .eq('schedule_id', scheduleId)
-        .eq('status', 'CONFIRMED');
+        .in('status', ['CONFIRMED', 'COMPLETED']);
 
-      if (!countError) {
+      if (!confirmedError) {
+        const totalCount = confirmedBookings?.length || 0;
+        
         // 스케줄의 current_students 업데이트
         const { error: scheduleUpdateError } = await (supabase as any)
           .from('schedules')
-          .update({ current_students: confirmedCount || 0 })
+          .update({ current_students: totalCount })
           .eq('id', scheduleId);
 
         if (scheduleUpdateError) {

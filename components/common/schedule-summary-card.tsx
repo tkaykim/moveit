@@ -95,7 +95,7 @@ export function ScheduleSummaryCard({
         <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
           <div className="text-xs text-green-600 dark:text-green-400 mb-1 flex items-center gap-1">
             <UserCheck size={12} />
-            확정 인원
+            확정 인원 (구입승인 + 출석완료)
           </div>
           <div className="text-xl font-bold text-green-700 dark:text-green-400">{confirmedCount}명</div>
         </div>

@@ -137,7 +137,10 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
           
           const { data: allBookingsData } = await allBookingsQuery;
           
-          const confirmedCount = allBookingsData?.filter((b: any) => b.status === 'CONFIRMED').length || 0;
+          // CONFIRMED와 COMPLETED 모두 합산 (출석완료 + 구입승인)
+          const confirmedCount = allBookingsData?.filter((b: any) => 
+            b.status === 'CONFIRMED' || b.status === 'COMPLETED'
+          ).length || 0;
           const pendingCount = allBookingsData?.filter((b: any) => b.status === 'PENDING').length || 0;
           const cancelledCount = allBookingsData?.filter((b: any) => b.status === 'CANCELLED').length || 0;
           const totalEnrollments = allBookingsData?.length || 0;
@@ -248,17 +251,19 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
 
       if (deleteError) throw deleteError;
 
-      // schedules.current_students 업데이트
+      // schedules.current_students 업데이트 (CONFIRMED + COMPLETED 합산)
       if (booking?.schedule_id) {
-        const { count: confirmedCount } = await supabase
+        const { data: confirmedBookings } = await supabase
           .from('bookings')
-          .select('*', { count: 'exact', head: true })
+          .select('id')
           .eq('schedule_id', booking.schedule_id)
-          .eq('status', 'CONFIRMED');
+          .in('status', ['CONFIRMED', 'COMPLETED']);
+
+        const totalCount = confirmedBookings?.length || 0;
 
         await supabase
           .from('schedules')
-          .update({ current_students: confirmedCount || 0 })
+          .update({ current_students: totalCount })
           .eq('id', booking.schedule_id);
       }
 
