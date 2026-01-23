@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Search, Download, MoreVertical, User } from 'lucide-react';
+import { Search, Download, User } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { BookingStatusBadge } from '@/components/common/booking-status-badge';
 import { ScheduleSelector } from '@/components/common/schedule-selector';
 import { ScheduleSummaryCard } from '@/components/common/schedule-summary-card';
+import { EnrollmentActionMenu } from './enrollments/enrollment-action-menu';
 
 interface EnrollmentsViewProps {
   academyId: string;
@@ -188,6 +189,85 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
     if (ticketType === 'BANK_TRANSFER') return '계좌이체';
     if (ticketType === 'MOBILE') return '간편결제';
     return ticketType || '-';
+  };
+
+  // 예약 상태 변경 핸들러
+  const handleStatusChange = async (bookingId: string, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || '상태 변경에 실패했습니다.');
+      }
+
+      // 성공 메시지
+      const statusMessages: Record<string, string> = {
+        CONFIRMED: '예약이 확정되었습니다.',
+        COMPLETED: '출석 처리가 완료되었습니다.',
+        CANCELLED: '예약이 취소되었습니다.',
+        PENDING: '예약이 대기 상태로 변경되었습니다.',
+      };
+
+      alert(statusMessages[newStatus] || '상태가 변경되었습니다.');
+
+      // 데이터 새로고침
+      await loadEnrollments();
+    } catch (error: any) {
+      console.error('Error changing booking status:', error);
+      throw error;
+    }
+  };
+
+  // 예약 삭제 핸들러 (선택적)
+  const handleDelete = async (bookingId: string) => {
+    try {
+      const supabase = getSupabaseClient() as any;
+      if (!supabase) {
+        throw new Error('Supabase 클라이언트를 초기화할 수 없습니다.');
+      }
+
+      // 예약 정보 조회 (schedule_id 확인용)
+      const { data: booking } = await supabase
+        .from('bookings')
+        .select('schedule_id, status')
+        .eq('id', bookingId)
+        .single();
+
+      // 예약 삭제
+      const { error: deleteError } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('id', bookingId);
+
+      if (deleteError) throw deleteError;
+
+      // schedules.current_students 업데이트
+      if (booking?.schedule_id) {
+        const { count: confirmedCount } = await supabase
+          .from('bookings')
+          .select('*', { count: 'exact', head: true })
+          .eq('schedule_id', booking.schedule_id)
+          .eq('status', 'CONFIRMED');
+
+        await supabase
+          .from('schedules')
+          .update({ current_students: confirmedCount || 0 })
+          .eq('id', booking.schedule_id);
+      }
+
+      alert('예약이 삭제되었습니다.');
+      await loadEnrollments();
+    } catch (error: any) {
+      console.error('Error deleting booking:', error);
+      throw error;
+    }
   };
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
@@ -415,12 +495,21 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                           -
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
+                          {enrollment.status === 'COMPLETED' ? (
+                            <span className="text-green-600 dark:text-green-400 font-medium">✓ 출석</span>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
                           {formatDate(enrollment.created_at)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right">
-                          <button className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300">
-                            <MoreVertical size={18} />
-                          </button>
+                          <EnrollmentActionMenu
+                            enrollment={enrollment}
+                            onStatusChange={handleStatusChange}
+                            onDelete={handleDelete}
+                          />
                         </td>
                       </tr>
                     );
