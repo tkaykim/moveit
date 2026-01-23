@@ -8,6 +8,7 @@ import { BookingStatusBadge } from '@/components/common/booking-status-badge';
 import { ScheduleSelector } from '@/components/common/schedule-selector';
 import { ScheduleSummaryCard } from '@/components/common/schedule-summary-card';
 import { EnrollmentActionMenu } from './enrollments/enrollment-action-menu';
+import { convertKSTInputToUTC } from '@/lib/utils/kst-time';
 
 interface EnrollmentsViewProps {
   academyId: string;
@@ -23,6 +24,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialScheduleId = searchParams.get('schedule_id');
+  const initialDate = searchParams.get('date') || '';
 
   const [enrollments, setEnrollments] = useState<EnrollmentWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +35,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
+  const [selectedDate, setSelectedDate] = useState<string>(initialDate);
 
   const loadEnrollments = useCallback(async () => {
     setLoading(true);
@@ -59,8 +62,6 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
       }
 
       // 클라이언트 사이드에서는 직접 쿼리
-      // class_id로 직접 필터링 (대부분의 예약이 class_id를 가지고 있음)
-      // class_id가 null인 경우는 schedule_id를 통해 schedules.class_id로 필터링됨
       let query = supabase
         .from('bookings')
         .select(`
@@ -79,12 +80,36 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
             *,
             tickets (*)
           )
-        `, { count: 'exact' })
-        .in('class_id', classIds);
+        `, { count: 'exact' });
 
       // 필터 적용
       if (selectedScheduleId) {
+        // 특정 수업을 선택한 경우, schedule_id로만 필터링
         query = query.eq('schedule_id', selectedScheduleId);
+      } else {
+        // 수업을 선택하지 않은 경우, 학원의 클래스로 필터링
+        // class_id로 직접 필터링 (대부분의 예약이 class_id를 가지고 있음)
+        // class_id가 null인 경우는 schedule_id를 통해 schedules.class_id로 필터링됨
+        query = query.in('class_id', classIds);
+        
+        if (selectedDate) {
+          // 날짜만 선택하고 수업을 선택하지 않은 경우, 해당 날짜의 스케줄에 대한 신청만 조회
+          // KST 기준으로 해당 날짜의 00:00:00 ~ 23:59:59를 UTC로 변환
+          const startKST = `${selectedDate}T00:00`;
+          const endKST = `${selectedDate}T23:59`;
+          
+          const startUTC = convertKSTInputToUTC(startKST);
+          const endUTC = convertKSTInputToUTC(endKST);
+          
+          if (startUTC && endUTC) {
+            // endUTC에 59초를 더해 23:59:59로 만듦
+            const endUTCWithSeconds = new Date(endUTC);
+            endUTCWithSeconds.setSeconds(59, 999);
+            
+            // schedules의 start_time으로 필터링
+            query = query.gte('schedules.start_time', startUTC).lte('schedules.start_time', endUTCWithSeconds.toISOString());
+          }
+        }
       }
       if (statusFilter !== 'ALL') {
         query = query.eq('status', statusFilter);
@@ -166,7 +191,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
     } finally {
       setLoading(false);
     }
-  }, [academyId, selectedScheduleId, statusFilter, searchTerm, currentPage, itemsPerPage]);
+  }, [academyId, selectedScheduleId, statusFilter, searchTerm, currentPage, itemsPerPage, selectedDate]);
 
   useEffect(() => {
     loadEnrollments();
@@ -332,21 +357,47 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
             </div>
           </div>
 
+          {/* 날짜 선택 */}
+          <div className="w-48">
+            <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">날짜</label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => {
+                setSelectedDate(e.target.value);
+                setSelectedScheduleId(null); // 날짜 변경 시 수업 선택 초기화
+                setCurrentPage(1);
+                // URL 업데이트 (날짜만)
+                if (e.target.value) {
+                  router.push(`/academy-admin/${academyId}/enrollments?date=${e.target.value}`);
+                } else {
+                  router.push(`/academy-admin/${academyId}/enrollments`);
+                }
+              }}
+              className="w-full px-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+            />
+          </div>
+
           {/* 수업 선택 */}
           <div className="w-64">
             <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">수업</label>
             <ScheduleSelector
               value={selectedScheduleId || undefined}
               academyId={academyId}
+              dateFilter={selectedDate || undefined}
               onChange={(id) => {
                 setSelectedScheduleId(id);
                 setCurrentPage(1);
                 // URL 업데이트
-                if (id) {
-                  router.push(`/academy-admin/${academyId}/enrollments?schedule_id=${id}`);
-                } else {
-                  router.push(`/academy-admin/${academyId}/enrollments`);
+                const params = new URLSearchParams();
+                if (selectedDate) {
+                  params.set('date', selectedDate);
                 }
+                if (id) {
+                  params.set('schedule_id', id);
+                }
+                const queryString = params.toString();
+                router.push(`/academy-admin/${academyId}/enrollments${queryString ? `?${queryString}` : ''}`);
               }}
             />
           </div>

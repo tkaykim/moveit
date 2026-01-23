@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Search, X } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import { convertKSTInputToUTC } from '@/lib/utils/kst-time';
 
 interface Schedule {
   id: string;
@@ -33,9 +34,10 @@ interface ScheduleSelectorProps {
   onChange: (scheduleId: string | null) => void;
   className?: string;
   academyId?: string; // 특정 학원의 스케줄만 필터링
+  dateFilter?: string; // 날짜 필터 (YYYY-MM-DD 형식)
 }
 
-export function ScheduleSelector({ value, onChange, className = '', academyId }: ScheduleSelectorProps) {
+export function ScheduleSelector({ value, onChange, className = '', academyId, dateFilter }: ScheduleSelectorProps) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [filteredSchedules, setFilteredSchedules] = useState<Schedule[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -45,7 +47,7 @@ export function ScheduleSelector({ value, onChange, className = '', academyId }:
 
   useEffect(() => {
     loadSchedules();
-  }, []);
+  }, [academyId, dateFilter]);
 
   useEffect(() => {
     if (searchTerm) {
@@ -120,6 +122,24 @@ export function ScheduleSelector({ value, onChange, className = '', academyId }:
       // academyId가 있으면 해당 학원의 스케줄만 필터링
       if (academyId) {
         query = query.eq('classes.academy_id', academyId);
+      }
+
+      // dateFilter가 있으면 해당 날짜의 스케줄만 필터링 (KST 기준)
+      if (dateFilter) {
+        // KST 기준으로 해당 날짜의 00:00:00 ~ 23:59:59를 UTC로 변환
+        const startKST = `${dateFilter}T00:00`;
+        const endKST = `${dateFilter}T23:59`;
+        
+        const startUTC = convertKSTInputToUTC(startKST);
+        const endUTC = convertKSTInputToUTC(endKST);
+        
+        if (startUTC && endUTC) {
+          // endUTC에 59초를 더해 23:59:59로 만듦
+          const endUTCWithSeconds = new Date(endUTC);
+          endUTCWithSeconds.setSeconds(59, 999);
+          
+          query = query.gte('start_time', startUTC).lte('start_time', endUTCWithSeconds.toISOString());
+        }
       }
 
       const { data, error } = await query
