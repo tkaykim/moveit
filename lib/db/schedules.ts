@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { Schedule } from '@/lib/supabase/types';
 import { Database } from '@/types/database';
+import { createBookingsForNewSchedule } from '@/lib/db/period-ticket-bookings';
 
 export async function getSchedules(filters?: {
   class_id?: string;
@@ -79,6 +80,21 @@ export async function createSchedule(schedule: Database['public']['Tables']['sch
     .single();
 
   if (error) throw error;
+  
+  // 생성된 스케줄에 대해 기존 기간권 보유자 자동 예약 생성
+  if (data && data.class_id && data.start_time) {
+    try {
+      await createBookingsForNewSchedule(
+        data.id,
+        data.class_id,
+        new Date(data.start_time)
+      );
+    } catch (bookingError) {
+      console.error('기간권 보유자 자동 예약 생성 오류:', bookingError);
+      // 자동 예약 실패해도 스케줄 생성은 성공으로 처리
+    }
+  }
+  
   return data;
 }
 
@@ -211,5 +227,20 @@ export async function createSingleSession(data: {
     .single();
 
   if (error) throw error;
+  
+  // 생성된 스케줄에 대해 기존 기간권 보유자 자동 예약 생성
+  if (result && result.class_id && result.start_time) {
+    try {
+      await createBookingsForNewSchedule(
+        result.id,
+        result.class_id,
+        new Date(result.start_time)
+      );
+    } catch (bookingError) {
+      console.error('기간권 보유자 자동 예약 생성 오류:', bookingError);
+      // 자동 예약 실패해도 스케줄 생성은 성공으로 처리
+    }
+  }
+  
   return result;
 }

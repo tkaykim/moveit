@@ -138,60 +138,73 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
   const activeCount = classMasters.filter((c) => c.is_active !== false).length;
   const inactiveCount = classMasters.filter((c) => c.is_active === false).length;
 
-  const getAccessConfigDisplay = (accessConfig: AccessConfig | null) => {
-    if (!accessConfig) {
-      return { 
-        icon: Unlock, 
-        text: '일반 수강권', 
-        color: 'text-gray-500',
-        allowCoupon: false,
-      };
-    }
+  const getAccessConfigDisplay = (classItem: any) => {
+    const classType = classItem.class_type || 'regular';
+    const accessConfig = classItem.access_config as AccessConfig | null;
     
-    if (accessConfig.requiredGroup) {
+    // access_config에서 허용 설정 확인
+    const allowRegular = accessConfig?.allowRegularTicket !== false;
+    const allowCoupon = accessConfig?.allowCoupon === true;
+    const allowPopup = accessConfig?.allowPopup === true || allowCoupon; // 쿠폰 허용 = 팝업 허용
+    const allowWorkshop = accessConfig?.allowWorkshop === true;
+    
+    // 허용되는 수강권 목록 생성
+    const allowedTypes: string[] = [];
+    if (allowRegular) allowedTypes.push('정규');
+    if (allowPopup) allowedTypes.push('팝업');
+    if (allowWorkshop) allowedTypes.push('워크샵');
+    
+    // 클래스 타입별 기본 색상
+    const typeColors: Record<string, { color: string; icon: typeof Lock | typeof Unlock }> = {
+      regular: { color: 'text-blue-600 dark:text-blue-400', icon: Unlock },
+      popup: { color: 'text-purple-600 dark:text-purple-400', icon: Unlock },
+      workshop: { color: 'text-amber-600 dark:text-amber-400', icon: Unlock },
+    };
+    
+    // 특정 그룹 전용인 경우
+    if (accessConfig?.requiredGroup) {
       return {
         icon: Lock,
         text: `${accessConfig.requiredGroup} 전용`,
         color: 'text-indigo-600 dark:text-indigo-400',
-        allowCoupon: accessConfig.allowCoupon === true,
+        allowedTypes: [],
       };
     }
     
-    const allowRegular = accessConfig.allowRegularTicket !== false;
-    const allowCoupon = accessConfig.allowCoupon === true;
-    
-    if (!allowRegular && !allowCoupon) {
-      return {
-        icon: Lock,
-        text: '전용만',
-        color: 'text-red-600 dark:text-red-400',
-        allowCoupon: false,
-      };
-    }
-    
-    if (allowRegular && allowCoupon) {
-      return { 
-        icon: Unlock, 
-        text: '수강권 + 쿠폰', 
-        color: 'text-green-600 dark:text-green-400',
-        allowCoupon: true,
-      };
-    }
-    
-    if (allowCoupon) {
+    // 복수 유형 허용시 표시
+    if (allowedTypes.length > 1) {
       return {
         icon: Unlock,
-        text: '쿠폰 가능',
-        color: 'text-amber-600 dark:text-amber-400',
-        allowCoupon: true,
+        text: allowedTypes.join(' + '),
+        color: 'text-green-600 dark:text-green-400',
+        allowedTypes,
       };
     }
     
+    // 단일 유형만 허용
+    if (allowedTypes.length === 1) {
+      const singleType = allowedTypes[0];
+      if (singleType === '정규') {
+        return { icon: Unlock, text: '정규 수강권', color: typeColors.regular.color, allowedTypes };
+      }
+      if (singleType === '팝업') {
+        return { icon: Unlock, text: '팝업 수강권', color: typeColors.popup.color, allowedTypes };
+      }
+      if (singleType === '워크샵') {
+        return { icon: Unlock, text: '워크샵 수강권', color: typeColors.workshop.color, allowedTypes };
+      }
+    }
+    
+    // 클래스 타입에 따른 기본값
+    const defaultConfig = typeColors[classType] || typeColors.regular;
+    const defaultText = classType === 'popup' ? '팝업 수강권' :
+                        classType === 'workshop' ? '워크샵 수강권' : '정규 수강권';
+    
     return { 
-      icon: Unlock, 
-      text: '수강권만', 
-      color: 'text-blue-600 dark:text-blue-400',
-      allowCoupon: false,
+      icon: defaultConfig.icon, 
+      text: defaultText, 
+      color: defaultConfig.color,
+      allowedTypes: [classType === 'popup' ? '팝업' : classType === 'workshop' ? '워크샵' : '정규'],
     };
   };
 
@@ -321,7 +334,7 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredClasses.map((classItem) => {
-                const accessDisplay = getAccessConfigDisplay(classItem.access_config);
+                const accessDisplay = getAccessConfigDisplay(classItem);
                 const AccessIcon = accessDisplay.icon;
                 const isActive = classItem.is_active !== false;
                 
@@ -415,9 +428,6 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
                     <div className={`flex items-center gap-1.5 text-xs ${accessDisplay.color}`}>
                       <AccessIcon size={14} />
                       <span>{accessDisplay.text}</span>
-                      {accessDisplay.allowCoupon && (
-                        <span className="text-amber-500 ml-1">🎫</span>
-                      )}
                     </div>
 
                     {classItem.halls?.name && (

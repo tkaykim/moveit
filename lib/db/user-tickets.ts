@@ -42,6 +42,7 @@ export async function getAvailableUserTickets(
   const supabase = await createClient() as any;
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
+  // 기간권(remaining_count IS NULL) 또는 횟수권(remaining_count > 0) 모두 조회
   let query = supabase
     .from('user_tickets')
     .select(`
@@ -53,6 +54,7 @@ export async function getAvailableUserTickets(
         is_coupon,
         academy_id,
         class_id,
+        ticket_type,
         academies (
           name_kr,
           name_en
@@ -61,8 +63,8 @@ export async function getAvailableUserTickets(
     `)
     .eq('user_id', userId)
     .eq('status', 'ACTIVE')
-    .gt('remaining_count', 0)
     .gte('expiry_date', today)
+    .or('remaining_count.gt.0,remaining_count.is.null')
     .order('created_at', { ascending: false });
 
   const { data, error } = await query;
@@ -81,20 +83,45 @@ export async function getAvailableUserTickets(
 
     const linkedTicketIds = new Set((ticketClassesData || []).map((tc: any) => tc.ticket_id));
 
+    // 클래스 정보 조회 (academy_id 확인용)
+    const { data: classData } = await supabase
+      .from('classes')
+      .select('academy_id')
+      .eq('id', classId)
+      .single();
+    
+    const classAcademyId = classData?.academy_id;
+
     return data.filter((item: any) => {
       const ticket = item.tickets;
       if (!ticket) return false;
 
       const ticketId = ticket.id;
       const isCoupon = ticket.is_coupon === true;
+      const isGeneral = ticket.is_general === true;
+      const ticketAcademyId = ticket.academy_id;
 
       // 쿠폰인 경우: allowCoupon이 true일 때만 표시
       if (isCoupon) {
         return allowCoupon;
       }
 
-      // 일반 수강권: ticket_classes에 연결되어 있어야만 사용 가능
-      return linkedTicketIds.has(ticketId);
+      // ticket_classes에 연결된 수강권은 사용 가능
+      if (linkedTicketIds.has(ticketId)) {
+        return true;
+      }
+
+      // is_general 수강권은 모든 클래스에서 사용 가능
+      if (isGeneral) {
+        return true;
+      }
+
+      // 학원 수강권은 해당 학원의 모든 클래스에서 사용 가능
+      if (ticketAcademyId && ticketAcademyId === classAcademyId) {
+        return true;
+      }
+
+      return false;
     });
   }
 
@@ -120,22 +147,45 @@ export async function getAvailableUserTickets(
 
 /**
  * 수강권 사용 (remaining_count 차감)
+ * 기간권(PERIOD)은 차감하지 않고, 횟수권(COUNT)만 차감
  * @param userTicketId user_tickets.id
  * @param count 차감할 횟수 (기본 1)
  */
 export async function consumeUserTicket(userTicketId: string, count: number = 1) {
   const supabase = await createClient() as any;
 
-  // 현재 수강권 정보 조회
+  // 현재 수강권 정보 조회 (ticket_type 확인을 위해 tickets 조인)
   const { data: currentTicket, error: fetchError } = await supabase
     .from('user_tickets')
-    .select('remaining_count, status')
+    .select(`
+      remaining_count, 
+      status,
+      expiry_date,
+      tickets (
+        ticket_type
+      )
+    `)
     .eq('id', userTicketId)
     .single();
 
   if (fetchError) throw fetchError;
   if (!currentTicket) throw new Error('수강권을 찾을 수 없습니다.');
 
+  const ticketType = currentTicket.tickets?.ticket_type;
+  const isPeriodTicket = ticketType === 'PERIOD';
+
+  // 기간권(PERIOD)인 경우: 횟수 차감 없이 유효기간만 확인
+  if (isPeriodTicket || currentTicket.remaining_count === null) {
+    // 유효기간 체크
+    const today = new Date().toISOString().split('T')[0];
+    if (currentTicket.expiry_date && currentTicket.expiry_date < today) {
+      throw new Error('수강권 유효기간이 만료되었습니다.');
+    }
+    // 기간권은 차감 없이 그대로 반환
+    return currentTicket;
+  }
+
+  // 횟수권(COUNT)인 경우: remaining_count 차감
   const newRemainingCount = (currentTicket.remaining_count || 0) - count;
 
   if (newRemainingCount < 0) {

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { getTicketById } from '@/lib/db/tickets';
+import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { Database } from '@/types/database';
 
 // 수강권 구매
@@ -15,9 +16,11 @@ export async function POST(request: Request) {
     if (authError || !authUser) {
       // 데모 버전: 인증 없이도 진행 (임시 사용자 ID 사용)
       // 실제 프로덕션에서는 이 부분을 제거해야 함
+      // 조회 API와 동일한 순서로 사용자 선택 (created_at ASC)
       const result = await supabase
         .from('users')
         .select('id')
+        .order('created_at', { ascending: true })
         .limit(1);
       const demoUsersList = result.data as Array<{ id: string }> | null;
       
@@ -128,10 +131,15 @@ export async function POST(request: Request) {
     }
 
     // user_tickets에 레코드 생성
+    // 기간권(PERIOD): remaining_count = null (횟수 무제한, 기간으로만 관리)
+    // 횟수권(COUNT): remaining_count = total_count (횟수 차감)
+    const isPeriodTicket = ticket.ticket_type === 'PERIOD';
+    const remainingCount = isPeriodTicket ? null : (ticket.total_count || 1);
+    
     const userTicketData: Database['public']['Tables']['user_tickets']['Insert'] = {
       user_id: user.id,
       ticket_id: ticketId,
-      remaining_count: ticket.total_count || 0,
+      remaining_count: remainingCount,
       start_date: startDate.toISOString().split('T')[0], // YYYY-MM-DD 형식
       expiry_date: expiryDate.toISOString().split('T')[0], // YYYY-MM-DD 형식
       status: 'ACTIVE',
@@ -153,6 +161,9 @@ export async function POST(request: Request) {
 
     // 거래 기록 생성 (revenue_transactions)
     if (ticket.academy_id) {
+      // 카드결제인 경우 데모 결제로 처리
+      const finalPaymentMethod = paymentMethod === 'card' ? 'CARD_DEMO' : (paymentMethod || 'TEST');
+      
       await (supabase as any)
         .from('revenue_transactions')
         .insert({
@@ -164,13 +175,38 @@ export async function POST(request: Request) {
           original_price: originalPrice,
           discount_amount: discountAmount,
           final_price: finalPrice,
-          payment_method: paymentMethod || 'TEST', // 결제 방법
-          payment_status: 'COMPLETED',
+          payment_method: finalPaymentMethod, // 데모 결제 방법
+          payment_status: 'COMPLETED', // 데모 결제는 즉시 완료 처리
         });
+    }
+
+    // 기간권(PERIOD)인 경우: 해당 기간 내 스케줄 자동 예약 생성
+    let autoBookingResult = { created: 0, skipped: 0, scheduleIds: [] as string[] };
+    
+    if (isPeriodTicket) {
+      try {
+        autoBookingResult = await createBookingsForPeriodTicket(
+          user.id,
+          userTicket.id,
+          ticketId,
+          userTicketData.start_date!,
+          userTicketData.expiry_date!
+        );
+        
+        console.log(`기간권 자동 예약 생성 완료: ${autoBookingResult.created}개 생성, ${autoBookingResult.skipped}개 스킵`);
+      } catch (bookingError) {
+        console.error('기간권 자동 예약 생성 오류:', bookingError);
+        // 자동 예약 실패해도 수강권 구매는 성공으로 처리
+      }
     }
 
     // 수강권/쿠폰 구분 메시지
     const productType = ticket.is_coupon ? '쿠폰' : '수강권';
+    
+    // 기간권인 경우 자동 예약 정보도 포함
+    const message = isPeriodTicket && autoBookingResult.created > 0
+      ? `${productType} 구매가 완료되었습니다. ${autoBookingResult.created}개의 수업이 자동 예약되었습니다.`
+      : `${productType} 구매가 완료되었습니다.`;
 
     return NextResponse.json({
       success: true,
@@ -181,7 +217,11 @@ export async function POST(request: Request) {
         finalPrice,
         discountApplied: !!appliedDiscount,
       },
-      message: `${productType} 구매가 완료되었습니다.`,
+      autoBooking: isPeriodTicket ? {
+        created: autoBookingResult.created,
+        skipped: autoBookingResult.skipped,
+      } : undefined,
+      message,
       demo: !authUser, // 데모 모드인지 표시
     });
   } catch (error: any) {

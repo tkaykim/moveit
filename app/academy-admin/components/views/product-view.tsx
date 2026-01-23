@@ -58,24 +58,43 @@ export function ProductView({ academyId }: ProductViewProps) {
     }
   };
 
+  // 수강권 유형 정보
+  const TICKET_CATEGORY_CONFIG = {
+    regular: {
+      name: '정규',
+      fullName: '정규 수강권',
+      classType: 'Regular',
+      badgeColor: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
+      borderColor: 'hover:border-blue-300 dark:hover:border-blue-600',
+    },
+    popup: {
+      name: '팝업',
+      fullName: '팝업 수강권',
+      classType: 'Popup',
+      badgeColor: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400',
+      borderColor: 'hover:border-purple-300 dark:hover:border-purple-600',
+    },
+    workshop: {
+      name: '워크샵',
+      fullName: '워크샵 수강권',
+      classType: 'Workshop',
+      badgeColor: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
+      borderColor: 'hover:border-amber-300 dark:hover:border-amber-600',
+    },
+  };
+
   const getTicketCategory = (ticket: any): 'regular' | 'popup' | 'workshop' => {
+    // access_group으로 먼저 판단
     if (ticket.access_group === 'popup') return 'popup';
     if (ticket.access_group === 'workshop') return 'workshop';
-    if (ticket.is_coupon === true) return 'popup'; // 기존 쿠폰은 팝업으로 분류
+    // is_coupon이 true인 경우 팝업으로 분류 (레거시 지원)
+    if (ticket.is_coupon === true && ticket.access_group !== 'regular') return 'popup';
+    // 기본값은 정규 수강권
     return 'regular';
   };
 
-  const getCategoryLabel = (ticket: any): string => {
-    const category = getTicketCategory(ticket);
-    if (category === 'regular') return '정규 수강권';
-    if (category === 'popup') return '팝업 수강권';
-    return '워크샵 수강권';
-  };
-
   const getCategoryBadgeColor = (category: 'regular' | 'popup' | 'workshop'): string => {
-    if (category === 'regular') return 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400';
-    if (category === 'popup') return 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400';
-    return 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400';
+    return TICKET_CATEGORY_CONFIG[category].badgeColor;
   };
 
   // 수강권을 타입별로 분류
@@ -112,11 +131,16 @@ export function ProductView({ academyId }: ProductViewProps) {
             <div className="space-y-6">
               {/* 정규 수강권 */}
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  정규 수강권
-                </h4>
+                <div className="flex items-center gap-2 mb-2">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    정규 수강권
+                  </h4>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-medium">
+                    Regular 클래스 전용
+                  </span>
+                </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                  일정 주기로 반복되는 수업을 설정할 수 있습니다
+                  기간 내 무제한 수강. 특정 클래스 지정 또는 전체 Regular 클래스 이용 가능
                 </p>
                 <div className="space-y-2">
                   {regularTickets.length === 0 ? (
@@ -157,11 +181,16 @@ export function ProductView({ academyId }: ProductViewProps) {
 
               {/* 팝업 수강권 */}
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  팝업 수강권
-                </h4>
+                <div className="flex items-center gap-2 mb-2">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    팝업 수강권
+                  </h4>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 font-medium">
+                    Popup 클래스 전용
+                  </span>
+                </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                  쿠폰제 학원에서 주로 사용하는 팝업 수강권. 정해진 금액과 횟수에 따라 팝업 수업용 수강권을 판매할 수 있습니다
+                  정해진 횟수만큼 Popup 클래스 수업에 참여 가능한 횟수제 수강권
                 </p>
                 <div className="space-y-2">
                   {popupTickets.length === 0 ? (
@@ -202,11 +231,16 @@ export function ProductView({ academyId }: ProductViewProps) {
 
               {/* 워크샵 수강권 */}
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  워크샵 수강권
-                </h4>
+                <div className="flex items-center gap-2 mb-2">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    워크샵 수강권
+                  </h4>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 font-medium">
+                    Workshop 클래스 전용
+                  </span>
+                </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                  팝업과 성격은 비슷하나 워크샵 전용 수강권을 판매할 수 있습니다
+                  정해진 횟수만큼 Workshop 클래스 수업에 참여 가능한 횟수제 수강권
                 </p>
                 <div className="space-y-2">
                   {workshopTickets.length === 0 ? (

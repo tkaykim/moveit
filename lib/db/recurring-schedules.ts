@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { Database } from '@/types/database';
 import { generateSessionDates, combineDateAndTime } from '@/lib/utils/schedule-generator';
+import { createBookingsForNewSchedules } from '@/lib/db/period-ticket-bookings';
 
 type RecurringSchedule = Database['public']['Tables']['recurring_schedules']['Row'];
 type RecurringScheduleInsert = Database['public']['Tables']['recurring_schedules']['Insert'];
@@ -143,11 +144,33 @@ export async function generateSessionsFromRecurringSchedule(
   const { data, error } = await supabase
     .from('schedules')
     .insert(sessions)
-    .select();
+    .select('id, class_id, start_time');
   
   if (error) throw error;
   
-  return data?.length || 0;
+  const createdCount = data?.length || 0;
+  
+  // 생성된 스케줄에 대해 기존 기간권 보유자 자동 예약 생성
+  if (data && data.length > 0) {
+    try {
+      const result = await createBookingsForNewSchedules(
+        data.map((s: any) => ({
+          id: s.id,
+          class_id: s.class_id,
+          start_time: s.start_time,
+        }))
+      );
+      
+      if (result.totalCreated > 0) {
+        console.log(`기간권 보유자 자동 예약 ${result.totalCreated}개 생성됨`);
+      }
+    } catch (bookingError) {
+      console.error('기간권 보유자 자동 예약 생성 오류:', bookingError);
+      // 자동 예약 실패해도 스케줄 생성은 성공으로 처리
+    }
+  }
+  
+  return createdCount;
 }
 
 /**

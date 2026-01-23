@@ -168,7 +168,8 @@ export function StudentView({ academyId }: StudentViewProps) {
 
   const getStudentStatus = (student: Student): string => {
     const tickets = student.user_tickets || [];
-    const activeTickets = tickets.filter((t) => t.status === 'ACTIVE' && t.remaining_count > 0);
+    // 기간권(remaining_count === null) 또는 횟수권(remaining_count > 0) 모두 포함
+    const activeTickets = tickets.filter((t) => t.status === 'ACTIVE' && (t.remaining_count === null || t.remaining_count > 0));
     
     if (activeTickets.length === 0) return '휴면';
     

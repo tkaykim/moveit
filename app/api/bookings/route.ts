@@ -16,10 +16,11 @@ export async function GET(request: Request) {
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !authUser) {
-      // 데모 버전: 인증 없이도 진행
+      // 데모 버전: 인증 없이도 진행 (created_at ASC로 정렬하여 일관된 사용자 선택)
       const { data: demoUsersList } = await (supabase as any)
         .from('users')
         .select('id')
+        .order('created_at', { ascending: true })
         .limit(1);
       
       if (demoUsersList && demoUsersList.length > 0) {
@@ -129,10 +130,11 @@ export async function POST(request: Request) {
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !authUser) {
-      // 데모 버전: 인증 없이도 진행
+      // 데모 버전: 인증 없이도 진행 (created_at ASC로 정렬하여 일관된 사용자 선택)
       const { data: demoUsersList } = await (supabase as any)
         .from('users')
         .select('id')
+        .order('created_at', { ascending: true })
         .limit(1);
       
       if (demoUsersList && demoUsersList.length > 0) {
@@ -157,7 +159,9 @@ export async function POST(request: Request) {
     }
 
     // 즉시 결제인 경우 수강권 없이 예약 생성
-    const isImmediatePayment = paymentMethod === 'card' || paymentMethod === 'account';
+    // 카드결제 데모도 포함 (CARD_DEMO는 수강권 구매 후 예약이지만 데모 결제로 처리)
+    const isImmediatePayment = paymentMethod === 'card' || paymentMethod === 'account' || paymentMethod === 'CARD_DEMO';
+    const isCardDemoPayment = paymentMethod === 'CARD_DEMO' || paymentMethod === 'card';
 
     let academyId: string;
     let resolvedClassId = classId;
@@ -203,9 +207,9 @@ export async function POST(request: Request) {
       academyId = classData.academy_id;
     }
 
-    // 수강권 사용인 경우에만 수강권 처리
+    // 수강권 사용인 경우에만 수강권 처리 (카드결제 데모는 수강권을 사용하지만 결제 상태는 별도 처리)
     let selectedUserTicketId = userTicketId;
-    if (!isImmediatePayment) {
+    if (!isImmediatePayment || isCardDemoPayment) {
       // 수강권 자동 선택 (userTicketId가 제공되지 않은 경우)
       if (!selectedUserTicketId) {
         // 클래스 ID를 포함하여 해당 클래스에 사용 가능한 수강권만 조회
@@ -260,26 +264,35 @@ export async function POST(request: Request) {
         }
       }
 
-      // 수강권 차감
-      try {
-        await consumeUserTicket(selectedUserTicketId, 1);
-      } catch (ticketError: any) {
-        console.error('Ticket usage error:', ticketError);
-        return NextResponse.json(
-          { error: ticketError.message || '수강권 차감에 실패했습니다.' },
-          { status: 400 }
-        );
+      // 수강권 차감 (카드결제 데모인 경우에도 수강권 차감)
+      if (selectedUserTicketId) {
+        try {
+          await consumeUserTicket(selectedUserTicketId, 1);
+        } catch (ticketError: any) {
+          console.error('Ticket usage error:', ticketError);
+          return NextResponse.json(
+            { error: ticketError.message || '수강권 차감에 실패했습니다.' },
+            { status: 400 }
+          );
+        }
       }
     }
 
     // 예약 생성
+    // 카드결제 데모인 경우: 수강권을 사용하지만 결제 상태는 COMPLETED로 설정
+    const finalPaymentStatus = isCardDemoPayment 
+      ? (paymentStatus || 'COMPLETED')  // 카드결제 데모는 즉시 완료
+      : isImmediatePayment 
+        ? (paymentStatus || 'PENDING') 
+        : 'PAID'; // 수강권 사용은 PAID
+    
     const bookingData: Database['public']['Tables']['bookings']['Insert'] = {
       user_id: user.id,
       class_id: resolvedClassId,
       schedule_id: scheduleId || null,
-      user_ticket_id: isImmediatePayment ? null : selectedUserTicketId,
+      user_ticket_id: isImmediatePayment && !isCardDemoPayment ? null : selectedUserTicketId,
       status: 'CONFIRMED',
-      payment_status: isImmediatePayment ? (paymentStatus || 'PENDING') : 'PAID',
+      payment_status: finalPaymentStatus,
     };
 
     const { data: booking, error: bookingError } = await (supabase as any)

@@ -18,7 +18,7 @@ interface ClassItem {
   class_type: string | null;
 }
 
-// 수강권용 기간 프리셋
+// 정규 수강권용 기간 프리셋
 const PERIOD_PRESETS = [
   { label: '1개월', days: 30 },
   { label: '3개월', days: 90 },
@@ -26,13 +26,38 @@ const PERIOD_PRESETS = [
   { label: '12개월', days: 365 },
 ];
 
-// 쿠폰용 횟수 프리셋
-const COUPON_COUNT_PRESETS = [
+// 팝업/워크샵 수강권용 횟수 프리셋
+const COUNT_PRESETS = [
   { label: '1회', count: 1 },
   { label: '3회', count: 3 },
   { label: '5회', count: 5 },
   { label: '10회', count: 10 },
 ];
+
+// 수강권 유형 정보
+const TICKET_CATEGORY_INFO = {
+  regular: {
+    name: '정규 수강권',
+    description: 'Regular 클래스 전용. 기간 내 무제한 수강 가능한 정기 수강권입니다.',
+    color: 'blue',
+    icon: 'Ticket',
+    ticketType: 'PERIOD' as const,
+  },
+  popup: {
+    name: '팝업 수강권',
+    description: 'Popup 클래스 전용. 정해진 횟수만큼 팝업 수업에 참여할 수 있는 수강권입니다.',
+    color: 'purple',
+    icon: 'Tag',
+    ticketType: 'COUNT' as const,
+  },
+  workshop: {
+    name: '워크샵 수강권',
+    description: 'Workshop 클래스 전용. 정해진 횟수만큼 워크샵 수업에 참여할 수 있는 수강권입니다.',
+    color: 'amber',
+    icon: 'Tag',
+    ticketType: 'COUNT' as const,
+  },
+};
 
 type ProductCategory = 'regular' | 'popup' | 'workshop';
 
@@ -88,7 +113,7 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
         setUseCustomPeriod(!PERIOD_PRESETS.some(p => p.days === ticket.valid_days));
       }
       if (ticket.total_count && category !== 'regular') {
-        setUseCustomCount(!COUPON_COUNT_PRESETS.some(p => p.count === ticket.total_count));
+        setUseCustomCount(!COUNT_PRESETS.some(p => p.count === ticket.total_count));
       }
       
       // 기존 연결된 클래스 로드 (정규 수강권인 경우에만)
@@ -265,15 +290,9 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
         console.log('전체 수강권이므로 ticket_classes에 저장하지 않습니다.');
       }
 
-      const categoryNames = {
-        regular: '정규 수강권',
-        popup: '팝업 수강권',
-        workshop: '워크샵 수강권',
-      };
-
       alert(ticket 
-        ? `${categoryNames[productCategory]}이(가) 수정되었습니다.`
-        : `${categoryNames[productCategory]}이(가) 등록되었습니다.`
+        ? `${TICKET_CATEGORY_INFO[productCategory].name}이(가) 수정되었습니다.`
+        : `${TICKET_CATEGORY_INFO[productCategory].name}이(가) 등록되었습니다.`
       );
       onClose();
     } catch (error: any) {
@@ -312,6 +331,7 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
               수강권 유형 *
             </label>
             <div className="grid grid-cols-1 gap-3">
+              {/* 정규 수강권 */}
               <button
                 type="button"
                 onClick={() => {
@@ -326,12 +346,17 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
               >
                 <div className="flex items-center gap-2">
                   <Ticket className="w-5 h-5" />
-                  <span className="font-semibold">정규 수강권</span>
+                  <span className="font-semibold">{TICKET_CATEGORY_INFO.regular.name}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-medium">
+                    Regular 클래스 전용
+                  </span>
                 </div>
                 <span className="text-xs text-gray-600 dark:text-gray-300 text-left">
-                  일정 주기로 반복되는 수업을 설정할 수 있습니다
+                  {TICKET_CATEGORY_INFO.regular.description}
                 </span>
               </button>
+
+              {/* 팝업 수강권 */}
               <button
                 type="button"
                 onClick={() => {
@@ -346,12 +371,17 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
               >
                 <div className="flex items-center gap-2">
                   <Tag className="w-5 h-5" />
-                  <span className="font-semibold">팝업 수강권</span>
+                  <span className="font-semibold">{TICKET_CATEGORY_INFO.popup.name}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 font-medium">
+                    Popup 클래스 전용
+                  </span>
                 </div>
                 <span className="text-xs text-gray-600 dark:text-gray-300 text-left">
-                  쿠폰제 학원에서 주로 사용하는 팝업 수강권. 정해진 금액과 횟수에 따라 팝업 수업용 수강권을 판매할 수 있습니다
+                  {TICKET_CATEGORY_INFO.popup.description}
                 </span>
               </button>
+
+              {/* 워크샵 수강권 */}
               <button
                 type="button"
                 onClick={() => {
@@ -366,10 +396,13 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
               >
                 <div className="flex items-center gap-2">
                   <Tag className="w-5 h-5" />
-                  <span className="font-semibold">워크샵 수강권</span>
+                  <span className="font-semibold">{TICKET_CATEGORY_INFO.workshop.name}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 font-medium">
+                    Workshop 클래스 전용
+                  </span>
                 </div>
                 <span className="text-xs text-gray-600 dark:text-gray-300 text-left">
-                  팝업과 성격은 비슷하나 워크샵 전용 수강권을 판매할 수 있습니다
+                  {TICKET_CATEGORY_INFO.workshop.description}
                 </span>
               </button>
             </div>
@@ -415,10 +448,10 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
           {(productCategory === 'popup' || productCategory === 'workshop') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                횟수 선택 *
+                사용 가능 횟수 *
               </label>
               <div className="flex flex-wrap gap-2 mb-2">
-                {COUPON_COUNT_PRESETS.map((preset) => (
+                {COUNT_PRESETS.map((preset) => (
                   <button
                     key={preset.count}
                     type="button"
@@ -428,7 +461,9 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
                     }}
                     className={`px-4 py-2 rounded-full border font-medium text-sm transition-colors ${
                       !useCustomCount && formData.total_count === preset.count
-                        ? 'bg-amber-600 text-white border-amber-600'
+                        ? productCategory === 'popup'
+                          ? 'bg-purple-600 text-white border-purple-600'
+                          : 'bg-amber-600 text-white border-amber-600'
                         : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
                     }`}
                   >
@@ -440,7 +475,9 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
                   onClick={() => setUseCustomCount(true)}
                   className={`px-4 py-2 rounded-full border font-medium text-sm transition-colors ${
                     useCustomCount
-                      ? 'bg-amber-600 text-white border-amber-600'
+                      ? productCategory === 'popup'
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'bg-amber-600 text-white border-amber-600'
                       : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
                   }`}
                 >
@@ -458,6 +495,9 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
                   onChange={(e) => setFormData({ ...formData, total_count: parseInt(e.target.value) || null })}
                 />
               )}
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {productCategory === 'popup' ? 'Popup' : 'Workshop'} 클래스에서 {formData.total_count || 0}회 수강 가능
+              </p>
             </div>
           )}
 
@@ -603,31 +643,45 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
             </div>
           )}
 
-          {/* 팝업/워크샵 수강권 안내 */}
-          {(productCategory === 'popup' || productCategory === 'workshop') && (
-            <div className={`${
-              productCategory === 'popup'
-                ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800'
-                : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
-            } border rounded-lg p-4`}>
-              <p className={`text-sm ${
-                productCategory === 'popup'
-                  ? 'text-purple-700 dark:text-purple-400'
-                  : 'text-amber-700 dark:text-amber-400'
-              }`}>
-                <strong>{productCategory === 'popup' ? '팝업' : '워크샵'} 수강권 사용 안내</strong>
-              </p>
-              <ul className={`text-xs mt-2 space-y-1 ${
-                productCategory === 'popup'
-                  ? 'text-purple-600 dark:text-purple-500'
-                  : 'text-amber-600 dark:text-amber-500'
-              }`}>
-                <li>• {productCategory === 'popup' ? '팝업' : '워크샵'} 수강권은 해당 타입의 클래스에서만 사용 가능합니다.</li>
-                <li>• 정해진 횟수만큼 수업에 참여할 수 있습니다.</li>
-                <li>• 횟수가 소진되면 추가 구매가 필요합니다.</li>
-              </ul>
-            </div>
-          )}
+          {/* 수강권 사용 안내 */}
+          <div className={`${
+            productCategory === 'regular'
+              ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+              : productCategory === 'popup'
+              ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800'
+              : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+          } border rounded-lg p-4`}>
+            <p className={`text-sm font-semibold ${
+              productCategory === 'regular'
+                ? 'text-blue-700 dark:text-blue-400'
+                : productCategory === 'popup'
+                ? 'text-purple-700 dark:text-purple-400'
+                : 'text-amber-700 dark:text-amber-400'
+            }`}>
+              {TICKET_CATEGORY_INFO[productCategory].name} 사용 안내
+            </p>
+            <ul className={`text-xs mt-2 space-y-1 ${
+              productCategory === 'regular'
+                ? 'text-blue-600 dark:text-blue-500'
+                : productCategory === 'popup'
+                ? 'text-purple-600 dark:text-purple-500'
+                : 'text-amber-600 dark:text-amber-500'
+            }`}>
+              {productCategory === 'regular' ? (
+                <>
+                  <li>• Regular 클래스 타입의 수업에서만 사용 가능합니다.</li>
+                  <li>• 설정한 기간 동안 무제한으로 수강 가능합니다.</li>
+                  <li>• 특정 클래스만 지정하거나, 전체 Regular 클래스 이용 가능하도록 설정할 수 있습니다.</li>
+                </>
+              ) : (
+                <>
+                  <li>• {productCategory === 'popup' ? 'Popup' : 'Workshop'} 클래스 타입의 수업에서만 사용 가능합니다.</li>
+                  <li>• 정해진 횟수만큼 수업에 참여할 수 있습니다.</li>
+                  <li>• 횟수가 소진되면 추가 구매가 필요합니다.</li>
+                </>
+              )}
+            </ul>
+          </div>
 
           {/* 판매 상태 */}
           <div className="flex items-center gap-2">

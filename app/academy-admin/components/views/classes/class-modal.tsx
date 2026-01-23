@@ -367,8 +367,9 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
         base_student_count: formData.base_student_count ? parseInt(formData.base_student_count, 10) : null,
         additional_salary_per_student: formData.additional_salary_per_student ? parseNumberFromString(formData.additional_salary_per_student) : null,
         access_config: {
-          allow_general: false, // 일반 수강권은 ticket_classes로 관리
-          allow_coupon: allowCoupon,
+          allowRegularTicket: true, // 정규 수강권은 ticket_classes로 관리
+          allowCoupon: allowCoupon, // 레거시 호환
+          allowPopup: allowCoupon, // 팝업 수강권 허용 여부
         },
       };
 
@@ -528,6 +529,11 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
         base_salary: parseNumberFromString(formData.base_salary),
         base_student_count: formData.base_student_count ? parseInt(formData.base_student_count, 10) : null,
         additional_salary_per_student: formData.additional_salary_per_student ? parseNumberFromString(formData.additional_salary_per_student) : null,
+        access_config: {
+          allowRegularTicket: true, // 정규 수강권은 ticket_classes로 관리
+          allowCoupon: allowCoupon, // 레거시 호환
+          allowPopup: allowCoupon, // 팝업 수강권 허용 여부
+        },
       };
 
       // start_time, end_time도 classes 테이블에 저장
@@ -653,29 +659,87 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
     <div className="space-y-6">
       <div>
         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">클래스 유형 선택</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">이 클래스의 유형을 선택해주세요.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">클래스 유형에 따라 사용 가능한 수강권이 결정됩니다.</p>
       </div>
       
-      <div className="grid grid-cols-3 gap-4">
-        {CLASS_TYPES.map((type) => (
-          <button
-            key={type.value}
-            type="button"
-            onClick={() => setFormData({ ...formData, class_type: type.value })}
-            className={`p-6 rounded-xl border-2 transition-all ${
-              formData.class_type === type.value
-                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-700 dark:text-blue-400 shadow-lg scale-105'
-                : 'bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-700 hover:border-blue-300 dark:hover:border-blue-700 text-gray-700 dark:text-gray-300 hover:shadow-md'
-            }`}
-          >
-            <div className="font-bold text-lg mb-1">{type.label}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              {type.value === 'regular' && '정기적으로 진행되는 정규 수업'}
-              {type.value === 'popup' && '특별 이벤트나 단기 수업'}
-              {type.value === 'workshop' && '집중 워크샵 형태의 수업'}
-            </div>
-          </button>
-        ))}
+      <div className="grid grid-cols-1 gap-4">
+        {/* Regular */}
+        <button
+          type="button"
+          onClick={() => setFormData({ ...formData, class_type: 'regular' })}
+          className={`p-5 rounded-xl border-2 transition-all text-left ${
+            formData.class_type === 'regular'
+              ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 shadow-lg'
+              : 'bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md'
+          }`}
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <span className={`font-bold text-lg ${formData.class_type === 'regular' ? 'text-blue-700 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>
+              Regular (정규)
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-semibold">
+              정규 수강권 전용
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            정기적으로 진행되는 정규 수업. 기간제 정규 수강권으로만 수강 가능합니다.
+          </p>
+        </button>
+
+        {/* Popup */}
+        <button
+          type="button"
+          onClick={() => setFormData({ ...formData, class_type: 'popup' })}
+          className={`p-5 rounded-xl border-2 transition-all text-left ${
+            formData.class_type === 'popup'
+              ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-500 shadow-lg'
+              : 'bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-700 hover:border-purple-300 dark:hover:border-purple-700 hover:shadow-md'
+          }`}
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <span className={`font-bold text-lg ${formData.class_type === 'popup' ? 'text-purple-700 dark:text-purple-400' : 'text-gray-700 dark:text-gray-300'}`}>
+              Popup (팝업)
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 font-semibold">
+              팝업 수강권 전용
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            특별 이벤트나 단기 수업. 횟수제 팝업 수강권으로만 수강 가능합니다.
+          </p>
+        </button>
+
+        {/* Workshop */}
+        <button
+          type="button"
+          onClick={() => setFormData({ ...formData, class_type: 'workshop' })}
+          className={`p-5 rounded-xl border-2 transition-all text-left ${
+            formData.class_type === 'workshop'
+              ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 shadow-lg'
+              : 'bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-700 hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-md'
+          }`}
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <span className={`font-bold text-lg ${formData.class_type === 'workshop' ? 'text-amber-700 dark:text-amber-400' : 'text-gray-700 dark:text-gray-300'}`}>
+              Workshop (워크샵)
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 font-semibold">
+              워크샵 수강권 전용
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            집중 워크샵 형태의 수업. 횟수제 워크샵 수강권으로만 수강 가능합니다.
+          </p>
+        </button>
+      </div>
+
+      {/* 안내 메시지 */}
+      <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-4 border border-gray-200 dark:border-neutral-700">
+        <p className="text-xs text-gray-600 dark:text-gray-400">
+          <Info size={14} className="inline mr-1 text-gray-500" />
+          <strong>수강권 연동 안내:</strong> 클래스 유형에 따라 기본 수강권이 결정됩니다.
+          필요시 Step 3에서 다른 유형의 수강권도 추가로 허용할 수 있습니다.
+        </p>
       </div>
     </div>
   );
@@ -898,22 +962,29 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
         </button>
       </div>
 
-      {/* 쿠폰 허용 여부 */}
+      {/* 추가 수강권 허용 */}
       <div className="border-t dark:border-neutral-800 pt-6">
-        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-neutral-800 rounded-xl">
+        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+          추가 수강권 허용
+        </h4>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+          기본 수강권 외에 다른 유형의 수강권으로도 이 수업을 수강할 수 있도록 허용합니다.
+        </p>
+        
+        <div className="flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              쿠폰 허용
+            <label className="block text-sm font-medium text-purple-700 dark:text-purple-400 mb-1">
+              팝업 수강권 허용
             </label>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              쿠폰으로 이 수업을 수강할 수 있도록 허용합니다
+            <p className="text-xs text-purple-600 dark:text-purple-500">
+              팝업 수강권(횟수권)으로도 이 수업을 수강할 수 있습니다
             </p>
           </div>
           <button
             type="button"
             onClick={() => setAllowCoupon(!allowCoupon)}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              allowCoupon ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+              allowCoupon ? 'bg-purple-600' : 'bg-gray-300 dark:bg-gray-600'
             }`}
           >
             <span
@@ -1304,22 +1375,25 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
               </button>
             </div>
 
-            {/* 쿠폰 허용 여부 */}
+            {/* 추가 수강권 허용 */}
             <div className="border-t dark:border-neutral-800 pt-6 mt-6">
-              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-neutral-800 rounded-xl">
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                추가 수강권 허용
+              </h4>
+              <div className="flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    쿠폰 허용
+                  <label className="block text-sm font-medium text-purple-700 dark:text-purple-400 mb-1">
+                    팝업 수강권 허용
                   </label>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    쿠폰으로 이 수업을 수강할 수 있도록 허용합니다
+                  <p className="text-xs text-purple-600 dark:text-purple-500">
+                    팝업 수강권(횟수권)으로도 이 수업을 수강할 수 있습니다
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setAllowCoupon(!allowCoupon)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    allowCoupon ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                    allowCoupon ? 'bg-purple-600' : 'bg-gray-300 dark:bg-gray-600'
                   }`}
                 >
                   <span

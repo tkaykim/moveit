@@ -27,9 +27,11 @@ export type Json =
 
 // 클래스 접근 제어 설정 타입
 export interface AccessConfig {
-  requiredGroup: string | null;  // 필수 수강권 그룹 (null이면 제한 없음)
-  allowRegularTicket: boolean;   // 수강권(is_coupon=false)으로 수업 참여 가능 여부
-  allowCoupon: boolean;          // 쿠폰(is_coupon=true)으로 수업 참여 가능 여부
+  requiredGroup?: string | null;  // 필수 수강권 그룹 (null이면 제한 없음)
+  allowRegularTicket?: boolean;   // 정규 수강권으로 수업 참여 가능 여부
+  allowCoupon?: boolean;          // 쿠폰(레거시)으로 수업 참여 가능 여부
+  allowPopup?: boolean;           // 팝업 수강권으로 수업 참여 가능 여부
+  allowWorkshop?: boolean;        // 워크샵 수강권으로 수업 참여 가능 여부
 }
 
 // 정규 수강생 할인 설정 타입 (팝업/워크샵용)

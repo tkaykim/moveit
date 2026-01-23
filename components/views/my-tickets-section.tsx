@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Ticket, Calendar, Hash, ChevronRight, Gift } from 'lucide-react';
+import { Ticket, Calendar, Hash, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface UserTicketDetail {
@@ -18,7 +18,8 @@ interface UserTicketDetail {
     valid_days?: number;
     academy_id: string;
     is_general: boolean;
-    is_coupon: boolean; // true: 쿠폰(1회 수강권), false: 정규 수강권
+    is_coupon: boolean;
+    access_group?: string;
     academies?: {
       id: string;
       name_kr: string;
@@ -27,22 +28,30 @@ interface UserTicketDetail {
   };
 }
 
+type TicketCategory = 'all' | 'regular' | 'popup' | 'workshop';
+
 interface MyTicketsSectionProps {
   onAcademyClick?: (academyId: string) => void;
 }
+
+const CATEGORY_CONFIG = {
+  all: { label: '전체', color: 'bg-neutral-600', textColor: 'text-neutral-600 dark:text-neutral-400' },
+  regular: { label: '정규권', color: 'bg-blue-600', textColor: 'text-blue-600 dark:text-blue-400' },
+  popup: { label: '팝업', color: 'bg-purple-600', textColor: 'text-purple-600 dark:text-purple-400' },
+  workshop: { label: '워크샵', color: 'bg-amber-600', textColor: 'text-amber-600 dark:text-amber-400' },
+};
 
 export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
   const { user } = useAuth();
   const [tickets, setTickets] = useState<UserTicketDetail[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'ticket' | 'coupon'>('ticket');
+  const [activeTab, setActiveTab] = useState<TicketCategory>('all');
 
   useEffect(() => {
     loadTickets();
   }, [user]);
 
   const loadTickets = async () => {
-    // 로그인하지 않은 사용자는 빈 배열로 설정
     if (!user) {
       setTickets([]);
       setLoading(false);
@@ -69,6 +78,16 @@ export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  const getTicketCategory = (ticket: UserTicketDetail): 'regular' | 'popup' | 'workshop' => {
+    const accessGroup = ticket.tickets?.access_group;
+    const isCoupon = ticket.tickets?.is_coupon;
+    
+    if (accessGroup === 'popup') return 'popup';
+    if (accessGroup === 'workshop') return 'workshop';
+    if (isCoupon && accessGroup !== 'regular') return 'popup';
+    return 'regular';
   };
 
   const getStatusBadge = (ticket: UserTicketDetail) => {
@@ -106,30 +125,49 @@ export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
     );
   };
 
-  // 수강권과 쿠폰 분리
-  const regularTickets = tickets.filter(t => !t.tickets?.is_coupon);
-  const couponTickets = tickets.filter(t => t.tickets?.is_coupon);
-  const displayTickets = activeTab === 'ticket' ? regularTickets : couponTickets;
+  const getCategoryBadge = (category: 'regular' | 'popup' | 'workshop') => {
+    const config = CATEGORY_CONFIG[category];
+    return (
+      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+        category === 'regular' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
+        category === 'popup' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' :
+        'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+      }`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  // 카테고리별 필터링
+  const categorizedTickets = tickets.map(t => ({ ...t, category: getTicketCategory(t) }));
+  const filteredTickets = activeTab === 'all' 
+    ? categorizedTickets 
+    : categorizedTickets.filter(t => t.category === activeTab);
+
+  // 카테고리별 개수
+  const counts = {
+    all: tickets.length,
+    regular: categorizedTickets.filter(t => t.category === 'regular').length,
+    popup: categorizedTickets.filter(t => t.category === 'popup').length,
+    workshop: categorizedTickets.filter(t => t.category === 'workshop').length,
+  };
 
   // 학원별로 그룹핑
-  const groupedTickets = displayTickets.reduce((acc, ticket) => {
+  const groupedTickets = filteredTickets.reduce((acc, ticket) => {
     const academyId = ticket.tickets?.academy_id || 'general';
-    const academyName = ticket.tickets?.academies?.name_kr || ticket.tickets?.academies?.name_en || (ticket.tickets?.is_general ? '전체 이용' : '기타');
+    const academyName = ticket.tickets?.academies?.name_kr || ticket.tickets?.academies?.name_en || (ticket.tickets?.is_general ? '전체 학원' : '기타');
     
     if (!acc[academyId]) {
-      acc[academyId] = {
-        academyName,
-        tickets: [],
-      };
+      acc[academyId] = { academyName, tickets: [] };
     }
     acc[academyId].tickets.push(ticket);
     return acc;
-  }, {} as Record<string, { academyName: string; tickets: UserTicketDetail[] }>);
+  }, {} as Record<string, { academyName: string; tickets: (UserTicketDetail & { category: 'regular' | 'popup' | 'workshop' })[] }>);
 
   if (loading) {
     return (
       <div className="mb-6">
-        <h3 className="text-lg font-bold text-black dark:text-white mb-4">보유 수강권/쿠폰</h3>
+        <h3 className="text-lg font-bold text-black dark:text-white mb-4">보유 수강권</h3>
         <div className="text-center py-8 text-neutral-500">로딩 중...</div>
       </div>
     );
@@ -137,111 +175,95 @@ export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
 
   return (
     <div className="mb-6">
-      <h3 className="text-lg font-bold text-black dark:text-white mb-4">보유 수강권/쿠폰</h3>
+      <h3 className="text-lg font-bold text-black dark:text-white mb-4">보유 수강권</h3>
       
-      {/* 탭 */}
-      <div className="flex mb-4 bg-neutral-100 dark:bg-neutral-800 rounded-xl p-1">
-        <button
-          onClick={() => setActiveTab('ticket')}
-          className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-colors ${
-            activeTab === 'ticket'
-              ? 'bg-white dark:bg-neutral-900 text-black dark:text-white shadow-sm'
-              : 'text-neutral-500 hover:text-black dark:hover:text-white'
-          }`}
-        >
-          <Ticket size={14} className="inline mr-1" />
-          수강권 ({regularTickets.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('coupon')}
-          className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-colors ${
-            activeTab === 'coupon'
-              ? 'bg-white dark:bg-neutral-900 text-black dark:text-white shadow-sm'
-              : 'text-neutral-500 hover:text-black dark:hover:text-white'
-          }`}
-        >
-          <Gift size={14} className="inline mr-1" />
-          쿠폰 ({couponTickets.length})
-        </button>
+      {/* 카테고리 탭 */}
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+        {(['all', 'regular', 'popup', 'workshop'] as TicketCategory[]).map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setActiveTab(cat)}
+            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              activeTab === cat
+                ? cat === 'all' ? 'bg-black dark:bg-white text-white dark:text-black' :
+                  cat === 'regular' ? 'bg-blue-600 text-white' :
+                  cat === 'popup' ? 'bg-purple-600 text-white' :
+                  'bg-amber-600 text-white'
+                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+            }`}
+          >
+            {CATEGORY_CONFIG[cat].label} ({counts[cat]})
+          </button>
+        ))}
       </div>
 
       {/* 안내 문구 */}
       <div className="text-xs text-neutral-500 bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-lg mb-4">
-        {activeTab === 'ticket' 
-          ? '💡 수강권은 기간 내 정규수업을 수강할 수 있는 권한입니다.'
-          : '💡 쿠폰은 쿠폰제 수업 또는 쿠폰 허용된 수업에 사용할 수 있습니다.'
-        }
+        {activeTab === 'regular' && '💡 정규권은 Regular 클래스를 기간 내 수강할 수 있습니다.'}
+        {activeTab === 'popup' && '💡 팝업 수강권은 Popup 클래스를 횟수만큼 수강할 수 있습니다.'}
+        {activeTab === 'workshop' && '💡 워크샵 수강권은 Workshop 클래스를 횟수만큼 수강할 수 있습니다.'}
+        {activeTab === 'all' && '💡 수강권 유형에 따라 이용 가능한 클래스가 다릅니다.'}
       </div>
 
-      {displayTickets.length === 0 ? (
+      {filteredTickets.length === 0 ? (
         <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 text-center">
-          {activeTab === 'ticket' ? (
-            <Ticket size={48} className="text-neutral-300 dark:text-neutral-700 mx-auto mb-3" />
-          ) : (
-            <Gift size={48} className="text-neutral-300 dark:text-neutral-700 mx-auto mb-3" />
-          )}
+          <Ticket size={48} className="text-neutral-300 dark:text-neutral-700 mx-auto mb-3" />
           <p className="text-neutral-500">
-            {activeTab === 'ticket' ? '보유한 수강권이 없습니다.' : '보유한 쿠폰이 없습니다.'}
+            {activeTab === 'all' ? '보유한 수강권이 없습니다.' : `보유한 ${CATEGORY_CONFIG[activeTab].label}이 없습니다.`}
           </p>
         </div>
       ) : (
         <div className="space-y-4">
-        {Object.entries(groupedTickets).map(([academyId, group]) => (
-          <div key={academyId} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-            {/* 학원 헤더 */}
-            <button
-              onClick={() => academyId !== 'general' && onAcademyClick?.(academyId)}
-              className={`w-full p-4 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 ${
-                academyId !== 'general' ? 'hover:bg-neutral-50 dark:hover:bg-neutral-800' : ''
-              }`}
-              disabled={academyId === 'general'}
-            >
-              <span className="font-bold text-black dark:text-white">{group.academyName}</span>
-              {academyId !== 'general' && (
-                <ChevronRight size={16} className="text-neutral-400" />
-              )}
-            </button>
+          {Object.entries(groupedTickets).map(([academyId, group]) => (
+            <div key={academyId} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
+              {/* 학원 헤더 */}
+              <button
+                onClick={() => academyId !== 'general' && onAcademyClick?.(academyId)}
+                className={`w-full p-4 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 ${
+                  academyId !== 'general' ? 'hover:bg-neutral-50 dark:hover:bg-neutral-800' : ''
+                }`}
+                disabled={academyId === 'general'}
+              >
+                <span className="font-bold text-black dark:text-white">{group.academyName}</span>
+                {academyId !== 'general' && <ChevronRight size={16} className="text-neutral-400" />}
+              </button>
 
-            {/* 상품 목록 */}
-            <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {group.tickets.map((ticket) => (
-                <div key={ticket.id} className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      {ticket.tickets?.is_coupon ? (
-                        <Gift size={16} className="text-orange-500" />
-                      ) : (
-                        <Ticket size={16} className="text-neutral-600 dark:text-neutral-400" />
-                      )}
-                      <span className="font-bold text-black dark:text-white">
-                        {ticket.tickets?.name || (activeTab === 'ticket' ? '수강권' : '쿠폰')}
-                      </span>
+              {/* 수강권 목록 */}
+              <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                {group.tickets.map((ticket) => (
+                  <div key={ticket.id} className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        {getCategoryBadge(ticket.category)}
+                        <span className="font-bold text-black dark:text-white">
+                          {ticket.tickets?.name || '수강권'}
+                        </span>
+                      </div>
+                      {getStatusBadge(ticket)}
                     </div>
-                    {getStatusBadge(ticket)}
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-neutral-500">
-                    {ticket.tickets?.ticket_type === 'COUNT' ? (
-                      <span className="flex items-center gap-1">
-                        <Hash size={14} />
-                        잔여 {ticket.remaining_count}회 / {ticket.tickets?.total_count || 0}회
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1">
-                        <Calendar size={14} />
-                        {formatDate(ticket.start_date)} ~ {formatDate(ticket.expiry_date)}
-                      </span>
+                    <div className="flex items-center gap-4 text-sm text-neutral-500">
+                      {ticket.tickets?.ticket_type === 'COUNT' ? (
+                        <span className="flex items-center gap-1">
+                          <Hash size={14} />
+                          잔여 {ticket.remaining_count}회 / {ticket.tickets?.total_count || 0}회
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <Calendar size={14} />
+                          {formatDate(ticket.start_date)} ~ {formatDate(ticket.expiry_date)}
+                        </span>
+                      )}
+                    </div>
+                    {ticket.tickets?.ticket_type === 'COUNT' && ticket.expiry_date && (
+                      <div className="mt-1 text-xs text-neutral-400">
+                        유효기간: {formatDate(ticket.expiry_date)}까지
+                      </div>
                     )}
                   </div>
-                  {ticket.tickets?.ticket_type === 'COUNT' && ticket.expiry_date && (
-                    <div className="mt-1 text-xs text-neutral-400">
-                      유효기간: {formatDate(ticket.expiry_date)}까지
-                    </div>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
         </div>
       )}
     </div>

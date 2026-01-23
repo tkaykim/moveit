@@ -8,6 +8,10 @@ import { NextResponse } from 'next/server';
  *   status: 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'PENDING',
  *   updateScheduleCount?: boolean  // schedules.current_students 업데이트 여부
  * }
+ * 
+ * 참고: 기간권(PERIOD) 예약의 경우 remaining_count가 null이므로
+ * 취소 시 수강권 횟수 복원이 필요 없습니다.
+ * 횟수권(COUNT) 예약의 경우에만 별도 복원 로직이 필요할 수 있습니다.
  */
 export async function PATCH(
   request: Request,

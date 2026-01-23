@@ -46,13 +46,16 @@ interface SessionData {
 interface UserTicket {
   id: string;
   ticket_id: string;
-  remaining_count: number;
+  remaining_count: number | null;
+  start_date: string | null;
+  expiry_date: string | null;
   tickets: {
     id: string;
     name: string;
     is_general: boolean;
     is_coupon: boolean;
     academy_id: string | null;
+    ticket_type: 'PERIOD' | 'COUNT' | null;
   };
 }
 
@@ -145,18 +148,18 @@ export default function SessionBookingPage() {
   };
 
   // 세션 로드 후 사용자 수강권 및 구매 가능 수강권 로드
+  // 데모 모드: user가 없어도 API에서 데모 사용자로 처리하므로 loadUserTickets 호출
   useEffect(() => {
-    if (session?.classes?.id && user) {
+    if (session?.classes?.id) {
       loadUserTickets();
-      loadPurchasableTickets();
-    } else if (session?.classes?.id && !user) {
       loadPurchasableTickets();
     }
   }, [session?.classes?.id, user]);
 
   // 사용자 보유 수강권 로드 (ticket_classes에 연결된 것만 + allowCoupon 적용)
+  // 데모 모드: user가 없어도 API에서 데모 사용자로 처리
   const loadUserTickets = async () => {
-    if (!session?.classes?.id || !user) return;
+    if (!session?.classes?.id) return;
 
     setLoadingUserTickets(true);
     try {
@@ -172,7 +175,10 @@ export default function SessionBookingPage() {
       const response = await fetch(`/api/user-tickets?${queryParams.toString()}`);
       if (response.ok) {
         const result = await response.json();
-        const ticketData: UserTicket[] = (result.data || []).filter((item: any) => item.remaining_count > 0);
+        // 기간권(remaining_count === null) 또는 횟수권(remaining_count > 0) 모두 포함
+        const ticketData: UserTicket[] = (result.data || []).filter((item: any) => 
+          item.remaining_count === null || item.remaining_count > 0
+        );
 
         setUserTickets(ticketData);
 
@@ -325,13 +331,15 @@ export default function SessionBookingPage() {
         throw new Error('수강권 구매 후 정보를 가져올 수 없습니다.');
       }
 
-      // 2. 구매한 수강권으로 예약
+      // 2. 구매한 수강권으로 예약 (카드결제인 경우 데모 결제 상태로 전달)
       const bookingResponse = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           scheduleId: sessionId,
           userTicketId: userTicketId,
+          paymentMethod: purchasePaymentType === 'card' ? 'CARD_DEMO' : purchasePaymentType, // 데모 결제 표시
+          paymentStatus: purchasePaymentType === 'card' ? 'COMPLETED' : 'PENDING', // 카드결제는 데모로 즉시 완료
         }),
       });
 
@@ -618,6 +626,15 @@ export default function SessionBookingPage() {
               <h4 className="font-bold text-black dark:text-white">보유 수강권 선택</h4>
               {userTickets.map((ut) => {
                 const isCoupon = ut.tickets?.is_coupon === true;
+                const isPeriodTicket = ut.tickets?.ticket_type === 'PERIOD' || ut.remaining_count === null;
+                
+                // 날짜 포맷팅 함수
+                const formatDate = (dateStr: string | null) => {
+                  if (!dateStr) return '';
+                  const date = new Date(dateStr);
+                  return `${date.getMonth() + 1}/${date.getDate()}`;
+                };
+                
                 return (
                   <button
                     key={ut.id}
@@ -630,10 +647,14 @@ export default function SessionBookingPage() {
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        isCoupon ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-blue-100 dark:bg-blue-900/30'
+                        isCoupon ? 'bg-orange-100 dark:bg-orange-900/30' : 
+                        isPeriodTicket ? 'bg-purple-100 dark:bg-purple-900/30' : 
+                        'bg-blue-100 dark:bg-blue-900/30'
                       }`}>
                         {isCoupon ? (
                           <Gift size={18} className="text-orange-600 dark:text-orange-400" />
+                        ) : isPeriodTicket ? (
+                          <Calendar size={18} className="text-purple-600 dark:text-purple-400" />
                         ) : (
                           <Ticket size={18} className="text-blue-600 dark:text-blue-400" />
                         )}
@@ -646,9 +667,20 @@ export default function SessionBookingPage() {
                               쿠폰
                             </span>
                           )}
+                          {isPeriodTicket && !isCoupon && (
+                            <span className="text-xs px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full">
+                              기간권
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-neutral-500">
-                          잔여 {ut.remaining_count}회
+                          {isPeriodTicket ? (
+                            // 기간권: 시작일 ~ 만료일 표시
+                            `${formatDate(ut.start_date)} ~ ${formatDate(ut.expiry_date)}`
+                          ) : (
+                            // 횟수권: 잔여 횟수 표시
+                            `잔여 ${ut.remaining_count}회`
+                          )}
                         </div>
                       </div>
                     </div>
