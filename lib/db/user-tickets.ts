@@ -28,11 +28,17 @@ export async function getUserTickets(userId: string) {
 /**
  * 사용 가능한 수강권 조회 (만료일 확인, remaining_count > 0)
  * @param userId 사용자 ID
- * @param academyId 학원 ID (선택사항, 제공 시 해당 학원 전용 수강권 + 전체 수강권 반환)
+ * @param academyId 학원 ID (선택사항)
  * @param classId 클래스 ID (선택사항, 제공 시 해당 클래스에 사용 가능한 수강권만 반환)
+ * @param allowCoupon 쿠폰 허용 여부 (선택사항, 기본값 false)
  * @returns 사용 가능한 수강권 목록
  */
-export async function getAvailableUserTickets(userId: string, academyId?: string, classId?: string) {
+export async function getAvailableUserTickets(
+  userId: string,
+  academyId?: string,
+  classId?: string,
+  allowCoupon: boolean = false
+) {
   const supabase = await createClient() as any;
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
@@ -44,6 +50,7 @@ export async function getAvailableUserTickets(userId: string, academyId?: string
         id,
         name,
         is_general,
+        is_coupon,
         academy_id,
         class_id,
         academies (
@@ -64,46 +71,47 @@ export async function getAvailableUserTickets(userId: string, academyId?: string
 
   if (!data) return [];
 
-  // 클래스 ID가 제공된 경우: 해당 클래스에 사용 가능한 수강권만 필터링
+  // classId가 제공된 경우: ticket_classes 테이블에서 연결된 수강권만 필터링
   if (classId) {
-    // ticket_classes 테이블 조인을 위해 추가 쿼리 필요
-    // 먼저 ticket_classes에서 해당 classId와 연결된 ticket_id 목록 가져오기
-    const supabase = await createClient() as any;
+    // ticket_classes에서 해당 classId와 연결된 ticket_id 목록 가져오기
     const { data: ticketClassesData } = await supabase
       .from('ticket_classes')
       .select('ticket_id')
       .eq('class_id', classId);
-    
+
     const linkedTicketIds = new Set((ticketClassesData || []).map((tc: any) => tc.ticket_id));
-    
+
     return data.filter((item: any) => {
       const ticket = item.tickets;
       if (!ticket) return false;
-      
+
       const ticketId = ticket.id;
-      const ticketAcademyId = ticket.academy_id;
-      const isGeneral = ticket.is_general;
-      
-      // 1. is_general = true: 모든 클래스 사용 가능
-      if (isGeneral) return true;
-      
-      // 2. ticket_classes 테이블에 해당 ticket_id와 class_id가 연결되어 있는 경우
-      if (linkedTicketIds.has(ticketId)) return true;
-      
-      return false;
+      const isCoupon = ticket.is_coupon === true;
+
+      // 쿠폰인 경우: allowCoupon이 true일 때만 표시
+      if (isCoupon) {
+        return allowCoupon;
+      }
+
+      // 일반 수강권: ticket_classes에 연결되어 있어야만 사용 가능
+      return linkedTicketIds.has(ticketId);
     });
   }
 
-  // academyId가 제공된 경우: 해당 학원 전용 수강권 + 전체 수강권(is_general=true 또는 academy_id IS NULL) 필터링
+  // academyId만 제공된 경우: 해당 학원의 수강권 필터링
   if (academyId) {
     return data.filter((item: any) => {
       const ticket = item.tickets;
       if (!ticket) return false;
-      
+
       const ticketAcademyId = ticket.academy_id;
-      const isGeneral = ticket.is_general;
-      // 전체 수강권(is_general=true 또는 academy_id가 null) 또는 해당 학원 수강권
-      return isGeneral || ticketAcademyId === null || ticketAcademyId === academyId;
+      const isCoupon = ticket.is_coupon === true;
+
+      // 쿠폰 제외 (classId 없이는 쿠폰 사용 불가)
+      if (isCoupon) return false;
+
+      // 해당 학원 수강권만
+      return ticketAcademyId === academyId;
     });
   }
 

@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Search, Download, User } from 'lucide-react';
+import { Search, Download, User, Users, Calendar, X, RefreshCw, Loader2, Clock, MapPin } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { BookingStatusBadge } from '@/components/common/booking-status-badge';
 import { ScheduleSelector } from '@/components/common/schedule-selector';
-import { ScheduleSummaryCard } from '@/components/common/schedule-summary-card';
 import { EnrollmentActionMenu } from './enrollments/enrollment-action-menu';
 import { convertKSTInputToUTC } from '@/lib/utils/kst-time';
 
@@ -20,6 +19,16 @@ type EnrollmentWithRelations = any & {
   user_tickets: any | null;
 };
 
+type StatusFilter = 'ALL' | 'CONFIRMED' | 'PENDING' | 'CANCELLED' | 'COMPLETED';
+
+const STATUS_TABS: { value: StatusFilter; label: string; color: string }[] = [
+  { value: 'ALL', label: '전체', color: 'bg-primary dark:bg-[#CCFF00] text-black' },
+  { value: 'CONFIRMED', label: '확정', color: 'bg-green-600 text-white' },
+  { value: 'PENDING', label: '대기', color: 'bg-yellow-500 text-white' },
+  { value: 'COMPLETED', label: '출석완료', color: 'bg-blue-600 text-white' },
+  { value: 'CANCELLED', label: '취소', color: 'bg-red-600 text-white' },
+];
+
 export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -27,21 +36,36 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
   const initialDate = searchParams.get('date') || '';
 
   const [enrollments, setEnrollments] = useState<EnrollmentWithRelations[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true); // 초기 로딩 (전체 화면 로딩)
+  const [isRefreshing, setIsRefreshing] = useState(false); // 필터 변경 시 로딩 (인라인 로딩)
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(initialScheduleId);
   const [scheduleSummary, setScheduleSummary] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [selectedDate, setSelectedDate] = useState<string>(initialDate);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({
+    ALL: 0,
+    CONFIRMED: 0,
+    PENDING: 0,
+    CANCELLED: 0,
+    COMPLETED: 0,
+  });
+  const isFirstLoad = useRef(true);
 
   const loadEnrollments = useCallback(async () => {
-    setLoading(true);
+    // 초기 로딩인지 필터 변경인지 구분
+    if (isFirstLoad.current) {
+      setInitialLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
     const supabase = getSupabaseClient() as any;
     if (!supabase) {
-      setLoading(false);
+      setInitialLoading(false);
+      setIsRefreshing(false);
       return;
     }
 
@@ -57,11 +81,49 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
       if (classIds.length === 0) {
         setEnrollments([]);
         setTotalCount(0);
-        setLoading(false);
+        setStatusCounts({ ALL: 0, CONFIRMED: 0, PENDING: 0, CANCELLED: 0, COMPLETED: 0 });
+        setInitialLoading(false);
+        setIsRefreshing(false);
+        isFirstLoad.current = false;
         return;
       }
 
-      // 클라이언트 사이드에서는 직접 쿼리
+      // 기본 쿼리 (상태별 카운트용)
+      let baseQuery = supabase
+        .from('bookings')
+        .select('status', { count: 'exact' });
+
+      if (selectedScheduleId) {
+        baseQuery = baseQuery.eq('schedule_id', selectedScheduleId);
+      } else {
+        baseQuery = baseQuery.in('class_id', classIds);
+
+        if (selectedDate) {
+          const startKST = `${selectedDate}T00:00`;
+          const endKST = `${selectedDate}T23:59`;
+          const startUTC = convertKSTInputToUTC(startKST);
+          const endUTC = convertKSTInputToUTC(endKST);
+
+          if (startUTC && endUTC) {
+            const endUTCWithSeconds = new Date(endUTC);
+            endUTCWithSeconds.setSeconds(59, 999);
+            baseQuery = baseQuery.gte('schedules.start_time', startUTC).lte('schedules.start_time', endUTCWithSeconds.toISOString());
+          }
+        }
+      }
+
+      // 상태별 카운트 조회
+      const { data: allStatusData } = await baseQuery;
+      const counts: Record<string, number> = {
+        ALL: allStatusData?.length || 0,
+        CONFIRMED: allStatusData?.filter((b: any) => b.status === 'CONFIRMED').length || 0,
+        PENDING: allStatusData?.filter((b: any) => b.status === 'PENDING').length || 0,
+        CANCELLED: allStatusData?.filter((b: any) => b.status === 'CANCELLED').length || 0,
+        COMPLETED: allStatusData?.filter((b: any) => b.status === 'COMPLETED').length || 0,
+      };
+      setStatusCounts(counts);
+
+      // 메인 쿼리
       let query = supabase
         .from('bookings')
         .select(`
@@ -84,47 +146,35 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
 
       // 필터 적용
       if (selectedScheduleId) {
-        // 특정 수업을 선택한 경우, schedule_id로만 필터링
         query = query.eq('schedule_id', selectedScheduleId);
       } else {
-        // 수업을 선택하지 않은 경우, 학원의 클래스로 필터링
-        // class_id로 직접 필터링 (대부분의 예약이 class_id를 가지고 있음)
-        // class_id가 null인 경우는 schedule_id를 통해 schedules.class_id로 필터링됨
         query = query.in('class_id', classIds);
-        
+
         if (selectedDate) {
-          // 날짜만 선택하고 수업을 선택하지 않은 경우, 해당 날짜의 스케줄에 대한 신청만 조회
-          // KST 기준으로 해당 날짜의 00:00:00 ~ 23:59:59를 UTC로 변환
           const startKST = `${selectedDate}T00:00`;
           const endKST = `${selectedDate}T23:59`;
-          
           const startUTC = convertKSTInputToUTC(startKST);
           const endUTC = convertKSTInputToUTC(endKST);
-          
+
           if (startUTC && endUTC) {
-            // endUTC에 59초를 더해 23:59:59로 만듦
             const endUTCWithSeconds = new Date(endUTC);
             endUTCWithSeconds.setSeconds(59, 999);
-            
-            // schedules의 start_time으로 필터링
             query = query.gte('schedules.start_time', startUTC).lte('schedules.start_time', endUTCWithSeconds.toISOString());
           }
         }
       }
+
       if (statusFilter !== 'ALL') {
         query = query.eq('status', statusFilter);
       }
 
-      // 검색어 필터 (게스트 이름, 연락처도 포함)
       if (searchTerm) {
         const search = searchTerm.toLowerCase();
         query = query.or(`users.name.ilike.%${search}%,users.email.ilike.%${search}%,users.phone.ilike.%${search}%,guest_name.ilike.%${search}%,guest_phone.ilike.%${search}%,schedules.classes.title.ilike.%${search}%`);
       }
 
-      // 정렬
       query = query.order('created_at', { ascending: false });
 
-      // 페이지네이션
       const from = (currentPage - 1) * itemsPerPage;
       const to = from + itemsPerPage - 1;
       query = query.range(from, to);
@@ -137,7 +187,6 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
 
       // 수업별 요약 정보 로드
       if (selectedScheduleId) {
-        // 스케줄 정보 조회 (해당 학원의 스케줄인지 확인)
         const { data: scheduleData, error: scheduleError } = await supabase
           .from('schedules')
           .select(`
@@ -150,20 +199,19 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
             halls (*)
           `)
           .eq('id', selectedScheduleId)
-          .eq('classes.academy_id', academyId)
           .single();
 
-        if (!scheduleError && scheduleData) {
-          // 신청인원 통계 (전체 데이터에서 계산)
+        const isValidSchedule = scheduleData?.classes?.academy_id === academyId;
+
+        if (!scheduleError && scheduleData && isValidSchedule) {
           const allBookingsQuery = supabase
             .from('bookings')
             .select('status')
             .eq('schedule_id', selectedScheduleId);
-          
+
           const { data: allBookingsData } = await allBookingsQuery;
-          
-          // CONFIRMED와 COMPLETED 모두 합산 (출석완료 + 구입승인)
-          const confirmedCount = allBookingsData?.filter((b: any) => 
+
+          const confirmedCount = allBookingsData?.filter((b: any) =>
             b.status === 'CONFIRMED' || b.status === 'COMPLETED'
           ).length || 0;
           const pendingCount = allBookingsData?.filter((b: any) => b.status === 'PENDING').length || 0;
@@ -189,7 +237,9 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
       console.error('Error loading enrollments:', error);
       alert('신청 목록을 불러오는데 실패했습니다.');
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
+      setIsRefreshing(false);
+      isFirstLoad.current = false;
     }
   }, [academyId, selectedScheduleId, statusFilter, searchTerm, currentPage, itemsPerPage, selectedDate]);
 
@@ -201,7 +251,6 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
     if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleDateString('ko-KR', {
-      year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
@@ -209,17 +258,17 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
     });
   };
 
-  const getPaymentMethod = (ticket: any) => {
-    if (!ticket) return '-';
-    const ticketType = ticket.ticket_type;
-    if (ticketType === 'CARD') return '카드';
-    if (ticketType === 'CASH') return '현금';
-    if (ticketType === 'BANK_TRANSFER') return '계좌이체';
-    if (ticketType === 'MOBILE') return '간편결제';
-    return ticketType || '-';
+  const formatScheduleTime = (schedule: any) => {
+    if (!schedule?.start_time) return '-';
+    const date = new Date(schedule.start_time);
+    return date.toLocaleDateString('ko-KR', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
-  // 예약 상태 변경 핸들러
   const handleStatusChange = async (bookingId: string, newStatus: string) => {
     try {
       const response = await fetch(`/api/bookings/${bookingId}/status`, {
@@ -235,7 +284,6 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
         throw new Error(error.error || '상태 변경에 실패했습니다.');
       }
 
-      // 성공 메시지
       const statusMessages: Record<string, string> = {
         CONFIRMED: '예약이 확정되었습니다.',
         COMPLETED: '출석 처리가 완료되었습니다.',
@@ -244,8 +292,6 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
       };
 
       alert(statusMessages[newStatus] || '상태가 변경되었습니다.');
-
-      // 데이터 새로고침
       await loadEnrollments();
     } catch (error: any) {
       console.error('Error changing booking status:', error);
@@ -253,7 +299,6 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
     }
   };
 
-  // 예약 삭제 핸들러 (선택적)
   const handleDelete = async (bookingId: string) => {
     try {
       const supabase = getSupabaseClient() as any;
@@ -261,14 +306,12 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
         throw new Error('Supabase 클라이언트를 초기화할 수 없습니다.');
       }
 
-      // 예약 정보 조회 (schedule_id 확인용)
       const { data: booking } = await supabase
         .from('bookings')
         .select('schedule_id, status')
         .eq('id', bookingId)
         .single();
 
-      // 예약 삭제
       const { error: deleteError } = await supabase
         .from('bookings')
         .delete()
@@ -276,7 +319,6 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
 
       if (deleteError) throw deleteError;
 
-      // schedules.current_students 업데이트 (CONFIRMED + COMPLETED 합산)
       if (booking?.schedule_id) {
         const { data: confirmedBookings } = await supabase
           .from('bookings')
@@ -300,267 +342,340 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
     }
   };
 
+  const clearFilters = () => {
+    setSelectedDate('');
+    setSelectedScheduleId(null);
+    setStatusFilter('ALL');
+    setSearchTerm('');
+    setCurrentPage(1);
+    router.push(`/academy-admin/${academyId}/enrollments`);
+  };
+
   const totalPages = Math.ceil(totalCount / itemsPerPage);
+  const hasFilters = selectedDate || selectedScheduleId || statusFilter !== 'ALL' || searchTerm;
 
   return (
-    <div>
+    <div className="space-y-6">
       {/* 헤더 */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white">신청 목록</h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white">신청인원 관리</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             수업별 신청인원을 확인하고 관리할 수 있습니다.
           </p>
         </div>
-        <button
-          onClick={() => {
-            // 엑셀 다운로드 (추후 구현)
-            alert('엑셀 다운로드 기능은 추후 구현 예정입니다.');
-          }}
-          className="px-4 py-2 bg-neutral-200 dark:bg-neutral-800 text-black dark:text-white rounded-lg hover:bg-neutral-300 dark:hover:bg-neutral-700 flex items-center gap-2"
-        >
-          <Download size={18} />
-          엑셀 다운로드
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadEnrollments}
+            disabled={isRefreshing}
+            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors disabled:opacity-50"
+            title="새로고침"
+          >
+            <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
+          </button>
+          <button
+            onClick={() => {
+              alert('엑셀 다운로드 기능은 추후 구현 예정입니다.');
+            }}
+            className="px-4 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 flex items-center gap-2 text-sm font-medium transition-colors"
+          >
+            <Download size={16} />
+            다운로드
+          </button>
+        </div>
       </div>
 
-      {/* 수업별 현황 요약 카드 */}
-      {scheduleSummary && (
-        <div className="mb-6">
-          <ScheduleSummaryCard
-            schedule={scheduleSummary.schedule}
-            totalEnrollments={scheduleSummary.total_enrollments}
-            confirmedCount={scheduleSummary.confirmed_count}
-            pendingCount={scheduleSummary.pending_count}
-            cancelledCount={scheduleSummary.cancelled_count}
-          />
-        </div>
-      )}
-
-      {/* 검색 및 필터링 */}
-      <div className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-neutral-200 dark:border-neutral-800 mb-6">
-        <div className="flex flex-wrap gap-3 items-end">
-          {/* 검색 바 */}
-          <div className="flex-1 min-w-[200px]">
-            <div className="relative">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-              <input
-                type="text"
-                placeholder="검색어를 입력해 주세요..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full pl-10 pr-4 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
-              />
+      {/* 필터 영역 */}
+      <div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-100 dark:border-neutral-800 shadow-sm">
+        {/* 선택된 수업 요약 바 */}
+        {scheduleSummary && (
+          <div className="px-4 py-3 bg-gradient-to-r from-primary/5 to-transparent dark:from-[#CCFF00]/5 border-b border-gray-100 dark:border-neutral-800">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-4">
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    {scheduleSummary.schedule.classes?.title}
+                  </h3>
+                  <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {scheduleSummary.schedule.instructors && (
+                      <span>{scheduleSummary.schedule.instructors.name_kr || scheduleSummary.schedule.instructors.name_en}</span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <Clock size={11} />
+                      {new Date(scheduleSummary.schedule.start_time).toLocaleString('ko-KR', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                    {scheduleSummary.schedule.halls && (
+                      <span className="flex items-center gap-1">
+                        <MapPin size={11} />
+                        {scheduleSummary.schedule.halls.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {scheduleSummary.max_students > 0 && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-neutral-800 rounded-lg border border-gray-200 dark:border-neutral-700">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">정원</span>
+                    <span className={`text-sm font-bold ${
+                      scheduleSummary.confirmed_count >= scheduleSummary.max_students
+                        ? 'text-red-600 dark:text-red-400'
+                        : scheduleSummary.confirmed_count >= scheduleSummary.max_students * 0.8
+                        ? 'text-yellow-600 dark:text-yellow-400'
+                        : 'text-green-600 dark:text-green-400'
+                    }`}>
+                      {scheduleSummary.confirmed_count}/{scheduleSummary.max_students}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <span className="text-xs text-green-600 dark:text-green-400">확정</span>
+                  <span className="text-sm font-bold text-green-700 dark:text-green-400">{scheduleSummary.confirmed_count}</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                  <span className="text-xs text-yellow-600 dark:text-yellow-400">대기</span>
+                  <span className="text-sm font-bold text-yellow-700 dark:text-yellow-400">{scheduleSummary.pending_count}</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                  <span className="text-xs text-red-600 dark:text-red-400">취소</span>
+                  <span className="text-sm font-bold text-red-700 dark:text-red-400">{scheduleSummary.cancelled_count}</span>
+                </div>
+              </div>
             </div>
           </div>
+        )}
 
-          {/* 날짜 선택 */}
-          <div className="w-48">
-            <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">날짜</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => {
-                setSelectedDate(e.target.value);
-                setSelectedScheduleId(null); // 날짜 변경 시 수업 선택 초기화
-                setCurrentPage(1);
-                // URL 업데이트 (날짜만)
-                if (e.target.value) {
-                  router.push(`/academy-admin/${academyId}/enrollments?date=${e.target.value}`);
-                } else {
-                  router.push(`/academy-admin/${academyId}/enrollments`);
-                }
-              }}
-              className="w-full px-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
-            />
-          </div>
-
-          {/* 수업 선택 */}
-          <div className="w-64">
-            <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">수업</label>
-            <ScheduleSelector
-              value={selectedScheduleId || undefined}
-              academyId={academyId}
-              dateFilter={selectedDate || undefined}
-              onChange={(id) => {
-                setSelectedScheduleId(id);
-                setCurrentPage(1);
-                // URL 업데이트
-                const params = new URLSearchParams();
-                if (selectedDate) {
-                  params.set('date', selectedDate);
-                }
-                if (id) {
-                  params.set('schedule_id', id);
-                }
-                const queryString = params.toString();
-                router.push(`/academy-admin/${academyId}/enrollments${queryString ? `?${queryString}` : ''}`);
-              }}
-            />
-          </div>
-
-          {/* 상태 필터 */}
-          <div>
-            <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1">상태</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
+        {/* 상태 필터 탭 */}
+        <div className="flex items-center gap-2 p-4 border-b border-gray-100 dark:border-neutral-800">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => {
+                setStatusFilter(tab.value);
                 setCurrentPage(1);
               }}
-              className="px-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+              disabled={isRefreshing}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-70 ${
+                statusFilter === tab.value
+                  ? tab.color
+                  : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-700'
+              }`}
             >
-              <option value="ALL">전체</option>
-              <option value="CONFIRMED">구입승인</option>
-              <option value="PENDING">대기중</option>
-              <option value="CANCELLED">신청취소</option>
-              <option value="COMPLETED">출석완료</option>
-            </select>
+              {tab.label} ({statusCounts[tab.value] || 0})
+            </button>
+          ))}
+          {isRefreshing && (
+            <Loader2 size={16} className="animate-spin text-gray-400 ml-2" />
+          )}
+        </div>
+
+        {/* 검색 및 필터 */}
+        <div className="p-4">
+          <div className="flex flex-wrap gap-3 items-end">
+            {/* 검색 */}
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">검색</label>
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="이름, 연락처, 수업명으로 검색..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+                />
+              </div>
+            </div>
+
+            {/* 날짜 선택 */}
+            <div className="w-44">
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">날짜</label>
+              <div className="relative">
+                <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    setSelectedScheduleId(null);
+                    setCurrentPage(1);
+                    if (e.target.value) {
+                      router.push(`/academy-admin/${academyId}/enrollments?date=${e.target.value}`);
+                    } else {
+                      router.push(`/academy-admin/${academyId}/enrollments`);
+                    }
+                  }}
+                  className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+                />
+              </div>
+            </div>
+
+            {/* 수업 선택 */}
+            <div className="w-72">
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">수업</label>
+              <ScheduleSelector
+                value={selectedScheduleId || undefined}
+                academyId={academyId}
+                dateFilter={selectedDate || undefined}
+                onChange={(id) => {
+                  setSelectedScheduleId(id);
+                  setCurrentPage(1);
+                  const params = new URLSearchParams();
+                  if (selectedDate) params.set('date', selectedDate);
+                  if (id) params.set('schedule_id', id);
+                  const queryString = params.toString();
+                  router.push(`/academy-admin/${academyId}/enrollments${queryString ? `?${queryString}` : ''}`);
+                }}
+              />
+            </div>
+
+            {/* 필터 초기화 */}
+            {hasFilters && (
+              <button
+                onClick={clearFilters}
+                className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <X size={14} />
+                초기화
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {/* 테이블 */}
-      <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center text-neutral-500 dark:text-neutral-400">로딩 중...</div>
+      <div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-100 dark:border-neutral-800 shadow-sm overflow-hidden relative">
+        {/* 인라인 로딩 오버레이 (필터 변경 시) */}
+        {isRefreshing && !initialLoading && (
+          <div className="absolute inset-0 bg-white/60 dark:bg-neutral-900/60 z-10 flex items-center justify-center">
+            <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border border-gray-200 dark:border-neutral-700">
+              <Loader2 size={16} className="animate-spin text-primary dark:text-[#CCFF00]" />
+              <span className="text-sm text-gray-600 dark:text-gray-300">불러오는 중...</span>
+            </div>
+          </div>
+        )}
+
+        {initialLoading ? (
+          <div className="p-16 text-center">
+            <div className="inline-block w-8 h-8 border-2 border-gray-300 border-t-primary dark:border-neutral-600 dark:border-t-[#CCFF00] rounded-full animate-spin mb-4" />
+            <p className="text-gray-500 dark:text-gray-400">로딩 중...</p>
+          </div>
         ) : enrollments.length === 0 ? (
-          <div className="p-12 text-center text-neutral-500 dark:text-neutral-400">
-            신청 내역이 없습니다.
+          <div className="p-16 text-center">
+            <Users className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+            <p className="text-gray-500 dark:text-gray-400 mb-2">
+              {hasFilters ? '검색 결과가 없습니다.' : '신청 내역이 없습니다.'}
+            </p>
+            {hasFilters && (
+              <button
+                onClick={clearFilters}
+                className="text-sm text-primary dark:text-[#CCFF00] hover:underline"
+              >
+                필터 초기화
+              </button>
+            )}
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-neutral-100 dark:bg-neutral-800">
+                <thead className="bg-gray-50 dark:bg-neutral-800">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-                      번호
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">
+                      #
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       신청인
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-                      연락처
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      수업
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-                      티켓옵션
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-                      티켓 수
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
                       상태
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-                      결제 금액
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-36">
+                      신청일시
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-                      결제 수단
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-                      출석
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-                      예매일시
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-                      작업
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20">
+
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                <tbody className="divide-y divide-gray-100 dark:divide-neutral-800">
                   {enrollments.map((enrollment, index) => {
                     const user = enrollment.users;
                     const schedule = enrollment.schedules;
-                    const userTicket = enrollment.user_tickets?.[0];
-                    const ticket = userTicket?.tickets;
                     const classData = schedule?.classes;
                     const instructor = schedule?.instructors;
 
-                    // 게스트 예약인지 일반 사용자 예약인지 확인
                     const isGuest = !user && (enrollment.guest_name || enrollment.guest_phone);
                     const displayName = user?.name || enrollment.guest_name || '-';
                     const displayPhone = user?.phone || enrollment.guest_phone || '-';
-                    const displayEmail = user?.email || null;
 
                     const rowNumber = (currentPage - 1) * itemsPerPage + index + 1;
 
                     return (
-                      <tr key={enrollment.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
+                      <tr key={enrollment.id} className="hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors">
+                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                           {rowNumber}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center">
-                              <User size={16} className="text-neutral-500" />
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-gray-100 dark:bg-neutral-700 flex items-center justify-center flex-shrink-0">
+                              <User size={16} className="text-gray-400" />
                             </div>
-                            <div>
+                            <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <div className="text-sm font-medium text-black dark:text-white">
+                                <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                   {displayName}
-                                </div>
+                                </span>
                                 {isGuest && (
-                                  <span className="text-xs px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded">
+                                  <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded font-medium">
                                     게스트
                                   </span>
                                 )}
                               </div>
-                              {displayEmail && (
-                                <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                                  {displayEmail}
-                                </div>
-                              )}
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {displayPhone}
+                              </div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
-                          {displayPhone}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">
+                        <td className="px-4 py-3">
                           {classData ? (
-                            <div>
-                              <div>{classData.title}</div>
-                              {instructor && (
-                                <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                                  {instructor.name_kr || instructor.name_en || ''}
-                                </div>
-                              )}
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                {classData.title}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                {instructor && (
+                                  <span>{instructor.name_kr || instructor.name_en}</span>
+                                )}
+                                {instructor && schedule?.start_time && <span>·</span>}
+                                {schedule?.start_time && (
+                                  <span>{formatScheduleTime(schedule)}</span>
+                                )}
+                              </div>
                             </div>
                           ) : (
-                            '-'
+                            <span className="text-gray-400">-</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
-                          1
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-3">
                           <BookingStatusBadge status={enrollment.status || ''} />
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
-                          {ticket?.price ? `${ticket.price.toLocaleString()}원` : '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
-                          {getPaymentMethod(ticket)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
-                          -
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
-                          {enrollment.status === 'COMPLETED' ? (
-                            <span className="text-green-600 dark:text-green-400 font-medium">✓ 출석</span>
-                          ) : (
-                            '-'
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
+                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                           {formatDate(enrollment.created_at)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <td className="px-4 py-3 text-right">
                           <EnrollmentActionMenu
                             enrollment={enrollment}
                             onStatusChange={handleStatusChange}
@@ -575,56 +690,55 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
             </div>
 
             {/* 페이지네이션 */}
-            <div className="px-6 py-4 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-              <div className="text-sm text-neutral-600 dark:text-neutral-400">
-                전체 {totalCount}개 중 {Math.min((currentPage - 1) * itemsPerPage + 1, totalCount)}-{Math.min(currentPage * itemsPerPage, totalCount)}개 노출 중입니다.
+            <div className="px-4 py-3 border-t border-gray-100 dark:border-neutral-800 flex items-center justify-between">
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                총 <span className="font-medium text-gray-900 dark:text-white">{totalCount}</span>건
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-neutral-600 dark:text-neutral-400">노출 수</span>
                   <select
                     value={itemsPerPage}
                     onChange={(e) => {
                       setItemsPerPage(Number(e.target.value));
                       setCurrentPage(1);
                     }}
-                    className="px-3 py-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded text-sm text-neutral-700 dark:text-neutral-300"
+                    className="px-2 py-1 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded text-sm text-gray-700 dark:text-gray-300"
                   >
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
+                    <option value={10}>10개</option>
+                    <option value={20}>20개</option>
+                    <option value={50}>50개</option>
+                    <option value={100}>100개</option>
                   </select>
                 </div>
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => setCurrentPage(1)}
                     disabled={currentPage === 1}
-                    className="px-2 py-1 text-sm text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-8 h-8 flex items-center justify-center text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     «
                   </button>
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="px-2 py-1 text-sm text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-8 h-8 flex items-center justify-center text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     ‹
                   </button>
-                  <span className="px-3 py-1 text-sm text-black dark:text-white font-medium">
-                    {currentPage}
+                  <span className="px-3 py-1 text-sm text-gray-900 dark:text-white font-medium">
+                    {currentPage} / {totalPages || 1}
                   </span>
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-2 py-1 text-sm text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={currentPage >= totalPages}
+                    className="w-8 h-8 flex items-center justify-center text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     ›
                   </button>
                   <button
                     onClick={() => setCurrentPage(totalPages)}
-                    disabled={currentPage === totalPages}
-                    className="px-2 py-1 text-sm text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={currentPage >= totalPages}
+                    className="w-8 h-8 flex items-center justify-center text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     »
                   </button>

@@ -29,9 +29,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const academyId = searchParams.get('academyId') || undefined;
     const classId = searchParams.get('classId') || undefined;
+    const allowCoupon = searchParams.get('allowCoupon') === 'true';
 
     // 수강권 목록 조회
-    const tickets = await getAvailableUserTickets(authUser.id, academyId, classId);
+    const tickets = await getAvailableUserTickets(authUser.id, academyId, classId, allowCoupon);
 
     // 수강권 개수 조회
     const counts = await getUserTicketCounts(authUser.id, academyId || undefined);

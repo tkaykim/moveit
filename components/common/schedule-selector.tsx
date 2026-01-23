@@ -92,12 +92,32 @@ export function ScheduleSelector({ value, onChange, className = '', academyId, d
     }
 
     try {
+      // academyId가 있으면 먼저 해당 학원의 class_id 목록을 가져옴
+      let classIds: string[] = [];
+      if (academyId) {
+        const { data: classesData } = await supabase
+          .from('classes')
+          .select('id')
+          .eq('academy_id', academyId);
+
+        classIds = classesData?.map((c: any) => c.id) || [];
+
+        // 해당 학원에 클래스가 없으면 빈 배열 반환
+        if (classIds.length === 0) {
+          setSchedules([]);
+          setFilteredSchedules([]);
+          setLoading(false);
+          return;
+        }
+      }
+
       let query = supabase
         .from('schedules')
         .select(`
           id,
           start_time,
           end_time,
+          class_id,
           classes (
             id,
             title,
@@ -119,9 +139,9 @@ export function ScheduleSelector({ value, onChange, className = '', academyId, d
         `)
         .eq('is_canceled', false);
 
-      // academyId가 있으면 해당 학원의 스케줄만 필터링
-      if (academyId) {
-        query = query.eq('classes.academy_id', academyId);
+      // academyId가 있으면 해당 학원의 클래스 ID로 필터링
+      if (academyId && classIds.length > 0) {
+        query = query.in('class_id', classIds);
       }
 
       // dateFilter가 있으면 해당 날짜의 스케줄만 필터링 (KST 기준)
@@ -129,15 +149,15 @@ export function ScheduleSelector({ value, onChange, className = '', academyId, d
         // KST 기준으로 해당 날짜의 00:00:00 ~ 23:59:59를 UTC로 변환
         const startKST = `${dateFilter}T00:00`;
         const endKST = `${dateFilter}T23:59`;
-        
+
         const startUTC = convertKSTInputToUTC(startKST);
         const endUTC = convertKSTInputToUTC(endKST);
-        
+
         if (startUTC && endUTC) {
           // endUTC에 59초를 더해 23:59:59로 만듦
           const endUTCWithSeconds = new Date(endUTC);
           endUTCWithSeconds.setSeconds(59, 999);
-          
+
           query = query.gte('start_time', startUTC).lte('start_time', endUTCWithSeconds.toISOString());
         }
       }

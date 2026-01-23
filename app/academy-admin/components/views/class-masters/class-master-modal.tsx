@@ -751,14 +751,24 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
             <p>수강권 목록을 불러오는 중...</p>
           </div>
         ) : availableTickets.length === 0 ? (
-          <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-6 text-center">
-            <Ticket size={32} className="mx-auto mb-3 text-amber-600 dark:text-amber-400" />
-            <p className="text-sm font-medium text-amber-700 dark:text-amber-400 mb-1">
-              등록된 수강권이 없습니다
-            </p>
-            <p className="text-xs text-amber-600 dark:text-amber-500">
-              먼저 &apos;수강권/상품 관리&apos;에서 수강권을 등록해주세요.
-            </p>
+          <div className="space-y-3">
+            <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-6 text-center">
+              <Ticket size={32} className="mx-auto mb-3 text-amber-600 dark:text-amber-400" />
+              <p className="text-sm font-medium text-amber-700 dark:text-amber-400 mb-1">
+                등록된 수강권이 없습니다
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-500">
+                아래 버튼을 눌러 새 수강권을 만들어주세요.
+              </p>
+            </div>
+            {/* 새 수강권 만들기 버튼 */}
+            <button
+              type="button"
+              onClick={() => setShowTicketModal(true)}
+              className="w-full py-3 border-2 border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-600 dark:text-blue-400 text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/30 flex items-center justify-center gap-2 transition-all"
+            >
+              <Plus size={18} /> 새 수강권 만들기
+            </button>
           </div>
         ) : (
           <div className="space-y-3">
@@ -847,6 +857,15 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
                 );
               })}
             </div>
+
+            {/* 새 수강권 만들기 버튼 */}
+            <button
+              type="button"
+              onClick={() => setShowTicketModal(true)}
+              className="w-full py-3 border-2 border-gray-300 dark:border-neutral-700 border-dashed rounded-xl text-gray-500 dark:text-gray-400 text-sm hover:bg-gray-50 dark:hover:bg-neutral-800 hover:border-blue-400 dark:hover:border-blue-600 flex items-center justify-center gap-2 transition-all"
+            >
+              <Plus size={18} /> 새 수강권 만들기
+            </button>
           </div>
         )}
       </div>
