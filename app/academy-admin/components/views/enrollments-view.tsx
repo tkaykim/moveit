@@ -58,6 +58,8 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
       }
 
       // 클라이언트 사이드에서는 직접 쿼리
+      // class_id로 직접 필터링 (대부분의 예약이 class_id를 가지고 있음)
+      // class_id가 null인 경우는 schedule_id를 통해 schedules.class_id로 필터링됨
       let query = supabase
         .from('bookings')
         .select(`
@@ -87,10 +89,10 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
         query = query.eq('status', statusFilter);
       }
 
-      // 검색어 필터
+      // 검색어 필터 (게스트 이름, 연락처도 포함)
       if (searchTerm) {
         const search = searchTerm.toLowerCase();
-        query = query.or(`users.name.ilike.%${search}%,users.email.ilike.%${search}%,users.phone.ilike.%${search}%,schedules.classes.title.ilike.%${search}%`);
+        query = query.or(`users.name.ilike.%${search}%,users.email.ilike.%${search}%,users.phone.ilike.%${search}%,guest_name.ilike.%${search}%,guest_phone.ilike.%${search}%,schedules.classes.title.ilike.%${search}%`);
       }
 
       // 정렬
@@ -126,11 +128,18 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
           .single();
 
         if (!scheduleError && scheduleData) {
-          // 신청인원 통계
-          const confirmedCount = data?.filter((b: any) => b.status === 'CONFIRMED').length || 0;
-          const pendingCount = data?.filter((b: any) => b.status === 'PENDING').length || 0;
-          const cancelledCount = data?.filter((b: any) => b.status === 'CANCELLED').length || 0;
-          const totalEnrollments = data?.length || 0;
+          // 신청인원 통계 (전체 데이터에서 계산)
+          const allBookingsQuery = supabase
+            .from('bookings')
+            .select('status')
+            .eq('schedule_id', selectedScheduleId);
+          
+          const { data: allBookingsData } = await allBookingsQuery;
+          
+          const confirmedCount = allBookingsData?.filter((b: any) => b.status === 'CONFIRMED').length || 0;
+          const pendingCount = allBookingsData?.filter((b: any) => b.status === 'PENDING').length || 0;
+          const cancelledCount = allBookingsData?.filter((b: any) => b.status === 'CANCELLED').length || 0;
+          const totalEnrollments = allBookingsData?.length || 0;
 
           setScheduleSummary({
             schedule: scheduleData,
@@ -336,6 +345,12 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                     const classData = schedule?.classes;
                     const instructor = schedule?.instructors;
 
+                    // 게스트 예약인지 일반 사용자 예약인지 확인
+                    const isGuest = !user && (enrollment.guest_name || enrollment.guest_phone);
+                    const displayName = user?.name || enrollment.guest_name || '-';
+                    const displayPhone = user?.phone || enrollment.guest_phone || '-';
+                    const displayEmail = user?.email || null;
+
                     const rowNumber = (currentPage - 1) * itemsPerPage + index + 1;
 
                     return (
@@ -349,19 +364,26 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                               <User size={16} className="text-neutral-500" />
                             </div>
                             <div>
-                              <div className="text-sm font-medium text-black dark:text-white">
-                                {user?.name || '-'}
+                              <div className="flex items-center gap-2">
+                                <div className="text-sm font-medium text-black dark:text-white">
+                                  {displayName}
+                                </div>
+                                {isGuest && (
+                                  <span className="text-xs px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded">
+                                    게스트
+                                  </span>
+                                )}
                               </div>
-                              {user?.email && (
+                              {displayEmail && (
                                 <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                                  {user.email}
+                                  {displayEmail}
                                 </div>
                               )}
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
-                          {user?.phone || '-'}
+                          {displayPhone}
                         </td>
                         <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">
                           {classData ? (
