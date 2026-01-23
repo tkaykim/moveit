@@ -11,6 +11,7 @@ import {
   X,
   Ticket,
   Image as ImageIcon,
+  UserCheck,
   type LucideIcon,
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';

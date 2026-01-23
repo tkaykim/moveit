@@ -16,6 +16,7 @@ import {
   Settings,
   X,
   BookOpen,
+  UserCog,
   type LucideIcon,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -61,6 +62,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
     { icon: Users, label: '학생 관리', href: `/academy-admin/${academyId}/students` },
     { icon: BookOpen, label: '클래스(반) 관리', href: `/academy-admin/${academyId}/class-masters` },
     { icon: CalendarDays, label: '스케줄 관리', href: `/academy-admin/${academyId}/schedule` },
+    { icon: UserCog, label: '신청인원 관리', href: `/academy-admin/${academyId}/enrollments` },
     { icon: Ticket, label: '수강권/상품', href: `/academy-admin/${academyId}/products` },
     { icon: ClipboardList, label: '업무/수업 일지', href: `/academy-admin/${academyId}/logs` },
     { icon: UserCheck, label: '강사 관리', href: `/academy-admin/${academyId}/instructors` },

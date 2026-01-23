@@ -48,9 +48,7 @@ export async function updateHall(id: string, updates: Database['public']['Tables
     .update(updates)
     .eq('id', id)
     .select()
-    .single();
-
-  if (error) throw error;
+    .single();  if (error) throw error;
   return data;
 }export async function deleteHall(id: string) {
   const supabase = await createClient() as any;

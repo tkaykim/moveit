@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Users } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Schedule, Class, Academy, Hall, Instructor } from '@/lib/supabase/types';
 
@@ -13,6 +14,7 @@ type ScheduleWithRelations = Schedule & {
 };
 
 export default function SchedulesPage() {
+  const router = useRouter();
   const [schedules, setSchedules] = useState<ScheduleWithRelations[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [academies, setAcademies] = useState<Academy[]>([]);
@@ -518,14 +520,24 @@ export default function SchedulesPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end gap-2">
                           <button
+                            onClick={() => router.push(`/admin/enrollments?schedule_id=${schedule.id}`)}
+                            className="px-3 py-1.5 text-xs bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-1.5 font-medium"
+                            title="신청자 관리하기"
+                          >
+                            <Users size={14} />
+                            신청자 관리하기
+                          </button>
+                          <button
                             onClick={() => handleEdit(schedule)}
                             className="text-primary dark:text-[#CCFF00] hover:opacity-80"
+                            title="수정"
                           >
                             <Edit size={18} />
                           </button>
                           <button
                             onClick={() => handleDelete(schedule.id)}
                             className="text-red-500 hover:opacity-80"
+                            title="삭제"
                           >
                             <Trash2 size={18} />
                           </button>

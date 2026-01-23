@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Users, Clock, MapPin, User, Lock, Unlock, Trash2, Ban, Link2, Check, Edit2, Save } from 'lucide-react';
+import { X, Users, Clock, MapPin, User, Lock, Unlock, Trash2, Ban, Link2, Check, Edit2, Save, UserCog } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { formatKSTTime, formatKSTDate } from '@/lib/utils/kst-time';
 import { AccessConfig } from '@/types/database';
@@ -13,6 +14,7 @@ interface SessionModalProps {
 }
 
 export function SessionModal({ session, academyId, onClose }: SessionModalProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -464,11 +466,26 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
               )}
 
               {/* 수강생 현황 */}
-              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                <Users size={18} />
-                <span>
-                  {session.current_students || 0} / {session.max_students || 20}명
-                </span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                  <Users size={18} />
+                  <span>
+                    {session.current_students || 0} / {session.max_students || 20}명
+                  </span>
+                </div>
+                {academyId && (
+                  <button
+                    onClick={() => {
+                      onClose();
+                      router.push(`/academy-admin/${academyId}/enrollments?schedule_id=${session.id}`);
+                    }}
+                    className="px-3 py-1.5 text-xs bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-1.5 font-medium"
+                    title="신청자 관리하기"
+                  >
+                    <UserCog size={14} />
+                    신청자 관리하기
+                  </button>
+                )}
               </div>
 
               {/* 접근 권한 */}
