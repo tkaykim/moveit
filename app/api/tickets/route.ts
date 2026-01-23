@@ -16,7 +16,13 @@ export async function GET(request: Request) {
       .from('tickets')
       .select(`
         *,
-        academies (*)
+        academies (*),
+        ticket_classes (
+          class_id,
+          classes (
+            class_type
+          )
+        )
       `)
       .eq('is_on_sale', true)
       .order('created_at', { ascending: false });

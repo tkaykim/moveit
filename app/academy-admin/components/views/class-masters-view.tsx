@@ -24,6 +24,7 @@ const DIFFICULTY_COLORS: Record<string, string> = {
 };
 
 type FilterTab = 'all' | 'active' | 'inactive';
+type ClassTypeFilter = 'all' | 'regular' | 'popup' | 'workshop';
 
 export function ClassMastersView({ academyId }: ClassMastersViewProps) {
   const [classMasters, setClassMasters] = useState<any[]>([]);
@@ -31,6 +32,7 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
   const [showModal, setShowModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState<any>(null);
   const [filterTab, setFilterTab] = useState<FilterTab>('active');
+  const [classTypeFilter, setClassTypeFilter] = useState<ClassTypeFilter>('all');
 
   useEffect(() => {
     loadData();
@@ -101,10 +103,36 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
   // 필터링된 클래스 목록
   const filteredClasses = classMasters.filter((classItem) => {
     const isActive = classItem.is_active !== false; // null이나 true면 활성화로 간주
-    if (filterTab === 'active') return isActive;
-    if (filterTab === 'inactive') return !isActive;
-    return true; // 'all'
+    
+    // 활성화 필터
+    if (filterTab === 'active' && !isActive) return false;
+    if (filterTab === 'inactive' && isActive) return false;
+    
+    // 클래스 유형 필터
+    if (classTypeFilter !== 'all') {
+      const classType = classItem.class_type || 'regular';
+      // 정규화: 기존 값들을 세 가지 유형으로 매핑
+      const normalizedType = 
+        classType === 'regular' || classType === 'REGULAR' ? 'regular' :
+        classType === 'popup' ? 'popup' :
+        'workshop'; // 기타 모든 값은 workshop으로 처리
+      
+      if (normalizedType !== classTypeFilter) return false;
+    }
+    
+    return true;
   });
+  
+  // 유형별 개수 계산
+  const regularCount = classMasters.filter(c => {
+    const type = c.class_type || 'regular';
+    return type === 'regular' || type === 'REGULAR';
+  }).length;
+  const popupCount = classMasters.filter(c => c.class_type === 'popup').length;
+  const workshopCount = classMasters.filter(c => {
+    const type = c.class_type;
+    return type && type !== 'regular' && type !== 'REGULAR' && type !== 'popup';
+  }).length;
 
   // 각 탭별 카운트
   const activeCount = classMasters.filter((c) => c.is_active !== false).length;
@@ -193,7 +221,7 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
           </p>
 
           {/* 활성화 필터 탭 */}
-          <div className="flex gap-2 mb-6 border-b dark:border-neutral-700 pb-3">
+          <div className="flex gap-2 mb-4 border-b dark:border-neutral-700 pb-3">
             <button
               onClick={() => setFilterTab('active')}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
@@ -223,6 +251,50 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
               }`}
             >
               전체 ({classMasters.length})
+            </button>
+          </div>
+          
+          {/* 클래스 유형 필터 */}
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setClassTypeFilter('all')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                classTypeFilter === 'all'
+                  ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                  : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-700'
+              }`}
+            >
+              전체
+            </button>
+            <button
+              onClick={() => setClassTypeFilter('regular')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                classTypeFilter === 'regular'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-700'
+              }`}
+            >
+              Regular ({regularCount})
+            </button>
+            <button
+              onClick={() => setClassTypeFilter('popup')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                classTypeFilter === 'popup'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-700'
+              }`}
+            >
+              Popup ({popupCount})
+            </button>
+            <button
+              onClick={() => setClassTypeFilter('workshop')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                classTypeFilter === 'workshop'
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-700'
+              }`}
+            >
+              Workshop ({workshopCount})
             </button>
           </div>
           
@@ -323,9 +395,19 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
                           {DIFFICULTY_LABELS[classItem.difficulty_level] || classItem.difficulty_level}
                         </span>
                       )}
-                      {classItem.class_type && classItem.class_type !== 'regular' && (
-                        <span className="text-xs px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded">
-                          {classItem.class_type}
+                      {classItem.class_type && (
+                        <span className={`text-xs px-2 py-1 rounded font-medium ${
+                          classItem.class_type === 'regular' 
+                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                            : classItem.class_type === 'popup'
+                            ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+                            : classItem.class_type === 'workshop'
+                            ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400'
+                        }`}>
+                          {classItem.class_type === 'regular' ? 'Regular' :
+                           classItem.class_type === 'popup' ? 'Popup' :
+                           classItem.class_type === 'workshop' ? 'Workshop' : classItem.class_type}
                         </span>
                       )}
                     </div>

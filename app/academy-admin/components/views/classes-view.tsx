@@ -37,6 +37,8 @@ const DIFFICULTY_LABELS: Record<string, string> = {
   ADVANCED: '고급',
 };
 
+type ClassTypeFilter = 'all' | 'regular' | 'popup' | 'workshop';
+
 export function ClassesView({ academyId }: ClassesViewProps) {
   const [classes, setClasses] = useState<any[]>([]);
   const [halls, setHalls] = useState<any[]>([]);
@@ -47,6 +49,7 @@ export function ClassesView({ academyId }: ClassesViewProps) {
   const [selectedHall, setSelectedHall] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedHallFilter, setSelectedHallFilter] = useState<string>('all'); // 'all' or hall id
+  const [classTypeFilter, setClassTypeFilter] = useState<ClassTypeFilter>('all');
 
   // 현재 월의 모든 날짜 배열 생성
   const monthDays = useMemo(() => {
@@ -150,9 +153,33 @@ export function ClassesView({ academyId }: ClassesViewProps) {
       const classDate = new Date(classItem.start_time);
       const isInDay = classDate >= startOfDay && classDate <= endOfDay;
       const matchesHall = !hallId || classItem.hall_id === hallId;
+      
+      // 클래스 유형 필터
+      if (classTypeFilter !== 'all') {
+        const classType = classItem.class_type || 'regular';
+        // 정규화: 기존 값들을 세 가지 유형으로 매핑
+        const normalizedType = 
+          classType === 'regular' || classType === 'REGULAR' ? 'regular' :
+          classType === 'popup' ? 'popup' :
+          'workshop'; // 기타 모든 값은 workshop으로 처리
+        
+        if (normalizedType !== classTypeFilter) return false;
+      }
+      
       return isInDay && matchesHall;
     });
   };
+  
+  // 유형별 개수 계산
+  const regularCount = classes.filter(c => {
+    const type = c.class_type || 'regular';
+    return type === 'regular' || type === 'REGULAR';
+  }).length;
+  const popupCount = classes.filter(c => c.class_type === 'popup').length;
+  const workshopCount = classes.filter(c => {
+    const type = c.class_type;
+    return type && type !== 'regular' && type !== 'REGULAR' && type !== 'popup';
+  }).length;
 
   const formatTime = (dateString: string) => {
     // UTC를 KST로 변환하여 표시
@@ -245,6 +272,19 @@ export function ClassesView({ academyId }: ClassesViewProps) {
                     <div className="space-y-1 overflow-y-auto max-h-[120px] sm:max-h-[130px]">
                       {dayClasses.map((classItem) => {
                         const classDifficulty = getDifficultyColor(classItem.difficulty_level || 'BEGINNER');
+                        const classType = classItem.class_type || 'regular';
+                        const normalizedType = 
+                          classType === 'regular' || classType === 'REGULAR' ? 'regular' :
+                          classType === 'popup' ? 'popup' :
+                          'workshop';
+                        const typeLabel = 
+                          normalizedType === 'regular' ? 'R' :
+                          normalizedType === 'popup' ? 'P' :
+                          'W';
+                        const typeColor = 
+                          normalizedType === 'regular' ? 'bg-blue-500 text-white' :
+                          normalizedType === 'popup' ? 'bg-purple-500 text-white' :
+                          'bg-amber-500 text-white';
                         return (
                           <div
                             key={classItem.id || classItem.schedule_id}
@@ -255,6 +295,9 @@ export function ClassesView({ academyId }: ClassesViewProps) {
                             }}
                           >
                             <div className={`absolute top-0 left-0 w-1 h-full ${classDifficulty.text.replace('text-', 'bg-')}`}></div>
+                            <span className={`text-[8px] sm:text-[9px] font-bold ${typeColor} px-1.5 py-0.5 rounded`}>
+                              {typeLabel}
+                            </span>
                             <span className="text-[9px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                               {formatTime(classItem.start_time)}
                             </span>
@@ -351,6 +394,53 @@ export function ClassesView({ academyId }: ClassesViewProps) {
             </div>
           </div>
         )}
+
+        {/* 클래스 유형 필터 */}
+        <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 p-4">
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mr-2">클래스 유형:</span>
+            <button
+              onClick={() => setClassTypeFilter('all')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                classTypeFilter === 'all'
+                  ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                  : 'bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700'
+              }`}
+            >
+              전체
+            </button>
+            <button
+              onClick={() => setClassTypeFilter('regular')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                classTypeFilter === 'regular'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700'
+              }`}
+            >
+              Regular ({regularCount})
+            </button>
+            <button
+              onClick={() => setClassTypeFilter('popup')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                classTypeFilter === 'popup'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700'
+              }`}
+            >
+              Popup ({popupCount})
+            </button>
+            <button
+              onClick={() => setClassTypeFilter('workshop')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                classTypeFilter === 'workshop'
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700'
+              }`}
+            >
+              Workshop ({workshopCount})
+            </button>
+          </div>
+        </div>
 
         <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 p-4 sm:p-6 overflow-x-auto">
           <div className="flex justify-between items-center mb-4">

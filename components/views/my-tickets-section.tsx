@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Ticket, Calendar, Hash, ChevronRight, Gift } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UserTicketDetail {
   id: string;
@@ -31,24 +32,35 @@ interface MyTicketsSectionProps {
 }
 
 export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
+  const { user } = useAuth();
   const [tickets, setTickets] = useState<UserTicketDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'ticket' | 'coupon'>('ticket');
 
   useEffect(() => {
     loadTickets();
-  }, []);
+  }, [user]);
 
   const loadTickets = async () => {
+    // 로그인하지 않은 사용자는 빈 배열로 설정
+    if (!user) {
+      setTickets([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await fetch('/api/user-tickets');
       if (response.ok) {
         const result = await response.json();
         setTickets(result.data || []);
+      } else {
+        setTickets([]);
       }
     } catch (error) {
       console.error('Error loading tickets:', error);
+      setTickets([]);
     } finally {
       setLoading(false);
     }

@@ -12,38 +12,29 @@ export async function GET(request: Request) {
   try {
     const supabase = await createClient();
 
-    // 현재 사용자 확인 (데모 버전: 인증 우회)
-    let user: any = null;
+    // 현재 사용자 확인
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !authUser) {
-      // 데모 버전: 인증 없이도 진행
-      const result = await supabase
-        .from('users')
-        .select('id')
-        .limit(1);
-      const demoUsersList = result.data as Array<{ id: string }> | null;
-      
-      if (demoUsersList && demoUsersList.length > 0) {
-        user = { id: demoUsersList[0].id };
-      } else {
-        return NextResponse.json(
-          { error: '인증이 필요합니다.' },
-          { status: 401 }
-        );
-      }
-    } else {
-      user = authUser;
+      // 로그인하지 않은 사용자에게는 빈 데이터 반환
+      return NextResponse.json({
+        data: [],
+        counts: {
+          total: 0,
+          academySpecific: 0,
+        },
+      });
     }
 
     const { searchParams } = new URL(request.url);
     const academyId = searchParams.get('academyId') || undefined;
+    const classId = searchParams.get('classId') || undefined;
 
     // 수강권 목록 조회
-    const tickets = await getAvailableUserTickets(user.id, academyId);
+    const tickets = await getAvailableUserTickets(authUser.id, academyId, classId);
 
     // 수강권 개수 조회
-    const counts = await getUserTicketCounts(user.id, academyId || undefined);
+    const counts = await getUserTicketCounts(authUser.id, academyId || undefined);
 
     return NextResponse.json({
       data: tickets,

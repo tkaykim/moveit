@@ -93,8 +93,17 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
   // 선택된 클래스의 정보
   const selectedClass = classMasters.find(c => c.id === formData.class_id);
 
-  // 정규 클래스만 필터링 (팝업 할인 대상)
-  const regularClasses = classMasters.filter(c => c.class_type !== 'popup');
+  // 정규 클래스만 필터링 (정규 수업 선택용)
+  const regularClasses = classMasters.filter(c => {
+    const type = c.class_type || 'regular';
+    return type === 'regular' || type === 'REGULAR';
+  });
+  
+  // 정규 클래스 + 워크샵 필터링 (팝업 할인 대상용)
+  const regularAndWorkshopClasses = classMasters.filter(c => {
+    const type = c.class_type || 'regular';
+    return type === 'regular' || type === 'REGULAR' || type === 'workshop';
+  });
 
   // 요일 토글
   const toggleDay = (dayIndex: number) => {
@@ -168,9 +177,17 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
 
         if (classError) throw classError;
 
-        // 2. schedules 테이블에 스케줄 생성
+        // 종료시각이 시작시각보다 뒤인지 검증
         const startDateTime = new Date(`${popupData.popup_date}T${popupData.start_time}:00`);
         const endDateTime = new Date(`${popupData.popup_date}T${popupData.end_time}:00`);
+        
+        if (endDateTime <= startDateTime) {
+          alert('종료 시간은 시작 시간보다 뒤여야 합니다.');
+          setLoading(false);
+          return;
+        }
+
+        // 2. schedules 테이블에 스케줄 생성
 
         const { error: scheduleError } = await supabase
           .from('schedules')
@@ -199,6 +216,18 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
 
         if (formData.days_of_week.length === 0) {
           alert('요일을 선택해주세요.');
+          setLoading(false);
+          return;
+        }
+
+        // 종료시각이 시작시각보다 뒤인지 검증
+        const startTimeParts = formData.start_time.split(':').map(Number);
+        const endTimeParts = formData.end_time.split(':').map(Number);
+        const startMinutes = startTimeParts[0] * 60 + startTimeParts[1];
+        const endMinutes = endTimeParts[0] * 60 + endTimeParts[1];
+        
+        if (endMinutes <= startMinutes) {
+          alert('종료 시간은 시작 시간보다 뒤여야 합니다.');
           setLoading(false);
           return;
         }
@@ -651,12 +680,12 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
                         할인 대상 (아래 클래스의 수강권 보유자에게 할인)
                       </label>
                       <div className="max-h-32 overflow-y-auto border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900">
-                        {regularClasses.length === 0 ? (
+                        {regularAndWorkshopClasses.length === 0 ? (
                           <div className="p-3 text-sm text-gray-400 text-center">
                             등록된 정규 클래스가 없습니다.
                           </div>
                         ) : (
-                          regularClasses.map((cls) => (
+                          regularAndWorkshopClasses.map((cls) => (
                             <div
                               key={cls.id}
                               onClick={() => toggleDiscountClass(cls.id)}

@@ -232,21 +232,39 @@ export const MyPageView = ({ myTickets, onQrOpen, onNavigate, onAcademyClick, on
         )}
 
         {/* 수강권 충전 버튼 */}
-        <button 
-          onClick={() => setIsTicketRechargeOpen(true)}
-          className="w-full bg-primary dark:bg-[#CCFF00] text-black rounded-2xl p-4 flex items-center justify-between mb-3 active:scale-[0.98] transition-transform shadow-sm"
-        >
-          <div className="flex items-center gap-3">
-            <div className="bg-black/10 p-2 rounded-xl">
-              <Plus size={20} />
+        {user ? (
+          <button 
+            onClick={() => setIsTicketRechargeOpen(true)}
+            className="w-full bg-primary dark:bg-[#CCFF00] text-black rounded-2xl p-4 flex items-center justify-between mb-3 active:scale-[0.98] transition-transform shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-black/10 p-2 rounded-xl">
+                <Plus size={20} />
+              </div>
+              <div className="text-left">
+                <div className="text-base font-black">수강권 충전</div>
+                <div className="text-xs text-black/70">현재 보유: {myTickets}회</div>
+              </div>
             </div>
-            <div className="text-left">
-              <div className="text-base font-black">수강권 충전</div>
-              <div className="text-xs text-black/70">현재 보유: {myTickets}회</div>
+            <ChevronLeft className="rotate-180 text-black/50" size={20} />
+          </button>
+        ) : (
+          <button 
+            onClick={() => setIsAuthModalOpen(true)}
+            className="w-full bg-primary dark:bg-[#CCFF00] text-black rounded-2xl p-4 flex items-center justify-between mb-3 active:scale-[0.98] transition-transform shadow-sm opacity-60"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-black/10 p-2 rounded-xl">
+                <Plus size={20} />
+              </div>
+              <div className="text-left">
+                <div className="text-base font-black">수강권 충전</div>
+                <div className="text-xs text-black/70">로그인 후 이용 가능</div>
+              </div>
             </div>
-          </div>
-          <ChevronLeft className="rotate-180 text-black/50" size={20} />
-        </button>
+            <ChevronLeft className="rotate-180 text-black/50" size={20} />
+          </button>
+        )}
 
         {/* 주요 버튼 */}
         <button 

@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       user = authUser;
     }
 
-    const { ticketId, startDate: requestedStartDate, discountId } = await request.json();
+    const { ticketId, startDate: requestedStartDate, discountId, paymentMethod } = await request.json();
 
     if (!ticketId) {
       return NextResponse.json(
@@ -164,7 +164,7 @@ export async function POST(request: Request) {
           original_price: originalPrice,
           discount_amount: discountAmount,
           final_price: finalPrice,
-          payment_method: 'TEST', // 테스트 결제
+          payment_method: paymentMethod || 'TEST', // 결제 방법
           payment_status: 'COMPLETED',
         });
     }

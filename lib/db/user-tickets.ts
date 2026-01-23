@@ -29,9 +29,10 @@ export async function getUserTickets(userId: string) {
  * 사용 가능한 수강권 조회 (만료일 확인, remaining_count > 0)
  * @param userId 사용자 ID
  * @param academyId 학원 ID (선택사항, 제공 시 해당 학원 전용 수강권 + 전체 수강권 반환)
+ * @param classId 클래스 ID (선택사항, 제공 시 해당 클래스에 사용 가능한 수강권만 반환)
  * @returns 사용 가능한 수강권 목록
  */
-export async function getAvailableUserTickets(userId: string, academyId?: string) {
+export async function getAvailableUserTickets(userId: string, academyId?: string, classId?: string) {
   const supabase = await createClient() as any;
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
@@ -40,9 +41,11 @@ export async function getAvailableUserTickets(userId: string, academyId?: string
     .select(`
       *,
       tickets (
+        id,
         name,
         is_general,
         academy_id,
+        class_id,
         academies (
           name_kr,
           name_en
@@ -59,12 +62,46 @@ export async function getAvailableUserTickets(userId: string, academyId?: string
 
   if (error) throw error;
 
-  // academyId가 제공된 경우: 해당 학원 전용 수강권 + 전체 수강권(is_general=true 또는 academy_id IS NULL) 필터링
-  if (academyId && data) {
+  if (!data) return [];
+
+  // 클래스 ID가 제공된 경우: 해당 클래스에 사용 가능한 수강권만 필터링
+  if (classId) {
+    // ticket_classes 테이블 조인을 위해 추가 쿼리 필요
+    // 먼저 ticket_classes에서 해당 classId와 연결된 ticket_id 목록 가져오기
+    const supabase = await createClient() as any;
+    const { data: ticketClassesData } = await supabase
+      .from('ticket_classes')
+      .select('ticket_id')
+      .eq('class_id', classId);
+    
+    const linkedTicketIds = new Set((ticketClassesData || []).map((tc: any) => tc.ticket_id));
+    
     return data.filter((item: any) => {
       const ticket = item.tickets;
-      const ticketAcademyId = ticket?.academy_id;
-      const isGeneral = ticket?.is_general;
+      if (!ticket) return false;
+      
+      const ticketId = ticket.id;
+      const ticketAcademyId = ticket.academy_id;
+      const isGeneral = ticket.is_general;
+      
+      // 1. is_general = true: 모든 클래스 사용 가능
+      if (isGeneral) return true;
+      
+      // 2. ticket_classes 테이블에 해당 ticket_id와 class_id가 연결되어 있는 경우
+      if (linkedTicketIds.has(ticketId)) return true;
+      
+      return false;
+    });
+  }
+
+  // academyId가 제공된 경우: 해당 학원 전용 수강권 + 전체 수강권(is_general=true 또는 academy_id IS NULL) 필터링
+  if (academyId) {
+    return data.filter((item: any) => {
+      const ticket = item.tickets;
+      if (!ticket) return false;
+      
+      const ticketAcademyId = ticket.academy_id;
+      const isGeneral = ticket.is_general;
       // 전체 수강권(is_general=true 또는 academy_id가 null) 또는 해당 학원 수강권
       return isGeneral || ticketAcademyId === null || ticketAcademyId === academyId;
     });

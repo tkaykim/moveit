@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Ticket, Check, AlertCircle, Gift } from 'lucide-react';
+import { X, Ticket, Check, AlertCircle, Gift, ShoppingCart } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { ClassInfo } from '@/types';
+import { useRouter } from 'next/navigation';
 
 interface UserTicketInfo {
   id: string;
@@ -26,6 +27,7 @@ interface BookingConfirmModalProps {
   onClose: () => void;
   classInfo: ClassInfo & { time?: string; schedule_id?: string } | null;
   academyId: string;
+  classId?: string; // 클래스 ID 추가
   onBookingComplete?: () => void;
 }
 
@@ -34,8 +36,10 @@ export const BookingConfirmModal = ({
   onClose,
   classInfo,
   academyId,
+  classId,
   onBookingComplete,
 }: BookingConfirmModalProps) => {
+  const router = useRouter();
   const [userTickets, setUserTickets] = useState<UserTicketInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
@@ -47,14 +51,21 @@ export const BookingConfirmModal = ({
     if (isOpen && academyId) {
       loadUserTickets();
     }
-  }, [isOpen, academyId]);
+  }, [isOpen, academyId, classId]);
 
   const loadUserTickets = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`/api/user-tickets?academyId=${academyId}`);
+      // 클래스 ID와 학원 ID를 모두 전달하여 해당 클래스에 사용 가능한 수강권만 조회
+      const queryParams = new URLSearchParams();
+      queryParams.append('academyId', academyId);
+      if (classId) {
+        queryParams.append('classId', classId);
+      }
+      
+      const response = await fetch(`/api/user-tickets?${queryParams.toString()}`);
       const result = await response.json();
       
       if (!response.ok) {
@@ -195,7 +206,29 @@ export const BookingConfirmModal = ({
             <div className="text-center py-12">
               <Ticket size={48} className="text-neutral-400 mx-auto mb-4" />
               <p className="text-neutral-500 mb-2">사용 가능한 수강권이 없습니다.</p>
-              <p className="text-sm text-neutral-400">수강권을 구매 후 예약해 주세요.</p>
+              <p className="text-sm text-neutral-400 mb-4">수강권을 구매 후 예약해 주세요.</p>
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mt-4">
+                <div className="flex items-start gap-3">
+                  <ShoppingCart className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" size={20} />
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-1">
+                      수강권이 없으신가요?
+                    </p>
+                    <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">
+                      수강권을 구매하시면 더 저렴하게 수업을 이용하실 수 있습니다.
+                    </p>
+                    <button
+                      onClick={() => {
+                        handleClose();
+                        router.push(`/tickets${academyId ? `?academyId=${academyId}` : ''}`);
+                      }}
+                      className="text-xs font-bold text-amber-700 dark:text-amber-300 underline hover:text-amber-800 dark:hover:text-amber-200"
+                    >
+                      수강권 구매하러 가기 →
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">

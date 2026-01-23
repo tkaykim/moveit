@@ -10,6 +10,10 @@ interface Ticket {
   ticket_type: string;
   total_count: number | null;
   valid_days: number | null;
+  academy_id: string | null;
+  class_id: string | null;
+  is_general: boolean;
+  is_coupon: boolean;
   academies: {
     id: string;
     name_kr: string | null;
@@ -27,9 +31,12 @@ interface TicketRechargeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPurchaseSuccess?: () => void;
+  academyId?: string;
+  classId?: string;
+  academyName?: string; // 학원 이름 (선택사항)
 }
 
-export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess }: TicketRechargeModalProps) => {
+export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academyId, classId, academyName }: TicketRechargeModalProps) => {
   const [activeTab, setActiveTab] = useState<'all' | 'academy'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Academy[]>([]);
@@ -40,16 +47,52 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess }: Tick
   const [purchasing, setPurchasing] = useState<string | null>(null);
 
   // 수강권 목록 로드
-  const loadTickets = useCallback(async (academyId?: string) => {
+  const loadTickets = useCallback(async (targetAcademyId?: string, targetClassId?: string) => {
     setLoading(true);
     try {
-      const url = academyId 
-        ? `/api/tickets?academyId=${academyId}`
+      // academyId prop이 있으면 해당 학원 수강권만 조회
+      const finalAcademyId = academyId || targetAcademyId;
+      const url = finalAcademyId 
+        ? `/api/tickets?academyId=${finalAcademyId}`
         : '/api/tickets';
       const response = await fetch(url);
       if (response.ok) {
         const { data } = await response.json();
-        setTickets(data || []);
+        let filteredTickets = data || [];
+        
+        // academyId prop이 있으면 해당 학원 수강권만 필터링
+        if (academyId) {
+          filteredTickets = filteredTickets.filter((t: Ticket) => 
+            t.academy_id === academyId
+          );
+        }
+        
+        // classId가 있으면 해당 클래스에 사용 가능한 수강권을 우선 정렬
+        if (targetClassId || classId) {
+          const targetClass = targetClassId || classId;
+          filteredTickets.sort((a: any, b: any) => {
+            // ticket_classes에서 연결된 클래스 전용 수강권 우선
+            const aTicketClasses = a.ticket_classes || [];
+            const bTicketClasses = b.ticket_classes || [];
+            const aIsClassSpecific = aTicketClasses.some((tc: any) => tc.class_id === targetClass);
+            const bIsClassSpecific = bTicketClasses.some((tc: any) => tc.class_id === targetClass);
+            
+            if (aIsClassSpecific && !bIsClassSpecific) return -1;
+            if (!aIsClassSpecific && bIsClassSpecific) return 1;
+            
+            // 그 다음 전체 수강권 (is_general = true)
+            if (a.is_general && !b.is_general) return -1;
+            if (!a.is_general && b.is_general) return 1;
+            
+            // 그 다음 학원 수강권
+            if (a.academy_id === finalAcademyId && b.academy_id !== finalAcademyId) return -1;
+            if (a.academy_id !== finalAcademyId && b.academy_id === finalAcademyId) return 1;
+            
+            return 0;
+          });
+        }
+        
+        setTickets(filteredTickets);
       } else {
         console.error('Failed to load tickets');
         setTickets([]);
@@ -60,23 +103,41 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess }: Tick
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [academyId, classId]);
+
+  // 모달이 열릴 때 초기화 및 수강권 로드
+  useEffect(() => {
+    if (isOpen) {
+      // academyId prop이 있으면 학원별 탭으로 설정하고 해당 학원 수강권만 로드
+      if (academyId) {
+        setActiveTab('academy');
+        loadTickets(academyId, classId);
+      } else {
+        setActiveTab('all');
+        loadTickets(undefined, classId);
+      }
+      if (!academyId) {
+        setSelectedAcademy(null);
+        setSearchQuery('');
+      }
+    }
+  }, [isOpen, academyId, classId, loadTickets]);
 
   // 전체 수강권 탭 선택 시
   useEffect(() => {
-    if (isOpen && activeTab === 'all') {
-      loadTickets();
+    if (isOpen && activeTab === 'all' && !academyId) {
+      loadTickets(undefined, classId);
       setSelectedAcademy(null);
       setSearchQuery('');
     }
-  }, [isOpen, activeTab, loadTickets]);
+  }, [isOpen, activeTab, loadTickets, academyId, classId]);
 
   // 학원 선택 시 수강권 로드
   useEffect(() => {
-    if (isOpen && activeTab === 'academy' && selectedAcademy) {
-      loadTickets(selectedAcademy.id);
+    if (isOpen && activeTab === 'academy' && selectedAcademy && !academyId) {
+      loadTickets(selectedAcademy.id, classId);
     }
-  }, [isOpen, activeTab, selectedAcademy, loadTickets]);
+  }, [isOpen, activeTab, selectedAcademy, loadTickets, academyId, classId]);
 
   // 학원 검색
   const handleSearch = useCallback(async (query: string) => {
@@ -124,10 +185,12 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess }: Tick
           onPurchaseSuccess();
         }
         // 수강권 목록 다시 로드
-        if (selectedAcademy) {
-          loadTickets(selectedAcademy.id);
+        if (academyId) {
+          loadTickets(academyId, classId);
+        } else if (selectedAcademy) {
+          loadTickets(selectedAcademy.id, classId);
         } else {
-          loadTickets();
+          loadTickets(undefined, classId);
         }
       } else {
         const error = await response.json();
@@ -173,33 +236,47 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess }: Tick
           </button>
         </div>
 
-        {/* 탭 */}
-        <div className="flex border-b border-neutral-200 dark:border-neutral-800">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={`flex-1 py-4 text-sm font-bold transition-colors ${
-              activeTab === 'all'
-                ? 'text-black dark:text-white border-b-2 border-primary dark:border-[#CCFF00]'
-                : 'text-neutral-500 dark:text-neutral-400'
-            }`}
-          >
-            전체 수강권
-          </button>
-          <button
-            onClick={() => setActiveTab('academy')}
-            className={`flex-1 py-4 text-sm font-bold transition-colors ${
-              activeTab === 'academy'
-                ? 'text-black dark:text-white border-b-2 border-primary dark:border-[#CCFF00]'
-                : 'text-neutral-500 dark:text-neutral-400'
-            }`}
-          >
-            학원별 수강권
-          </button>
-        </div>
+        {/* 탭 - academyId가 있으면 탭 숨김 */}
+        {!academyId && (
+          <div className="flex border-b border-neutral-200 dark:border-neutral-800">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`flex-1 py-4 text-sm font-bold transition-colors ${
+                activeTab === 'all'
+                  ? 'text-black dark:text-white border-b-2 border-primary dark:border-[#CCFF00]'
+                  : 'text-neutral-500 dark:text-neutral-400'
+              }`}
+            >
+              전체 수강권
+            </button>
+            <button
+              onClick={() => setActiveTab('academy')}
+              className={`flex-1 py-4 text-sm font-bold transition-colors ${
+                activeTab === 'academy'
+                  ? 'text-black dark:text-white border-b-2 border-primary dark:border-[#CCFF00]'
+                  : 'text-neutral-500 dark:text-neutral-400'
+              }`}
+            >
+              학원별 수강권
+            </button>
+          </div>
+        )}
+        
+        {/* academyId가 있을 때 헤더 표시 */}
+        {academyId && (
+          <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 bg-primary/5 dark:bg-[#CCFF00]/5">
+            <div className="text-sm font-bold text-black dark:text-white mb-1">
+              {academyName || selectedAcademy?.name_kr || selectedAcademy?.name_en || '학원'} 수강권
+            </div>
+            <div className="text-xs text-neutral-500 dark:text-neutral-400">
+              {classId ? '이 수업에 사용 가능한 수강권이 우선 표시됩니다' : '해당 학원의 수강권만 표시됩니다'}
+            </div>
+          </div>
+        )}
 
         {/* 컨텐츠 */}
         <div className="flex-1 overflow-y-auto">
-          {activeTab === 'academy' && (
+          {activeTab === 'academy' && !academyId && (
             <div className="p-4 border-b border-neutral-200 dark:border-neutral-800">
               {/* 학원 검색 */}
               <div className="relative mb-4">
@@ -278,53 +355,90 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess }: Tick
                 <Loader2 className="animate-spin text-neutral-400 mx-auto mb-2" size={24} />
                 <div className="text-neutral-500 dark:text-neutral-400">로딩 중...</div>
               </div>
-            ) : activeTab === 'academy' && !selectedAcademy ? (
+            ) : activeTab === 'academy' && !selectedAcademy && !academyId ? (
               <div className="text-center py-12 text-neutral-500 dark:text-neutral-400">
                 학원을 검색하여 선택해주세요
               </div>
             ) : tickets.length === 0 ? (
               <div className="text-center py-12 text-neutral-500 dark:text-neutral-400">
-                {activeTab === 'all' ? '전체 수강권이 없습니다' : '해당 학원의 수강권이 없습니다'}
+                {academyId 
+                  ? '해당 학원의 수강권이 없습니다' 
+                  : activeTab === 'all' 
+                    ? '전체 수강권이 없습니다' 
+                    : '해당 학원의 수강권이 없습니다'}
               </div>
             ) : (
               <div className="space-y-3">
-                {tickets.map((ticket) => (
-                  <div
-                    key={ticket.id}
-                    className="bg-neutral-100 dark:bg-neutral-800 rounded-2xl p-4 border border-neutral-200 dark:border-neutral-700"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <TicketIcon size={18} className="text-primary dark:text-[#CCFF00]" />
-                          <h3 className="font-bold text-black dark:text-white">{ticket.name}</h3>
-                        </div>
-                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                          {ticket.ticket_type} • {ticket.total_count}회 • 유효기간 {ticket.valid_days}일
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-lg font-black text-primary dark:text-[#CCFF00]">
-                          {ticket.price?.toLocaleString()}원
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handlePurchase(ticket.id)}
-                      disabled={purchasing === ticket.id}
-                      className="w-full bg-primary dark:bg-[#CCFF00] text-black font-bold py-3 rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2"
+                {tickets.map((ticket, index) => {
+                  // 현재 수업에 사용 가능한 수강권인지 확인
+                  const ticketClasses = (ticket as any).ticket_classes || [];
+                  const isLinkedToClass = classId && ticketClasses.some((tc: any) => tc.class_id === classId);
+                  const isAvailableForClass = classId 
+                    ? (ticket.is_general || isLinkedToClass)
+                    : true;
+                  
+                  // 우선 표시 여부 (첫 번째이거나 클래스 전용 수강권)
+                  const isPriority = index === 0 || (classId && isLinkedToClass);
+                  
+                  return (
+                    <div
+                      key={ticket.id}
+                      className={`bg-neutral-100 dark:bg-neutral-800 rounded-2xl p-4 border ${
+                        isPriority && isAvailableForClass
+                          ? 'border-primary dark:border-[#CCFF00] border-2 bg-primary/5 dark:bg-[#CCFF00]/5'
+                          : 'border-neutral-200 dark:border-neutral-700'
+                      }`}
                     >
-                      {purchasing === ticket.id ? (
-                        <>
-                          <Loader2 className="animate-spin" size={18} />
-                          구매 중...
-                        </>
-                      ) : (
-                        '구매하기'
+                      {isPriority && isAvailableForClass && (
+                        <div className="mb-2">
+                          <span className="text-xs font-bold px-2 py-1 bg-primary dark:bg-[#CCFF00] text-black rounded-full">
+                            이 수업에 사용 가능
+                          </span>
+                        </div>
                       )}
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <TicketIcon size={18} className="text-primary dark:text-[#CCFF00]" />
+                            <h3 className="font-bold text-black dark:text-white">{ticket.name}</h3>
+                            {ticket.is_coupon && (
+                              <span className="text-xs px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full">
+                                쿠폰
+                              </span>
+                            )}
+                            {ticket.is_general && (
+                              <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
+                                전체 이용
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                            {ticket.ticket_type} • {ticket.total_count || ticket.valid_days || '-'} {ticket.ticket_type === 'COUNT' ? '회' : '일'}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-black text-primary dark:text-[#CCFF00]">
+                            {ticket.price?.toLocaleString()}원
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handlePurchase(ticket.id)}
+                        disabled={purchasing === ticket.id}
+                        className="w-full bg-primary dark:bg-[#CCFF00] text-black font-bold py-3 rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2"
+                      >
+                        {purchasing === ticket.id ? (
+                          <>
+                            <Loader2 className="animate-spin" size={18} />
+                            구매 중...
+                          </>
+                        ) : (
+                          '구매하기'
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

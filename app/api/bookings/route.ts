@@ -147,7 +147,7 @@ export async function POST(request: Request) {
       user = authUser;
     }
 
-    const { classId, scheduleId, userTicketId } = await request.json();
+    const { classId, scheduleId, userTicketId, paymentMethod, paymentStatus } = await request.json();
 
     if (!classId && !scheduleId) {
       return NextResponse.json(
@@ -155,6 +155,9 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    // 즉시 결제인 경우 수강권 없이 예약 생성
+    const isImmediatePayment = paymentMethod === 'card' || paymentMethod === 'account';
 
     let academyId: string;
     let resolvedClassId = classId;
@@ -200,48 +203,73 @@ export async function POST(request: Request) {
       academyId = classData.academy_id;
     }
 
-    // 수강권 자동 선택 (userTicketId가 제공되지 않은 경우)
+    // 수강권 사용인 경우에만 수강권 처리
     let selectedUserTicketId = userTicketId;
-    if (!selectedUserTicketId) {
-      const availableTickets = await getAvailableUserTickets(user.id, academyId);
-      
-      if (availableTickets.length === 0) {
+    if (!isImmediatePayment) {
+      // 수강권 자동 선택 (userTicketId가 제공되지 않은 경우)
+      if (!selectedUserTicketId) {
+        // 클래스 ID를 포함하여 해당 클래스에 사용 가능한 수강권만 조회
+        const availableTickets = await getAvailableUserTickets(user.id, academyId, resolvedClassId);
+        
+        if (availableTickets.length === 0) {
+          return NextResponse.json(
+            { error: '이 수업에 사용 가능한 수강권이 없습니다.' },
+            { status: 400 }
+          );
+        }
+
+        // ticket_classes 테이블에서 해당 클래스와 연결된 수강권 확인
+        const supabase = await createClient() as any;
+        const { data: ticketClassesData } = await supabase
+          .from('ticket_classes')
+          .select('ticket_id')
+          .eq('class_id', resolvedClassId);
+        
+        const linkedTicketIds = new Set((ticketClassesData || []).map((tc: any) => tc.ticket_id));
+        
+        // 클래스 전용 수강권 우선 (ticket_classes에 연결된 수강권), 없으면 전체 수강권 선택
+        const classSpecificTicket = availableTickets.find((t: any) => {
+          const ticket = t.tickets;
+          if (!ticket) return false;
+          // ticket_classes에 연결된 수강권이거나 is_general인 경우
+          return linkedTicketIds.has(ticket.id) || ticket.is_general;
+        });
+        
+        if (classSpecificTicket) {
+          selectedUserTicketId = classSpecificTicket.id;
+        } else {
+          // 학원 전용 수강권 우선
+          const academySpecificTicket = availableTickets.find(
+            (t: any) => t.tickets && !t.tickets.is_general && t.tickets.academy_id === academyId
+          );
+          
+          if (academySpecificTicket) {
+            selectedUserTicketId = academySpecificTicket.id;
+          } else {
+            // 전체 수강권 선택 (is_general이 true이거나 academy_id가 null)
+            const generalTicket = availableTickets.find(
+              (t: any) => t.tickets && (t.tickets.is_general || t.tickets.academy_id === null)
+            );
+            
+            if (generalTicket) {
+              selectedUserTicketId = generalTicket.id;
+            } else {
+              selectedUserTicketId = availableTickets[0].id;
+            }
+          }
+        }
+      }
+
+      // 수강권 차감
+      try {
+        await consumeUserTicket(selectedUserTicketId, 1);
+      } catch (ticketError: any) {
+        console.error('Ticket usage error:', ticketError);
         return NextResponse.json(
-          { error: '사용 가능한 수강권이 없습니다.' },
+          { error: ticketError.message || '수강권 차감에 실패했습니다.' },
           { status: 400 }
         );
       }
-
-      // 학원 전용 수강권 우선, 없으면 전체 수강권 선택
-      const academySpecificTicket = availableTickets.find(
-        (t: any) => t.tickets && !t.tickets.is_general && t.tickets.academy_id === academyId
-      );
-      
-      if (academySpecificTicket) {
-        selectedUserTicketId = academySpecificTicket.id;
-      } else {
-        // 전체 수강권 선택 (is_general이 true이거나 academy_id가 null)
-        const generalTicket = availableTickets.find(
-          (t: any) => t.tickets && (t.tickets.is_general || t.tickets.academy_id === null)
-        );
-        
-        if (generalTicket) {
-          selectedUserTicketId = generalTicket.id;
-        } else {
-          selectedUserTicketId = availableTickets[0].id;
-        }
-      }
-    }
-
-    // 수강권 차감
-    try {
-      await consumeUserTicket(selectedUserTicketId, 1);
-    } catch (ticketError: any) {
-      console.error('Ticket usage error:', ticketError);
-      return NextResponse.json(
-        { error: ticketError.message || '수강권 차감에 실패했습니다.' },
-        { status: 400 }
-      );
     }
 
     // 예약 생성
@@ -249,9 +277,9 @@ export async function POST(request: Request) {
       user_id: user.id,
       class_id: resolvedClassId,
       schedule_id: scheduleId || null,
-      user_ticket_id: selectedUserTicketId,
+      user_ticket_id: isImmediatePayment ? null : selectedUserTicketId,
       status: 'CONFIRMED',
-      payment_status: 'PAID',
+      payment_status: isImmediatePayment ? (paymentStatus || 'PENDING') : 'PAID',
     };
 
     const { data: booking, error: bookingError } = await (supabase as any)
@@ -262,25 +290,27 @@ export async function POST(request: Request) {
 
     if (bookingError) {
       console.error('Booking creation error:', bookingError);
-      // 예약 생성 실패 시 수강권 차감 롤백
-      try {
-        const ticketBeforeUse = await (supabase as any)
-          .from('user_tickets')
-          .select('remaining_count, status')
-          .eq('id', selectedUserTicketId)
-          .single();
+      // 예약 생성 실패 시 수강권 차감 롤백 (수강권 사용인 경우만)
+      if (!isImmediatePayment && selectedUserTicketId) {
+        try {
+          const ticketBeforeUse = await (supabase as any)
+            .from('user_tickets')
+            .select('remaining_count, status')
+            .eq('id', selectedUserTicketId)
+            .single();
 
-        if (ticketBeforeUse.data) {
-          const newRemainingCount = (ticketBeforeUse.data.remaining_count || 0) + 1;
-          const newStatus = newRemainingCount > 0 ? 'ACTIVE' : ticketBeforeUse.data.status;
+          if (ticketBeforeUse.data) {
+            const newRemainingCount = (ticketBeforeUse.data.remaining_count || 0) + 1;
+            const newStatus = newRemainingCount > 0 ? 'ACTIVE' : ticketBeforeUse.data.status;
 
-          await updateUserTicket(selectedUserTicketId, {
-            remaining_count: newRemainingCount,
-            status: newStatus,
-          });
+            await updateUserTicket(selectedUserTicketId, {
+              remaining_count: newRemainingCount,
+              status: newStatus,
+            });
+          }
+        } catch (rollbackError) {
+          console.error('Rollback failed:', rollbackError);
         }
-      } catch (rollbackError) {
-        console.error('Rollback failed:', rollbackError);
       }
 
       return NextResponse.json(

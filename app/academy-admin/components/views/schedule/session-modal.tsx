@@ -167,6 +167,15 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
       return;
     }
 
+    // 종료시각이 시작시각보다 뒤인지 검증
+    const startDateTime = new Date(`${formData.startDate}T${formData.startTime}:00`);
+    const endDateTime = new Date(`${formData.startDate}T${formData.endTime}:00`);
+    
+    if (endDateTime <= startDateTime) {
+      alert('종료 시간은 시작 시간보다 뒤여야 합니다.');
+      return;
+    }
+
     setLoading(true);
     const supabase = getSupabaseClient();
     if (!supabase) {
@@ -176,7 +185,7 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
     }
 
     try {
-      // 로컬 시간을 ISO 형식으로 변환
+      // 로컬 시간을 ISO 형식으로 변환 (이미 검증 완료)
       const startDateTime = new Date(`${formData.startDate}T${formData.startTime}:00`);
       const endDateTime = new Date(`${formData.startDate}T${formData.endTime}:00`);
 

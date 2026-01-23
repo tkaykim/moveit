@@ -9,6 +9,8 @@ import { TicketRechargeModal } from '@/components/modals/ticket-recharge-modal';
 interface TicketsViewProps {
   onBack: () => void;
   onTicketsRefresh?: () => void;
+  academyId?: string;
+  classId?: string;
 }
 
 interface UserTicket {
@@ -23,7 +25,7 @@ interface UserTicket {
   academy_id?: string;
 }
 
-export const TicketsView = ({ onBack, onTicketsRefresh }: TicketsViewProps) => {
+export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: TicketsViewProps) => {
   const [tickets, setTickets] = useState<UserTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'ALL' | 'ACTIVE' | 'EXPIRED' | 'USED'>('ALL');
@@ -353,6 +355,8 @@ export const TicketsView = ({ onBack, onTicketsRefresh }: TicketsViewProps) => {
       <TicketRechargeModal 
         isOpen={isRechargeModalOpen} 
         onClose={() => setIsRechargeModalOpen(false)}
+        academyId={academyId}
+        classId={classId}
         onPurchaseSuccess={() => {
           loadTickets();
           if (onTicketsRefresh) {

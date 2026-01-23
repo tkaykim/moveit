@@ -58,11 +58,30 @@ export function ProductView({ academyId }: ProductViewProps) {
     }
   };
 
-  const getCategory = (ticket: any): string => {
-    if (ticket.ticket_type === 'COUNT') return '횟수제';
-    if (ticket.ticket_type === 'PERIOD') return '기간제';
-    return '일반';
+  const getTicketCategory = (ticket: any): 'regular' | 'popup' | 'workshop' => {
+    if (ticket.access_group === 'popup') return 'popup';
+    if (ticket.access_group === 'workshop') return 'workshop';
+    if (ticket.is_coupon === true) return 'popup'; // 기존 쿠폰은 팝업으로 분류
+    return 'regular';
   };
+
+  const getCategoryLabel = (ticket: any): string => {
+    const category = getTicketCategory(ticket);
+    if (category === 'regular') return '정규 수강권';
+    if (category === 'popup') return '팝업 수강권';
+    return '워크샵 수강권';
+  };
+
+  const getCategoryBadgeColor = (category: 'regular' | 'popup' | 'workshop'): string => {
+    if (category === 'regular') return 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400';
+    if (category === 'popup') return 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400';
+    return 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400';
+  };
+
+  // 수강권을 타입별로 분류
+  const regularTickets = tickets.filter(t => getTicketCategory(t) === 'regular');
+  const popupTickets = tickets.filter(t => getTicketCategory(t) === 'popup');
+  const workshopTickets = tickets.filter(t => getTicketCategory(t) === 'workshop');
 
   if (loading) {
     return (
@@ -90,40 +109,151 @@ export function ProductView({ academyId }: ProductViewProps) {
             <h3 className="font-bold text-md text-gray-800 dark:text-white mb-4 flex items-center gap-2">
               <Ticket size={18} className="text-gray-500 dark:text-gray-400" /> 판매 중인 상품
             </h3>
-            <div className="space-y-4">
-              {tickets.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  등록된 상품이 없습니다.
-                </div>
-              ) : (
-                tickets.map((product) => (
-                  <div
-                    key={product.id}
-                    className="flex justify-between items-center p-4 border dark:border-neutral-800 rounded-lg hover:border-blue-300 dark:hover:border-blue-600 transition-colors bg-white dark:bg-neutral-900"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded">
-                          {getCategory(product)}
-                        </span>
-                        <h4 className="font-bold text-gray-800 dark:text-white">{product.name}</h4>
-                      </div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        기본가: ₩{product.price.toLocaleString()}
-                      </p>
+            <div className="space-y-6">
+              {/* 정규 수강권 */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  정규 수강권
+                </h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  일정 주기로 반복되는 수업을 설정할 수 있습니다
+                </p>
+                <div className="space-y-2">
+                  {regularTickets.length === 0 ? (
+                    <div className="text-center py-4 text-xs text-gray-400 dark:text-gray-500">
+                      등록된 정규 수강권이 없습니다
                     </div>
-                    <button
-                      onClick={() => {
-                        setSelectedTicket(product);
-                        setShowTicketModal(true);
-                      }}
-                      className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-                    >
-                      <Settings size={18} />
-                    </button>
-                  </div>
-                ))
-              )}
+                  ) : (
+                    regularTickets.map((product) => (
+                      <div
+                        key={product.id}
+                        className="flex justify-between items-center p-3 border dark:border-neutral-800 rounded-lg hover:border-blue-300 dark:hover:border-blue-600 transition-colors bg-white dark:bg-neutral-900"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${getCategoryBadgeColor('regular')}`}>
+                              정규
+                            </span>
+                            <h4 className="font-bold text-sm text-gray-800 dark:text-white">{product.name}</h4>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            기본가: ₩{product.price?.toLocaleString() || 0}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setSelectedTicket(product);
+                            setShowTicketModal(true);
+                          }}
+                          className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 ml-2"
+                        >
+                          <Settings size={16} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* 팝업 수강권 */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  팝업 수강권
+                </h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  쿠폰제 학원에서 주로 사용하는 팝업 수강권. 정해진 금액과 횟수에 따라 팝업 수업용 수강권을 판매할 수 있습니다
+                </p>
+                <div className="space-y-2">
+                  {popupTickets.length === 0 ? (
+                    <div className="text-center py-4 text-xs text-gray-400 dark:text-gray-500">
+                      등록된 팝업 수강권이 없습니다
+                    </div>
+                  ) : (
+                    popupTickets.map((product) => (
+                      <div
+                        key={product.id}
+                        className="flex justify-between items-center p-3 border dark:border-neutral-800 rounded-lg hover:border-purple-300 dark:hover:border-purple-600 transition-colors bg-white dark:bg-neutral-900"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${getCategoryBadgeColor('popup')}`}>
+                              팝업
+                            </span>
+                            <h4 className="font-bold text-sm text-gray-800 dark:text-white">{product.name}</h4>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            기본가: ₩{product.price?.toLocaleString() || 0} • {product.total_count || 0}회
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setSelectedTicket(product);
+                            setShowTicketModal(true);
+                          }}
+                          className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 ml-2"
+                        >
+                          <Settings size={16} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* 워크샵 수강권 */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  워크샵 수강권
+                </h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  팝업과 성격은 비슷하나 워크샵 전용 수강권을 판매할 수 있습니다
+                </p>
+                <div className="space-y-2">
+                  {workshopTickets.length === 0 ? (
+                    <div className="text-center py-4 text-xs text-gray-400 dark:text-gray-500">
+                      등록된 워크샵 수강권이 없습니다
+                    </div>
+                  ) : (
+                    workshopTickets.map((product) => (
+                      <div
+                        key={product.id}
+                        className="flex justify-between items-center p-3 border dark:border-neutral-800 rounded-lg hover:border-amber-300 dark:hover:border-amber-600 transition-colors bg-white dark:bg-neutral-900"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${getCategoryBadgeColor('workshop')}`}>
+                              워크샵
+                            </span>
+                            <h4 className="font-bold text-sm text-gray-800 dark:text-white">{product.name}</h4>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            기본가: ₩{product.price?.toLocaleString() || 0} • {product.total_count || 0}회
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setSelectedTicket(product);
+                            setShowTicketModal(true);
+                          }}
+                          className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 ml-2"
+                        >
+                          <Settings size={16} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setSelectedTicket(null);
+                  setShowTicketModal(true);
+                }}
+                className="w-full py-3 border border-gray-300 dark:border-neutral-700 border-dashed rounded-lg text-gray-500 dark:text-gray-400 text-sm hover:bg-gray-100 dark:hover:bg-neutral-800 flex items-center justify-center gap-2 transition-colors"
+              >
+                <Plus size={16} /> 새 수강권 만들기
+              </button>
             </div>
           </div>
 
