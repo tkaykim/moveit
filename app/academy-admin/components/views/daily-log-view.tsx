@@ -44,34 +44,58 @@ export function DailyLogView({ academyId }: DailyLogViewProps) {
     try {
       const dateStr = selectedDate.toISOString().split('T')[0];
 
-      // 오늘의 클래스 로드 (video_url 포함)
+      // 선택한 날짜의 스케줄 로드
       const startOfDay = new Date(selectedDate);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(selectedDate);
       endOfDay.setHours(23, 59, 59, 999);
 
-      const { data: classesData, error: classesError } = await supabase
+      // 먼저 해당 학원의 클래스 ID 목록 조회
+      const { data: academyClasses, error: classError } = await supabase
         .from('classes')
-        .select(`
-          *,
-          instructors (
-            id,
-            name_kr,
-            name_en
-          ),
-          halls (
-            id,
-            name
-          )
-        `)
+        .select('id')
         .eq('academy_id', academyId)
-        .eq('is_canceled', false)
-        .gte('start_time', startOfDay.toISOString())
-        .lte('start_time', endOfDay.toISOString())
-        .order('start_time', { ascending: true });
+        .eq('is_canceled', false);
 
-      if (classesError) throw classesError;
-      setClasses(classesData || []);
+      if (classError) throw classError;
+
+      const classIds = (academyClasses || []).map((c: any) => c.id);
+
+      let schedulesData: any[] = [];
+      if (classIds.length > 0) {
+        // schedules 테이블에서 선택한 날짜의 수업 일정 조회
+        const { data: schedules, error: schedulesError } = await supabase
+          .from('schedules')
+          .select(`
+            *,
+            classes (
+              id,
+              title,
+              genre,
+              difficulty_level,
+              academy_id,
+              video_url
+            ),
+            instructors (
+              id,
+              name_kr,
+              name_en
+            ),
+            halls (
+              id,
+              name
+            )
+          `)
+          .in('class_id', classIds)
+          .eq('is_canceled', false)
+          .gte('start_time', startOfDay.toISOString())
+          .lte('start_time', endOfDay.toISOString())
+          .order('start_time', { ascending: true });
+
+        if (schedulesError) throw schedulesError;
+        schedulesData = schedules || [];
+      }
+      setClasses(schedulesData);
 
       // 오늘의 일지 로드
       const { data: logsData, error: logsError } = await supabase
@@ -83,12 +107,16 @@ export function DailyLogView({ academyId }: DailyLogViewProps) {
 
       if (logsError) throw logsError;
 
-      // 클래스와 일지 매칭
-      const logsMap = new Map((logsData || []).map((log: any) => [log.class_id, log]));
-      const combinedData = (classesData || []).map((classItem: any) => {
-        const log = logsMap.get(classItem.id);
+      // 스케줄과 일지 매칭 (class_id + log_date 기준)
+      const logsMap = new Map(
+        (logsData || []).map((log: any) => [`${log.class_id}_${log.log_date}`, log])
+      );
+      const combinedData = schedulesData.map((scheduleItem: any) => {
+        const classId = scheduleItem.class_id;
+        const logKey = `${classId}_${dateStr}`;
+        const log = logsMap.get(logKey);
         return {
-          ...classItem,
+          ...scheduleItem,
           log: log || null,
         };
       });
@@ -303,10 +331,12 @@ export function DailyLogView({ academyId }: DailyLogViewProps) {
               logs.map((item) => {
                 const log = item.log;
                 const status = log?.status || 'PENDING';
-                const time = new Date(item.start_time).toLocaleTimeString('ko-KR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                });
+                const time = item.start_time 
+                  ? new Date(item.start_time).toLocaleTimeString('ko-KR', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : '-';
 
                 const hasWarning = status === 'PENDING' || log?.notes;
                 
@@ -341,7 +371,7 @@ export function DailyLogView({ academyId }: DailyLogViewProps) {
                         </div>
                         <div className="min-w-0 flex-1">
                           <h4 className="font-bold text-sm md:text-base text-gray-800 dark:text-white break-words">
-                            {item.title || '-'}
+                            {item.classes?.title || item.title || '-'}
                           </h4>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 break-words">
                             {item.instructors?.name_kr || item.instructors?.name_en || '-'} 강사
@@ -412,28 +442,28 @@ export function DailyLogView({ academyId }: DailyLogViewProps) {
                               </p>
                             </div>
 
-                            {(item.video_url || log?.video_url) && (
+                            {(log?.video_url || item.video_url || item.classes?.video_url) && (
                               <div className="mb-4">
                                 <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase">
                                   수업영상 링크
                                 </label>
                                 <a
-                                  href={item.video_url || log?.video_url}
+                                  href={log?.video_url || item.video_url || item.classes?.video_url}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:underline break-all block"
                                 >
-                                  {item.video_url || log?.video_url}
+                                  {log?.video_url || item.video_url || item.classes?.video_url}
                                 </a>
                               </div>
                             )}
 
                             <div className="mt-4">
                               <button
-                                onClick={() => {
-                                  setSelectedLog({ classItem: item, log });
-                                  setShowLogModal(true);
-                                }}
+                              onClick={() => {
+                                setSelectedLog({ classItem: item, log: item.log });
+                                setShowLogModal(true);
+                              }}
                                 className="w-full sm:w-auto bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
                               >
                                 일지 수정하기

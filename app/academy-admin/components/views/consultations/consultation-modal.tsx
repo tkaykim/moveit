@@ -38,17 +38,46 @@ export function ConsultationModal({ academyId, consultation, onClose }: Consulta
         notes: consultation.notes || '',
       });
     }
-  }, [consultation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [consultation, academyId]);
 
   const loadUsers = async () => {
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
     try {
-      const { data } = await supabase.from('users').select('id, name').limit(100);
-      setUsers(data || []);
+      // academy_students를 통해 해당 학원의 학생만 조회
+      const { data: academyStudents, error: studentsError } = await supabase
+        .from('academy_students')
+        .select(`
+          user_id,
+          users (
+            id,
+            name,
+            name_en,
+            nickname
+          )
+        `)
+        .eq('academy_id', academyId);
+
+      if (studentsError) {
+        console.error('Error loading academy students:', studentsError);
+        setUsers([]);
+      } else {
+        // 중복 제거 및 users 정보만 추출
+        const uniqueUsers = new Map();
+        (academyStudents || []).forEach((academyStudent: any) => {
+          const userId = academyStudent.user_id;
+          if (academyStudent.users && !uniqueUsers.has(userId)) {
+            uniqueUsers.set(userId, academyStudent.users);
+          }
+        });
+
+        setUsers(Array.from(uniqueUsers.values()));
+      }
     } catch (error) {
       console.error('Error loading users:', error);
+      setUsers([]);
     }
   };
 

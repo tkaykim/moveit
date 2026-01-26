@@ -41,6 +41,21 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // 이미 제출 중이면 무시
+    if (loading) return;
+    
+    // 필수 필드 검증
+    if (!formData.name || !formData.name.trim()) {
+      alert('이름을 입력해주세요.');
+      return;
+    }
+    
+    if (!formData.phone || !formData.phone.trim()) {
+      alert('전화번호를 입력해주세요.');
+      return;
+    }
+    
     setLoading(true);
 
     const supabase = getSupabaseClient();
@@ -53,14 +68,29 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
     try {
       let userId: string;
 
-      // 1. 기존 사용자 확인 (전화번호 또는 이메일로)
+      // 1. 기존 사용자 확인 (이름과 전화번호 조합 우선, 그 다음 전화번호, 이메일)
       let existingUser = null;
       
-      if (formData.phone) {
+      // 1순위: 이름과 전화번호 조합으로 확인
+      if (formData.name && formData.phone) {
+        const { data: namePhoneUser } = await supabase
+          .from('users')
+          .select('id, name, nickname, email, phone')
+          .eq('name', formData.name.trim())
+          .eq('phone', formData.phone.trim())
+          .maybeSingle();
+        
+        if (namePhoneUser) {
+          existingUser = namePhoneUser;
+        }
+      }
+      
+      // 2순위: 전화번호만으로 확인 (이름+전화번호로 찾지 못한 경우)
+      if (!existingUser && formData.phone) {
         const { data: phoneUser } = await supabase
           .from('users')
           .select('id, name, nickname, email, phone')
-          .eq('phone', formData.phone)
+          .eq('phone', formData.phone.trim())
           .maybeSingle();
         
         if (phoneUser) {
@@ -68,12 +98,12 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
         }
       }
 
-      // 전화번호로 찾지 못했고 이메일이 있으면 이메일로 확인
+      // 3순위: 이메일로 확인 (전화번호로 찾지 못했고 이메일이 있는 경우)
       if (!existingUser && formData.email) {
         const { data: emailUser } = await supabase
           .from('users')
           .select('id, name, nickname, email, phone')
-          .eq('email', formData.email)
+          .eq('email', formData.email.trim())
           .maybeSingle();
         
         if (emailUser) {
@@ -87,23 +117,23 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
         
         // 기존 사용자 정보 업데이트
         const updateData: any = {};
-        if (formData.name && formData.name !== existingUser.name) {
-          updateData.name = formData.name;
+        if (formData.name?.trim() && formData.name.trim() !== existingUser.name) {
+          updateData.name = formData.name.trim();
         }
-        if (formData.nickname && formData.nickname !== existingUser.nickname) {
-          updateData.nickname = formData.nickname;
+        if (formData.nickname?.trim() && formData.nickname.trim() !== existingUser.nickname) {
+          updateData.nickname = formData.nickname.trim();
         }
-        if (formData.email && formData.email !== existingUser.email) {
-          updateData.email = formData.email;
+        if (formData.email?.trim() && formData.email.trim() !== existingUser.email) {
+          updateData.email = formData.email.trim();
         }
-        if (formData.phone && formData.phone !== existingUser.phone) {
-          updateData.phone = formData.phone;
+        if (formData.phone?.trim() && formData.phone.trim() !== existingUser.phone) {
+          updateData.phone = formData.phone.trim();
         }
-        if (formData.name_en) updateData.name_en = formData.name_en;
+        if (formData.name_en?.trim()) updateData.name_en = formData.name_en.trim();
         if (formData.birth_date) updateData.birth_date = formData.birth_date;
         if (formData.gender) updateData.gender = formData.gender;
-        if (formData.address) updateData.address = formData.address;
-        if (formData.nationality) updateData.nationality = formData.nationality;
+        if (formData.address?.trim()) updateData.address = formData.address.trim();
+        if (formData.nationality?.trim()) updateData.nationality = formData.nationality.trim();
 
         if (Object.keys(updateData).length > 0) {
           const { error: updateError } = await supabase
@@ -152,20 +182,22 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
           if (updateRelationError) throw updateRelationError;
         }
 
-        alert('기존 학생을 해당 학원의 수강생으로 등록했습니다.');
+        alert('기존 학생을 해당 학원의 수강생으로 등록했습니다. 이제 해당 학원에서 조회 가능합니다.');
       } else {
         // 5. 신규 사용자 생성
+        // id 필드를 명시적으로 제외하여 데이터베이스가 자동으로 UUID 생성하도록 함
         const userData: any = {
-          name: formData.name,
-          nickname: formData.nickname || null,
-          email: formData.email || null,
-          phone: formData.phone || null,
+          name: formData.name.trim(),
+          nickname: formData.nickname?.trim() || null,
+          email: formData.email?.trim() || null,
+          phone: formData.phone.trim(),
         };
-        if (formData.name_en) userData.name_en = formData.name_en;
+        // id 필드는 포함하지 않음 (데이터베이스가 자동 생성)
+        if (formData.name_en?.trim()) userData.name_en = formData.name_en.trim();
         if (formData.birth_date) userData.birth_date = formData.birth_date;
         if (formData.gender) userData.gender = formData.gender;
-        if (formData.address) userData.address = formData.address;
-        if (formData.nationality) userData.nationality = formData.nationality;
+        if (formData.address?.trim()) userData.address = formData.address.trim();
+        if (formData.nationality?.trim()) userData.nationality = formData.nationality.trim();
 
         const { data: newUser, error: insertError } = await supabase
           .from('users')
@@ -174,8 +206,17 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
           .single();
 
         if (insertError) {
-          if (insertError.code === '23505' && insertError.message.includes('email')) {
-            throw new Error('이미 등록된 이메일입니다.');
+          if (insertError.code === '23505') {
+            if (insertError.message.includes('users_pkey')) {
+              throw new Error('이미 등록된 사용자입니다. 잠시 후 다시 시도해주세요.');
+            }
+            if (insertError.message.includes('email')) {
+              throw new Error('이미 등록된 이메일입니다.');
+            }
+            if (insertError.message.includes('phone')) {
+              throw new Error('이미 등록된 전화번호입니다.');
+            }
+            throw new Error('중복된 정보가 있습니다. 잠시 후 다시 시도해주세요.');
           }
           throw insertError;
         }
@@ -247,7 +288,7 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                이름 *
+                이름 <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -288,10 +329,11 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  전화번호
+                  전화번호 <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="tel"
+                  required
                   className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}

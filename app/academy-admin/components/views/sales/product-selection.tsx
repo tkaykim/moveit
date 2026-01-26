@@ -68,44 +68,51 @@ export function ProductSelection({
           <p className="text-sm">&quot;{searchQuery}&quot;에 대한 검색 결과가 없습니다.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {filteredProducts.map((product) => (
-          <button
-            key={product.id}
-            onClick={() => onProductSelect(product)}
-            className={`relative p-4 rounded-xl border-2 text-left transition-all ${
-              selectedProduct?.id === product.id
-                ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-500 dark:ring-blue-400'
-                : 'border-slate-200 dark:border-neutral-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-slate-50 dark:hover:bg-neutral-800'
-            }`}
-          >
-            <div className="flex justify-between items-start mb-2">
-              <span
-                className={`text-xs font-bold px-2 py-1 rounded ${
-                  product.type === 'count'
-                    ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
-                    : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
-                }`}
-              >
-                {product.type === 'count' ? '횟수제' : '기간제'}
-              </span>
-              {selectedProduct?.id === product.id && (
-                <div className="bg-blue-500 dark:bg-blue-400 text-white rounded-full p-0.5">
-                  <Check size={12} />
-                </div>
-              )}
+        <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {filteredProducts.map((product) => (
+            <button
+              key={product.id}
+              onClick={() => onProductSelect(product)}
+              className={`relative p-3 rounded-lg border-2 text-left transition-all ${
+                selectedProduct?.id === product.id
+                  ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-500 dark:ring-blue-400'
+                  : 'border-slate-200 dark:border-neutral-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-slate-50 dark:hover:bg-neutral-800'
+              }`}
+            >
+              <div className="flex justify-between items-start mb-1.5">
+                <span
+                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                    product.type === 'count'
+                      ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
+                      : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+                  }`}
+                >
+                  {product.type === 'count' ? '횟수제' : '기간제'}
+                </span>
+                {selectedProduct?.id === product.id && (
+                  <div className="bg-blue-500 dark:bg-blue-400 text-white rounded-full p-0.5">
+                    <Check size={10} />
+                  </div>
+                )}
+              </div>
+              <div className="font-semibold text-sm text-slate-800 dark:text-white mb-1 truncate">{product.name}</div>
+              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                {formatCurrency(product.price)}
+              </div>
+              <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                {product.type === 'count'
+                  ? `${product.amount}회 제공`
+                  : `${product.days}일 무제한`}
+              </div>
+            </button>
+          ))}
+          </div>
+          {filteredProducts.length > 10 && (
+            <div className="text-center text-xs text-gray-500 dark:text-gray-400 mt-3 py-2">
+              총 {filteredProducts.length}개의 수강권
             </div>
-            <div className="font-bold text-slate-800 dark:text-white mb-1">{product.name}</div>
-            <div className="text-sm text-slate-600 dark:text-slate-400">
-              {formatCurrency(product.price)}
-            </div>
-            <div className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-              {product.type === 'count'
-                ? `${product.amount}회 제공`
-                : `${product.days}일 무제한`}
-            </div>
-          </button>
-        ))}
+          )}
         </div>
       )}
     </section>

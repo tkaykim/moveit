@@ -41,9 +41,58 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
     if (!supabase) return;
 
     try {
-      // 학생 목록 로드
-      const { data: users } = await supabase.from('users').select('*').limit(100);
-      setStudents(users || []);
+      // academy_students를 통해 해당 학원의 학생만 조회
+      const { data: academyStudents, error: studentsError } = await supabase
+        .from('academy_students')
+        .select(`
+          *,
+          users (
+            id,
+            name,
+            name_en,
+            nickname,
+            phone,
+            email,
+            birth_date,
+            gender,
+            address,
+            nationality
+          ),
+          academies (
+            id,
+            name_kr,
+            name_en
+          )
+        `)
+        .eq('academy_id', academyId);
+
+      if (studentsError) {
+        console.error('Error loading academy students:', studentsError);
+        setStudents([]);
+      } else {
+        // 중복 제거 (같은 user가 여러 번 나타날 수 있으므로)
+        const uniqueUsers = new Map();
+        (academyStudents || []).forEach((academyStudent: any) => {
+          const userId = academyStudent.user_id;
+          if (!uniqueUsers.has(userId)) {
+            uniqueUsers.set(userId, {
+              ...academyStudent.users,
+              academy_students: []
+            });
+          }
+          // 해당 user의 academy_students 정보 수집
+          uniqueUsers.get(userId).academy_students.push({
+            academy_id: academyStudent.academy_id,
+            academy: academyStudent.academies,
+            created_at: academyStudent.created_at,
+            referral_source: academyStudent.referral_source,
+            interested_genres: academyStudent.interested_genres,
+            level: academyStudent.level,
+          });
+        });
+
+        setStudents(Array.from(uniqueUsers.values()));
+      }
 
       // 상품(수강권) 목록 로드
       const { data: tickets } = await supabase

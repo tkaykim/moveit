@@ -8,10 +8,11 @@ interface DailyLogModalProps {
   academyId: string;
   classItem: any;
   log?: any;
+  logDate?: string; // 선택한 날짜 (YYYY-MM-DD 형식)
   onClose: () => void;
 }
 
-export function DailyLogModal({ academyId, classItem, log, onClose }: DailyLogModalProps) {
+export function DailyLogModal({ academyId, classItem, log, logDate, onClose }: DailyLogModalProps) {
   const [formData, setFormData] = useState({
     max_students: 0, // 정원
     current_students: 0, // 신청자 수
@@ -25,12 +26,12 @@ export function DailyLogModal({ academyId, classItem, log, onClose }: DailyLogMo
   useEffect(() => {
     if (classItem) {
       setFormData({
-        max_students: classItem.max_students || 0, // 정원
+        max_students: classItem.max_students || classItem.classes?.max_students || 0, // 정원
         current_students: classItem.current_students || 0, // 신청자 수
         present_students: classItem.present_students || 0, // 실제 출석자 수
         content: log?.content || '',
         notes: log?.notes || '',
-        video_url: classItem.video_url || '',
+        video_url: log?.video_url || classItem.video_url || classItem.classes?.video_url || '',
       });
     }
   }, [log, classItem]);
@@ -47,32 +48,35 @@ export function DailyLogModal({ academyId, classItem, log, onClose }: DailyLogMo
     }
 
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const selectedDate = logDate || new Date().toISOString().split('T')[0];
       
-      // classes 데이터 업데이트 (max_students, current_students, present_students, video_url)
-      const classUpdateData = {
+      // schedules 데이터 업데이트 (max_students, current_students, present_students, video_url)
+      const scheduleUpdateData = {
         max_students: formData.max_students,
         current_students: formData.current_students,
         present_students: formData.present_students,
         video_url: formData.video_url || null,
       };
 
-      // classes 업데이트
-      const { error: classError } = await supabase
-        .from('classes')
-        .update(classUpdateData)
-        .eq('id', classItem.id);
+      // schedules 업데이트 (classes가 아닌 schedules 테이블)
+      const scheduleId = classItem.id; // schedule의 id
+      const { error: scheduleError } = await supabase
+        .from('schedules')
+        .update(scheduleUpdateData)
+        .eq('id', scheduleId);
 
-      if (classError) throw classError;
+      if (scheduleError) throw scheduleError;
 
       // daily_logs 데이터 (수업 내용과 특이사항만 저장)
+      const classId = classItem.class_id || classItem.id;
       const logData = {
         academy_id: academyId,
-        class_id: classItem.id,
-        log_date: today,
+        class_id: classId,
+        log_date: selectedDate,
         content: formData.content || null,
         notes: formData.notes || null,
         status: 'COMPLETED',
+        video_url: formData.video_url || null,
       };
 
       // daily_logs 저장/업데이트
@@ -112,7 +116,7 @@ export function DailyLogModal({ academyId, classItem, log, onClose }: DailyLogMo
       <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b dark:border-neutral-800 flex justify-between items-center sticky top-0 bg-white dark:bg-neutral-900">
           <h3 className="text-xl font-bold text-gray-800 dark:text-white">
-            {log ? '일지 수정' : '일지 작성'} - {classItem.title || '-'} ({time})
+            {log ? '일지 수정' : '일지 작성'} - {classItem.classes?.title || classItem.title || '-'} ({time})
           </h3>
           <button
             onClick={onClose}

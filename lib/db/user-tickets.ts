@@ -96,15 +96,6 @@ export async function getAvailableUserTickets(
 
     const linkedTicketIds = new Set((ticketClassesData || []).map((tc: any) => tc.ticket_id));
 
-    // 클래스 정보 조회 (academy_id 확인용)
-    const { data: classData } = await supabase
-      .from('classes')
-      .select('academy_id')
-      .eq('id', classId)
-      .single();
-    
-    const classAcademyId = classData?.academy_id;
-
     return data.filter((item: any) => {
       const ticket = item.tickets;
       if (!ticket) return false;
@@ -112,7 +103,6 @@ export async function getAvailableUserTickets(
       const ticketId = ticket.id;
       const isCoupon = ticket.is_coupon === true;
       const isGeneral = ticket.is_general === true;
-      const ticketAcademyId = ticket.academy_id;
 
       // 쿠폰인 경우: allowCoupon이 true일 때만 표시
       if (isCoupon) {
@@ -129,11 +119,7 @@ export async function getAvailableUserTickets(
         return true;
       }
 
-      // 학원 수강권은 해당 학원의 모든 클래스에서 사용 가능
-      if (ticketAcademyId && ticketAcademyId === classAcademyId) {
-        return true;
-      }
-
+      // 그 외의 경우는 ticket_classes에 연결되지 않은 수강권이므로 사용 불가
       return false;
     });
   }
