@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { X, Lock, Info, CheckSquare, Square, Ticket, Tag } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { X, Lock, Info, CheckSquare, Square, Ticket, Tag, Search } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 
 interface TicketModalProps {
   academyId: string;
   ticket?: any;
+  initialCategory?: 'regular' | 'popup' | 'workshop';
   onClose: () => void;
 }
 
@@ -34,25 +35,33 @@ const COUNT_PRESETS = [
   { label: '10회', count: 10 },
 ];
 
+// 팝업 쿠폰용 유효기간 프리셋 (일수)
+const POPUP_VALIDITY_PRESETS = [
+  { label: '30일', days: 30 },
+  { label: '60일', days: 60 },
+  { label: '90일', days: 90 },
+  { label: '무제한', days: null },
+];
+
 // 수강권 유형 정보
 const TICKET_CATEGORY_INFO = {
   regular: {
     name: '정규 수강권',
-    description: 'Regular 클래스 전용. 기간 내 무제한 수강 가능한 정기 수강권입니다.',
+    description: '특정 클래스를 기간 내 무제한 수강 가능. 구매 시 시작일 선택.',
     color: 'blue',
     icon: 'Ticket',
     ticketType: 'PERIOD' as const,
   },
   popup: {
-    name: '팝업 수강권',
-    description: 'Popup 클래스 전용. 정해진 횟수만큼 팝업 수업에 참여할 수 있는 수강권입니다.',
+    name: '팝업 쿠폰',
+    description: '횟수 기반 수강권. 유효기간 내 횟수를 소진하지 않으면 잔여 수량 소멸.',
     color: 'purple',
     icon: 'Tag',
     ticketType: 'COUNT' as const,
   },
   workshop: {
     name: '워크샵 수강권',
-    description: 'Workshop 클래스 전용. 정해진 횟수만큼 워크샵 수업에 참여할 수 있는 수강권입니다.',
+    description: '특정 워크샵 수업 전용. 해당 워크샵에서만 사용 가능한 수강권.',
     color: 'amber',
     icon: 'Tag',
     ticketType: 'COUNT' as const,
@@ -61,15 +70,15 @@ const TICKET_CATEGORY_INFO = {
 
 type ProductCategory = 'regular' | 'popup' | 'workshop';
 
-export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
+export function TicketModal({ academyId, ticket, initialCategory, onClose }: TicketModalProps) {
   // 상품 카테고리: 정규 수강권 / 팝업 수강권 / 워크샵 수강권
-  const [productCategory, setProductCategory] = useState<ProductCategory>('regular');
+  const [productCategory, setProductCategory] = useState<ProductCategory>(initialCategory || 'regular');
   
   const [formData, setFormData] = useState({
     name: '',
     price: 0,
-    ticket_type: 'PERIOD' as 'COUNT' | 'PERIOD', // 수강권은 기간제, 쿠폰은 횟수제
-    total_count: null as number | null,
+    ticket_type: (initialCategory === 'popup' || initialCategory === 'workshop' ? 'COUNT' : 'PERIOD') as 'COUNT' | 'PERIOD',
+    total_count: (initialCategory === 'popup' || initialCategory === 'workshop' ? 1 : null) as number | null,
     valid_days: null as number | null,
     is_on_sale: true,
   });
@@ -80,6 +89,20 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
   const [useCustomPeriod, setUseCustomPeriod] = useState(false);
   const [useCustomCount, setUseCustomCount] = useState(false);
+  const [useCustomPopupValidity, setUseCustomPopupValidity] = useState(false);
+  const [popupValidDays, setPopupValidDays] = useState<number | null>(initialCategory === 'popup' ? 30 : null); // 팝업 쿠폰 기본 유효기간 30일
+  const [classSearchQuery, setClassSearchQuery] = useState('');
+  
+  // 검색 필터링된 클래스 목록
+  const filteredClasses = useMemo(() => {
+    if (!classSearchQuery.trim()) return classes;
+    const query = classSearchQuery.toLowerCase();
+    return classes.filter(cls => 
+      (cls.title?.toLowerCase().includes(query)) ||
+      (cls.genre?.toLowerCase().includes(query)) ||
+      (cls.difficulty_level?.toLowerCase().includes(query))
+    );
+  }, [classes, classSearchQuery]);
 
   useEffect(() => {
     loadClasses();
@@ -87,9 +110,11 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
 
   useEffect(() => {
     if (ticket) {
-      // 수강권 타입 확인: access_group 또는 is_coupon으로 판단
+      // 수강권 타입 확인: ticket_category 우선, 없으면 access_group 또는 is_coupon으로 판단
       let category: ProductCategory = 'regular';
-      if (ticket.access_group === 'popup') {
+      if (ticket.ticket_category === 'popup' || ticket.ticket_category === 'workshop') {
+        category = ticket.ticket_category;
+      } else if (ticket.access_group === 'popup') {
         category = 'popup';
       } else if (ticket.access_group === 'workshop') {
         category = 'workshop';
@@ -114,6 +139,14 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
       }
       if (ticket.total_count && category !== 'regular') {
         setUseCustomCount(!COUNT_PRESETS.some(p => p.count === ticket.total_count));
+      }
+      
+      // 팝업/워크샵 수강권의 유효기간 로드
+      if (category === 'popup' || category === 'workshop') {
+        setPopupValidDays(ticket.valid_days);
+        if (ticket.valid_days !== null) {
+          setUseCustomPopupValidity(!POPUP_VALIDITY_PRESETS.some(p => p.days === ticket.valid_days));
+        }
       }
       
       // 기존 연결된 클래스 로드 (정규 수강권인 경우에만)
@@ -227,7 +260,10 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
         price: formData.price,
         ticket_type: productCategory === 'regular' ? 'PERIOD' : 'COUNT',
         total_count: productCategory === 'regular' ? null : formData.total_count,
-        valid_days: productCategory === 'regular' ? formData.valid_days : null,
+        // 정규: 이용 기간, 팝업/워크샵: 유효기간(소멸 기한)
+        valid_days: productCategory === 'regular' 
+          ? formData.valid_days 
+          : popupValidDays,
         is_on_sale: formData.is_on_sale,
         is_coupon: productCategory !== 'regular', // 팝업/워크샵은 쿠폰으로 처리
         is_general: isGeneral,
@@ -235,6 +271,7 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
         access_group: productCategory === 'regular' 
           ? (isGeneral ? 'general' : null)
           : productCategory, // 'popup' 또는 'workshop'
+        ticket_category: productCategory, // 'regular' | 'popup' | 'workshop'
       };
 
       let ticketId: string;
@@ -348,20 +385,21 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
                   <Ticket className="w-5 h-5" />
                   <span className="font-semibold">{TICKET_CATEGORY_INFO.regular.name}</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-medium">
-                    Regular 클래스 전용
+                    기간제
                   </span>
                 </div>
                 <span className="text-xs text-gray-600 dark:text-gray-300 text-left">
-                  {TICKET_CATEGORY_INFO.regular.description}
+                  1개월/3개월/6개월/1년권 등. 구매 시 시작일 선택, 기간 내 무제한 수강.
                 </span>
               </button>
 
-              {/* 팝업 수강권 */}
+              {/* 팝업 쿠폰 */}
               <button
                 type="button"
                 onClick={() => {
                   setProductCategory('popup');
                   setFormData({ ...formData, ticket_type: 'COUNT', total_count: 1 });
+                  setPopupValidDays(30);
                 }}
                 className={`p-4 rounded-lg border flex flex-col items-start gap-2 transition-colors ${
                   productCategory === 'popup'
@@ -373,11 +411,11 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
                   <Tag className="w-5 h-5" />
                   <span className="font-semibold">{TICKET_CATEGORY_INFO.popup.name}</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 font-medium">
-                    Popup 클래스 전용
+                    횟수제
                   </span>
                 </div>
                 <span className="text-xs text-gray-600 dark:text-gray-300 text-left">
-                  {TICKET_CATEGORY_INFO.popup.description}
+                  1회/5회/10회권 등. 유효기간 내 미소진 시 잔여 수량 소멸.
                 </span>
               </button>
 
@@ -387,6 +425,7 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
                 onClick={() => {
                   setProductCategory('workshop');
                   setFormData({ ...formData, ticket_type: 'COUNT', total_count: 1 });
+                  setPopupValidDays(null);
                 }}
                 className={`p-4 rounded-lg border flex flex-col items-start gap-2 transition-colors ${
                   productCategory === 'workshop'
@@ -398,11 +437,11 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
                   <Tag className="w-5 h-5" />
                   <span className="font-semibold">{TICKET_CATEGORY_INFO.workshop.name}</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 font-medium">
-                    Workshop 클래스 전용
+                    특정 수업 전용
                   </span>
                 </div>
                 <span className="text-xs text-gray-600 dark:text-gray-300 text-left">
-                  {TICKET_CATEGORY_INFO.workshop.description}
+                  특정 워크샵 수업에서만 사용 가능한 전용 수강권.
                 </span>
               </button>
             </div>
@@ -501,6 +540,64 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
             </div>
           )}
 
+          {/* 유효기간 선택 (팝업/워크샵 수강권) */}
+          {(productCategory === 'popup' || productCategory === 'workshop') && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                유효기간 (구매일 기준)
+              </label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {POPUP_VALIDITY_PRESETS.map((preset) => (
+                  <button
+                    key={preset.days ?? 'unlimited'}
+                    type="button"
+                    onClick={() => {
+                      setPopupValidDays(preset.days);
+                      setUseCustomPopupValidity(false);
+                    }}
+                    className={`px-4 py-2 rounded-full border font-medium text-sm transition-colors ${
+                      !useCustomPopupValidity && popupValidDays === preset.days
+                        ? productCategory === 'popup'
+                          ? 'bg-purple-600 text-white border-purple-600'
+                          : 'bg-amber-600 text-white border-amber-600'
+                        : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setUseCustomPopupValidity(true)}
+                  className={`px-4 py-2 rounded-full border font-medium text-sm transition-colors ${
+                    useCustomPopupValidity
+                      ? productCategory === 'popup'
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'bg-amber-600 text-white border-amber-600'
+                      : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
+                  }`}
+                >
+                  직접 입력
+                </button>
+              </div>
+              {useCustomPopupValidity && (
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="일수를 입력하세요"
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={popupValidDays || ''}
+                  onChange={(e) => setPopupValidDays(parseInt(e.target.value) || null)}
+                />
+              )}
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {popupValidDays 
+                  ? `구매 시점으로부터 ${popupValidDays}일 안에 ${formData.total_count || 0}회를 소진해야 합니다. 미소진 잔여 수량은 소멸됩니다.`
+                  : '유효기간 없이 횟수가 소진될 때까지 사용 가능합니다.'}
+              </p>
+            </div>
+          )}
+
           {/* 기간 선택 (수강권 전용 - 기간제만 지원) */}
           {productCategory === 'regular' && (
             <div>
@@ -563,6 +660,20 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
               </label>
 
               <div className="border dark:border-neutral-700 rounded-lg overflow-hidden">
+                {/* 검색 입력 */}
+                <div className="p-3 border-b dark:border-neutral-700 bg-white dark:bg-neutral-900">
+                  <div className="relative">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="클래스 검색..."
+                      value={classSearchQuery}
+                      onChange={(e) => setClassSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 border dark:border-neutral-700 rounded-lg bg-gray-50 dark:bg-neutral-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
                 {/* 전체 선택 헤더 */}
                 <div
                   onClick={handleSelectAll}
@@ -596,8 +707,13 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
                       <Info size={16} className="inline mr-1" />
                       등록된 클래스가 없습니다.
                     </div>
+                  ) : filteredClasses.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                      <Search size={16} className="inline mr-1" />
+                      &quot;{classSearchQuery}&quot;에 대한 검색 결과가 없습니다.
+                    </div>
                   ) : (
-                    classes.map((cls) => (
+                    filteredClasses.map((cls) => (
                       <div
                         key={cls.id}
                         onClick={() => handleToggleClass(cls.id)}
@@ -669,14 +785,20 @@ export function TicketModal({ academyId, ticket, onClose }: TicketModalProps) {
             }`}>
               {productCategory === 'regular' ? (
                 <>
-                  <li>• Regular 클래스 타입의 수업에서만 사용 가능합니다.</li>
-                  <li>• 설정한 기간 동안 무제한으로 수강 가능합니다.</li>
-                  <li>• 특정 클래스만 지정하거나, 전체 Regular 클래스 이용 가능하도록 설정할 수 있습니다.</li>
+                  <li>• 선택한 Regular 클래스에서만 사용 가능합니다.</li>
+                  <li>• 구매 시 시작일을 선택하고, 해당일부터 설정 기간 동안 무제한 수강 가능합니다.</li>
+                  <li>• 1개월, 3개월, 6개월, 1년 등 다양한 기간 옵션을 제공할 수 있습니다.</li>
+                </>
+              ) : productCategory === 'popup' ? (
+                <>
+                  <li>• Popup 클래스 및 Popup 허용된 Regular 클래스에서 사용 가능합니다.</li>
+                  <li>• 1회권, 5회권, 10회권 등 횟수 기반으로 판매됩니다.</li>
+                  <li>• 유효기간 내 횟수를 소진하지 않으면 잔여 수량은 소멸됩니다.</li>
                 </>
               ) : (
                 <>
-                  <li>• {productCategory === 'popup' ? 'Popup' : 'Workshop'} 클래스 타입의 수업에서만 사용 가능합니다.</li>
-                  <li>• 정해진 횟수만큼 수업에 참여할 수 있습니다.</li>
+                  <li>• 특정 Workshop 클래스에서만 사용 가능한 전용 수강권입니다.</li>
+                  <li>• 해당 워크샵 수업에만 사용할 수 있는 특수 수강권입니다.</li>
                   <li>• 횟수가 소진되면 추가 구매가 필요합니다.</li>
                 </>
               )}

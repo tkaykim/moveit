@@ -8,10 +8,18 @@ export async function getUserTickets(userId: string) {
     .select(`
       *,
       tickets (
+        id,
         name,
+        ticket_type,
+        total_count,
+        valid_days,
         is_general,
+        is_coupon,
+        access_group,
+        ticket_category,
         academy_id,
         academies (
+          id,
           name_kr,
           name_en
         )
@@ -50,12 +58,17 @@ export async function getAvailableUserTickets(
       tickets (
         id,
         name,
+        ticket_type,
+        total_count,
+        valid_days,
         is_general,
         is_coupon,
+        access_group,
+        ticket_category,
         academy_id,
         class_id,
-        ticket_type,
         academies (
+          id,
           name_kr,
           name_en
         )
@@ -272,10 +285,18 @@ export async function getUserTicketById(id: string) {
     .select(`
       *,
       tickets (
+        id,
         name,
+        ticket_type,
+        total_count,
+        valid_days,
         is_general,
+        is_coupon,
+        access_group,
+        ticket_category,
         academy_id,
         academies (
+          id,
           name_kr,
           name_en
         )

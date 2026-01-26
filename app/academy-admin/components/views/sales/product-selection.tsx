@@ -1,6 +1,7 @@
 "use client";
 
-import { Check } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Check, Search } from 'lucide-react';
 import { formatCurrency } from '../utils/format-currency';
 
 interface ProductSelectionProps {
@@ -16,6 +17,21 @@ export function ProductSelection({
   onProductSelect,
   disabled,
 }: ProductSelectionProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // 검색 필터링된 상품 목록
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery.trim()) return products;
+    const query = searchQuery.toLowerCase();
+    return products.filter(product => 
+      (product.name?.toLowerCase().includes(query)) ||
+      (product.price?.toString().includes(query)) ||
+      (product.type?.toLowerCase().includes(query)) ||
+      (product.amount?.toString().includes(query)) ||
+      (product.days?.toString().includes(query))
+    );
+  }, [products, searchQuery]);
+
   return (
     <section
       className={`bg-white dark:bg-neutral-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-neutral-800 transition-opacity ${
@@ -28,13 +44,32 @@ export function ProductSelection({
         </span>
         수강권 선택
       </h2>
+
+      {/* 검색 입력 */}
+      <div className="relative mb-4">
+        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          placeholder="수강권명, 가격, 유형으로 검색..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          disabled={disabled}
+          className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-gray-900 dark:text-white disabled:opacity-50"
+        />
+      </div>
+
       {products.length === 0 ? (
         <div className="text-center py-8 text-gray-500 dark:text-gray-400">
           등록된 수강권이 없습니다.
         </div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <Search size={24} className="mx-auto mb-2 opacity-50" />
+          <p className="text-sm">&quot;{searchQuery}&quot;에 대한 검색 결과가 없습니다.</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {products.map((product) => (
+          {filteredProducts.map((product) => (
           <button
             key={product.id}
             onClick={() => onProductSelect(product)}

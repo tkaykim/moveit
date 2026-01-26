@@ -186,10 +186,20 @@ export async function cancelSchedule(id: string) {
 }
 
 /**
- * 세션 삭제
+ * 세션 삭제 (연관된 예약도 함께 삭제)
  */
 export async function deleteSchedule(id: string) {
   const supabase = await createClient() as any;
+  
+  // 먼저 연관된 예약 삭제
+  const { error: bookingsError } = await supabase
+    .from('bookings')
+    .delete()
+    .eq('schedule_id', id);
+
+  if (bookingsError) throw bookingsError;
+
+  // 스케줄 삭제
   const { error } = await supabase
     .from('schedules')
     .delete()

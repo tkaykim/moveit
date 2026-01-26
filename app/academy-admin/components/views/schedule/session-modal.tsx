@@ -254,8 +254,6 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('이 세션을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
-    
     setLoading(true);
     const supabase = getSupabaseClient();
     if (!supabase) {
@@ -265,6 +263,43 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
     }
 
     try {
+      // 먼저 연관된 예약이 있는지 확인
+      const { data: bookings, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('id, status')
+        .eq('schedule_id', session.id);
+
+      if (bookingsError) throw bookingsError;
+
+      const hasBookings = bookings && bookings.length > 0;
+      const confirmedBookings = bookings?.filter((b: any) => b.status === 'CONFIRMED' || b.status === 'PENDING') || [];
+
+      // 예약이 있는 경우 사용자에게 확인
+      if (hasBookings) {
+        const confirmMessage = confirmedBookings.length > 0
+          ? `이 세션에 ${confirmedBookings.length}개의 예약이 있습니다. 예약을 모두 취소하고 세션을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`
+          : `이 세션에 ${bookings.length}개의 예약 기록이 있습니다. 모두 삭제하고 세션을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`;
+        
+        if (!window.confirm(confirmMessage)) {
+          setLoading(false);
+          return;
+        }
+
+        // 연관된 예약 삭제
+        const { error: deleteBookingsError } = await supabase
+          .from('bookings')
+          .delete()
+          .eq('schedule_id', session.id);
+
+        if (deleteBookingsError) throw deleteBookingsError;
+      } else {
+        if (!window.confirm('이 세션을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 스케줄 삭제
       const { error } = await supabase
         .from('schedules')
         .delete()

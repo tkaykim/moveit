@@ -69,7 +69,7 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
         const ticket = item.tickets;
         const academy = ticket?.academies;
         const academyId = ticket?.academy_id;
-        const isGeneral = ticket?.is_general;
+        
         return {
           id: item.id,
           ticket_name: ticket?.name || '수강권',
@@ -78,9 +78,7 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
           start_date: item.start_date,
           expiry_date: item.expiry_date,
           status: item.status || 'ACTIVE',
-          academy_name: (isGeneral || academyId === null)
-            ? '어디서나 수강권'
-            : (academy?.name_kr || academy?.name_en || '학원 정보 없음'),
+          academy_name: academy?.name_kr || academy?.name_en || '학원',
           academy_id: academyId,
         };
       });
@@ -102,14 +100,9 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
     return ticket.status === filter;
   });
 
-  // 전체 수강권과 학원별 수강권으로 그룹화
-  // 전체 수강권: academy_name이 '어디서나 수강권'인 것
-  const allAcademyTickets = filteredTickets.filter(t => t.academy_name === '어디서나 수강권');
-  const academySpecificTickets = filteredTickets.filter(t => t.academy_name !== '어디서나 수강권');
-  
   // 학원별로 그룹화
-  const ticketsByAcademy = academySpecificTickets.reduce((acc, ticket) => {
-    const academyName = ticket.academy_name || '기타';
+  const ticketsByAcademy = filteredTickets.reduce((acc, ticket) => {
+    const academyName = ticket.academy_name || '학원';
     if (!acc[academyName]) {
       acc[academyName] = [];
     }
@@ -238,56 +231,9 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
         </div>
       ) : (
         <div className="space-y-6">
-          {/* 전체 수강권 섹션 */}
-          {allAcademyTickets.length > 0 && (
-            <div>
-              <h3 className="text-sm font-bold text-neutral-600 dark:text-neutral-400 mb-3">어디서나 수강권</h3>
-              <div className="space-y-3">
-                {allAcademyTickets.map((ticket) => (
-                  <div
-                    key={ticket.id}
-                    className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Ticket className="text-primary dark:text-[#CCFF00]" size={20} />
-                          <h3 className="text-base font-bold text-black dark:text-white">
-                            {ticket.ticket_name}
-                          </h3>
-                        </div>
-                        <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                          {ticket.academy_name}
-                        </p>
-                      </div>
-                      {getStatusBadge(ticket.status, ticket.expiry_date)}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 pt-3 border-t border-neutral-200 dark:border-neutral-800">
-                      <div>
-                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">잔여 횟수</div>
-                        <div className="text-lg font-black text-black dark:text-white">
-                          {ticket.remaining_count}회
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">만료일</div>
-                        <div className="text-sm font-bold text-black dark:text-white flex items-center gap-1">
-                          <Calendar size={14} />
-                          {formatDate(ticket.expiry_date)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 학원별 수강권 섹션 */}
+          {/* 학원별 수강권 */}
           {Object.keys(ticketsByAcademy).length > 0 && (
             <div>
-              <h3 className="text-sm font-bold text-neutral-600 dark:text-neutral-400 mb-3">학원별 수강권</h3>
               {Object.entries(ticketsByAcademy).map(([academyName, academyTickets]) => (
                 <div key={academyName} className="mb-4">
                   <h4 className="text-xs font-semibold text-neutral-500 dark:text-neutral-500 mb-2 pl-1">

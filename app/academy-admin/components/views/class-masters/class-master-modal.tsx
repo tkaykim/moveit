@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { X, Ticket, Info, ToggleLeft, ToggleRight, ChevronLeft, ChevronRight, CheckCircle2, CheckSquare, Square, Plus } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { X, Ticket, Info, ToggleLeft, ToggleRight, ChevronLeft, ChevronRight, CheckCircle2, CheckSquare, Square, Plus, Search } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { TicketModal } from '../products/ticket-modal';
 // import { InstructorSelector } from '../classes/instructor-selector';
@@ -39,7 +39,8 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
     hall_id: '',
     max_students: 0,
     allowRegularTicket: true,
-    allowCoupon: false,
+    allowPopup: false,     // popup 수강권 허용 여부
+    allowWorkshop: false,  // workshop 수강권 허용 여부
     is_active: true,
   });
   const [halls, setHalls] = useState<any[]>([]);
@@ -50,6 +51,17 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
   const [availableTickets, setAvailableTickets] = useState<any[]>([]);
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
   const [showTicketModal, setShowTicketModal] = useState(false);
+  const [ticketSearchQuery, setTicketSearchQuery] = useState('');
+
+  // 검색 필터링된 수강권 목록
+  const filteredTickets = useMemo(() => {
+    if (!ticketSearchQuery.trim()) return availableTickets;
+    const query = ticketSearchQuery.toLowerCase();
+    return availableTickets.filter(ticket => 
+      (ticket.name?.toLowerCase().includes(query)) ||
+      (ticket.ticket_type?.toLowerCase().includes(query))
+    );
+  }, [availableTickets, ticketSearchQuery]);
 
   useEffect(() => {
     loadHalls();
@@ -74,7 +86,8 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         hall_id: classData.hall_id || '',
         max_students: classData.max_students || 0,
         allowRegularTicket: classData.access_config?.allowRegularTicket !== false,
-        allowCoupon: classData.access_config?.allowCoupon === true,
+        allowPopup: classData.access_config?.allowPopup === true || classData.access_config?.allowCoupon === true, // 기존 allowCoupon도 호환
+        allowWorkshop: classData.access_config?.allowWorkshop === true,
         is_active: classData.is_active !== false,
       });
       
@@ -319,7 +332,9 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         access_config: {
           requiredGroup: null,
           allowRegularTicket: false, // ticket_classes로 관리하므로 false
-          allowCoupon: formData.allowCoupon,
+          allowCoupon: formData.allowPopup, // 호환성: allowPopup과 동일하게 설정
+          allowPopup: formData.allowPopup,
+          allowWorkshop: formData.allowWorkshop,
         },
         start_time: null,
         end_time: null,
@@ -460,7 +475,9 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         access_config: {
           requiredGroup: null,
           allowRegularTicket: false, // ticket_classes로 관리하므로 false
-          allowCoupon: formData.allowCoupon,
+          allowCoupon: formData.allowPopup, // 호환성: allowPopup과 동일하게 설정
+          allowPopup: formData.allowPopup,
+          allowWorkshop: formData.allowWorkshop,
         },
         start_time: null,
         end_time: null,
@@ -772,6 +789,18 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
           </div>
         ) : (
           <div className="space-y-3">
+            {/* 검색 입력 */}
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="수강권 검색..."
+                value={ticketSearchQuery}
+                onChange={(e) => setTicketSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-3 border-2 dark:border-neutral-700 rounded-xl bg-gray-50 dark:bg-neutral-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
             {/* 전체 선택 버튼 */}
             <div
               onClick={handleSelectAllTickets}
@@ -804,7 +833,12 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
 
             {/* 수강권 목록 */}
             <div className="grid gap-3 max-h-64 overflow-y-auto pr-2">
-              {availableTickets.map((ticket) => {
+              {filteredTickets.length === 0 && ticketSearchQuery ? (
+                <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                  <Search size={16} className="inline mr-1" />
+                  &quot;{ticketSearchQuery}&quot;에 대한 검색 결과가 없습니다.
+                </div>
+              ) : filteredTickets.map((ticket) => {
                 const isSelected = selectedTicketIds.includes(ticket.id);
                 return (
                   <div
@@ -870,32 +904,61 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         )}
       </div>
 
-      {/* 쿠폰 허용 여부 */}
-      <div className="border-t dark:border-neutral-800 pt-6">
-        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-neutral-800 rounded-xl">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              쿠폰 허용
-            </label>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              쿠폰으로 이 수업을 수강할 수 있도록 허용합니다
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setFormData({ ...formData, allowCoupon: !formData.allowCoupon })}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              formData.allowCoupon ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                formData.allowCoupon ? 'translate-x-6' : 'translate-x-1'
+      {/* 다른 유형 수강권 허용 (Regular 클래스만) */}
+      {formData.class_type === 'regular' && (
+        <div className="border-t dark:border-neutral-800 pt-6 space-y-3">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            다른 유형 수강권 허용
+          </label>
+          <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
+            체크 시 해당 수강권으로도 이 Regular 클래스 수강 가능
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div
+              onClick={() => setFormData({ ...formData, allowPopup: !formData.allowPopup })}
+              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                formData.allowPopup
+                  ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-400 dark:border-purple-600'
+                  : 'bg-gray-50 dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 hover:border-purple-300 dark:hover:border-purple-700'
               }`}
-            />
-          </button>
+            >
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={formData.allowPopup}
+                  onChange={() => {}}
+                  className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
+                />
+                <div>
+                  <span className="font-medium text-gray-900 dark:text-white">Popup 수강권</span>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">팝업 수강권 보유자 허용</p>
+                </div>
+              </div>
+            </div>
+            <div
+              onClick={() => setFormData({ ...formData, allowWorkshop: !formData.allowWorkshop })}
+              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                formData.allowWorkshop
+                  ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-400 dark:border-amber-600'
+                  : 'bg-gray-50 dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 hover:border-amber-300 dark:hover:border-amber-700'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={formData.allowWorkshop}
+                  onChange={() => {}}
+                  className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
+                />
+                <div>
+                  <span className="font-medium text-gray-900 dark:text-white">Workshop 수강권</span>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">워크샵 수강권 보유자 허용</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 선택 상태 요약 */}
       {availableTickets.length > 0 && (
@@ -1185,6 +1248,20 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
               </label>
 
               <div className="border dark:border-neutral-700 rounded-lg overflow-hidden">
+                {/* 검색 입력 */}
+                <div className="p-3 border-b dark:border-neutral-700 bg-white dark:bg-neutral-900">
+                  <div className="relative">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="수강권 검색..."
+                      value={ticketSearchQuery}
+                      onChange={(e) => setTicketSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 border dark:border-neutral-700 rounded-lg bg-gray-50 dark:bg-neutral-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
                 {/* 전체 선택 헤더 - 수강권 모달과 동일 */}
                 <div
                   onClick={handleSelectAllTickets}
@@ -1218,8 +1295,13 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
                       <Info size={16} className="inline mr-1" />
                       등록된 수강권이 없습니다.
                     </div>
+                  ) : filteredTickets.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                      <Search size={16} className="inline mr-1" />
+                      &quot;{ticketSearchQuery}&quot;에 대한 검색 결과가 없습니다.
+                    </div>
                   ) : (
-                    availableTickets.map((ticket) => {
+                    filteredTickets.map((ticket) => {
                       const isSelected = selectedTicketIds.includes(ticket.id);
                       return (
                         <div
@@ -1270,32 +1352,61 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
               </button>
             </div>
 
-            {/* 쿠폰 허용 여부 */}
-            <div className="border-t dark:border-neutral-800 pt-6 mt-6">
-              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-neutral-800 rounded-xl">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    쿠폰 허용
-                  </label>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    쿠폰으로 이 수업을 수강할 수 있도록 허용합니다
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, allowCoupon: !formData.allowCoupon })}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    formData.allowCoupon ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      formData.allowCoupon ? 'translate-x-6' : 'translate-x-1'
+            {/* 다른 유형 수강권 허용 (Regular 클래스만) */}
+            {formData.class_type === 'regular' && (
+              <div className="border-t dark:border-neutral-800 pt-6 mt-6 space-y-3">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  다른 유형 수강권 허용
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
+                  체크 시 해당 수강권으로도 이 Regular 클래스 수강 가능
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div
+                    onClick={() => setFormData({ ...formData, allowPopup: !formData.allowPopup })}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                      formData.allowPopup
+                        ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-400 dark:border-purple-600'
+                        : 'bg-gray-50 dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 hover:border-purple-300 dark:hover:border-purple-700'
                     }`}
-                  />
-                </button>
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={formData.allowPopup}
+                        onChange={() => {}}
+                        className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
+                      />
+                      <div>
+                        <span className="font-medium text-gray-900 dark:text-white">Popup 수강권</span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">팝업 수강권 보유자 허용</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    onClick={() => setFormData({ ...formData, allowWorkshop: !formData.allowWorkshop })}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                      formData.allowWorkshop
+                        ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-400 dark:border-amber-600'
+                        : 'bg-gray-50 dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 hover:border-amber-300 dark:hover:border-amber-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={formData.allowWorkshop}
+                        onChange={() => {}}
+                        className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
+                      />
+                      <div>
+                        <span className="font-medium text-gray-900 dark:text-white">Workshop 수강권</span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">워크샵 수강권 보유자 허용</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
               {/* 수정 모드 버튼 */}

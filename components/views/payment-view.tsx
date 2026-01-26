@@ -44,15 +44,12 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
           const result = await response.json();
           const tickets = result.data || [];
 
-          // 전체 수강권과 학원별 수강권으로 그룹화
-          const generalTickets: TicketGroup['tickets'] = [];
+          // 학원별 수강권
           const academyTickets: TicketGroup['tickets'] = [];
-          let generalCount = 0;
           let academyCount = 0;
 
           tickets.forEach((item: any) => {
             const ticket = item.tickets;
-            const isGeneral = ticket?.is_general || ticket?.academy_id === null;
             
             const ticketInfo = {
               id: item.id,
@@ -61,24 +58,14 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
               ticket_name: ticket?.name || '수강권',
             };
 
-            if (isGeneral) {
-              generalTickets.push(ticketInfo);
-              generalCount += item.remaining_count || 0;
-            } else if (ticket?.academy_id === academy.id) {
+            // 해당 학원의 수강권만 추가
+            if (ticket?.academy_id === academy.id) {
               academyTickets.push(ticketInfo);
               academyCount += item.remaining_count || 0;
             }
           });
 
           const groups: TicketGroup[] = [];
-          if (generalCount > 0) {
-            groups.push({
-              type: 'general',
-              name: '어디서나 수강권',
-              count: generalCount,
-              tickets: generalTickets,
-            });
-          }
           if (academyCount > 0) {
             groups.push({
               type: 'academy',
@@ -90,11 +77,8 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
 
           setTicketGroups(groups);
           
-          // 기본 선택: 전체 수강권이 있으면 전체 수강권, 없으면 학원 전용 수강권
-          if (generalCount > 0) {
-            setPaymentMethod('general_ticket');
-            setSelectedTicketId(generalTickets[0]?.id);
-          } else if (academyCount > 0) {
+          // 기본 선택: 학원 전용 수강권이 있으면 선택
+          if (academyCount > 0) {
             setPaymentMethod('academy_ticket');
             setSelectedTicketId(academyTickets[0]?.id);
           }

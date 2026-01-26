@@ -9,17 +9,24 @@ interface TodayClassesSectionProps {
   academyId: string;
 }
 
-interface ClassWithDetails {
+// schedules 테이블 기반으로 변경
+interface ScheduleWithDetails {
   id: string;
-  title: string | null;
+  class_id: string;
   start_time: string | null;
   end_time: string | null;
-  academy_id: string;
   instructor_id: string | null;
   hall_id: string | null;
   current_students: number | null;
   max_students: number | null;
   is_canceled: boolean;
+  classes: {
+    id: string;
+    title: string | null;
+    genre: string | null;
+    difficulty_level: string | null;
+    academy_id: string;
+  } | null;
   instructors: {
     id: string;
     name_kr: string | null;
@@ -33,17 +40,17 @@ interface ClassWithDetails {
 
 type ClassStatus = 'past' | 'ongoing' | 'upcoming';
 
-interface ClassifiedClass {
-  class: ClassWithDetails;
+interface ClassifiedSchedule {
+  schedule: ScheduleWithDetails;
   status: ClassStatus;
 }
 
 export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
-  const [classes, setClasses] = useState<ClassifiedClass[]>([]);
+  const [schedules, setSchedules] = useState<ClassifiedSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [showLogModal, setShowLogModal] = useState(false);
-  const [selectedClass, setSelectedClass] = useState<ClassWithDetails | null>(null);
+  const [selectedSchedule, setSelectedSchedule] = useState<ScheduleWithDetails | null>(null);
   const [selectedLog, setSelectedLog] = useState<any>(null);
 
   // KST 시간 업데이트 (1초마다)
@@ -61,13 +68,14 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [academyId]);
 
-  // 일지 데이터 로드
-  const loadLogForClass = async (classId: string) => {
+  // 일지 데이터 로드 (schedule_id 기준)
+  const loadLogForSchedule = async (scheduleId: string, classId: string) => {
     const supabase = getSupabaseClient();
     if (!supabase) return null;
 
     try {
       const today = new Date().toISOString().split('T')[0];
+      // schedule_id 또는 class_id + date로 일지 조회
       const { data, error } = await supabase
         .from('daily_logs')
         .select('*')
@@ -86,10 +94,10 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
 
   // 현재 시간이 변경될 때마다 수업 상태 재분류
   useEffect(() => {
-    if (classes.length > 0) {
-      setClasses((prev) => {
+    if (schedules.length > 0) {
+      setSchedules((prev) => {
         return prev.map((item) => {
-          const status = classifyClassStatus(item.class, currentTime);
+          const status = classifyScheduleStatus(item.schedule, currentTime);
           return { ...item, status };
         });
       });
@@ -121,12 +129,38 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
       const endOfDay = new Date(kstDate);
       endOfDay.setHours(23, 59, 59, 999);
 
-      // 오늘 날짜의 classes 가져오기 (KST 기준)
-      // PostgreSQL에서 KST 날짜로 필터링하기 위해 raw SQL 사용
-      const { data: todayClasses, error } = await (supabase as any)
+      // 먼저 해당 학원의 클래스 ID 목록 조회
+      const { data: academyClasses, error: classError } = await supabase
         .from('classes')
+        .select('id')
+        .eq('academy_id', academyId)
+        .eq('is_canceled', false);
+
+      if (classError) {
+        console.error('Error loading academy classes:', classError);
+        throw classError;
+      }
+
+      const classIds = (academyClasses || []).map((c: any) => c.id);
+      
+      if (classIds.length === 0) {
+        setSchedules([]);
+        setLoading(false);
+        return;
+      }
+
+      // schedules 테이블에서 오늘 날짜의 수업 일정 조회
+      const { data: todaySchedules, error } = await supabase
+        .from('schedules')
         .select(`
           *,
+          classes (
+            id,
+            title,
+            genre,
+            difficulty_level,
+            academy_id
+          ),
           instructors (
             id,
             name_kr,
@@ -137,9 +171,8 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
             name
           )
         `)
-        .eq('academy_id', academyId)
+        .in('class_id', classIds)
         .eq('is_canceled', false)
-        .not('start_time', 'is', null)
         .gte('start_time', startOfDay.toISOString())
         .lte('start_time', endOfDay.toISOString())
         .order('start_time', { ascending: true });
@@ -152,21 +185,21 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
       // KST 기준으로 오늘 날짜 필터링 (클라이언트 측에서 정확히 확인)
       const todayKSTString = formatter.format(now); // YYYY-MM-DD 형식
       
-      const filteredClasses = (todayClasses || []).filter((cls: ClassWithDetails) => {
-        if (!cls.start_time) return false;
+      const filteredSchedules = (todaySchedules || []).filter((schedule: ScheduleWithDetails) => {
+        if (!schedule.start_time) return false;
         // start_time을 KST로 변환하여 날짜 문자열 추출
-        const classStartDate = new Date(cls.start_time);
-        const classStartKSTString = formatter.format(classStartDate);
-        return classStartKSTString === todayKSTString;
+        const scheduleStartDate = new Date(schedule.start_time);
+        const scheduleStartKSTString = formatter.format(scheduleStartDate);
+        return scheduleStartKSTString === todayKSTString;
       });
 
       // 수업 상태 분류
-      const classified = filteredClasses.map((cls: ClassWithDetails) => ({
-        class: cls,
-        status: classifyClassStatus(cls, currentTime),
+      const classified = filteredSchedules.map((schedule: ScheduleWithDetails) => ({
+        schedule: schedule,
+        status: classifyScheduleStatus(schedule, currentTime),
       }));
 
-      setClasses(classified);
+      setSchedules(classified);
     } catch (error) {
       console.error('Error loading today schedules:', error);
     } finally {
@@ -174,14 +207,14 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
     }
   };
 
-  const classifyClassStatus = (
-    cls: ClassWithDetails,
+  const classifyScheduleStatus = (
+    schedule: ScheduleWithDetails,
     now: Date
   ): ClassStatus => {
-    if (!cls.start_time || !cls.end_time) return 'upcoming';
+    if (!schedule.start_time || !schedule.end_time) return 'upcoming';
     
-    const startTime = new Date(cls.start_time);
-    const endTime = new Date(cls.end_time);
+    const startTime = new Date(schedule.start_time);
+    const endTime = new Date(schedule.end_time);
 
     if (endTime < now) return 'past';
     if (startTime <= now && now < endTime) return 'ongoing';
@@ -212,9 +245,9 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
   };
 
   // 홀별로 수업 그룹화
-  const classesByHall = classes.reduce((acc, item) => {
-    const hallId = item.class.hall_id || 'no-hall';
-    const hallName = item.class.halls?.name || '홀 미지정';
+  const schedulesByHall = schedules.reduce((acc, item) => {
+    const hallId = item.schedule.hall_id || 'no-hall';
+    const hallName = item.schedule.halls?.name || '홀 미지정';
     
     if (!acc[hallId]) {
       acc[hallId] = {
@@ -226,17 +259,17 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
       };
     }
     
-    acc[hallId][item.status].push(item.class);
+    acc[hallId][item.status].push(item.schedule);
     return acc;
   }, {} as Record<string, {
     hallId: string;
     hallName: string;
-    past: ClassWithDetails[];
-    ongoing: ClassWithDetails[];
-    upcoming: ClassWithDetails[];
+    past: ScheduleWithDetails[];
+    ongoing: ScheduleWithDetails[];
+    upcoming: ScheduleWithDetails[];
   }>);
 
-  const halls = Object.values(classesByHall);
+  const halls = Object.values(schedulesByHall);
 
   if (loading) {
     return (
@@ -260,13 +293,13 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
         </div>
         <div className="text-left sm:text-right">
           <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-            {classes.length}건
+            {schedules.length}건
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400">오늘 예정</div>
         </div>
       </div>
 
-      {classes.length === 0 ? (
+      {schedules.length === 0 ? (
         <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
           오늘 예정된 수업이 없습니다.
         </div>
@@ -302,14 +335,14 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
                         {hall.past.length === 0 ? (
                           <div className="text-gray-400 dark:text-gray-500 text-xs">-</div>
                         ) : (
-                          hall.past.map((cls) => (
-                            <ClassCell 
-                              key={cls.id} 
-                              class={cls} 
+                          hall.past.map((schedule) => (
+                            <ScheduleCell 
+                              key={schedule.id} 
+                              schedule={schedule} 
                               status="past"
                               onClick={async () => {
-                                setSelectedClass(cls);
-                                const log = await loadLogForClass(cls.id);
+                                setSelectedSchedule(schedule);
+                                const log = await loadLogForSchedule(schedule.id, schedule.class_id);
                                 setSelectedLog(log);
                                 setShowLogModal(true);
                               }}
@@ -323,14 +356,14 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
                         {hall.ongoing.length === 0 ? (
                           <div className="text-gray-400 dark:text-gray-500 text-xs">-</div>
                         ) : (
-                          hall.ongoing.map((cls) => (
-                            <ClassCell 
-                              key={cls.id} 
-                              class={cls} 
+                          hall.ongoing.map((schedule) => (
+                            <ScheduleCell 
+                              key={schedule.id} 
+                              schedule={schedule} 
                               status="ongoing"
                               onClick={async () => {
-                                setSelectedClass(cls);
-                                const log = await loadLogForClass(cls.id);
+                                setSelectedSchedule(schedule);
+                                const log = await loadLogForSchedule(schedule.id, schedule.class_id);
                                 setSelectedLog(log);
                                 setShowLogModal(true);
                               }}
@@ -344,14 +377,14 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
                         {hall.upcoming.length === 0 ? (
                           <div className="text-gray-400 dark:text-gray-500 text-xs">-</div>
                         ) : (
-                          hall.upcoming.map((cls) => (
-                            <ClassCell 
-                              key={cls.id} 
-                              class={cls} 
+                          hall.upcoming.map((schedule) => (
+                            <ScheduleCell 
+                              key={schedule.id} 
+                              schedule={schedule} 
                               status="upcoming"
                               onClick={async () => {
-                                setSelectedClass(cls);
-                                const log = await loadLogForClass(cls.id);
+                                setSelectedSchedule(schedule);
+                                const log = await loadLogForSchedule(schedule.id, schedule.class_id);
                                 setSelectedLog(log);
                                 setShowLogModal(true);
                               }}
@@ -396,14 +429,14 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
                         {hall.past.length === 0 ? (
                           <div className="text-gray-400 dark:text-gray-500 text-sm">-</div>
                         ) : (
-                          hall.past.map((cls) => (
-                            <ClassCell 
-                              key={cls.id} 
-                              class={cls} 
+                          hall.past.map((schedule) => (
+                            <ScheduleCell 
+                              key={schedule.id} 
+                              schedule={schedule} 
                               status="past"
                               onClick={async () => {
-                                setSelectedClass(cls);
-                                const log = await loadLogForClass(cls.id);
+                                setSelectedSchedule(schedule);
+                                const log = await loadLogForSchedule(schedule.id, schedule.class_id);
                                 setSelectedLog(log);
                                 setShowLogModal(true);
                               }}
@@ -417,14 +450,14 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
                         {hall.ongoing.length === 0 ? (
                           <div className="text-gray-400 dark:text-gray-500 text-sm">-</div>
                         ) : (
-                          hall.ongoing.map((cls) => (
-                            <ClassCell 
-                              key={cls.id} 
-                              class={cls} 
+                          hall.ongoing.map((schedule) => (
+                            <ScheduleCell 
+                              key={schedule.id} 
+                              schedule={schedule} 
                               status="ongoing"
                               onClick={async () => {
-                                setSelectedClass(cls);
-                                const log = await loadLogForClass(cls.id);
+                                setSelectedSchedule(schedule);
+                                const log = await loadLogForSchedule(schedule.id, schedule.class_id);
                                 setSelectedLog(log);
                                 setShowLogModal(true);
                               }}
@@ -438,14 +471,14 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
                         {hall.upcoming.length === 0 ? (
                           <div className="text-gray-400 dark:text-gray-500 text-sm">-</div>
                         ) : (
-                          hall.upcoming.map((cls) => (
-                            <ClassCell 
-                              key={cls.id} 
-                              class={cls} 
+                          hall.upcoming.map((schedule) => (
+                            <ScheduleCell 
+                              key={schedule.id} 
+                              schedule={schedule} 
                               status="upcoming"
                               onClick={async () => {
-                                setSelectedClass(cls);
-                                const log = await loadLogForClass(cls.id);
+                                setSelectedSchedule(schedule);
+                                const log = await loadLogForSchedule(schedule.id, schedule.class_id);
                                 setSelectedLog(log);
                                 setShowLogModal(true);
                               }}
@@ -462,14 +495,27 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
         </>
       )}
 
-      {showLogModal && selectedClass && (
+      {showLogModal && selectedSchedule && (
         <DailyLogModal
           academyId={academyId}
-          classItem={selectedClass}
+          classItem={{
+            id: selectedSchedule.class_id,
+            title: selectedSchedule.classes?.title || null,
+            start_time: selectedSchedule.start_time,
+            end_time: selectedSchedule.end_time,
+            academy_id: selectedSchedule.classes?.academy_id || academyId,
+            instructor_id: selectedSchedule.instructor_id,
+            hall_id: selectedSchedule.hall_id,
+            current_students: selectedSchedule.current_students,
+            max_students: selectedSchedule.max_students,
+            is_canceled: selectedSchedule.is_canceled,
+            instructors: selectedSchedule.instructors,
+            halls: selectedSchedule.halls,
+          }}
           log={selectedLog}
           onClose={() => {
             setShowLogModal(false);
-            setSelectedClass(null);
+            setSelectedSchedule(null);
             setSelectedLog(null);
             loadTodaySchedules();
           }}
@@ -479,14 +525,16 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
   );
 }
 
-interface ClassCellProps {
-  class: ClassWithDetails;
+interface ScheduleCellProps {
+  schedule: ScheduleWithDetails;
   status: ClassStatus;
   onClick?: () => void;
 }
 
-function ClassCell({ class: cls, status, onClick }: ClassCellProps) {
-  const instructorName = cls.instructors?.name_kr || cls.instructors?.name_en || null;
+function ScheduleCell({ schedule, status, onClick }: ScheduleCellProps) {
+  const instructorName = schedule.instructors?.name_kr || schedule.instructors?.name_en || null;
+  const classTitle = schedule.classes?.title || '수업명 없음';
+  
   const formatTime = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleTimeString('ko-KR', {
@@ -509,20 +557,20 @@ function ClassCell({ class: cls, status, onClick }: ClassCellProps) {
       onClick={onClick}
     >
       <div className="font-semibold text-[10px] sm:text-sm text-gray-900 dark:text-white mb-0.5 sm:mb-1 line-clamp-1">
-        {cls.title || '수업명 없음'}
+        {classTitle}
       </div>
-      {cls.start_time && (
+      {schedule.start_time && (
         <div className="text-[9px] sm:text-xs text-gray-600 dark:text-gray-400 mb-0.5 sm:mb-1 font-medium">
-          {formatTime(cls.start_time)}
-          {cls.end_time && ` - ${formatTime(cls.end_time)}`}
+          {formatTime(schedule.start_time)}
+          {schedule.end_time && ` - ${formatTime(schedule.end_time)}`}
         </div>
       )}
       <div className="hidden sm:block text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
         {instructorName && (
           <div>강사: {instructorName}</div>
         )}
-        {cls.max_students !== null && (
-          <div>인원: {cls.current_students || 0} / {cls.max_students}명</div>
+        {schedule.max_students !== null && (
+          <div>인원: {schedule.current_students || 0} / {schedule.max_students}명</div>
         )}
       </div>
     </div>

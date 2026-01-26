@@ -13,13 +13,14 @@ interface UserTicketDetail {
   tickets: {
     id: string;
     name: string;
-    ticket_type: 'PERIOD' | 'COUNT';
+    ticket_type: 'period' | 'count' | 'PERIOD' | 'COUNT';
     total_count?: number;
     valid_days?: number;
     academy_id: string;
     is_general: boolean;
     is_coupon: boolean;
     access_group?: string;
+    ticket_category?: string;
     academies?: {
       id: string;
       name_kr: string;
@@ -81,9 +82,16 @@ export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
   };
 
   const getTicketCategory = (ticket: UserTicketDetail): 'regular' | 'popup' | 'workshop' => {
+    const ticketCategory = ticket.tickets?.ticket_category;
     const accessGroup = ticket.tickets?.access_group;
     const isCoupon = ticket.tickets?.is_coupon;
     
+    // ticket_category 우선 확인
+    if (ticketCategory === 'popup') return 'popup';
+    if (ticketCategory === 'workshop') return 'workshop';
+    if (ticketCategory === 'regular') return 'regular';
+    
+    // access_group 폴백
     if (accessGroup === 'popup') return 'popup';
     if (accessGroup === 'workshop') return 'workshop';
     if (isCoupon && accessGroup !== 'regular') return 'popup';
@@ -242,7 +250,7 @@ export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
                       {getStatusBadge(ticket)}
                     </div>
                     <div className="flex items-center gap-4 text-sm text-neutral-500">
-                      {ticket.tickets?.ticket_type === 'COUNT' ? (
+                      {ticket.tickets?.ticket_type?.toLowerCase() === 'count' ? (
                         <span className="flex items-center gap-1">
                           <Hash size={14} />
                           잔여 {ticket.remaining_count}회 / {ticket.tickets?.total_count || 0}회
@@ -254,7 +262,7 @@ export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
                         </span>
                       )}
                     </div>
-                    {ticket.tickets?.ticket_type === 'COUNT' && ticket.expiry_date && (
+                    {ticket.tickets?.ticket_type?.toLowerCase() === 'count' && ticket.expiry_date && (
                       <div className="mt-1 text-xs text-neutral-400">
                         유효기간: {formatDate(ticket.expiry_date)}까지
                       </div>

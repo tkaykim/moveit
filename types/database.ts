@@ -34,11 +34,18 @@ export interface AccessConfig {
   allowWorkshop?: boolean;        // 워크샵 수강권으로 수업 참여 가능 여부
 }
 
-// 정규 수강생 할인 설정 타입 (팝업/워크샵용)
+// 정규 수강생 할인 설정 타입 (레거시 - 하위 호환용)
 export interface DiscountConfig {
   enabled: boolean;              // 할인 활성화 여부
   target_class_ids: string[];    // 할인 대상 정규 클래스 ID 목록
   discount_amount: number;       // 할인 금액
+}
+
+// 무료 수강 가능 설정 타입 (팝업 클래스용)
+// 특정 정규 수업반 수강권 보유자가 무료로 수강 가능
+export interface FreeAccessConfig {
+  enabled: boolean;              // 무료 수강 활성화 여부
+  target_class_ids: string[];    // 무료 수강 가능한 정규 클래스 ID 목록 (이 클래스 수강권 보유시 무료)
 }
 
 export type Database = {
@@ -383,6 +390,7 @@ export type Database = {
           present_students: number | null
           price: number | null
           discount_config: DiscountConfig | null
+          free_access_config: FreeAccessConfig | null
           song: string | null
           start_time: string | null
           status: string | null
@@ -394,6 +402,7 @@ export type Database = {
           academy_id: string
           access_config?: AccessConfig | null
           discount_config?: DiscountConfig | null
+          free_access_config?: FreeAccessConfig | null
           additional_salary_per_student?: number | null
           base_salary?: number
           base_student_count?: number | null
@@ -423,6 +432,7 @@ export type Database = {
           academy_id?: string
           access_config?: AccessConfig | null
           discount_config?: DiscountConfig | null
+          free_access_config?: FreeAccessConfig | null
           additional_salary_per_student?: number | null
           base_salary?: number
           base_student_count?: number | null
@@ -1123,6 +1133,7 @@ export type Database = {
           name: string
           price: number | null
           ticket_type: string
+          ticket_category: 'regular' | 'popup' | 'workshop'
           total_count: number | null
           valid_days: number | null
         }
@@ -1138,6 +1149,7 @@ export type Database = {
           name: string
           price?: number | null
           ticket_type: string
+          ticket_category?: 'regular' | 'popup' | 'workshop'
           total_count?: number | null
           valid_days?: number | null
         }
@@ -1153,6 +1165,7 @@ export type Database = {
           name?: string
           price?: number | null
           ticket_type?: string
+          ticket_category?: 'regular' | 'popup' | 'workshop'
           total_count?: number | null
           valid_days?: number | null
         }

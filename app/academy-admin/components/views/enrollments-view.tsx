@@ -598,6 +598,9 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       수업
                     </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      수강권
+                    </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
                       상태
                     </th>
@@ -667,6 +670,34 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                             </div>
                           ) : (
                             <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {enrollment.user_tickets?.tickets ? (
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[180px]">
+                                {enrollment.user_tickets.tickets.name || '-'}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                {enrollment.user_tickets.tickets.ticket_type === 'PERIOD' ? (
+                                  <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-[10px] font-medium">
+                                    기간권
+                                  </span>
+                                ) : (
+                                  <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded text-[10px] font-medium">
+                                    횟수권
+                                  </span>
+                                )}
+                                {enrollment.user_tickets.tickets.valid_days && (
+                                  <span>{enrollment.user_tickets.tickets.valid_days}일</span>
+                                )}
+                                {enrollment.user_tickets.tickets.total_count && (
+                                  <span>{enrollment.user_tickets.tickets.total_count}회</span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
                           )}
                         </td>
                         <td className="px-4 py-3">

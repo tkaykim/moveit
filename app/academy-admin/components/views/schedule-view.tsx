@@ -370,6 +370,9 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
             setShowRecurringModal(false);
             loadData();
           }}
+          onClassCreated={() => {
+            loadData(); // 클래스 생성 후 데이터 새로고침
+          }}
         />
       )}
 
