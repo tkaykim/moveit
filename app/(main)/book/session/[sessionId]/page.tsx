@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
-import { ChevronLeft, Calendar, Clock, MapPin, User, Users, Wallet, CheckCircle, CreditCard, Building2, LogIn, AlertCircle, Ticket, Gift } from 'lucide-react';
+import { ChevronLeft, Calendar, Clock, MapPin, User, Users, Wallet, CheckCircle, CreditCard, Building2, LogIn, AlertCircle, Ticket, Gift, CalendarDays, ChevronRight } from 'lucide-react';
 import { formatKSTTime, formatKSTDate } from '@/lib/utils/kst-time';
 import { MyTab } from '@/components/auth/MyTab';
 import { TicketRechargeModal } from '@/components/modals/ticket-recharge-modal';
@@ -106,6 +106,19 @@ export default function SessionBookingPage() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isTicketPurchaseModalOpen, setIsTicketPurchaseModalOpen] = useState(false);
 
+  // 종료된 수업일 때 같은 클래스의 다음 가능한 날짜 목록
+  const [upcomingSessions, setUpcomingSessions] = useState<Array<{
+    id: string;
+    start_time: string;
+    end_time: string;
+    current_students: number;
+    max_students: number;
+    is_canceled: boolean;
+    instructors: { name_kr: string; name_en: string } | null;
+    halls: { name: string } | null;
+  }>>([]);
+  const [loadingUpcoming, setLoadingUpcoming] = useState(false);
+
   useEffect(() => {
     loadSessionData();
     checkAuth();
@@ -147,6 +160,51 @@ export default function SessionBookingPage() {
     const { data: { user: authUser } } = await (supabase as any).auth.getUser();
     setUser(authUser);
   };
+
+  // 종료된 수업일 때 같은 클래스의 다음 가능한 날짜(세션) 로드
+  const loadUpcomingSessions = async (classId: string) => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    setLoadingUpcoming(true);
+    try {
+      const now = new Date().toISOString();
+      const { data, error } = await (supabase as any)
+        .from('schedules')
+        .select(`
+          id,
+          start_time,
+          end_time,
+          current_students,
+          max_students,
+          is_canceled,
+          instructors (name_kr, name_en),
+          halls (name)
+        `)
+        .eq('class_id', classId)
+        .gte('start_time', now)
+        .eq('is_canceled', false)
+        .order('start_time', { ascending: true })
+        .limit(8);
+
+      if (error) throw error;
+      setUpcomingSessions(data || []);
+    } catch (err) {
+      console.error('Error loading upcoming sessions:', err);
+      setUpcomingSessions([]);
+    } finally {
+      setLoadingUpcoming(false);
+    }
+  };
+
+  // 세션 로드 후: 종료된 수업이면 다음 가능한 날짜 로드
+  useEffect(() => {
+    if (session && new Date(session.start_time) < new Date() && session.classes?.id) {
+      loadUpcomingSessions(session.classes.id);
+    } else {
+      setUpcomingSessions([]);
+    }
+  }, [session?.id, session?.classes?.id, session?.start_time]);
 
   // 세션 로드 후 사용자 수강권 및 구매 가능 수강권 로드
   // 데모 모드: user가 없어도 API에서 데모 사용자로 처리하므로 loadUserTickets 호출
@@ -489,10 +547,68 @@ export default function SessionBookingPage() {
 
       {/* 예약 불가 상태 */}
       {!canBook && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6 text-center">
-          <span className="text-red-600 dark:text-red-400 font-medium">
-            {isCanceled ? '취소된 수업입니다.' : isPast ? '이미 종료된 수업입니다.' : '정원이 마감되었습니다.'}
-          </span>
+        <div className="mb-6 space-y-4">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-center">
+            <span className="text-red-600 dark:text-red-400 font-medium">
+              {isCanceled ? '취소된 수업입니다.' : isPast ? '이미 종료된 수업입니다.' : '정원이 마감되었습니다.'}
+            </span>
+          </div>
+
+          {/* 종료된 수업일 때만: 다음 날짜 예약 유도 */}
+          {isPast && session?.classes?.id && (
+            <div className="bg-primary/5 dark:bg-[#CCFF00]/5 border border-primary/30 dark:border-[#CCFF00]/30 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <CalendarDays className="text-primary dark:text-[#CCFF00] flex-shrink-0" size={20} />
+                <h4 className="font-bold text-black dark:text-white">다른 날짜에 예약하기</h4>
+              </div>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
+                같은 수업의 다음 일정을 선택해 예약할 수 있습니다.
+              </p>
+              {loadingUpcoming ? (
+                <div className="text-center py-6 text-neutral-500 text-sm">다음 일정 불러오는 중...</div>
+              ) : upcomingSessions.length === 0 ? (
+                <p className="text-sm text-neutral-500 dark:text-neutral-400 text-center py-4">
+                  예약 가능한 다음 일정이 없습니다.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {upcomingSessions.map((s) => {
+                    const full = (s.current_students || 0) >= (s.max_students || 20);
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => router.push(`/book/session/${s.id}`)}
+                        disabled={full}
+                        className={`w-full flex items-center justify-between gap-3 rounded-xl p-3 text-left border-2 transition-colors ${
+                          full
+                            ? 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 opacity-60 cursor-not-allowed'
+                            : 'bg-white dark:bg-neutral-900 border-primary/40 dark:border-[#CCFF00]/40 hover:border-primary dark:hover:border-[#CCFF00] hover:bg-primary/5 dark:hover:bg-[#CCFF00]/5'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Calendar size={18} className="text-neutral-500 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <div className="font-medium text-black dark:text-white truncate">
+                              {formatKSTDate(new Date(s.start_time))}
+                            </div>
+                            <div className="text-xs text-neutral-500 flex items-center gap-2">
+                              <span>{formatKSTTime(s.start_time)}–{formatKSTTime(s.end_time)}</span>
+                              <span>·</span>
+                              <span>{s.current_students || 0}/{s.max_students || 20}명</span>
+                              {full && <span className="text-red-500">마감</span>}
+                            </div>
+                          </div>
+                        </div>
+                        {!full && (
+                          <ChevronRight size={18} className="text-primary dark:text-[#CCFF00] flex-shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
