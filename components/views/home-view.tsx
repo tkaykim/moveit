@@ -207,6 +207,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             .select('academy_id, price')
             .in('academy_id', allAcademyIds)
             .eq('is_on_sale', true)
+            .or('is_public.eq.true,is_public.is.null')
             .not('price', 'is', null)
             .gt('price', 0)
             .limit(100);

@@ -15,6 +15,7 @@ export function SettingsView({ academyId }: SettingsViewProps) {
     name_en: '',
     address: '',
     contact_number: '',
+    description: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,6 +46,7 @@ export function SettingsView({ academyId }: SettingsViewProps) {
         name_en: data.name_en || '',
         address: data.address || '',
         contact_number: data.contact_number || '',
+        description: data.description || '',
       });
     } catch (error) {
       console.error('Error loading academy:', error);
@@ -140,6 +142,21 @@ export function SettingsView({ academyId }: SettingsViewProps) {
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                학원 설명
+              </label>
+              <textarea
+                rows={6}
+                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white resize-none"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="학원에 대한 상세 설명을 입력하세요..."
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                학원 소개, 특징, 운영 방식 등을 자유롭게 작성하세요.
+              </p>
             </div>
             <button
               type="submit"

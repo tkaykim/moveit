@@ -26,6 +26,7 @@ interface SessionData {
     access_config: {
       allowCoupon?: boolean;
       allowRegularTicket?: boolean;
+      allowPopup?: boolean;
     } | null;
     academies: {
       id: string;
@@ -165,7 +166,7 @@ export default function SessionBookingPage() {
     try {
       const classId = session.classes.id;
       const academyId = session.classes.academy_id;
-      const allowCoupon = session.classes.access_config?.allowCoupon === true;
+      const allowCoupon = session.classes.access_config?.allowCoupon === true || session.classes.access_config?.allowPopup === true;
 
       const queryParams = new URLSearchParams();
       if (academyId) queryParams.append('academyId', academyId);
@@ -205,7 +206,7 @@ export default function SessionBookingPage() {
       if (!supabase) return;
 
       const classId = session.classes.id;
-      const allowCoupon = session.classes.access_config?.allowCoupon === true;
+      const allowCoupon = session.classes.access_config?.allowCoupon === true || session.classes.access_config?.allowPopup === true;
 
       // 1. ticket_classes에서 이 클래스와 연결된 ticket_id 목록 조회
       const { data: ticketClassesData } = await (supabase as any)
@@ -221,12 +222,13 @@ export default function SessionBookingPage() {
         return;
       }
 
-      // 2. 연결된 수강권 + (allowCoupon이면 쿠폰) 조회
+      // 2. 연결된 수강권 + (allowCoupon이면 쿠폰) 조회 (공개 수강권만: 비공개는 유저 구매 불가)
       let query = (supabase as any)
         .from('tickets')
         .select('id, name, price, ticket_type, total_count, valid_days, is_general, is_coupon, academy_id')
         .eq('is_on_sale', true)
-        .eq('academy_id', session.classes.academy_id);
+        .eq('academy_id', session.classes.academy_id)
+        .or('is_public.eq.true,is_public.is.null');
 
       const { data: ticketsData, error } = await query;
 
@@ -430,7 +432,7 @@ export default function SessionBookingPage() {
   const isPast = new Date(session.start_time) < new Date();
   const isCanceled = session.is_canceled;
   const canBook = !isFull && !isPast && !isCanceled;
-  const allowCoupon = session.classes.access_config?.allowCoupon === true;
+  const allowCoupon = session.classes.access_config?.allowCoupon === true || session.classes.access_config?.allowPopup === true;
 
   // 선택된 구매 수강권 정보
   const selectedPurchaseTicket = purchasableTickets.find(t => t.id === selectedPurchaseTicketId);

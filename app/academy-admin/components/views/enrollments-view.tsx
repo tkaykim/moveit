@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Search, Download, User, Users, Calendar, X, RefreshCw, Loader2, Clock, MapPin } from 'lucide-react';
+import { Search, Download, User, Users, Calendar, X, RefreshCw, Loader2, Clock, MapPin, UserPlus } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { BookingStatusBadge } from '@/components/common/booking-status-badge';
 import { ScheduleSelector } from '@/components/common/schedule-selector';
 import { EnrollmentActionMenu } from './enrollments/enrollment-action-menu';
+import { AdminAddEnrollmentModal } from './enrollments/admin-add-enrollment-modal';
 import { convertKSTInputToUTC } from '@/lib/utils/kst-time';
 
 interface EnrollmentsViewProps {
@@ -53,6 +54,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
     CANCELLED: 0,
     COMPLETED: 0,
   });
+  const [isAdminAddModalOpen, setIsAdminAddModalOpen] = useState(false);
   const isFirstLoad = useRef(true);
 
   const loadEnrollments = useCallback(async () => {
@@ -366,6 +368,13 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setIsAdminAddModalOpen(true)}
+            className="px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-2 text-sm font-medium transition-colors"
+          >
+            <UserPlus size={16} />
+            수기 추가
+          </button>
+          <button
             onClick={loadEnrollments}
             disabled={isRefreshing}
             className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors disabled:opacity-50"
@@ -673,7 +682,11 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          {enrollment.user_tickets?.tickets ? (
+                          {enrollment.is_admin_added ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
+                              관리자 권한
+                            </span>
+                          ) : enrollment.user_tickets?.tickets ? (
                             <div className="min-w-0">
                               <div className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[180px]">
                                 {enrollment.user_tickets.tickets.name || '-'}
@@ -779,6 +792,15 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
           </>
         )}
       </div>
+
+      <AdminAddEnrollmentModal
+        isOpen={isAdminAddModalOpen}
+        onClose={() => setIsAdminAddModalOpen(false)}
+        onSuccess={loadEnrollments}
+        academyId={academyId}
+        initialScheduleId={selectedScheduleId}
+        dateFilter={selectedDate || undefined}
+      />
     </div>
   );
 }

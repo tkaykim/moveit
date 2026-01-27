@@ -61,6 +61,7 @@ export type Database = {
           address: string | null
           contact_number: string | null
           created_at: string | null
+          description: string | null
           id: string
           images: Json | null
           instagram_handle: string | null
@@ -78,6 +79,7 @@ export type Database = {
           address?: string | null
           contact_number?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
           images?: Json | null
           instagram_handle?: string | null
@@ -95,6 +97,7 @@ export type Database = {
           address?: string | null
           contact_number?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
           images?: Json | null
           instagram_handle?: string | null
@@ -309,6 +312,7 @@ export type Database = {
           guest_name: string | null
           guest_phone: string | null
           payment_status: string | null
+          is_admin_added: boolean | null
         }
         Insert: {
           class_id?: string | null
@@ -322,6 +326,7 @@ export type Database = {
           guest_name?: string | null
           guest_phone?: string | null
           payment_status?: string | null
+          is_admin_added?: boolean | null
         }
         Update: {
           class_id?: string | null
@@ -335,6 +340,7 @@ export type Database = {
           guest_name?: string | null
           guest_phone?: string | null
           payment_status?: string | null
+          is_admin_added?: boolean | null
         }
         Relationships: [
           {
@@ -1125,11 +1131,15 @@ export type Database = {
           academy_id: string | null
           access_group: string | null
           class_id: string | null
+          /** 팝업 수량별 가격: [{ count, price, valid_days? }] */
+          count_options: Json | null
           created_at: string | null
           id: string
           is_coupon: boolean
           is_general: boolean
           is_on_sale: boolean | null
+          /** true=공개(유저 구매 가능), false=비공개(Admin만 판매/지급) */
+          is_public: boolean | null
           name: string
           price: number | null
           ticket_type: string
@@ -1141,11 +1151,13 @@ export type Database = {
           academy_id?: string | null
           access_group?: string | null
           class_id?: string | null
+          count_options?: Json | null
           created_at?: string | null
           id?: string
           is_coupon?: boolean
           is_general?: boolean
           is_on_sale?: boolean | null
+          is_public?: boolean | null
           name: string
           price?: number | null
           ticket_type: string
@@ -1157,11 +1169,13 @@ export type Database = {
           academy_id?: string | null
           access_group?: string | null
           class_id?: string | null
+          count_options?: Json | null
           created_at?: string | null
           id?: string
           is_coupon?: boolean
           is_general?: boolean
           is_on_sale?: boolean | null
+          is_public?: boolean | null
           name?: string
           price?: number | null
           ticket_type?: string

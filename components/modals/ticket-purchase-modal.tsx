@@ -93,6 +93,7 @@ export const TicketPurchaseModal = ({
         .select('*')
         .eq('academy_id', academyId)
         .eq('is_on_sale', true)
+        .or('is_public.eq.true,is_public.is.null')
         .order('price', { ascending: true });
 
       if (error) throw error;

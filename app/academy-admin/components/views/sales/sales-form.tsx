@@ -101,14 +101,38 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
         .eq('academy_id', academyId)
         .eq('is_on_sale', true);
 
-      const formattedProducts = (tickets || []).map((ticket: any) => ({
-        id: ticket.id,
-        type: ticket.ticket_type === 'COUNT' ? 'count' : 'period',
-        name: ticket.name,
-        amount: ticket.total_count,
-        days: ticket.valid_days,
-        price: ticket.price,
-      }));
+      const formattedProducts: any[] = [];
+      for (const ticket of tickets || []) {
+        const opts = ticket.count_options as { count?: number; price?: number; valid_days?: number | null }[] | null;
+        const hasCountOptions = opts && Array.isArray(opts) && opts.length > 0 && (ticket.ticket_category === 'popup' || ticket.access_group === 'popup');
+        if (hasCountOptions) {
+          for (const o of opts) {
+            const count = Number(o?.count ?? 1);
+            const price = Number(o?.price ?? 0);
+            if (count > 0) {
+              formattedProducts.push({
+                id: ticket.id,
+                productKey: `${ticket.id}_${count}`,
+                type: 'count',
+                name: `${ticket.name} ${count}회권`,
+                amount: count,
+                days: o?.valid_days ?? ticket.valid_days,
+                price,
+              });
+            }
+          }
+        } else {
+          formattedProducts.push({
+            id: ticket.id,
+            productKey: ticket.id,
+            type: ticket.ticket_type === 'COUNT' ? 'count' : 'period',
+            name: ticket.name,
+            amount: ticket.total_count,
+            days: ticket.valid_days,
+            price: ticket.price,
+          });
+        }
+      }
       setProducts(formattedProducts);
 
       // 할인 정책 로드

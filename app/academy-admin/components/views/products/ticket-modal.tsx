@@ -81,6 +81,7 @@ export function TicketModal({ academyId, ticket, initialCategory, onClose }: Tic
     total_count: (initialCategory === 'popup' || initialCategory === 'workshop' ? 1 : null) as number | null,
     valid_days: null as number | null,
     is_on_sale: true,
+    is_public: true,
   });
   
   const [loading, setLoading] = useState(false);
@@ -92,6 +93,10 @@ export function TicketModal({ academyId, ticket, initialCategory, onClose }: Tic
   const [useCustomPopupValidity, setUseCustomPopupValidity] = useState(false);
   const [popupValidDays, setPopupValidDays] = useState<number | null>(initialCategory === 'popup' ? 30 : null); // 팝업 쿠폰 기본 유효기간 30일
   const [classSearchQuery, setClassSearchQuery] = useState('');
+  // 팝업 수강권 수량별 가격: [{ count, price, valid_days? }, ...]
+  const [countOptions, setCountOptions] = useState<{ count: number; price: number; valid_days?: number | null }[]>(() =>
+    initialCategory === 'popup' ? [{ count: 1, price: 0, valid_days: null }, { count: 3, price: 0, valid_days: null }, { count: 5, price: 0, valid_days: null }] : []
+  );
   
   // 검색 필터링된 클래스 목록
   const filteredClasses = useMemo(() => {
@@ -107,6 +112,12 @@ export function TicketModal({ academyId, ticket, initialCategory, onClose }: Tic
   useEffect(() => {
     loadClasses();
   }, [academyId]);
+
+  useEffect(() => {
+    if (productCategory === 'popup' && countOptions.length === 0 && !ticket) {
+      setCountOptions([{ count: 1, price: 0, valid_days: null }, { count: 3, price: 0, valid_days: null }, { count: 5, price: 0, valid_days: null }]);
+    }
+  }, [productCategory]);
 
   useEffect(() => {
     if (ticket) {
@@ -131,6 +142,7 @@ export function TicketModal({ academyId, ticket, initialCategory, onClose }: Tic
         total_count: ticket.total_count,
         valid_days: ticket.valid_days,
         is_on_sale: ticket.is_on_sale !== false,
+        is_public: ticket.is_public ?? true,
       });
       
       // 프리셋에 없는 값이면 커스텀 모드
@@ -147,6 +159,16 @@ export function TicketModal({ academyId, ticket, initialCategory, onClose }: Tic
         if (ticket.valid_days !== null) {
           setUseCustomPopupValidity(!POPUP_VALIDITY_PRESETS.some(p => p.days === ticket.valid_days));
         }
+      }
+      // 팝업 수강권 수량별 가격 로드
+      if (category === 'popup' && ticket.count_options && Array.isArray(ticket.count_options) && ticket.count_options.length > 0) {
+        setCountOptions(ticket.count_options.map((o: { count?: number; price?: number; valid_days?: number | null }) => ({
+          count: Number(o?.count ?? 1),
+          price: Number(o?.price ?? 0),
+          valid_days: o?.valid_days ?? null,
+        })));
+      } else if (category === 'popup') {
+        setCountOptions([{ count: 1, price: ticket.price ?? 0, valid_days: null }, { count: 3, price: 0, valid_days: null }, { count: 5, price: 0, valid_days: null }]);
       }
       
       // 기존 연결된 클래스 로드 (정규 수강권인 경우에만)
@@ -254,25 +276,29 @@ export function TicketModal({ academyId, ticket, initialCategory, onClose }: Tic
 
     try {
       // 정규 수강권: 기간제(PERIOD), 팝업/워크샵: 횟수제(COUNT)
-      const ticketData = {
+      const ticketData: Record<string, unknown> = {
         academy_id: academyId,
         name: formData.name,
-        price: formData.price,
+        price: productCategory === 'popup' && countOptions.length > 0
+          ? (countOptions.find(o => o.count === 1)?.price ?? countOptions[0]?.price ?? formData.price)
+          : formData.price,
         ticket_type: productCategory === 'regular' ? 'PERIOD' : 'COUNT',
-        total_count: productCategory === 'regular' ? null : formData.total_count,
-        // 정규: 이용 기간, 팝업/워크샵: 유효기간(소멸 기한)
-        valid_days: productCategory === 'regular' 
-          ? formData.valid_days 
-          : popupValidDays,
+        total_count: productCategory === 'regular' ? null : (productCategory === 'popup' ? (countOptions[0]?.count ?? null) : formData.total_count),
+        valid_days: productCategory === 'regular' ? formData.valid_days : (productCategory === 'popup' ? (countOptions[0]?.valid_days ?? null) : popupValidDays),
         is_on_sale: formData.is_on_sale,
-        is_coupon: productCategory !== 'regular', // 팝업/워크샵은 쿠폰으로 처리
+        is_public: formData.is_public,
+        is_coupon: productCategory !== 'regular',
         is_general: isGeneral,
         class_id: null,
-        access_group: productCategory === 'regular' 
-          ? (isGeneral ? 'general' : null)
-          : productCategory, // 'popup' 또는 'workshop'
-        ticket_category: productCategory, // 'regular' | 'popup' | 'workshop'
+        access_group: productCategory === 'regular' ? (isGeneral ? 'general' : null) : productCategory,
+        ticket_category: productCategory,
       };
+      if (productCategory === 'popup') {
+        const opts = countOptions.filter(o => o.count > 0);
+        ticketData.count_options = opts.length > 0 ? opts : null;
+      } else {
+        ticketData.count_options = null;
+      }
 
       let ticketId: string;
 
@@ -468,23 +494,114 @@ export function TicketModal({ academyId, ticket, initialCategory, onClose }: Tic
             />
           </div>
 
-          {/* 가격 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              가격 *
-            </label>
-            <input
-              type="number"
-              required
-              min="0"
-              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-              value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) || 0 })}
-            />
-          </div>
+          {/* 가격 (정규/워크샵만; 팝업은 횟수권 옵션에서 설정) */}
+          {(productCategory === 'regular' || productCategory === 'workshop') && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                가격 *
+              </label>
+              <input
+                type="number"
+                required
+                min="0"
+                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) || 0 })}
+              />
+            </div>
+          )}
 
-          {/* 횟수 선택 (팝업/워크샵 수강권) */}
-          {(productCategory === 'popup' || productCategory === 'workshop') && (
+          {/* 횟수권 옵션 (팝업 수강권만 – 횟수·가격·유효기간을 여기서만 설정) */}
+          {productCategory === 'popup' && (
+            <div className="rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-900/10 p-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                횟수권 옵션
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                각 횟수권별로 사용 횟수, 가격, 유효기간(일)을 설정하세요. 아래에서 옵션을 추가·수정할 수 있습니다.
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-neutral-600">
+                      <th className="text-left py-2 pr-2 font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">사용 횟수(회)</th>
+                      <th className="text-left py-2 pr-2 font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">가격(원)</th>
+                      <th className="text-left py-2 pr-2 font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">유효기간(일)</th>
+                      <th className="w-14 py-2" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {countOptions.map((opt, idx) => (
+                      <tr key={idx} className="border-b border-gray-100 dark:border-neutral-700/50">
+                        <td className="py-2 pr-2">
+                          <input
+                            type="number"
+                            min="1"
+                            className="w-16 border dark:border-neutral-700 rounded px-2 py-1.5 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                            value={opt.count}
+                            onChange={(e) => {
+                              const v = parseInt(e.target.value, 10) || 1;
+                              setCountOptions(prev => prev.map((o, i) => i === idx ? { ...o, count: v } : o));
+                            }}
+                          />
+                          <span className="ml-1 text-gray-500 dark:text-gray-400">회</span>
+                        </td>
+                        <td className="py-2 pr-2">
+                          <input
+                            type="number"
+                            min="0"
+                            className="w-24 border dark:border-neutral-700 rounded px-2 py-1.5 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                            value={opt.price}
+                            onChange={(e) => {
+                              const v = parseInt(e.target.value, 10) || 0;
+                              setCountOptions(prev => prev.map((o, i) => i === idx ? { ...o, price: v } : o));
+                            }}
+                            placeholder="가격"
+                          />
+                        </td>
+                        <td className="py-2 pr-2">
+                          <input
+                            type="number"
+                            min="1"
+                            className="w-20 border dark:border-neutral-700 rounded px-2 py-1.5 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                            value={opt.valid_days ?? ''}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              const v = raw === '' ? null : (parseInt(raw, 10) || null);
+                              setCountOptions(prev => prev.map((o, i) => i === idx ? { ...o, valid_days: v } : o));
+                            }}
+                            placeholder="비우면 무제한"
+                          />
+                          <span className="ml-1 text-gray-500 dark:text-gray-400">일</span>
+                        </td>
+                        <td className="py-2">
+                          {countOptions.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setCountOptions(prev => prev.filter((_, i) => i !== idx))}
+                              className="text-red-500 hover:text-red-600 text-xs"
+                            >
+                              삭제
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCountOptions(prev => [...prev, { count: prev.length ? Math.max(...prev.map(o => o.count)) + 1 : 1, price: 0, valid_days: null }])}
+                className="mt-2 text-sm text-purple-600 dark:text-purple-400 hover:underline font-medium"
+              >
+                + 옵션 추가
+              </button>
+            </div>
+          )}
+
+          {/* 횟수 선택 (워크샵만; 팝업은 위 횟수권 옵션에서 설정) */}
+          {productCategory === 'workshop' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 사용 가능 횟수 *
@@ -500,9 +617,7 @@ export function TicketModal({ academyId, ticket, initialCategory, onClose }: Tic
                     }}
                     className={`px-4 py-2 rounded-full border font-medium text-sm transition-colors ${
                       !useCustomCount && formData.total_count === preset.count
-                        ? productCategory === 'popup'
-                          ? 'bg-purple-600 text-white border-purple-600'
-                          : 'bg-amber-600 text-white border-amber-600'
+                        ? 'bg-amber-600 text-white border-amber-600'
                         : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
                     }`}
                   >
@@ -514,9 +629,7 @@ export function TicketModal({ academyId, ticket, initialCategory, onClose }: Tic
                   onClick={() => setUseCustomCount(true)}
                   className={`px-4 py-2 rounded-full border font-medium text-sm transition-colors ${
                     useCustomCount
-                      ? productCategory === 'popup'
-                        ? 'bg-purple-600 text-white border-purple-600'
-                        : 'bg-amber-600 text-white border-amber-600'
+                      ? 'bg-amber-600 text-white border-amber-600'
                       : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
                   }`}
                 >
@@ -535,13 +648,13 @@ export function TicketModal({ academyId, ticket, initialCategory, onClose }: Tic
                 />
               )}
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {productCategory === 'popup' ? 'Popup' : 'Workshop'} 클래스에서 {formData.total_count || 0}회 수강 가능
+                Workshop 클래스에서 {formData.total_count || 0}회 수강 가능
               </p>
             </div>
           )}
 
-          {/* 유효기간 선택 (팝업/워크샵 수강권) */}
-          {(productCategory === 'popup' || productCategory === 'workshop') && (
+          {/* 유효기간 선택 (워크샵만; 팝업은 횟수권 옵션에서 옵션별 설정) */}
+          {productCategory === 'workshop' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 유효기간 (구매일 기준)
@@ -557,9 +670,7 @@ export function TicketModal({ academyId, ticket, initialCategory, onClose }: Tic
                     }}
                     className={`px-4 py-2 rounded-full border font-medium text-sm transition-colors ${
                       !useCustomPopupValidity && popupValidDays === preset.days
-                        ? productCategory === 'popup'
-                          ? 'bg-purple-600 text-white border-purple-600'
-                          : 'bg-amber-600 text-white border-amber-600'
+                        ? 'bg-amber-600 text-white border-amber-600'
                         : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
                     }`}
                   >
@@ -571,9 +682,7 @@ export function TicketModal({ academyId, ticket, initialCategory, onClose }: Tic
                   onClick={() => setUseCustomPopupValidity(true)}
                   className={`px-4 py-2 rounded-full border font-medium text-sm transition-colors ${
                     useCustomPopupValidity
-                      ? productCategory === 'popup'
-                        ? 'bg-purple-600 text-white border-purple-600'
-                        : 'bg-amber-600 text-white border-amber-600'
+                      ? 'bg-amber-600 text-white border-amber-600'
                       : 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800'
                   }`}
                 >
@@ -817,6 +926,25 @@ export function TicketModal({ academyId, ticket, initialCategory, onClose }: Tic
             <label htmlFor="is_on_sale" className="text-sm text-gray-700 dark:text-gray-300">
               판매 중
             </label>
+          </div>
+
+          {/* 공개 여부 */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="is_public"
+                className="w-4 h-4 rounded"
+                checked={formData.is_public}
+                onChange={(e) => setFormData({ ...formData, is_public: e.target.checked })}
+              />
+              <label htmlFor="is_public" className="text-sm text-gray-700 dark:text-gray-300">
+                공개 (사용자 구매·목록 노출)
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 pl-6">
+              비공개 시 사용자 직접 구매 불가. 학원에서만 판매·지급 가능.
+            </p>
           </div>
 
           {/* 버튼 */}

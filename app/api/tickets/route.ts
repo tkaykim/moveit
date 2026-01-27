@@ -25,6 +25,7 @@ export async function GET(request: Request) {
         )
       `)
       .eq('is_on_sale', true)
+      .or('is_public.eq.true,is_public.is.null')
       .order('created_at', { ascending: false });
 
     if (academyId) {

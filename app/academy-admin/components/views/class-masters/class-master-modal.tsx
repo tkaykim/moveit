@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { X, Ticket, Info, ToggleLeft, ToggleRight, ChevronLeft, ChevronRight, CheckCircle2, CheckSquare, Square, Plus, Search } from 'lucide-react';
+import { X, Ticket, Info, ToggleLeft, ToggleRight, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2, CheckSquare, Square, Plus, Search, Zap, Tag } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { TicketModal } from '../products/ticket-modal';
 // import { InstructorSelector } from '../classes/instructor-selector';
@@ -53,6 +53,15 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [ticketSearchQuery, setTicketSearchQuery] = useState('');
 
+  // ticket_category 우선, 없으면 access_group → is_coupon (product-view와 동일한 분류 로직)
+  const getTicketCategory = useCallback((ticket: any): 'regular' | 'popup' | 'workshop' => {
+    if (ticket.ticket_category === 'popup' || ticket.ticket_category === 'workshop') return ticket.ticket_category;
+    if (ticket.access_group === 'popup') return 'popup';
+    if (ticket.access_group === 'workshop') return 'workshop';
+    if (ticket.is_coupon === true && ticket.access_group !== 'regular') return 'popup';
+    return 'regular';
+  }, []);
+
   // 검색 필터링된 수강권 목록
   const filteredTickets = useMemo(() => {
     if (!ticketSearchQuery.trim()) return availableTickets;
@@ -62,6 +71,20 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
       (ticket.ticket_type?.toLowerCase().includes(query))
     );
   }, [availableTickets, ticketSearchQuery]);
+
+  // 카테고리별 수강권 (검색 필터 적용)
+  const regularTickets = useMemo(() => filteredTickets.filter(t => getTicketCategory(t) === 'regular'), [filteredTickets, getTicketCategory]);
+  const popupTickets = useMemo(() => filteredTickets.filter(t => getTicketCategory(t) === 'popup'), [filteredTickets, getTicketCategory]);
+  const workshopTickets = useMemo(() => filteredTickets.filter(t => getTicketCategory(t) === 'workshop'), [filteredTickets, getTicketCategory]);
+
+  // 아코디언 펼침 상태 (클래스 유형별 기본: 해당 유형 섹션만 열림)
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ regular: true, popup: false, workshop: false });
+  useEffect(() => {
+    if (currentStep === 3 || classData) {
+      // 정규/팝업/워크샵 동일하게 3종 모두 펼쳐서 표시
+      setExpandedSections({ regular: true, popup: true, workshop: true });
+    }
+  }, [currentStep, classData]);
 
   useEffect(() => {
     loadHalls();
@@ -118,13 +141,12 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
     }
 
     try {
-      // 해당 학원의 모든 판매 중인 일반 수강권 조회 (쿠폰 제외)
+      // 해당 학원의 모든 판매 중인 수강권 조회 (정규/팝업/워크샵 포함, is_coupon 필터 제거)
       const { data, error } = await supabase
         .from('tickets')
-        .select('id, name, ticket_type, price, is_general, is_coupon, valid_days, total_count')
+        .select('id, name, ticket_type, price, is_general, is_coupon, valid_days, total_count, ticket_category, access_group')
         .eq('academy_id', academyId)
         .eq('is_on_sale', true)
-        .or('is_coupon.is.null,is_coupon.eq.false') // 쿠폰 제외
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -264,24 +286,41 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
     });
   };
 
+  // Step 3에서는 클래스 유형 무관하게 정규/팝업/워크샵 3종 모두 표시·선택 가능
+  const applicableTickets = useMemo(() => [...regularTickets, ...popupTickets, ...workshopTickets], [regularTickets, popupTickets, workshopTickets]);
+
+  const getTicketsByCategory = useCallback((cat: 'regular' | 'popup' | 'workshop') => {
+    if (cat === 'regular') return regularTickets;
+    if (cat === 'popup') return popupTickets;
+    return workshopTickets;
+  }, [regularTickets, popupTickets, workshopTickets]);
+
   const handleSelectAllTickets = () => {
-    console.log('handleSelectAllTickets 호출됨', {
-      currentSelected: selectedTicketIds.length,
-      totalTickets: availableTickets.length
-    });
-    if (selectedTicketIds.length === availableTickets.length) {
-      console.log('전체 해제');
+    if (selectedTicketIds.length === applicableTickets.length) {
       setSelectedTicketIds([]);
     } else {
-      const allIds = availableTickets.map((t) => t.id);
-      console.log('전체 선택:', allIds);
-      setSelectedTicketIds(allIds);
+      setSelectedTicketIds(applicableTickets.map((t) => t.id));
     }
   };
 
-  // 수강권 모달과 동일한 선택 상태 계산
-  const isAllTicketsSelected = availableTickets.length > 0 && selectedTicketIds.length === availableTickets.length;
-  const isPartialTicketsSelected = selectedTicketIds.length > 0 && selectedTicketIds.length < availableTickets.length;
+  const handleSelectAllForCategory = (cat: 'regular' | 'popup' | 'workshop') => {
+    const list = getTicketsByCategory(cat);
+    const ids = list.map((t) => t.id);
+    const allSelected = ids.length > 0 && ids.every((id) => selectedTicketIds.includes(id));
+    if (allSelected) {
+      setSelectedTicketIds((prev) => prev.filter((id) => !ids.includes(id)));
+    } else {
+      setSelectedTicketIds((prev) => [...new Set([...prev, ...ids])]);
+    }
+  };
+
+  const toggleSection = (cat: string) => {
+    setExpandedSections((prev) => ({ ...prev, [cat]: !prev[cat] }));
+  };
+
+  // 수강권 모달과 동일한 선택 상태 계산 (applicable 기준)
+  const isAllTicketsSelected = applicableTickets.length > 0 && selectedTicketIds.length === applicableTickets.length;
+  const isPartialTicketsSelected = selectedTicketIds.length > 0 && selectedTicketIds.length < applicableTickets.length;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -316,6 +355,16 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         // 또는 그냥 instructor_id만 null로 저장
       }
 
+      // 선택된 수강권 중 팝업/워크샵이 있으면 allowPopup/allowWorkshop true (access_config 호환)
+      const allowPopup = selectedTicketIds.some((id) => {
+        const t = availableTickets.find((x) => x.id === id);
+        return t && getTicketCategory(t) === 'popup';
+      });
+      const allowWorkshop = selectedTicketIds.some((id) => {
+        const t = availableTickets.find((x) => x.id === id);
+        return t && getTicketCategory(t) === 'workshop';
+      });
+
       const dataToSave: any = {
         academy_id: academyId,
         title: finalTitle || null,
@@ -332,9 +381,9 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         access_config: {
           requiredGroup: null,
           allowRegularTicket: false, // ticket_classes로 관리하므로 false
-          allowCoupon: formData.allowPopup, // 호환성: allowPopup과 동일하게 설정
-          allowPopup: formData.allowPopup,
-          allowWorkshop: formData.allowWorkshop,
+          allowCoupon: allowPopup, // 호환성: 선택된 팝업 수강권 있으면 true
+          allowPopup,
+          allowWorkshop,
         },
         start_time: null,
         end_time: null,
@@ -452,12 +501,16 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
     }
 
     try {
-      // 강사 이름이 직접 입력된 경우 title에 포함시키거나 별도 처리
       let finalTitle = formData.title;
-      if (!formData.instructor_id && formData.instructor_name.trim()) {
-        // 강사 이름이 직접 입력된 경우 title에 포함 (선택사항)
-        // 또는 그냥 instructor_id만 null로 저장
-      }
+
+      const allowPopup = selectedTicketIds.some((id) => {
+        const t = availableTickets.find((x) => x.id === id);
+        return t && getTicketCategory(t) === 'popup';
+      });
+      const allowWorkshop = selectedTicketIds.some((id) => {
+        const t = availableTickets.find((x) => x.id === id);
+        return t && getTicketCategory(t) === 'workshop';
+      });
 
       const dataToSave: any = {
         academy_id: academyId,
@@ -474,10 +527,10 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         is_active: formData.is_active,
         access_config: {
           requiredGroup: null,
-          allowRegularTicket: false, // ticket_classes로 관리하므로 false
-          allowCoupon: formData.allowPopup, // 호환성: allowPopup과 동일하게 설정
-          allowPopup: formData.allowPopup,
-          allowWorkshop: formData.allowWorkshop,
+          allowRegularTicket: false,
+          allowCoupon: allowPopup,
+          allowPopup,
+          allowWorkshop,
         },
         start_time: null,
         end_time: null,
@@ -749,246 +802,133 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
     </div>
   );
 
+  const TICKET_SECTION_CONFIG: Record<'regular' | 'popup' | 'workshop', { label: string; headerBg: string; border: string; iconBg: string }> = {
+    regular: { label: '정규 수강권', headerBg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800', iconBg: 'bg-blue-100 dark:bg-blue-900/40' },
+    popup: { label: '팝업 수강권', headerBg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800', iconBg: 'bg-purple-100 dark:bg-purple-900/40' },
+    workshop: { label: '워크샵 수강권', headerBg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800', iconBg: 'bg-amber-100 dark:bg-amber-900/40' },
+  };
+
+  const renderTicketCard = (ticket: any, isSelected: boolean) => (
+    <div
+      key={ticket.id}
+      onClick={() => handleToggleTicket(ticket.id)}
+      className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+        isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-400 dark:border-blue-600 shadow-md' : 'bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm'
+      }`}
+    >
+      {isSelected ? <CheckSquare size={22} className="text-blue-600 dark:text-blue-400 shrink-0" /> : <Square size={22} className="text-gray-400 shrink-0" />}
+      <div className="flex-1 min-w-0">
+        <div className="font-semibold text-gray-900 dark:text-white mb-1 truncate">{ticket.name}</div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {ticket.is_general && <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-md text-xs font-medium">전체 이용</span>}
+          {ticket.ticket_type === 'PERIOD' && ticket.valid_days && <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-md text-xs">{ticket.valid_days}일</span>}
+          {ticket.ticket_type === 'COUNT' && ticket.total_count && <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-md text-xs">{ticket.total_count}회</span>}
+          {ticket.price && <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md text-xs font-medium">{ticket.price.toLocaleString()}원</span>}
+        </div>
+      </div>
+      {isSelected && <div className="shrink-0"><div className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse" /></div>}
+    </div>
+  );
+
+  // 클래스 유형 무관하게 정규/팝업/워크샵 3종 모두 동일하게 노출
+  const step3Sections: ('regular' | 'popup' | 'workshop')[] = ['regular', 'popup', 'workshop'];
+
   const renderStep3 = () => (
     <div className="space-y-6">
       <div>
         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">수강권 설정</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">이 수업을 들을 수 있는 수강권을 선택하고 쿠폰 허용 여부를 설정하세요.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">이 수업을 들을 수 있는 수강권을 정규/팝업/워크샵별로 선택하세요.</p>
       </div>
 
-      {/* 수강권 선택 */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-          이 수업을 수강할 수 있는 수강권 선택
-        </label>
-        
-        {loadingTickets ? (
-          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-            <p>수강권 목록을 불러오는 중...</p>
+      {loadingTickets ? (
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2" />
+          <p>수강권 목록을 불러오는 중...</p>
+        </div>
+      ) : availableTickets.length === 0 ? (
+        <div className="space-y-3">
+          <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-6 text-center">
+            <Ticket size={32} className="mx-auto mb-3 text-amber-600 dark:text-amber-400" />
+            <p className="text-sm font-medium text-amber-700 dark:text-amber-400 mb-1">등록된 수강권이 없습니다</p>
+            <p className="text-xs text-amber-600 dark:text-amber-500">아래 버튼을 눌러 새 수강권을 만들어주세요.</p>
           </div>
-        ) : availableTickets.length === 0 ? (
-          <div className="space-y-3">
-            <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-6 text-center">
-              <Ticket size={32} className="mx-auto mb-3 text-amber-600 dark:text-amber-400" />
-              <p className="text-sm font-medium text-amber-700 dark:text-amber-400 mb-1">
-                등록된 수강권이 없습니다
-              </p>
-              <p className="text-xs text-amber-600 dark:text-amber-500">
-                아래 버튼을 눌러 새 수강권을 만들어주세요.
-              </p>
-            </div>
-            {/* 새 수강권 만들기 버튼 */}
-            <button
-              type="button"
-              onClick={() => setShowTicketModal(true)}
-              className="w-full py-3 border-2 border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-600 dark:text-blue-400 text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/30 flex items-center justify-center gap-2 transition-all"
-            >
-              <Plus size={18} /> 새 수강권 만들기
-            </button>
+          <button type="button" onClick={() => setShowTicketModal(true)} className="w-full py-3 border-2 border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-600 dark:text-blue-400 text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/30 flex items-center justify-center gap-2 transition-all">
+            <Plus size={18} /> 새 수강권 만들기
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input type="text" placeholder="수강권 검색..." value={ticketSearchQuery} onChange={(e) => setTicketSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-3 border-2 dark:border-neutral-700 rounded-xl bg-gray-50 dark:bg-neutral-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
           </div>
-        ) : (
-          <div className="space-y-3">
-            {/* 검색 입력 */}
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="수강권 검색..."
-                value={ticketSearchQuery}
-                onChange={(e) => setTicketSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-3 border-2 dark:border-neutral-700 rounded-xl bg-gray-50 dark:bg-neutral-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
 
-            {/* 전체 선택 버튼 */}
-            <div
-              onClick={handleSelectAllTickets}
-              className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl cursor-pointer hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-900/30 dark:hover:to-blue-800/30 transition-all"
-            >
-              {selectedTicketIds.length === availableTickets.length ? (
-                <CheckSquare size={24} className="text-blue-600 dark:text-blue-400 shrink-0" />
-              ) : selectedTicketIds.length > 0 ? (
-                <div className="w-6 h-6 border-2 border-blue-600 dark:border-blue-400 bg-blue-600 dark:bg-blue-500 rounded flex items-center justify-center">
-                  <div className="w-3 h-0.5 bg-white" />
-                </div>
-              ) : (
-                <Square size={24} className="text-gray-400 shrink-0" />
-              )}
-              <div className="flex-1">
-                <span className="font-semibold text-gray-900 dark:text-white block">
-                  전체 선택
-                </span>
-                <span className="text-xs text-gray-600 dark:text-gray-400">
-                  모든 수강권을 선택/해제합니다
-                </span>
-              </div>
-              <div className="text-right">
-                <span className="text-lg font-bold text-blue-600 dark:text-blue-400 block">
-                  {selectedTicketIds.length} / {availableTickets.length}
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">선택됨</span>
-              </div>
-            </div>
-
-            {/* 수강권 목록 */}
-            <div className="grid gap-3 max-h-64 overflow-y-auto pr-2">
-              {filteredTickets.length === 0 && ticketSearchQuery ? (
-                <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                  <Search size={16} className="inline mr-1" />
-                  &quot;{ticketSearchQuery}&quot;에 대한 검색 결과가 없습니다.
-                </div>
-              ) : filteredTickets.map((ticket) => {
-                const isSelected = selectedTicketIds.includes(ticket.id);
-                return (
-                  <div
-                    key={ticket.id}
-                    onClick={() => handleToggleTicket(ticket.id)}
-                    className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                      isSelected
-                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-400 dark:border-blue-600 shadow-md'
-                        : 'bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm'
-                    }`}
-                  >
-                    {isSelected ? (
-                      <CheckSquare size={22} className="text-blue-600 dark:text-blue-400 shrink-0" />
-                    ) : (
-                      <Square size={22} className="text-gray-400 shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-gray-900 dark:text-white mb-1 truncate">
-                        {ticket.name}
+          {step3Sections.map((cat) => {
+            const list = getTicketsByCategory(cat);
+            const config = TICKET_SECTION_CONFIG[cat];
+            const isOpen = expandedSections[cat] ?? false;
+            const sectionSelected = list.filter((t) => selectedTicketIds.includes(t.id)).length;
+            const sectionAllSelected = list.length > 0 && list.every((t) => selectedTicketIds.includes(t.id));
+            const Icon = cat === 'regular' ? Ticket : cat === 'popup' ? Zap : Tag;
+            return (
+              <div key={cat} className={`rounded-xl border-2 overflow-hidden ${config.border}`}>
+                <button type="button" onClick={() => toggleSection(cat)} className={`w-full p-4 flex items-center justify-between ${config.headerBg} transition-colors hover:opacity-90`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${config.iconBg}`}><Icon size={18} className={cat === 'regular' ? 'text-blue-500' : cat === 'popup' ? 'text-purple-500' : 'text-amber-500'} /></div>
+                    <div className="text-left">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-gray-800 dark:text-white">{config.label}</h3>
+                        <span className="text-xs font-bold px-2 py-0.5 rounded bg-white/60 dark:bg-black/20">{list.length}개</span>
                       </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {ticket.is_general && (
-                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-md text-xs font-medium">
-                            전체 이용
-                          </span>
-                        )}
-                        {ticket.ticket_type === 'PERIOD' && ticket.valid_days && (
-                          <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-md text-xs">
-                            {ticket.valid_days}일
-                          </span>
-                        )}
-                        {ticket.ticket_type === 'COUNT' && ticket.total_count && (
-                          <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-md text-xs">
-                            {ticket.total_count}회
-                          </span>
-                        )}
-                        {ticket.price && (
-                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md text-xs font-medium">
-                            {ticket.price.toLocaleString()}원
-                          </span>
-                        )}
-                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">이 수강권으로 이 클래스를 수강할 수 있게 하려면 체크하세요.</p>
                     </div>
-                    {isSelected && (
-                      <div className="shrink-0">
-                        <div className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse"></div>
-                      </div>
+                  </div>
+                  {isOpen ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
+                </button>
+                {isOpen && (
+                  <div className="p-4 space-y-2 border-t dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                    {list.length === 0 ? (
+                      <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">{ticketSearchQuery ? `"${ticketSearchQuery}"에 대한 검색 결과가 없습니다.` : `등록된 ${config.label}이(가) 없습니다.`}</div>
+                    ) : (
+                      <>
+                        <div onClick={() => handleSelectAllForCategory(cat)} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-neutral-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-neutral-750">
+                          {sectionAllSelected ? <CheckSquare size={20} className="text-blue-600 dark:text-blue-400 shrink-0" /> : sectionSelected > 0 ? <div className="w-5 h-5 border-2 border-blue-600 dark:border-blue-400 bg-blue-600 dark:bg-blue-500 rounded flex items-center justify-center"><div className="w-2.5 h-0.5 bg-white" /></div> : <Square size={20} className="text-gray-400 shrink-0" />}
+                          <span className="font-medium text-gray-900 dark:text-white text-sm">전체 선택</span>
+                          <span className="ml-auto text-sm text-gray-500 dark:text-gray-400">{sectionSelected} / {list.length}</span>
+                        </div>
+                        <div className="grid gap-2 max-h-48 overflow-y-auto">
+                          {list.map((ticket) => renderTicketCard(ticket, selectedTicketIds.includes(ticket.id)))}
+                        </div>
+                      </>
                     )}
                   </div>
-                );
-              })}
-            </div>
-
-            {/* 새 수강권 만들기 버튼 */}
-            <button
-              type="button"
-              onClick={() => setShowTicketModal(true)}
-              className="w-full py-3 border-2 border-gray-300 dark:border-neutral-700 border-dashed rounded-xl text-gray-500 dark:text-gray-400 text-sm hover:bg-gray-50 dark:hover:bg-neutral-800 hover:border-blue-400 dark:hover:border-blue-600 flex items-center justify-center gap-2 transition-all"
-            >
-              <Plus size={18} /> 새 수강권 만들기
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* 다른 유형 수강권 허용 (Regular 클래스만) */}
-      {formData.class_type === 'regular' && (
-        <div className="border-t dark:border-neutral-800 pt-6 space-y-3">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            다른 유형 수강권 허용
-          </label>
-          <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
-            체크 시 해당 수강권으로도 이 Regular 클래스 수강 가능
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <div
-              onClick={() => setFormData({ ...formData, allowPopup: !formData.allowPopup })}
-              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                formData.allowPopup
-                  ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-400 dark:border-purple-600'
-                  : 'bg-gray-50 dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 hover:border-purple-300 dark:hover:border-purple-700'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={formData.allowPopup}
-                  onChange={() => {}}
-                  className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
-                />
-                <div>
-                  <span className="font-medium text-gray-900 dark:text-white">Popup 수강권</span>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">팝업 수강권 보유자 허용</p>
-                </div>
+                )}
               </div>
-            </div>
-            <div
-              onClick={() => setFormData({ ...formData, allowWorkshop: !formData.allowWorkshop })}
-              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                formData.allowWorkshop
-                  ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-400 dark:border-amber-600'
-                  : 'bg-gray-50 dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 hover:border-amber-300 dark:hover:border-amber-700'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={formData.allowWorkshop}
-                  onChange={() => {}}
-                  className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
-                />
-                <div>
-                  <span className="font-medium text-gray-900 dark:text-white">Workshop 수강권</span>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">워크샵 수강권 보유자 허용</p>
-                </div>
-              </div>
-            </div>
-          </div>
+            );
+          })}
+
+          <button type="button" onClick={() => setShowTicketModal(true)} className="w-full py-3 border-2 border-gray-300 dark:border-neutral-700 border-dashed rounded-xl text-gray-500 dark:text-gray-400 text-sm hover:bg-gray-50 dark:hover:bg-neutral-800 hover:border-blue-400 dark:hover:border-blue-600 flex items-center justify-center gap-2 transition-all">
+            <Plus size={18} /> 새 수강권 만들기
+          </button>
         </div>
       )}
 
-      {/* 선택 상태 요약 */}
       {availableTickets.length > 0 && (
-        <div className={`p-4 rounded-xl border-2 ${
-          selectedTicketIds.length > 0
-            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-            : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
-        }`}>
+        <div className={`p-4 rounded-xl border-2 ${selectedTicketIds.length > 0 ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}>
           {selectedTicketIds.length > 0 ? (
             <div className="flex items-start gap-2">
               <CheckSquare size={18} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-blue-700 dark:text-blue-400">
-                  {selectedTicketIds.length}개의 수강권이 선택되었습니다
-                </p>
-                <p className="text-xs text-blue-600 dark:text-blue-500 mt-1">
-                  선택한 수강권으로 이 수업을 수강할 수 있습니다.
-                </p>
+                <p className="text-sm font-medium text-blue-700 dark:text-blue-400">{selectedTicketIds.length}개의 수강권이 선택되었습니다</p>
+                <p className="text-xs text-blue-600 dark:text-blue-500 mt-1">선택한 수강권으로 이 수업을 수강할 수 있습니다.</p>
               </div>
             </div>
           ) : (
             <div className="flex items-start gap-2">
-              <div className="w-4 h-4 border-2 border-amber-600 dark:border-amber-400 rounded shrink-0 mt-0.5"></div>
+              <div className="w-4 h-4 border-2 border-amber-600 dark:border-amber-400 rounded shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                  수강권이 선택되지 않았습니다
-                </p>
-                <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
-                  수강권을 선택하지 않으면 이 수업은 어떤 수강권으로도 들을 수 없습니다.
-                </p>
+                <p className="text-sm font-medium text-amber-700 dark:text-amber-400">수강권이 선택되지 않았습니다</p>
+                <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">수강권을 선택하지 않으면 이 수업은 어떤 수강권으로도 들을 수 없습니다.</p>
               </div>
             </div>
           )}
@@ -1239,174 +1179,66 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
             />
           </div>
 
-          {/* 수강권 설정 섹션 - 수강권 모달의 클래스 선택 UI와 완전히 동일 */}
+          {/* 수강권 설정 - 정규/팝업/워크샵 아코디언 (Step3와 동일) */}
           <div className="border-t dark:border-neutral-800 pt-4 mt-4">
-            {/* 수강권 선택 - 수강권 모달의 클래스 선택 UI와 완전히 동일 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                <Ticket size={14} /> 이 클래스를 들을 수 있는 수강권
-              </label>
-
-              <div className="border dark:border-neutral-700 rounded-lg overflow-hidden">
-                {/* 검색 입력 */}
-                <div className="p-3 border-b dark:border-neutral-700 bg-white dark:bg-neutral-900">
-                  <div className="relative">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="수강권 검색..."
-                      value={ticketSearchQuery}
-                      onChange={(e) => setTicketSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 border dark:border-neutral-700 rounded-lg bg-gray-50 dark:bg-neutral-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                {/* 전체 선택 헤더 - 수강권 모달과 동일 */}
-                <div
-                  onClick={handleSelectAllTickets}
-                  className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-neutral-800 border-b dark:border-neutral-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-neutral-750"
-                >
-                  {isAllTicketsSelected ? (
-                    <CheckSquare size={20} className="text-blue-600 dark:text-blue-400" />
-                  ) : isPartialTicketsSelected ? (
-                    <div className="w-5 h-5 border-2 border-blue-600 dark:border-blue-400 bg-blue-600 dark:bg-blue-500 rounded flex items-center justify-center">
-                      <div className="w-2.5 h-0.5 bg-white" />
-                    </div>
-                  ) : (
-                    <Square size={20} className="text-gray-400" />
-                  )}
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    전체 선택
-                  </span>
-                  <span className="ml-auto text-sm text-gray-500 dark:text-gray-400">
-                    {selectedTicketIds.length} / {availableTickets.length}
-                  </span>
-                </div>
-
-                {/* 수강권 목록 */}
-                <div className="max-h-48 overflow-y-auto">
-                  {loadingTickets ? (
-                    <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                      수강권 목록 불러오는 중...
-                    </div>
-                  ) : availableTickets.length === 0 ? (
-                    <div className="p-4 text-center text-amber-600 dark:text-amber-400">
-                      <Info size={16} className="inline mr-1" />
-                      등록된 수강권이 없습니다.
-                    </div>
-                  ) : filteredTickets.length === 0 ? (
-                    <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                      <Search size={16} className="inline mr-1" />
-                      &quot;{ticketSearchQuery}&quot;에 대한 검색 결과가 없습니다.
-                    </div>
-                  ) : (
-                    filteredTickets.map((ticket) => {
-                      const isSelected = selectedTicketIds.includes(ticket.id);
-                      return (
-                        <div
-                          key={ticket.id}
-                          onClick={() => handleToggleTicket(ticket.id)}
-                          className="flex items-center gap-3 p-3 border-b dark:border-neutral-700 last:border-b-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-neutral-800"
-                        >
-                          {isSelected ? (
-                            <CheckSquare size={18} className="text-blue-600 dark:text-blue-400 shrink-0" />
-                          ) : (
-                            <Square size={18} className="text-gray-400 shrink-0" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-gray-900 dark:text-white truncate">
-                              {ticket.name || '제목 없음'}
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                              {ticket.ticket_type === 'PERIOD' && ticket.valid_days ? `${ticket.valid_days}일` : ''}
-                              {ticket.ticket_type === 'COUNT' && ticket.total_count ? `${ticket.total_count}회` : ''}
-                              {ticket.price && `• ${ticket.price.toLocaleString()}원`}
-                              {ticket.is_general && (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-                                  전체 이용
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-              
-              {isAllTicketsSelected && (
-                <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-                  모든 수강권에서 이 클래스를 수강할 수 있습니다.
-                </p>
-              )}
-              
-              {/* 새 수강권 만들기 버튼 */}
-              <button
-                type="button"
-                onClick={() => setShowTicketModal(true)}
-                className="w-full mt-4 py-3 border border-gray-300 dark:border-neutral-700 border-dashed rounded-lg text-gray-500 dark:text-gray-400 text-sm hover:bg-gray-100 dark:hover:bg-neutral-800 flex items-center justify-center gap-2 transition-colors"
-              >
-                <Plus size={16} /> 새 수강권 만들기
-              </button>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+              <Ticket size={14} /> 이 클래스를 들을 수 있는 수강권
+            </label>
+            <div className="relative mb-3">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input type="text" placeholder="수강권 검색..." value={ticketSearchQuery} onChange={(e) => setTicketSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-2 border dark:border-neutral-700 rounded-lg bg-gray-50 dark:bg-neutral-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-
-            {/* 다른 유형 수강권 허용 (Regular 클래스만) */}
-            {formData.class_type === 'regular' && (
-              <div className="border-t dark:border-neutral-800 pt-6 mt-6 space-y-3">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  다른 유형 수강권 허용
-                </label>
-                <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
-                  체크 시 해당 수강권으로도 이 Regular 클래스 수강 가능
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div
-                    onClick={() => setFormData({ ...formData, allowPopup: !formData.allowPopup })}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                      formData.allowPopup
-                        ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-400 dark:border-purple-600'
-                        : 'bg-gray-50 dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 hover:border-purple-300 dark:hover:border-purple-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={formData.allowPopup}
-                        onChange={() => {}}
-                        className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
-                      />
-                      <div>
-                        <span className="font-medium text-gray-900 dark:text-white">Popup 수강권</span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">팝업 수강권 보유자 허용</p>
-                      </div>
+            {loadingTickets ? (
+              <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">수강권 목록 불러오는 중...</div>
+            ) : availableTickets.length === 0 ? (
+              <div className="p-4 text-center text-amber-600 dark:text-amber-400 text-sm">
+                <Info size={16} className="inline mr-1" /> 등록된 수강권이 없습니다.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {step3Sections.map((cat) => {
+                  const list = getTicketsByCategory(cat);
+                  const config = TICKET_SECTION_CONFIG[cat];
+                  const isOpen = expandedSections[cat] ?? false;
+                  const sectionSelected = list.filter((t) => selectedTicketIds.includes(t.id)).length;
+                  const sectionAllSelected = list.length > 0 && list.every((t) => selectedTicketIds.includes(t.id));
+                  const Icon = cat === 'regular' ? Ticket : cat === 'popup' ? Zap : Tag;
+                  return (
+                    <div key={cat} className={`rounded-lg border-2 overflow-hidden ${config.border}`}>
+                      <button type="button" onClick={() => toggleSection(cat)} className={`w-full p-3 flex items-center justify-between ${config.headerBg} transition-colors hover:opacity-90 text-left`}>
+                        <div className="flex items-center gap-2">
+                          <div className={`p-1.5 rounded ${config.iconBg}`}><Icon size={16} className={cat === 'regular' ? 'text-blue-500' : cat === 'popup' ? 'text-purple-500' : 'text-amber-500'} /></div>
+                          <span className="font-bold text-sm text-gray-800 dark:text-white">{config.label}</span>
+                          <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-white/60 dark:bg-black/20">{list.length}개</span>
+                        </div>
+                        {isOpen ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
+                      </button>
+                      {isOpen && (
+                        <div className="p-3 space-y-2 border-t dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                          {list.length === 0 ? (
+                            <div className="text-center py-2 text-gray-500 dark:text-gray-400 text-xs">{ticketSearchQuery ? `"${ticketSearchQuery}" 검색 결과 없음` : `${config.label} 없음`}</div>
+                          ) : (
+                            <>
+                              <div onClick={() => handleSelectAllForCategory(cat)} className="flex items-center gap-2 p-2 rounded bg-gray-50 dark:bg-neutral-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-neutral-750 text-sm">
+                                {sectionAllSelected ? <CheckSquare size={16} className="text-blue-600 dark:text-blue-400 shrink-0" /> : sectionSelected > 0 ? <div className="w-4 h-4 border-2 border-blue-600 bg-blue-600 rounded flex items-center justify-center"><div className="w-2 h-0.5 bg-white" /></div> : <Square size={16} className="text-gray-400 shrink-0" />}
+                                <span className="font-medium text-gray-900 dark:text-white">전체 선택</span>
+                                <span className="ml-auto text-xs text-gray-500">{sectionSelected}/{list.length}</span>
+                              </div>
+                              <div className="grid gap-1.5 max-h-40 overflow-y-auto">
+                                {list.map((ticket) => renderTicketCard(ticket, selectedTicketIds.includes(ticket.id)))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div
-                    onClick={() => setFormData({ ...formData, allowWorkshop: !formData.allowWorkshop })}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                      formData.allowWorkshop
-                        ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-400 dark:border-amber-600'
-                        : 'bg-gray-50 dark:bg-neutral-800 border-gray-200 dark:border-neutral-700 hover:border-amber-300 dark:hover:border-amber-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={formData.allowWorkshop}
-                        onChange={() => {}}
-                        className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
-                      />
-                      <div>
-                        <span className="font-medium text-gray-900 dark:text-white">Workshop 수강권</span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">워크샵 수강권 보유자 허용</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
             )}
+            <button type="button" onClick={() => setShowTicketModal(true)} className="w-full mt-4 py-3 border border-gray-300 dark:border-neutral-700 border-dashed rounded-lg text-gray-500 dark:text-gray-400 text-sm hover:bg-gray-100 dark:hover:bg-neutral-800 flex items-center justify-center gap-2 transition-colors">
+              <Plus size={16} /> 새 수강권 만들기
+            </button>
           </div>
 
               {/* 수정 모드 버튼 */}

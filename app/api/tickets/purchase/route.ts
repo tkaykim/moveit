@@ -61,6 +61,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // 비공개 수강권은 사용자 직접 구매 불가
+    if (ticket.is_public === false) {
+      return NextResponse.json(
+        { error: '비공개 수강권은 직접 구매할 수 없습니다.' },
+        { status: 400 }
+      );
+    }
+
     // 할인정책 적용 처리
     let discountAmount = 0;
     let appliedDiscount = null;

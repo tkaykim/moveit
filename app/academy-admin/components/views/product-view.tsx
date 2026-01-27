@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Ticket, TrendingUp, Settings, Plus, Tag, Zap, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { Ticket, TrendingUp, Settings, Plus, Tag, Zap, ChevronDown, ChevronUp, Search, Trash2 } from 'lucide-react';
 import { SectionHeader } from '../common/section-header';
 import { TicketModal } from './products/ticket-modal';
 import { DiscountModal } from './products/discount-modal';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import { formatCurrency } from './utils/format-currency';
 
 interface ProductViewProps {
   academyId: string;
@@ -29,6 +30,7 @@ export function ProductView({ academyId }: ProductViewProps) {
   });
   const [initialTicketCategory, setInitialTicketCategory] = useState<'regular' | 'popup' | 'workshop' | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
+  const [deletingTicketId, setDeletingTicketId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -65,6 +67,43 @@ export function ProductView({ academyId }: ProductViewProps) {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteTicket = async (product: any) => {
+    if (!product?.id) return;
+    const message = `"${product.name}" 수강권을 삭제하시겠습니까?\n\n클래스 연결 정보(ticket_classes)는 함께 삭제됩니다. 보유 회원이 있거나 매출 이력이 있는 수강권은 삭제할 수 없습니다.`;
+    if (!confirm(message)) return;
+
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    setDeletingTicketId(product.id);
+    try {
+      // 1) ticket_classes에서 해당 수강권 연결 삭제
+      await supabase.from('ticket_classes').delete().eq('ticket_id', product.id);
+
+      // 2) tickets 삭제 (user_tickets·revenue_transactions 참조 시 FK 오류)
+      const { error } = await supabase.from('tickets').delete().eq('id', product.id).eq('academy_id', academyId);
+
+      if (error) {
+        if (error.code === '23503') {
+          alert('보유 회원이 있거나 매출 이력이 있어 삭제할 수 없습니다. 판매 중지만 가능합니다.');
+        } else {
+          alert(`삭제 실패: ${error.message}`);
+        }
+        return;
+      }
+      if (selectedTicket?.id === product.id) {
+        setSelectedTicket(null);
+        setShowTicketModal(false);
+      }
+      loadData();
+    } catch (err: any) {
+      console.error('Delete ticket error:', err);
+      alert(err?.message || '삭제 중 오류가 발생했습니다.');
+    } finally {
+      setDeletingTicketId(null);
     }
   };
 
@@ -346,44 +385,86 @@ export function ProductView({ academyId }: ProductViewProps) {
                           )}
                         </div>
                       ) : (
-                        categoryTickets.map((product) => (
+                        categoryTickets.map((product) => {
+                          const opts = (category === 'popup' && product.count_options && Array.isArray(product.count_options) && product.count_options.length > 0)
+                            ? product.count_options as { count?: number; price?: number; valid_days?: number | null }[]
+                            : null;
+                          return (
                           <div
                             key={product.id}
-                            className={`flex justify-between items-center p-3 border dark:border-neutral-800 rounded-lg transition-colors bg-white dark:bg-neutral-900 ${config.borderColor}`}
+                            className={`flex justify-between items-start gap-2 p-3 border dark:border-neutral-800 rounded-lg transition-colors bg-white dark:bg-neutral-900 ${config.borderColor} ${deletingTicketId === product.id ? 'opacity-60 pointer-events-none' : ''}`}
                           >
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <h4 className="font-bold text-sm text-gray-800 dark:text-white">{product.name}</h4>
+                                <h4 className="font-bold text-sm text-gray-800 dark:text-white truncate">{product.name}</h4>
                                 {!product.is_on_sale && (
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-neutral-800 text-gray-500 dark:text-gray-400">
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-neutral-800 text-gray-500 dark:text-gray-400 flex-shrink-0">
                                     판매중지
                                   </span>
                                 )}
+                                {product.is_public === false && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400 flex-shrink-0">
+                                    비공개
+                                  </span>
+                                )}
                               </div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                ₩{product.price?.toLocaleString() || 0}
-                                {category === 'regular' && product.valid_days && (
-                                  <span> • {product.valid_days}일</span>
-                                )}
-                                {(category === 'popup' || category === 'workshop') && (
-                                  <>
-                                    <span> • {product.total_count || 0}회</span>
-                                    {product.valid_days && <span> • 유효 {product.valid_days}일</span>}
-                                  </>
-                                )}
-                              </p>
+                              {category === 'regular' && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  {formatCurrency(product.price ?? 0)}
+                                  {product.valid_days && <span> • {product.valid_days}일</span>}
+                                </p>
+                              )}
+                              {(category === 'popup' || category === 'workshop') && !opts && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  {formatCurrency(product.price ?? 0)}
+                                  <span> • {product.total_count ?? 0}회</span>
+                                  {product.valid_days && <span> • 유효 {product.valid_days}일</span>}
+                                </p>
+                              )}
+                              {opts && (
+                                <div className="mt-2">
+                                  <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">옵션</span>
+                                  <div className="flex flex-wrap gap-1.5 mt-1">
+                                    {opts.map((o: { count?: number; price?: number; valid_days?: number | null }, i: number) => {
+                                      const c = Number(o?.count ?? 0);
+                                      const p = Number(o?.price ?? 0);
+                                      const d = o?.valid_days;
+                                      if (c <= 0) return null;
+                                      return (
+                                        <span
+                                          key={i}
+                                          className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 font-medium"
+                                        >
+                                          <span>{c}회권</span>
+                                          <span className="text-purple-600 dark:text-purple-300">{formatCurrency(p)}</span>
+                                          {d != null && <span className="text-[10px] text-purple-500 dark:text-purple-400">유효 {d}일</span>}
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                            <button
-                              onClick={() => {
-                                setSelectedTicket(product);
-                                setShowTicketModal(true);
-                              }}
-                              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 ml-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-800"
-                            >
-                              <Settings size={16} />
-                            </button>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setSelectedTicket(product); setShowTicketModal(true); }}
+                                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-800"
+                                title="수정"
+                              >
+                                <Settings size={16} />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDeleteTicket(product); }}
+                                disabled={deletingTicketId === product.id}
+                                className="text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="삭제"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </div>
-                        ))
+                          );
+                        })
                       )}
 
                       {categoryTickets.length > 0 && !searchQuery && (

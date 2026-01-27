@@ -51,6 +51,7 @@ export async function getAvailableUserTickets(
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
   // 기간권(remaining_count IS NULL) 또는 횟수권(remaining_count > 0) 모두 조회
+  // expiry_date는 쿼리 후 필터: NULL(무기한)이거나 오늘 이상만 포함 (.gte만 쓰면 NULL이 제외됨)
   let query = supabase
     .from('user_tickets')
     .select(`
@@ -76,15 +77,20 @@ export async function getAvailableUserTickets(
     `)
     .eq('user_id', userId)
     .eq('status', 'ACTIVE')
-    .gte('expiry_date', today)
     .or('remaining_count.gt.0,remaining_count.is.null')
     .order('created_at', { ascending: false });
 
-  const { data, error } = await query;
+  const { data: rawData, error } = await query;
 
   if (error) throw error;
 
-  if (!data) return [];
+  if (!rawData) return [];
+
+  // expiry_date: null(무기한)이거나 오늘 이상인 수강권만 포함
+  const data = rawData.filter((row: any) => {
+    const exp = row.expiry_date;
+    return exp == null || exp >= today;
+  });
 
   // classId가 제공된 경우: ticket_classes 테이블에서 연결된 수강권만 필터링
   if (classId) {
@@ -104,14 +110,14 @@ export async function getAvailableUserTickets(
       const isCoupon = ticket.is_coupon === true;
       const isGeneral = ticket.is_general === true;
 
-      // 쿠폰인 경우: allowCoupon이 true일 때만 표시
-      if (isCoupon) {
-        return allowCoupon;
-      }
-
-      // ticket_classes에 연결된 수강권은 사용 가능
+      // ticket_classes에 연결된 수강권(팝업 포함)은 해당 수업에서 사용 가능
       if (linkedTicketIds.has(ticketId)) {
         return true;
+      }
+
+      // 쿠폰(팝업 등)인 경우: allowCoupon이 true일 때만 표시 (클래스에서 허용 시)
+      if (isCoupon) {
+        return allowCoupon;
       }
 
       // is_general 수강권은 모든 클래스에서 사용 가능
@@ -119,7 +125,7 @@ export async function getAvailableUserTickets(
         return true;
       }
 
-      // 그 외의 경우는 ticket_classes에 연결되지 않은 수강권이므로 사용 불가
+      // 그 외는 사용 불가
       return false;
     });
   }

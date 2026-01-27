@@ -70,12 +70,16 @@ export function ProductSelection({
       ) : (
         <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {filteredProducts.map((product) => (
+            {filteredProducts.map((product) => {
+              const selKey = selectedProduct?.productKey ?? selectedProduct?.id;
+              const prodKey = product.productKey ?? product.id;
+              const isSelected = selKey === prodKey;
+              return (
             <button
-              key={product.id}
-              onClick={() => onProductSelect(product)}
+              key={prodKey}
+              onClick={() => onProductSelect(isSelected ? null : product)}
               className={`relative p-3 rounded-lg border-2 text-left transition-all ${
-                selectedProduct?.id === product.id
+                isSelected
                   ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-500 dark:ring-blue-400'
                   : 'border-slate-200 dark:border-neutral-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-slate-50 dark:hover:bg-neutral-800'
               }`}
@@ -90,7 +94,7 @@ export function ProductSelection({
                 >
                   {product.type === 'count' ? '횟수제' : '기간제'}
                 </span>
-                {selectedProduct?.id === product.id && (
+                {isSelected && (
                   <div className="bg-blue-500 dark:bg-blue-400 text-white rounded-full p-0.5">
                     <Check size={10} />
                   </div>
@@ -106,7 +110,8 @@ export function ProductSelection({
                   : `${product.days}일 무제한`}
               </div>
             </button>
-          ))}
+              );
+            })}
           </div>
           {filteredProducts.length > 10 && (
             <div className="text-center text-xs text-gray-500 dark:text-gray-400 mt-3 py-2">
