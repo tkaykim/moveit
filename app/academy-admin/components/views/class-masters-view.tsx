@@ -218,7 +218,7 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-6" data-onboarding="page-class-masters-0">
         <SectionHeader
           title="클래스(반) 관리"
           buttonText="새 클래스 추가"
@@ -226,6 +226,7 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
             setSelectedClass(null);
             setShowModal(true);
           }}
+          dataOnboarding="page-class-masters-add"
         />
 
         <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 p-6">

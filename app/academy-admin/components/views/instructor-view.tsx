@@ -117,7 +117,7 @@ export function InstructorView({ academyId }: InstructorViewProps) {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-6" data-onboarding="page-instructors-0">
         <SectionHeader
           title="강사 관리 및 정산"
           buttonText="강사 등록"

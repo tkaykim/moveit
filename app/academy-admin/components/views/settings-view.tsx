@@ -92,7 +92,7 @@ export function SettingsView({ academyId }: SettingsViewProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-onboarding="page-settings-0">
       <SectionHeader title="시스템 설정" />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

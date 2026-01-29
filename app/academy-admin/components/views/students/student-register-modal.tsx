@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import { normalizePhone, formatPhoneDisplay, parsePhoneInput } from '@/lib/utils/phone';
 
 const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)'] as const;
 
@@ -51,8 +52,9 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
       return;
     }
     
-    if (!formData.phone || !formData.phone.trim()) {
-      alert('전화번호를 입력해주세요.');
+    const phoneDigits = normalizePhone(formData.phone);
+    if (!phoneDigits || phoneDigits.length < 10) {
+      alert('전화번호를 10~11자리 숫자로 입력해주세요.');
       return;
     }
     
@@ -68,48 +70,28 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
     try {
       let userId: string;
 
-      // 1. 기존 사용자 확인 (이름과 전화번호 조합 우선, 그 다음 전화번호, 이메일)
+      // 1. 기존 사용자 확인: 전화번호 기준. DB에 하이픈 있음/없음 혼재하므로 숫자·하이픈 형식 둘 다 조회.
+      const phoneForDb = normalizePhone(formData.phone);
+      const phoneFormatted = formatPhoneDisplay(phoneForDb);
       let existingUser = null;
-      
-      // 1순위: 이름과 전화번호 조합으로 확인
-      if (formData.name && formData.phone) {
-        const { data: namePhoneUser } = await supabase
+
+      const { data: byDigits } = await supabase
+        .from('users')
+        .select('id, name, nickname, email, phone')
+        .eq('phone', phoneForDb)
+        .maybeSingle();
+      if (byDigits) {
+        existingUser = byDigits;
+      } else {
+        const { data: byFormatted } = await supabase
           .from('users')
           .select('id, name, nickname, email, phone')
-          .eq('name', formData.name.trim())
-          .eq('phone', formData.phone.trim())
+          .eq('phone', phoneFormatted)
           .maybeSingle();
-        
-        if (namePhoneUser) {
-          existingUser = namePhoneUser;
-        }
-      }
-      
-      // 2순위: 전화번호만으로 확인 (이름+전화번호로 찾지 못한 경우)
-      if (!existingUser && formData.phone) {
-        const { data: phoneUser } = await supabase
-          .from('users')
-          .select('id, name, nickname, email, phone')
-          .eq('phone', formData.phone.trim())
-          .maybeSingle();
-        
-        if (phoneUser) {
-          existingUser = phoneUser;
-        }
+        if (byFormatted) existingUser = byFormatted;
       }
 
-      // 3순위: 이메일로 확인 (전화번호로 찾지 못했고 이메일이 있는 경우)
-      if (!existingUser && formData.email) {
-        const { data: emailUser } = await supabase
-          .from('users')
-          .select('id, name, nickname, email, phone')
-          .eq('email', formData.email.trim())
-          .maybeSingle();
-        
-        if (emailUser) {
-          existingUser = emailUser;
-        }
-      }
+      // 중복 체크는 연락처(전화번호)만 함. 이메일/이름/닉네임은 부수 정보.
 
       // 2. 기존 사용자가 있는 경우
       if (existingUser) {
@@ -126,8 +108,8 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
         if (formData.email?.trim() && formData.email.trim() !== existingUser.email) {
           updateData.email = formData.email.trim();
         }
-        if (formData.phone?.trim() && formData.phone.trim() !== existingUser.phone) {
-          updateData.phone = formData.phone.trim();
+        if (phoneForDb && phoneForDb !== normalizePhone(existingUser.phone || '')) {
+          updateData.phone = phoneForDb;
         }
         if (formData.name_en?.trim()) updateData.name_en = formData.name_en.trim();
         if (formData.birth_date) updateData.birth_date = formData.birth_date;
@@ -170,6 +152,11 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
             if (relationError.code === '42P01') {
               throw new Error('academy_students 테이블이 없습니다. 마이그레이션을 실행해주세요.');
             }
+            if (relationError.code === '23505') {
+              alert('이미 해당 학원에 등록된 회원입니다. 목록에서 확인해주세요.');
+              onClose();
+              return;
+            }
             throw relationError;
           }
         } else {
@@ -184,43 +171,32 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
 
         alert('기존 학생을 해당 학원의 수강생으로 등록했습니다. 이제 해당 학원에서 조회 가능합니다.');
       } else {
-        // 5. 신규 사용자 생성
-        // id 필드를 명시적으로 제외하여 데이터베이스가 자동으로 UUID 생성하도록 함
-        const userData: any = {
-          name: formData.name.trim(),
-          nickname: formData.nickname?.trim() || null,
-          email: formData.email?.trim() || null,
-          phone: formData.phone.trim(),
-        };
-        // id 필드는 포함하지 않음 (데이터베이스가 자동 생성)
-        if (formData.name_en?.trim()) userData.name_en = formData.name_en.trim();
-        if (formData.birth_date) userData.birth_date = formData.birth_date;
-        if (formData.gender) userData.gender = formData.gender;
-        if (formData.address?.trim()) userData.address = formData.address.trim();
-        if (formData.nationality?.trim()) userData.nationality = formData.nationality.trim();
-
-        const { data: newUser, error: insertError } = await supabase
-          .from('users')
-          .insert([userData])
-          .select()
-          .single();
+        // 5. 신규 사용자 생성 (RPC로 id를 서버에서 생성해 users_pkey 오류 방지)
+        const { data: newUserRows, error: insertError } = await supabase.rpc('create_student_user', {
+          p_name: formData.name.trim(),
+          p_nickname: formData.nickname?.trim() || null,
+          p_email: (formData.email?.trim() && formData.email.trim()) ? formData.email.trim() : null,
+          p_phone: phoneForDb,
+          p_name_en: formData.name_en?.trim() || null,
+          p_birth_date: formData.birth_date || null,
+          p_gender: formData.gender || null,
+          p_address: formData.address?.trim() || null,
+          p_nationality: formData.nationality?.trim() || null,
+        });
 
         if (insertError) {
           if (insertError.code === '23505') {
-            if (insertError.message.includes('users_pkey')) {
-              throw new Error('이미 등록된 사용자입니다. 잠시 후 다시 시도해주세요.');
+            const raw = `${insertError.message || ''} ${(insertError as any).details || ''}`.toLowerCase();
+            if (raw.includes('phone')) {
+              throw new Error('이미 등록된 전화번호입니다. 해당 번호로 등록된 회원이 있습니다. 학원에 추가만 하시려면 전화번호를 정확히 입력해주세요.');
             }
-            if (insertError.message.includes('email')) {
-              throw new Error('이미 등록된 이메일입니다.');
-            }
-            if (insertError.message.includes('phone')) {
-              throw new Error('이미 등록된 전화번호입니다.');
-            }
-            throw new Error('중복된 정보가 있습니다. 잠시 후 다시 시도해주세요.');
+            throw new Error('중복된 정보가 있습니다. 연락처를 확인해주세요.');
           }
           throw insertError;
         }
 
+        const newUser = Array.isArray(newUserRows) && newUserRows.length > 0 ? newUserRows[0] : newUserRows;
+        if (!newUser?.id) throw new Error('회원 생성 후 데이터를 받지 못했습니다.');
         userId = newUser.id;
 
         // 6. 학원-학생 관계 생성
@@ -333,11 +309,14 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
                 </label>
                 <input
                   type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel"
                   required
                   className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  value={formatPhoneDisplay(formData.phone)}
+                  onChange={(e) => setFormData({ ...formData, phone: parsePhoneInput(e.target.value) })}
                   placeholder="010-1234-5678"
+                  maxLength={13}
                 />
               </div>
 

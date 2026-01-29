@@ -244,7 +244,7 @@ export function ProductView({ academyId }: ProductViewProps) {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-6" data-onboarding="page-products-0">
         <SectionHeader
           title="수강권 및 상품 관리"
           buttonText="새 상품 추가"
@@ -253,6 +253,7 @@ export function ProductView({ academyId }: ProductViewProps) {
             setInitialTicketCategory(undefined);
             setShowTicketModal(true);
           }}
+          dataOnboarding="page-products-add"
         />
 
         {/* 검색 및 카테고리 필터 */}

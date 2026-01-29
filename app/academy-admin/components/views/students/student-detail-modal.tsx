@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import { normalizePhone, formatPhoneDisplay, parsePhoneInput } from '@/lib/utils/phone';
 
 interface StudentDetailModalProps {
   student: any;
@@ -25,7 +26,7 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
       setFormData({
         name: student.name || '',
         nickname: student.nickname || '',
-        phone: student.phone || '',
+        phone: normalizePhone(student.phone || ''),
         email: student.email || '',
       });
     }
@@ -43,9 +44,15 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
     }
 
     try {
+      const updatePayload = {
+        name: formData.name,
+        nickname: formData.nickname,
+        phone: formData.phone ? normalizePhone(formData.phone) : null,
+        email: formData.email,
+      };
       const { error } = await supabase
         .from('users')
-        .update(formData)
+        .update(updatePayload)
         .eq('id', student.id);
 
       if (error) throw error;
@@ -106,9 +113,12 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
               </label>
               <input
                 type="tel"
+                inputMode="numeric"
                 className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                value={formatPhoneDisplay(formData.phone)}
+                onChange={(e) => setFormData({ ...formData, phone: parsePhoneInput(e.target.value) })}
+                placeholder="010-1234-5678"
+                maxLength={13}
               />
             </div>
 
@@ -161,7 +171,7 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">전화번호</span>
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {student.phone || '-'}
+                    {student.phone ? formatPhoneDisplay(student.phone) : '-'}
                   </span>
                 </div>
                 <div className="flex justify-between">

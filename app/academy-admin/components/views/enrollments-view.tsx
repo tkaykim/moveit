@@ -357,7 +357,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
   const hasFilters = selectedDate || selectedScheduleId || statusFilter !== 'ALL' || searchTerm;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-onboarding="page-enrollments-0">
       {/* 헤더 */}
       <div className="flex justify-between items-center">
         <div>
@@ -368,8 +368,10 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
         </div>
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => setIsAdminAddModalOpen(true)}
             className="px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-2 text-sm font-medium transition-colors"
+            data-onboarding="page-enrollments-add"
           >
             <UserPlus size={16} />
             수기 추가

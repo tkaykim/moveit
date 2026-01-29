@@ -7,6 +7,7 @@ import { StatusBadge } from '../common/status-badge';
 import { StudentRegisterModal } from './students/student-register-modal';
 import { StudentDetailModal } from './students/student-detail-modal';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import { formatPhoneDisplay, normalizePhone } from '@/lib/utils/phone';
 
 interface StudentViewProps {
   academyId: string;
@@ -194,10 +195,11 @@ export function StudentView({ academyId }: StudentViewProps) {
 
   const filteredStudents = students.filter((student) => {
     if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
+    const term = searchTerm.toLowerCase().trim();
+    const termDigits = normalizePhone(searchTerm);
     return (
       student.name?.toLowerCase().includes(term) ||
-      student.phone?.includes(term) ||
+      (student.phone && (student.phone.includes(term) || normalizePhone(student.phone).includes(termDigits))) ||
       student.nickname?.toLowerCase().includes(term)
     );
   });
@@ -212,7 +214,7 @@ export function StudentView({ academyId }: StudentViewProps) {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-6" data-onboarding="page-students-0">
         <SectionHeader
           title="학생(회원) 관리"
           buttonText="학생 등록"
@@ -280,7 +282,7 @@ export function StudentView({ academyId }: StudentViewProps) {
                           {student.name || student.nickname || '-'}
                         </td>
                         <td className="px-4 sm:px-6 py-4 text-gray-600 dark:text-gray-400">
-                          {student.phone || '-'}
+                          {student.phone ? formatPhoneDisplay(student.phone) : '-'}
                         </td>
                         <td className="px-4 sm:px-6 py-4">
                           <span

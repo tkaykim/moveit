@@ -27,6 +27,7 @@ interface SidebarItemProps {
   href: string;
   active: boolean;
   onClick?: () => void;
+  dataOnboarding?: string;
 }
 
 const SidebarItem = ({ icon: Icon, label, href, active, onClick }: SidebarItemProps) => (
@@ -56,7 +57,6 @@ interface AcademyAdminSidebarProps {
 export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdminSidebarProps) {
   const pathname = usePathname();
   const [academyName, setAcademyName] = useState<string | null>(null);
-
   const menuItems = [
     { icon: LayoutDashboard, label: '대시보드', href: `/academy-admin/${academyId}` },
     { icon: Users, label: '학생 관리', href: `/academy-admin/${academyId}/students` },
@@ -172,7 +172,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
           <div className="px-6 pt-6 pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             수업 관리
           </div>
-          {menuItems.slice(0, 5).map((item) => (
+          {menuItems.slice(0, 5).map((item, idx) => (
             <SidebarItem
               key={item.href}
               icon={item.icon}
@@ -186,7 +186,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
           <div className="px-6 pt-6 pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             운영 관리
           </div>
-          {menuItems.slice(5, 8).map((item) => (
+          {menuItems.slice(5, 8).map((item, idx) => (
             <SidebarItem
               key={item.href}
               icon={item.icon}
@@ -200,7 +200,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
           <div className="px-6 pt-6 pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             매출 및 설정
           </div>
-          {menuItems.slice(8).map((item) => (
+          {menuItems.slice(8).map((item, idx) => (
             <SidebarItem
               key={item.href}
               icon={item.icon}

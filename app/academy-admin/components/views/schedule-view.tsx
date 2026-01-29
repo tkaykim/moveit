@@ -182,13 +182,15 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-6" data-onboarding="page-schedule-0">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-xl font-bold text-gray-800 dark:text-white">스케줄 관리</h2>
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => setShowRecurringModal(true)}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
+              data-onboarding="page-schedule-create"
             >
               <Repeat size={16} /> 스케줄 생성
             </button>

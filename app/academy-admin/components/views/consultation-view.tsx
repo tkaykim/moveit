@@ -94,7 +94,7 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
 
   return (
     <>
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col" data-onboarding="page-consultations-0">
         <SectionHeader
           title="상담 및 리드 관리 (Kanban)"
           buttonText="상담 추가"

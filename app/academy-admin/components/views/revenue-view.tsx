@@ -100,7 +100,7 @@ export function RevenueView({ academyId }: RevenueViewProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-onboarding="page-revenue-0">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800 dark:text-white">매출 및 정산 관리</h2>
         <button

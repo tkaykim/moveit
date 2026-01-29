@@ -1,9 +1,10 @@
 "use client";
 
-import { Search, Bell, Moon, Sun, Menu, CreditCard, Plus, MessageSquare, ChevronDown } from 'lucide-react';
+import { Search, Bell, Moon, Sun, Menu, CreditCard, Plus, MessageSquare, ChevronDown, BookOpen } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useEffect, useState, useRef } from 'react';
+import { useOnboardingOptional } from '../contexts/onboarding-context';
 
 interface AcademyAdminHeaderProps {
   academyId: string;
@@ -36,6 +37,7 @@ export function AcademyAdminHeader({ academyId, onMenuClick }: AcademyAdminHeade
   const [mounted, setMounted] = useState(false);
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const quickActionsRef = useRef<HTMLDivElement>(null);
+  const onboarding = useOnboardingOptional();
 
   useEffect(() => {
     setMounted(true);
@@ -79,6 +81,15 @@ export function AcademyAdminHeader({ academyId, onMenuClick }: AcademyAdminHeade
             >
               <CreditCard size={18} />
             </button>
+            {onboarding && (
+              <button
+                onClick={onboarding.startOnboarding}
+                className="p-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+                aria-label="온보딩 튜토리얼"
+              >
+                <BookOpen size={18} />
+              </button>
+            )}
             <div className="relative" ref={quickActionsRef}>
               <button
                 onClick={() => setQuickActionsOpen(!quickActionsOpen)}
@@ -127,6 +138,17 @@ export function AcademyAdminHeader({ academyId, onMenuClick }: AcademyAdminHeade
             <CreditCard size={18} />
             <span>수강권 간편결제</span>
           </button>
+
+          {/* 온보딩 튜토리얼 */}
+          {onboarding && (
+            <button
+              onClick={onboarding.startOnboarding}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors font-medium text-sm"
+            >
+              <BookOpen size={18} />
+              <span>온보딩 튜토리얼</span>
+            </button>
+          )}
 
           {/* 빠른 작업 드롭다운 */}
           <div className="relative" ref={quickActionsRef}>

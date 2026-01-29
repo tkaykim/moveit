@@ -202,13 +202,13 @@ export function DailyLogView({ academyId }: DailyLogViewProps) {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-6" data-onboarding="page-logs-0">
         <SectionHeader title="업무 및 수업 일지" />
 
         {/* 날짜 선택 및 요약 */}
         <div className="bg-white dark:bg-neutral-900 p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800">
           {/* 날짜 네비게이션 - 모바일 최적화 */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4" data-onboarding="page-logs-date">
             {/* 날짜 선택 영역 */}
             <div className="flex items-center justify-between md:justify-start gap-2 md:gap-4 flex-1">
               <button
@@ -492,7 +492,7 @@ export function DailyLogView({ academyId }: DailyLogViewProps) {
           </div>
 
           {/* 오른쪽: 운영 메모 */}
-          <div className="space-y-4">
+          <div className="space-y-4" data-onboarding="page-logs-note">
             <h3 className="font-bold text-gray-800 dark:text-white flex items-center gap-2">
               <FileText size={18} /> 운영 메모
             </h3>
