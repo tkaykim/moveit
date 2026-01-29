@@ -331,8 +331,8 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
                               className={`${color.bg} ${color.border} p-1.5 sm:p-2 rounded border text-left hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden group`}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedSession(session);
-                                setShowSessionModal(true);
+                                setClickedDate(date);
+                                setShowDailyModal(true);
                               }}
                             >
                               <div className={`absolute top-0 left-0 w-1 h-full ${color.text.replace('text-', 'bg-')}`}></div>

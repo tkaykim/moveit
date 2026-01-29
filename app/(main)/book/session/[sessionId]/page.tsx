@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
-import { ChevronLeft, Calendar, Clock, MapPin, User, Users, Wallet, CheckCircle, CreditCard, Building2, LogIn, AlertCircle, Ticket, Gift, CalendarDays, ChevronRight } from 'lucide-react';
+import { ChevronLeft, Calendar, Clock, MapPin, User, Users, Wallet, CheckCircle, CreditCard, Building2, LogIn, AlertCircle, Ticket, Gift, CalendarDays, ChevronRight, Loader2 } from 'lucide-react';
 import { formatKSTTime, formatKSTDate } from '@/lib/utils/kst-time';
 import { MyTab } from '@/components/auth/MyTab';
 import { TicketRechargeModal } from '@/components/modals/ticket-recharge-modal';
@@ -496,7 +496,22 @@ export default function SessionBookingPage() {
   const selectedPurchaseTicket = purchasableTickets.find(t => t.id === selectedPurchaseTicketId);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-950 pt-12 px-5 pb-32">
+    <div className="min-h-screen bg-white dark:bg-neutral-950 pt-12 px-5 pb-32 relative">
+      {/* 예약/구매 처리 중 로딩 오버레이 */}
+      {submitting && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/50 dark:bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4 min-w-[240px]">
+            <Loader2 size={40} className="text-primary dark:text-[#CCFF00] animate-spin" />
+            <p className="text-base font-semibold text-black dark:text-white text-center">
+              {paymentMethod === 'purchase' ? '수강권 구매 및 예약 중' : paymentMethod === 'ticket' ? '예약 처리 중' : '예약 신청 중'}
+            </p>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 text-center">
+              잠시만 기다려주세요.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 헤더 */}
       <div className="flex items-center gap-4 mb-8">
         <button onClick={() => router.back()} className="p-2 -ml-2">
@@ -987,15 +1002,22 @@ export default function SessionBookingPage() {
               (paymentMethod === 'ticket' && !selectedUserTicketId) ||
               (paymentMethod === 'purchase' && !selectedPurchaseTicketId)
             }
-            className="w-full bg-primary dark:bg-[#CCFF00] text-black font-bold py-3.5 rounded-xl text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-primary dark:bg-[#CCFF00] text-black font-bold py-3.5 rounded-xl text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {submitting
-              ? '처리 중...'
-              : paymentMethod === 'ticket'
-              ? '수강권으로 예약하기'
-              : paymentMethod === 'purchase'
-              ? '수강권 구매 및 예약하기'
-              : '예약 신청하기'}
+            {submitting ? (
+              <>
+                <Loader2 size={20} className="animate-spin flex-shrink-0" />
+                <span>
+                  {paymentMethod === 'purchase' ? '수강권 구매 및 예약 중...' : paymentMethod === 'ticket' ? '예약 처리 중...' : '예약 신청 중...'}
+                </span>
+              </>
+            ) : paymentMethod === 'ticket' ? (
+              '수강권으로 예약하기'
+            ) : paymentMethod === 'purchase' ? (
+              '수강권 구매 및 예약하기'
+            ) : (
+              '예약 신청하기'
+            )}
           </button>
         </div>
       )}

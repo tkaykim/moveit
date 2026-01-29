@@ -1329,26 +1329,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
         <div className="space-y-6">
           <div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">팝업 클래스 수강 설정</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">가격과 무료 수강 조건을 설정해주세요.</p>
-          </div>
-
-          {/* 가격 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              가격 (Popup 수강권 1매) *
-            </label>
-            <div className="relative">
-              <input
-                type="number"
-                required
-                min="0"
-                step="1000"
-                className="w-full border dark:border-neutral-700 rounded-lg px-4 py-3 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white pr-12"
-                value={popupData.price}
-                onChange={(e) => setPopupData({ ...popupData, price: parseInt(e.target.value) || 0 })}
-              />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">원</span>
-            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">무료 수강 조건을 설정해주세요. 가격은 수강권(상품)에서 설정합니다.</p>
           </div>
 
           {/* 무료 수강 설정 */}
@@ -1443,26 +1424,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
       <div className="space-y-6">
         <div>
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">워크샵 수강권 설정</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">이 워크샵을 수강할 수 있는 수강권을 선택해주세요.</p>
-        </div>
-
-        {/* 가격 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            가격 *
-          </label>
-          <div className="relative">
-            <input
-              type="number"
-              required
-              min="0"
-              step="1000"
-              className="w-full border dark:border-neutral-700 rounded-lg px-4 py-3 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white pr-12"
-              value={popupData.price}
-              onChange={(e) => setPopupData({ ...popupData, price: parseInt(e.target.value) || 0 })}
-            />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">원</span>
-          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">이 워크샵을 수강할 수 있는 수강권을 선택해주세요. 가격은 수강권(상품)에서 설정합니다.</p>
         </div>
 
         {/* 수강권 선택 */}
