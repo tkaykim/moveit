@@ -33,7 +33,7 @@ export function DashboardView({ academyId }: DashboardViewProps) {
       iconColor: 'text-purple-600 dark:text-purple-400',
     },
     {
-      label: '신청인원 관리',
+      label: '출석/신청 관리',
       icon: UserCog,
       href: `/academy-admin/${academyId}/enrollments`,
       description: '수업 신청 및 등록을 관리합니다',

@@ -35,6 +35,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
   const router = useRouter();
   const initialScheduleId = searchParams.get('schedule_id');
   const initialDate = searchParams.get('date') || '';
+  const initialClassId = searchParams.get('class_id');
 
   const [enrollments, setEnrollments] = useState<EnrollmentWithRelations[]>([]);
   const [initialLoading, setInitialLoading] = useState(true); // 초기 로딩 (전체 화면 로딩)
@@ -47,6 +48,8 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [selectedDate, setSelectedDate] = useState<string>(initialDate);
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(initialClassId);
+  const [classesOnSelectedDate, setClassesOnSelectedDate] = useState<{ id: string; title: string }[]>([]);
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({
     ALL: 0,
     CONFIRMED: 0,
@@ -56,6 +59,49 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
   });
   const [isAdminAddModalOpen, setIsAdminAddModalOpen] = useState(false);
   const isFirstLoad = useRef(true);
+
+  // 날짜 선택 시 해당 날짜에 수업이 있는 클래스 목록 (class 기준 하나씩) — 4-A
+  useEffect(() => {
+    if (!selectedDate || !academyId) {
+      setClassesOnSelectedDate([]);
+      return;
+    }
+    const supabase = getSupabaseClient() as any;
+    if (!supabase) return;
+
+    const startKST = `${selectedDate}T00:00`;
+    const endKST = `${selectedDate}T23:59`;
+    const startUTC = convertKSTInputToUTC(startKST);
+    const endUTC = convertKSTInputToUTC(endKST);
+    if (!startUTC || !endUTC) {
+      setClassesOnSelectedDate([]);
+      return;
+    }
+    const endUTCWithSeconds = new Date(endUTC);
+    endUTCWithSeconds.setSeconds(59, 999);
+
+    (async () => {
+      const { data: classesData } = await supabase.from('classes').select('id').eq('academy_id', academyId);
+      const classIds = classesData?.map((c: any) => c.id) || [];
+      if (classIds.length === 0) {
+        setClassesOnSelectedDate([]);
+        return;
+      }
+      const { data: schedules } = await supabase
+        .from('schedules')
+        .select('class_id, classes(id, title)')
+        .in('class_id', classIds)
+        .eq('is_canceled', false)
+        .gte('start_time', startUTC)
+        .lte('start_time', endUTCWithSeconds.toISOString());
+      const byClass = new Map<string, string>();
+      (schedules || []).forEach((s: any) => {
+        const c = s.classes;
+        if (c?.id && c?.title && !byClass.has(c.id)) byClass.set(c.id, c.title);
+      });
+      setClassesOnSelectedDate(Array.from(byClass.entries()).map(([id, title]) => ({ id, title })));
+    })();
+  }, [academyId, selectedDate]);
 
   const loadEnrollments = useCallback(async () => {
     // 초기 로딩인지 필터 변경인지 구분
@@ -98,7 +144,8 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
       if (selectedScheduleId) {
         baseQuery = baseQuery.eq('schedule_id', selectedScheduleId);
       } else {
-        baseQuery = baseQuery.in('class_id', classIds);
+        const effectiveClassIds = selectedClassId ? [selectedClassId] : classIds;
+        baseQuery = baseQuery.in('class_id', effectiveClassIds);
 
         if (selectedDate) {
           const startKST = `${selectedDate}T00:00`;
@@ -150,7 +197,8 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
       if (selectedScheduleId) {
         query = query.eq('schedule_id', selectedScheduleId);
       } else {
-        query = query.in('class_id', classIds);
+        const effectiveClassIds = selectedClassId ? [selectedClassId] : classIds;
+        query = query.in('class_id', effectiveClassIds);
 
         if (selectedDate) {
           const startKST = `${selectedDate}T00:00`;
@@ -243,7 +291,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
       setIsRefreshing(false);
       isFirstLoad.current = false;
     }
-  }, [academyId, selectedScheduleId, statusFilter, searchTerm, currentPage, itemsPerPage, selectedDate]);
+  }, [academyId, selectedScheduleId, selectedClassId, statusFilter, searchTerm, currentPage, itemsPerPage, selectedDate]);
 
   useEffect(() => {
     loadEnrollments();
@@ -271,14 +319,20 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
     });
   };
 
-  const handleStatusChange = async (bookingId: string, newStatus: string) => {
+  const handleStatusChange = async (
+    bookingId: string,
+    newStatus: string,
+    options?: { restoreTicket?: boolean }
+  ) => {
     try {
+      const body: { status: string; restoreTicket?: boolean } = { status: newStatus };
+      if (options?.restoreTicket !== undefined) body.restoreTicket = options.restoreTicket;
       const response = await fetch(`/api/bookings/${bookingId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -347,6 +401,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
   const clearFilters = () => {
     setSelectedDate('');
     setSelectedScheduleId(null);
+    setSelectedClassId(null);
     setStatusFilter('ALL');
     setSearchTerm('');
     setCurrentPage(1);
@@ -354,16 +409,16 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
   };
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
-  const hasFilters = selectedDate || selectedScheduleId || statusFilter !== 'ALL' || searchTerm;
+  const hasFilters = selectedDate || selectedScheduleId || selectedClassId || statusFilter !== 'ALL' || searchTerm;
 
   return (
     <div className="space-y-6" data-onboarding="page-enrollments-0">
       {/* 헤더 */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white">신청인원 관리</h2>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white">출석/신청 관리</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            수업별 신청인원을 확인하고 관리할 수 있습니다.
+            날짜·수업별 신청인원을 확인하고 출석을 관리할 수 있습니다.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -517,6 +572,8 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                   onChange={(e) => {
                     setSelectedDate(e.target.value);
                     setSelectedScheduleId(null);
+                    setSelectedClassId(null);
+                    setClassesOnSelectedDate([]);
                     setCurrentPage(1);
                     if (e.target.value) {
                       router.push(`/academy-admin/${academyId}/enrollments?date=${e.target.value}`);
@@ -529,23 +586,45 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
               </div>
             </div>
 
-            {/* 수업 선택 */}
+            {/* 수업 선택: 날짜 선택 시 class 기준 하나만, 미선택 시 기존 스케줄 드롭다운 */}
             <div className="w-72">
               <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">수업</label>
-              <ScheduleSelector
-                value={selectedScheduleId || undefined}
-                academyId={academyId}
-                dateFilter={selectedDate || undefined}
-                onChange={(id) => {
-                  setSelectedScheduleId(id);
-                  setCurrentPage(1);
-                  const params = new URLSearchParams();
-                  if (selectedDate) params.set('date', selectedDate);
-                  if (id) params.set('schedule_id', id);
-                  const queryString = params.toString();
-                  router.push(`/academy-admin/${academyId}/enrollments${queryString ? `?${queryString}` : ''}`);
-                }}
-              />
+              {selectedDate ? (
+                <select
+                  value={selectedClassId || ''}
+                  onChange={(e) => {
+                    const id = e.target.value || null;
+                    setSelectedClassId(id);
+                    setSelectedScheduleId(null);
+                    setCurrentPage(1);
+                    const params = new URLSearchParams();
+                    params.set('date', selectedDate);
+                    if (id) params.set('class_id', id);
+                    router.push(`/academy-admin/${academyId}/enrollments?${params.toString()}`);
+                  }}
+                  className="w-full pl-3 pr-8 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00] text-gray-900 dark:text-white"
+                >
+                  <option value="">수업 선택</option>
+                  {classesOnSelectedDate.map((c) => (
+                    <option key={c.id} value={c.id}>{c.title}</option>
+                  ))}
+                </select>
+              ) : (
+                <ScheduleSelector
+                  value={selectedScheduleId || undefined}
+                  academyId={academyId}
+                  dateFilter={undefined}
+                  onChange={(id) => {
+                    setSelectedScheduleId(id);
+                    setSelectedClassId(null);
+                    setCurrentPage(1);
+                    const params = new URLSearchParams();
+                    if (id) params.set('schedule_id', id);
+                    const queryString = params.toString();
+                    router.push(`/academy-admin/${academyId}/enrollments${queryString ? `?${queryString}` : ''}`);
+                  }}
+                />
+              )}
             </div>
 
             {/* 필터 초기화 */}
@@ -630,7 +709,11 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                     const classData = schedule?.classes;
                     const instructor = schedule?.instructors;
 
-                    const isGuest = !user && (enrollment.guest_name || enrollment.guest_phone);
+                    // 4-C: 관리자 수기 추가 = 게스트, 비로그인 신청 = 비회원
+                    const isAdminAdded = enrollment.is_admin_added === true;
+                    const isNonMember = !user && (enrollment.guest_name || enrollment.guest_phone);
+                    const isGuest = isAdminAdded;
+                    const showAsNonMember = isNonMember && !isAdminAdded;
                     const displayName = user?.name || enrollment.guest_name || '-';
                     const displayPhone = user?.phone || enrollment.guest_phone || '-';
 
@@ -654,6 +737,11 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                                 {isGuest && (
                                   <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded font-medium">
                                     게스트
+                                  </span>
+                                )}
+                                {showAsNonMember && (
+                                  <span className="text-[10px] px-1.5 py-0.5 bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 rounded font-medium">
+                                    비회원
                                   </span>
                                 )}
                               </div>

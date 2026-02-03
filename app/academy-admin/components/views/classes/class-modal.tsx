@@ -369,7 +369,7 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
         access_config: {
           allowRegularTicket: true, // 정규 수강권은 ticket_classes로 관리
           allowCoupon: allowCoupon, // 레거시 호환
-          allowPopup: allowCoupon, // 팝업 수강권 허용 여부
+          allowPopup: allowCoupon, // 쿠폰제(횟수제) 수강권 허용 여부
         },
       };
 
@@ -532,7 +532,7 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
         access_config: {
           allowRegularTicket: true, // 정규 수강권은 ticket_classes로 관리
           allowCoupon: allowCoupon, // 레거시 호환
-          allowPopup: allowCoupon, // 팝업 수강권 허용 여부
+          allowPopup: allowCoupon, // 쿠폰제(횟수제) 수강권 허용 여부
         },
       };
 
@@ -678,11 +678,11 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
               Regular (정규)
             </span>
             <span className="text-[10px] px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-semibold">
-              정규 수강권 전용
+              기간제 수강권 전용
             </span>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            정기적으로 진행되는 정규 수업. 기간제 정규 수강권으로만 수강 가능합니다.
+            정기적으로 진행되는 정규 수업. 기간제 수강권으로만 수강 가능합니다.
           </p>
         </button>
 
@@ -701,11 +701,11 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
               Popup (팝업)
             </span>
             <span className="text-[10px] px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 font-semibold">
-              팝업 수강권 전용
+              쿠폰제(횟수제) 수강권 전용
             </span>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            특별 이벤트나 단기 수업. 횟수제 팝업 수강권으로만 수강 가능합니다.
+            특별 이벤트나 단기 수업. 쿠폰제(횟수제) 수강권으로만 수강 가능합니다.
           </p>
         </button>
 
@@ -724,11 +724,11 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
               Workshop (워크샵)
             </span>
             <span className="text-[10px] px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 font-semibold">
-              워크샵 수강권 전용
+              워크샵(특강) 수강권 전용
             </span>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            집중 워크샵 형태의 수업. 횟수제 워크샵 수강권으로만 수강 가능합니다.
+            집중 워크샵 형태의 수업. 워크샵(특강) 수강권으로만 수강 가능합니다.
           </p>
         </button>
       </div>
@@ -974,10 +974,10 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
         <div className="flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
           <div>
             <label className="block text-sm font-medium text-purple-700 dark:text-purple-400 mb-1">
-              팝업 수강권 허용
+              쿠폰제(횟수제) 수강권 허용
             </label>
             <p className="text-xs text-purple-600 dark:text-purple-500">
-              팝업 수강권(횟수권)으로도 이 수업을 수강할 수 있습니다
+              쿠폰제(횟수제) 수강권으로도 이 수업을 수강할 수 있습니다
             </p>
           </div>
           <button
@@ -1383,10 +1383,10 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
               <div className="flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
                 <div>
                   <label className="block text-sm font-medium text-purple-700 dark:text-purple-400 mb-1">
-                    팝업 수강권 허용
+                    쿠폰제(횟수제) 수강권 허용
                   </label>
                   <p className="text-xs text-purple-600 dark:text-purple-500">
-                    팝업 수강권(횟수권)으로도 이 수업을 수강할 수 있습니다
+                    쿠폰제(횟수제) 수강권으로도 이 수업을 수강할 수 있습니다
                   </p>
                 </div>
                 <button

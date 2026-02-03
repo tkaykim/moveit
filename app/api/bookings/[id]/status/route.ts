@@ -7,11 +7,11 @@ import { NextResponse } from 'next/server';
  * Body: {
  *   status: 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'PENDING',
  *   updateScheduleCount?: boolean  // schedules.current_students 업데이트 여부
+ *   restoreTicket?: boolean        // 취소 시 쿠폰제(COUNT) 수강권 횟수 회원에게 반환 여부
  * }
  * 
- * 참고: 기간권(PERIOD) 예약의 경우 remaining_count가 null이므로
- * 취소 시 수강권 횟수 복원이 필요 없습니다.
- * 횟수권(COUNT) 예약의 경우에만 별도 복원 로직이 필요할 수 있습니다.
+ * 기간권(PERIOD)은 remaining_count가 null이므로 복원 없음.
+ * 횟수권(COUNT) 취소 시 restoreTicket === true 이면 해당 user_ticket의 remaining_count 1 증가.
  */
 export async function PATCH(
   request: Request,
@@ -21,7 +21,7 @@ export async function PATCH(
     const { id } = await params;
     const supabase = await createClient();
     const body = await request.json();
-    const { status, updateScheduleCount = true } = body;
+    const { status, updateScheduleCount = true, restoreTicket = false } = body;
 
     if (!status) {
       return NextResponse.json(
@@ -71,7 +71,24 @@ export async function PATCH(
       );
     }
 
-      // schedules.current_students 업데이트
+    // 취소 시 쿠폰제(COUNT) 수강권 횟수 반환
+    if (status === 'CANCELLED' && restoreTicket && currentBooking.user_ticket_id) {
+      const { data: userTicket, error: utError } = await (supabase as any)
+        .from('user_tickets')
+        .select('id, remaining_count, tickets(ticket_type)')
+        .eq('id', currentBooking.user_ticket_id)
+        .single();
+
+      if (!utError && userTicket?.tickets?.ticket_type === 'COUNT' && typeof userTicket.remaining_count === 'number') {
+        const newRemaining = userTicket.remaining_count + 1;
+        await (supabase as any)
+          .from('user_tickets')
+          .update({ remaining_count: newRemaining })
+          .eq('id', currentBooking.user_ticket_id);
+      }
+    }
+
+    // schedules.current_students 업데이트
     if (updateScheduleCount && scheduleId) {
       // 해당 스케줄의 CONFIRMED + COMPLETED 예약 수 계산 (출석완료와 구입승인 모두 합산)
       const { data: confirmedBookings, error: confirmedError } = await (supabase as any)

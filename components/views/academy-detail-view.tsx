@@ -1,9 +1,10 @@
 "use client";
 
 import Image from 'next/image';
-import { ChevronLeft, Heart, X } from 'lucide-react';
+import { ChevronLeft, Heart, X, MessageSquare } from 'lucide-react';
 import { ClassPreviewModal } from '@/components/modals/class-preview-modal';
 import { TicketPurchaseModal } from '@/components/modals/ticket-purchase-modal';
+import { ConsultationRequestModal } from '@/components/modals/consultation-request-modal';
 import { Academy, ClassInfo } from '@/types';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -30,6 +31,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; thumbnail?: string } | null>(null);
   const [showTicketPurchaseModal, setShowTicketPurchaseModal] = useState(false);
+  const [showConsultationModal, setShowConsultationModal] = useState(false);
   const { user } = useAuth();
   const homeRef = useRef<HTMLDivElement>(null);
   const scheduleRef = useRef<HTMLDivElement>(null);
@@ -331,6 +333,14 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                 {academy.name}에 오신 것을 환영합니다. 최고의 댄스 교육을 제공합니다.
               </p>
             </div>
+            <button
+              type="button"
+              onClick={() => setShowConsultationModal(true)}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-primary dark:border-[#CCFF00] text-primary dark:text-[#CCFF00] font-bold text-sm"
+            >
+              <MessageSquare size={18} />
+              상담 신청하기
+            </button>
             {academy.tags && (
               <div>
                 <h4 className="text-sm font-bold text-black dark:text-white mb-2">태그</h4>
@@ -478,6 +488,12 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
         onPurchaseComplete={() => {
           // 구매 완료 후 처리
         }}
+      />
+      <ConsultationRequestModal
+        isOpen={showConsultationModal}
+        onClose={() => setShowConsultationModal(false)}
+        academyId={(academy as any).academyId || academy.id}
+        academyName={academy.name}
       />
       {/* 유튜브 영상 모달 */}
       {selectedVideo && (

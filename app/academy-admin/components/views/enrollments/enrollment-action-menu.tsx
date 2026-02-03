@@ -8,8 +8,9 @@ interface EnrollmentActionMenuProps {
     id: string;
     status: string;
     schedule_id: string | null;
+    user_tickets?: { tickets?: { ticket_type?: string } } | null;
   };
-  onStatusChange: (bookingId: string, newStatus: string) => Promise<void>;
+  onStatusChange: (bookingId: string, newStatus: string, options?: { restoreTicket?: boolean }) => Promise<void>;
   onDelete?: (bookingId: string) => Promise<void>;
 }
 
@@ -38,7 +39,7 @@ export function EnrollmentActionMenu({
     };
   }, [isOpen]);
 
-  const handleStatusChange = async (newStatus: string) => {
+  const handleStatusChange = async (newStatus: string, options?: { restoreTicket?: boolean }) => {
     if (isLoading) return;
 
     const confirmMessage = {
@@ -52,9 +53,15 @@ export function EnrollmentActionMenu({
       return;
     }
 
+    // 취소 시 쿠폰제(횟수제) 수강권이면 수강권 반환 여부 선택
+    let restoreTicket: boolean | undefined;
+    if (newStatus === 'CANCELLED' && enrollment.user_tickets?.tickets?.ticket_type === 'COUNT') {
+      restoreTicket = confirm('수강권 횟수를 회원에게 반환하시겠습니까?');
+    }
+
     setIsLoading(true);
     try {
-      await onStatusChange(enrollment.id, newStatus);
+      await onStatusChange(enrollment.id, newStatus, restoreTicket !== undefined ? { restoreTicket } : undefined);
       setIsOpen(false);
     } catch (error) {
       console.error('Error changing status:', error);
@@ -116,10 +123,10 @@ export function EnrollmentActionMenu({
       });
     }
 
-    // CONFIRMED 또는 PENDING -> CANCELLED
+    // CONFIRMED 또는 PENDING -> CANCELLED (쿠폰제일 때 취소 후 수강권 반환 여부 선택)
     if (currentStatus === 'CONFIRMED' || currentStatus === 'PENDING') {
       actions.push({
-        label: '취소하기',
+        label: enrollment.user_tickets?.tickets?.ticket_type === 'COUNT' ? '취소하기 (반환 여부 선택)' : '취소하기',
         icon: XCircle,
         status: 'CANCELLED',
         onClick: () => handleStatusChange('CANCELLED'),

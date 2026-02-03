@@ -69,6 +69,7 @@ interface PurchasableTicket {
   valid_days?: number;
   is_general: boolean;
   is_coupon: boolean;
+  ticket_category?: 'regular' | 'popup' | 'workshop';
 }
 
 type PaymentMethod = 'ticket' | 'purchase' | 'onsite';
@@ -283,7 +284,7 @@ export default function SessionBookingPage() {
       // 2. 연결된 수강권 + (allowCoupon이면 쿠폰) 조회 (공개 수강권만: 비공개는 유저 구매 불가)
       let query = (supabase as any)
         .from('tickets')
-        .select('id, name, price, ticket_type, total_count, valid_days, is_general, is_coupon, academy_id')
+        .select('id, name, price, ticket_type, total_count, valid_days, is_general, is_coupon, academy_id, ticket_category')
         .eq('is_on_sale', true)
         .eq('academy_id', session.classes.academy_id)
         .or('is_public.eq.true,is_public.is.null');
@@ -460,7 +461,11 @@ export default function SessionBookingPage() {
     } else if (paymentMethod === 'purchase') {
       handlePurchaseBooking();
     } else {
-      handleOnsiteBooking();
+      // 현장 결제: 확인 팝업 후 진행 (docs/update .md 9-A)
+      const confirmed = window.confirm(
+        '현장 결제로 진행하시겠어요?\n\n현장 결제의 경우 결제 선착순 마감으로 수업에 참석하실 수 없을 수 있습니다.'
+      );
+      if (confirmed) handleOnsiteBooking();
     }
   };
 
@@ -844,7 +849,9 @@ export default function SessionBookingPage() {
               ) : (
                 <>
                   {purchasableTickets.map((ticket) => {
-                    const isCoupon = ticket.is_coupon === true;
+                    const category = ticket.ticket_category || (ticket.is_coupon ? 'popup' : 'regular');
+                    const categoryLabel = category === 'regular' ? '기간제' : category === 'popup' ? '쿠폰제(횟수제)' : '워크샵(특강)';
+                    const categoryColor = category === 'regular' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : category === 'popup' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400';
                     return (
                       <button
                         key={ticket.id}
@@ -857,22 +864,22 @@ export default function SessionBookingPage() {
                       >
                         <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            isCoupon ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-green-100 dark:bg-green-900/30'
+                            category === 'regular' ? 'bg-blue-100 dark:bg-blue-900/30' : category === 'popup' ? 'bg-purple-100 dark:bg-purple-900/30' : 'bg-amber-100 dark:bg-amber-900/30'
                           }`}>
-                            {isCoupon ? (
-                              <Gift size={18} className="text-orange-600 dark:text-orange-400" />
+                            {category === 'regular' ? (
+                              <Ticket size={18} className="text-blue-600 dark:text-blue-400" />
+                            ) : category === 'popup' ? (
+                              <Gift size={18} className="text-purple-600 dark:text-purple-400" />
                             ) : (
-                              <Ticket size={18} className="text-green-600 dark:text-green-400" />
+                              <Ticket size={18} className="text-amber-600 dark:text-amber-400" />
                             )}
                           </div>
                           <div>
                             <div className="text-black dark:text-white font-medium flex items-center gap-2">
                               {ticket.name}
-                              {isCoupon && (
-                                <span className="text-xs px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full">
-                                  쿠폰
-                                </span>
-                              )}
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${categoryColor}`}>
+                                {categoryLabel}
+                              </span>
                             </div>
                             <div className="text-xs text-neutral-500">
                               {ticket.ticket_type === 'COUNT'

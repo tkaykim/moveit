@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Ticket, TrendingUp, Settings, Plus, Tag, Zap, ChevronDown, ChevronUp, Search, Trash2 } from 'lucide-react';
+import { Ticket, TrendingUp, Settings, Plus, Tag, Zap, ChevronDown, ChevronUp, Search, Trash2, Link2 } from 'lucide-react';
 import { SectionHeader } from '../common/section-header';
 import { TicketModal } from './products/ticket-modal';
 import { DiscountModal } from './products/discount-modal';
@@ -110,22 +110,22 @@ export function ProductView({ academyId }: ProductViewProps) {
   // 수강권 유형 정보
   const TICKET_CATEGORY_CONFIG = {
     regular: {
-      name: '정규',
-      fullName: '정규 수강권',
+      name: '기간제',
+      fullName: '기간제 수강권',
       classType: 'Regular',
       badgeColor: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
       borderColor: 'hover:border-blue-300 dark:hover:border-blue-600',
     },
     popup: {
-      name: '팝업',
-      fullName: '팝업 수강권',
+      name: '쿠폰제',
+      fullName: '쿠폰제(횟수제) 수강권',
       classType: 'Popup',
       badgeColor: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400',
       borderColor: 'hover:border-purple-300 dark:hover:border-purple-600',
     },
     workshop: {
-      name: '워크샵',
-      fullName: '워크샵 수강권',
+      name: '워크샵(특강)',
+      fullName: '워크샵(특강) 수강권',
       classType: 'Workshop',
       badgeColor: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
       borderColor: 'hover:border-amber-300 dark:hover:border-amber-600',
@@ -138,7 +138,7 @@ export function ProductView({ academyId }: ProductViewProps) {
     if (ticket.access_group === 'workshop') return 'workshop';
     // is_coupon이 true인 경우 팝업으로 분류 (레거시 지원)
     if (ticket.is_coupon === true && ticket.access_group !== 'regular') return 'popup';
-    // 기본값은 정규 수강권
+    // 기본값은 기간제 수강권
     return 'regular';
   };
 
@@ -291,7 +291,7 @@ export function ProductView({ academyId }: ProductViewProps) {
               }`}
             >
               <Ticket size={16} />
-              정규 수강권 ({regularTickets.length})
+              기간제 수강권 ({regularTickets.length})
             </button>
             <button
               onClick={() => setCategoryFilter('popup')}
@@ -302,7 +302,7 @@ export function ProductView({ academyId }: ProductViewProps) {
               }`}
             >
               <Zap size={16} />
-              팝업 쿠폰 ({popupTickets.length})
+              쿠폰제(횟수제) 수강권 ({popupTickets.length})
             </button>
             <button
               onClick={() => setCategoryFilter('workshop')}
@@ -313,7 +313,7 @@ export function ProductView({ academyId }: ProductViewProps) {
               }`}
             >
               <Tag size={16} />
-              워크샵 수강권 ({workshopTickets.length})
+              워크샵(특강) 수강권 ({workshopTickets.length})
             </button>
           </div>
         </div>
@@ -447,6 +447,19 @@ export function ProductView({ academyId }: ProductViewProps) {
                               )}
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0">
+                              {product.is_on_sale !== false && product.is_public !== false && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/book/ticket?ticketId=${product.id}&academyId=${product.academy_id || academyId || ''}`;
+                                    navigator.clipboard.writeText(url).then(() => alert('구매 링크가 복사되었습니다.')).catch(() => alert('복사에 실패했습니다.'));
+                                  }}
+                                  className="text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 p-2 rounded-lg"
+                                  title="구매 링크 복사"
+                                >
+                                  <Link2 size={16} />
+                                </button>
+                              )}
                               <button
                                 onClick={(e) => { e.stopPropagation(); setSelectedTicket(product); setShowTicketModal(true); }}
                                 className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-800"

@@ -21,13 +21,15 @@ interface Student {
   email?: string | null;
   user_tickets?: Array<{
     id: string;
-    remaining_count: number;
+    remaining_count: number | null;
     expiry_date?: string | null;
     status: string;
     tickets: {
       id: string;
       name: string;
       ticket_type: string;
+      ticket_category?: string | null;
+      access_group?: string | null;
     };
   }>;
   bookings?: Array<{
@@ -44,9 +46,11 @@ export function StudentView({ academyId }: StudentViewProps) {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | '수강중' | '만료예정' | '휴면'>('ALL');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
 
   useEffect(() => {
     loadStudents();
@@ -126,7 +130,9 @@ export function StudentView({ academyId }: StudentViewProps) {
             tickets (
               id,
               name,
-              ticket_type
+              ticket_type,
+              ticket_category,
+              access_group
             )
           ),
           bookings (
@@ -142,7 +148,7 @@ export function StudentView({ academyId }: StudentViewProps) {
         .in('id', userIds);
 
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,nickname.ilike.%${searchTerm}%`);
+        query = query.or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,nickname.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -189,19 +195,35 @@ export function StudentView({ academyId }: StudentViewProps) {
     const tickets = student.user_tickets || [];
     return tickets
       .filter((t) => t.status === 'ACTIVE')
-      .reduce((sum, t) => sum + t.remaining_count, 0);
+      .reduce((sum, t) => sum + (t.remaining_count ?? 0), 0);
   };
 
+  const getNearestExpiry = (student: Student): string | null => {
+    const tickets = student.user_tickets || [];
+    const withExpiry = tickets
+      .filter((t) => t.status === 'ACTIVE' && t.expiry_date)
+      .map((t) => t.expiry_date as string)
+      .sort();
+    if (withExpiry.length === 0) return null;
+    return withExpiry[0];
+  };
 
   const filteredStudents = students.filter((student) => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase().trim();
-    const termDigits = normalizePhone(searchTerm);
-    return (
-      student.name?.toLowerCase().includes(term) ||
-      (student.phone && (student.phone.includes(term) || normalizePhone(student.phone).includes(termDigits))) ||
-      student.nickname?.toLowerCase().includes(term)
-    );
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase().trim();
+      const termDigits = normalizePhone(searchTerm);
+      const matchesSearch =
+        student.name?.toLowerCase().includes(term) ||
+        (student.phone && (student.phone.includes(term) || normalizePhone(student.phone).includes(termDigits))) ||
+        student.nickname?.toLowerCase().includes(term) ||
+        (student.email?.toLowerCase().includes(term));
+      if (!matchesSearch) return false;
+    }
+    if (statusFilter !== 'ALL') {
+      const status = getStudentStatus(student);
+      if (status !== statusFilter) return false;
+    }
+    return true;
   });
 
   if (loading) {
@@ -226,7 +248,7 @@ export function StudentView({ academyId }: StudentViewProps) {
             <div className="relative flex-1 max-w-sm">
               <input
                 type="text"
-                placeholder="이름, 전화번호 검색..."
+                placeholder="이름, 연락처, 이메일 검색..."
                 className="pl-9 pr-4 py-2 border dark:border-neutral-700 rounded-lg text-sm w-full focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 outline-none bg-white dark:bg-neutral-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -236,10 +258,45 @@ export function StudentView({ academyId }: StudentViewProps) {
                 className="absolute left-3 top-2.5 text-gray-400 dark:text-gray-500"
               />
             </div>
-            <div className="flex gap-2 sm:gap-3">
-              <button className="flex items-center gap-2 px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-neutral-800">
-                <Filter size={16} /> <span className="hidden sm:inline">필터</span>
-              </button>
+            <div className="flex gap-2 sm:gap-3 relative">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setFilterDropdownOpen((v) => !v)}
+                  className="flex items-center gap-2 px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-neutral-800"
+                >
+                  <Filter size={16} /> <span className="hidden sm:inline">필터</span>
+                  {statusFilter !== 'ALL' && (
+                    <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs px-1.5 py-0.5 rounded">
+                      {statusFilter}
+                    </span>
+                  )}
+                </button>
+                {filterDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" aria-hidden onClick={() => setFilterDropdownOpen(false)} />
+                    <div className="absolute left-0 top-full mt-1 w-44 py-1 bg-white dark:bg-neutral-800 border dark:border-neutral-700 rounded-lg shadow-lg z-20">
+                      {(['ALL', '수강중', '만료예정', '휴면'] as const).map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => {
+                            setStatusFilter(opt);
+                            setFilterDropdownOpen(false);
+                          }}
+                          className={`w-full px-4 py-2 text-left text-sm ${
+                            statusFilter === opt
+                              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-700'
+                          }`}
+                        >
+                          {opt === 'ALL' ? '전체' : opt}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
               <button className="flex items-center gap-2 px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-neutral-800">
                 <Download size={16} /> <span className="hidden sm:inline">엑셀 다운로드</span>
               </button>
@@ -254,20 +311,22 @@ export function StudentView({ academyId }: StudentViewProps) {
                   <th className="px-4 sm:px-6 py-3">이름</th>
                   <th className="px-4 sm:px-6 py-3">연락처</th>
                   <th className="px-4 sm:px-6 py-3">잔여 횟수</th>
+                  <th className="px-4 sm:px-6 py-3 hidden md:table-cell">가장 가까운 만료일</th>
                   <th className="px-4 sm:px-6 py-3">상태</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-neutral-800">
                 {filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 sm:px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                      {searchTerm ? '검색 결과가 없습니다.' : '등록된 학생이 없습니다.'}
+                    <td colSpan={5} className="px-4 sm:px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                      {searchTerm || statusFilter !== 'ALL' ? '검색 결과가 없습니다.' : '등록된 학생이 없습니다.'}
                     </td>
                   </tr>
                 ) : (
                   filteredStudents.map((student) => {
                     const status = getStudentStatus(student);
                     const remaining = getTotalRemaining(student);
+                    const nearestExpiry = getNearestExpiry(student);
 
                     return (
                       <tr
@@ -294,6 +353,11 @@ export function StudentView({ academyId }: StudentViewProps) {
                           >
                             {remaining}회
                           </span>
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 hidden md:table-cell text-gray-600 dark:text-gray-400 text-sm">
+                          {nearestExpiry
+                            ? new Date(nearestExpiry).toLocaleDateString('ko-KR')
+                            : '-'}
                         </td>
                         <td className="px-4 sm:px-6 py-4">
                           <StatusBadge status={status} />

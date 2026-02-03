@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, UserPlus, Search, Loader2 } from 'lucide-react';
+import { X, UserPlus, Search, Loader2, User, FileText } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { ScheduleSelector } from '@/components/common/schedule-selector';
+
+type AddMode = 'member' | 'guest';
 
 interface AdminAddEnrollmentModalProps {
   isOpen: boolean;
@@ -22,17 +24,25 @@ export function AdminAddEnrollmentModal({
   initialScheduleId,
   dateFilter,
 }: AdminAddEnrollmentModalProps) {
+  const [addMode, setAddMode] = useState<AddMode>('guest');
   const [scheduleId, setScheduleId] = useState<string | null>(initialScheduleId ?? null);
   const [students, setStudents] = useState<any[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // 비회원 수기 추가 (이름·연락처·사유 직접 입력) — 4-B
+  const [guestName, setGuestName] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
+  const [adminNote, setAdminNote] = useState('');
 
   useEffect(() => {
     if (isOpen && academyId) {
       setScheduleId(initialScheduleId ?? null);
       setSelectedStudent(null);
       setSearchTerm('');
+      setGuestName('');
+      setGuestPhone('');
+      setAdminNote('');
       loadStudents();
     }
   }, [isOpen, academyId, initialScheduleId]);
@@ -83,7 +93,7 @@ export function AdminAddEnrollmentModal({
       )
     : students;
 
-  const handleSubmit = async () => {
+  const handleSubmitMember = async () => {
     if (!scheduleId || !selectedStudent) {
       alert('수업과 추가할 인원을 선택해주세요.');
       return;
@@ -100,9 +110,7 @@ export function AdminAddEnrollmentModal({
         }),
       });
       const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error || '수기 추가에 실패했습니다.');
-      }
+      if (!res.ok) throw new Error(json.error || '수기 추가에 실패했습니다.');
       alert(json.message || '수강 명단에 추가되었습니다.');
       onSuccess();
       onClose();
@@ -112,6 +120,53 @@ export function AdminAddEnrollmentModal({
       setSubmitting(false);
     }
   };
+
+  const handleSubmitGuest = async () => {
+    if (!scheduleId) {
+      alert('수업을 선택해주세요.');
+      return;
+    }
+    if (!guestName.trim()) {
+      alert('이름을 입력해주세요.');
+      return;
+    }
+    if (!guestPhone.trim()) {
+      alert('연락처를 입력해주세요.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/bookings/admin-add-guest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scheduleId,
+          academyId,
+          guestName: guestName.trim(),
+          guestPhone: guestPhone.trim(),
+          adminNote: adminNote.trim() || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || '수기 추가에 실패했습니다.');
+      alert(json.message || '게스트로 수강 명단에 추가되었습니다.');
+      onSuccess();
+      onClose();
+    } catch (e: any) {
+      alert(e.message || '수기 추가에 실패했습니다.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (addMode === 'guest') handleSubmitGuest();
+    else handleSubmitMember();
+  };
+
+  const canSubmit = addMode === 'guest'
+    ? scheduleId && guestName.trim() && guestPhone.trim()
+    : scheduleId && selectedStudent;
 
   if (!isOpen) return null;
 
@@ -130,8 +185,28 @@ export function AdminAddEnrollmentModal({
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            수강권 사용 없이 관리자가 특전으로 수강 명단에 넣습니다. 수강권 컬럼에는 &quot;관리자 권한&quot;으로 표기됩니다.
+            수강권 사용 없이 관리자가 수강 명단에 넣습니다. 회원 선택 또는 이름·연락처·사유를 직접 입력하세요.
           </p>
+
+          {/* 추가 방식: 게스트(이름·연락처·사유) / 회원 선택 */}
+          <div className="flex gap-2 p-1 bg-gray-100 dark:bg-neutral-800 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setAddMode('guest')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-colors ${addMode === 'guest' ? 'bg-white dark:bg-neutral-700 shadow text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+            >
+              <FileText size={16} />
+              이름·연락처·사유 입력
+            </button>
+            <button
+              type="button"
+              onClick={() => setAddMode('member')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-colors ${addMode === 'member' ? 'bg-white dark:bg-neutral-700 shadow text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+            >
+              <User size={16} />
+              회원 검색
+            </button>
+          </div>
 
           <div>
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">수업 선택</label>
@@ -144,6 +219,40 @@ export function AdminAddEnrollmentModal({
             />
           </div>
 
+          {addMode === 'guest' ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">이름</label>
+                <input
+                  type="text"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder="이름"
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">연락처</label>
+                <input
+                  type="text"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                  placeholder="연락처"
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">사유 (선택)</label>
+                <input
+                  type="text"
+                  value={adminNote}
+                  onChange={(e) => setAdminNote(e.target.value)}
+                  placeholder="수기 추가 사유"
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+                />
+              </div>
+            </div>
+          ) : (
           <div>
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">추가할 인원</label>
             {!selectedStudent ? (
@@ -202,6 +311,7 @@ export function AdminAddEnrollmentModal({
               </div>
             )}
           </div>
+          )}
         </div>
         <div className="flex gap-2 px-4 py-3 border-t border-gray-100 dark:border-neutral-800">
           <button
@@ -214,7 +324,7 @@ export function AdminAddEnrollmentModal({
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={submitting || !scheduleId || !selectedStudent}
+            disabled={submitting || !canSubmit}
             className="flex-1 px-4 py-2.5 bg-primary dark:bg-[#CCFF00] text-black rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
           >
             {submitting ? <Loader2 size={18} className="animate-spin" /> : <UserPlus size={18} />}

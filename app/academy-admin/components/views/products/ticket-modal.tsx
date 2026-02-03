@@ -46,21 +46,21 @@ const POPUP_VALIDITY_PRESETS = [
 // 수강권 유형 정보
 const TICKET_CATEGORY_INFO = {
   regular: {
-    name: '정규 수강권',
+    name: '기간제 수강권',
     description: '특정 클래스를 기간 내 무제한 수강 가능. 구매 시 시작일 선택.',
     color: 'blue',
     icon: 'Ticket',
     ticketType: 'PERIOD' as const,
   },
   popup: {
-    name: '팝업 쿠폰',
+    name: '쿠폰제(횟수제) 수강권',
     description: '횟수 기반 수강권. 유효기간 내 횟수를 소진하지 않으면 잔여 수량 소멸.',
     color: 'purple',
     icon: 'Tag',
     ticketType: 'COUNT' as const,
   },
   workshop: {
-    name: '워크샵 수강권',
+    name: '워크샵(특강) 수강권',
     description: '특정 워크샵 수업 전용. 해당 워크샵에서만 사용 가능한 수강권.',
     color: 'amber',
     icon: 'Tag',
@@ -71,7 +71,7 @@ const TICKET_CATEGORY_INFO = {
 type ProductCategory = 'regular' | 'popup' | 'workshop';
 
 export function TicketModal({ academyId, ticket, initialCategory, onClose }: TicketModalProps) {
-  // 상품 카테고리: 정규 수강권 / 팝업 수강권 / 워크샵 수강권
+  // 상품 카테고리: 기간제 수강권 / 쿠폰제(횟수제) 수강권 / 워크샵(특강) 수강권
   const [productCategory, setProductCategory] = useState<ProductCategory>(initialCategory || 'regular');
   
   const [formData, setFormData] = useState({

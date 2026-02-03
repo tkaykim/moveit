@@ -74,6 +74,8 @@ export type Database = {
           tiktok_handle: string | null
           website_url: string | null
           youtube_url: string | null
+          max_extension_days: number | null
+          consultation_availability: Json | null
         }
         Insert: {
           address?: string | null
@@ -92,6 +94,8 @@ export type Database = {
           tiktok_handle?: string | null
           website_url?: string | null
           youtube_url?: string | null
+          max_extension_days?: number | null
+          consultation_availability?: Json | null
         }
         Update: {
           address?: string | null
@@ -110,6 +114,8 @@ export type Database = {
           tiktok_handle?: string | null
           website_url?: string | null
           youtube_url?: string | null
+          max_extension_days?: number | null
+          consultation_availability?: Json | null
         }
         Relationships: []
       }
@@ -313,6 +319,7 @@ export type Database = {
           guest_phone: string | null
           payment_status: string | null
           is_admin_added: boolean | null
+          admin_note: string | null
         }
         Insert: {
           class_id?: string | null
@@ -327,6 +334,7 @@ export type Database = {
           guest_phone?: string | null
           payment_status?: string | null
           is_admin_added?: boolean | null
+          admin_note?: string | null
         }
         Update: {
           class_id?: string | null
@@ -341,6 +349,7 @@ export type Database = {
           guest_phone?: string | null
           payment_status?: string | null
           is_admin_added?: boolean | null
+          admin_note?: string | null
         }
         Relationships: [
           {
@@ -488,6 +497,33 @@ export type Database = {
           },
         ]
       }
+      consultation_categories: {
+        Row: {
+          id: string
+          academy_id: string
+          name: string
+          duration_minutes: number
+          display_order: number | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          academy_id: string
+          name: string
+          duration_minutes?: number
+          display_order?: number | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          academy_id?: string
+          name?: string
+          duration_minutes?: number
+          display_order?: number | null
+          created_at?: string | null
+        }
+        Relationships: [{ foreignKeyName: "consultation_categories_academy_id_fkey"; columns: ["academy_id"]; isOneToOne: false; referencedRelation: "academies"; referencedColumns: ["id"] }]
+      }
       consultations: {
         Row: {
           academy_id: string
@@ -502,6 +538,9 @@ export type Database = {
           topic: string
           updated_at: string | null
           user_id: string | null
+          category_id: string | null
+          detail: string | null
+          visit_datetime: string | null
         }
         Insert: {
           academy_id: string
@@ -516,6 +555,9 @@ export type Database = {
           topic: string
           updated_at?: string | null
           user_id?: string | null
+          category_id?: string | null
+          detail?: string | null
+          visit_datetime?: string | null
         }
         Update: {
           academy_id?: string
@@ -530,6 +572,9 @@ export type Database = {
           topic?: string
           updated_at?: string | null
           user_id?: string | null
+          category_id?: string | null
+          detail?: string | null
+          visit_datetime?: string | null
         }
         Relationships: [
           {
@@ -1234,6 +1279,51 @@ export type Database = {
             referencedRelation: "classes"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      ticket_extension_requests: {
+        Row: {
+          id: string
+          user_ticket_id: string
+          request_type: string
+          absent_start_date: string
+          absent_end_date: string
+          status: string
+          reject_reason: string | null
+          processed_at: string | null
+          processed_by: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_ticket_id: string
+          request_type: string
+          absent_start_date: string
+          absent_end_date: string
+          status?: string
+          reject_reason?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_ticket_id?: string
+          request_type?: string
+          absent_start_date?: string
+          absent_end_date?: string
+          status?: string
+          reject_reason?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          { foreignKeyName: "ticket_extension_requests_user_ticket_id_fkey"; columns: ["user_ticket_id"]; isOneToOne: false; referencedRelation: "user_tickets"; referencedColumns: ["id"] },
+          { foreignKeyName: "ticket_extension_requests_processed_by_fkey"; columns: ["processed_by"]; isOneToOne: false; referencedRelation: "users"; referencedColumns: ["id"] },
         ]
       }
       user_tickets: {

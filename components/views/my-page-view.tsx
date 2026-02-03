@@ -271,19 +271,19 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                   <div className="text-2xl font-black text-blue-600 dark:text-blue-400 mb-1">
                     {ticketSummary.regular}
                   </div>
-                  <div className="text-xs font-medium text-blue-600 dark:text-blue-400">정규권</div>
+                  <div className="text-xs font-medium text-blue-600 dark:text-blue-400">기간제</div>
                 </div>
                 <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 text-center">
                   <div className="text-2xl font-black text-purple-600 dark:text-purple-400 mb-1">
                     {ticketSummary.popup}
                   </div>
-                  <div className="text-xs font-medium text-purple-600 dark:text-purple-400">팝업</div>
+                  <div className="text-xs font-medium text-purple-600 dark:text-purple-400">쿠폰제(횟수제)</div>
                 </div>
                 <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 text-center">
                   <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mb-1">
                     {ticketSummary.workshop}
                   </div>
-                  <div className="text-xs font-medium text-amber-600 dark:text-amber-400">워크샵</div>
+                  <div className="text-xs font-medium text-amber-600 dark:text-amber-400">워크샵(특강)</div>
                 </div>
               </div>
             )}

@@ -1337,7 +1337,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
                 <Users size={18} className="text-green-600" />
-                정규 수강권 보유자 무료 수강
+                기간제 수강권 보유자 무료 수강
               </label>
               <button
                 type="button"
@@ -1357,7 +1357,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
             {popupData.free_access_enabled && (
               <>
                 <p className="text-xs text-green-700 dark:text-green-400">
-                  아래에서 선택한 정규 클래스의 수강권을 보유한 회원은 이 팝업을 무료로 수강할 수 있습니다.
+                  아래에서 선택한 정규 클래스의 기간제 수강권을 보유한 회원은 이 팝업을 무료로 수강할 수 있습니다.
                 </p>
 
                 <div className="max-h-48 overflow-y-auto border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900">
@@ -1395,7 +1395,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
 
                 {popupData.free_access_class_ids.length > 0 && (
                   <p className="text-xs text-green-600 dark:text-green-400 font-medium">
-                    {popupData.free_access_class_ids.length}개의 정규 클래스 수강권 보유자가 무료 수강 가능
+                    {popupData.free_access_class_ids.length}개의 정규 클래스 기간제 수강권 보유자가 무료 수강 가능
                   </p>
                 )}
               </>
@@ -1403,7 +1403,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
 
             {!popupData.free_access_enabled && (
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                활성화하면 특정 정규 클래스 수강권 보유자가 이 팝업을 무료로 수강할 수 있습니다.
+                활성화하면 특정 정규 클래스 기간제 수강권 보유자가 이 팝업을 무료로 수강할 수 있습니다.
               </p>
             )}
           </div>
@@ -1423,7 +1423,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
     return (
       <div className="space-y-6">
         <div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">워크샵 수강권 설정</h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">워크샵(특강) 수강권 설정</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">이 워크샵을 수강할 수 있는 수강권을 선택해주세요. 가격은 수강권(상품)에서 설정합니다.</p>
         </div>
 

@@ -67,7 +67,7 @@ export const GLOBAL_STEPS: GlobalStep[] = [
     type: 'sidebar',
     target: 'sidebar-5',
     label: '수강권/상품',
-    message: '"이동하기"를 누르면 수강권/상품 페이지로 이동합니다. 정규·팝업·워크샵 수강권과 할인 설정 화면을 보면서 설명합니다.',
+    message: '"이동하기"를 누르면 수강권/상품 페이지로 이동합니다. 기간제·쿠폰제(횟수제)·워크샵(특강) 수강권과 할인 설정 화면을 보면서 설명합니다.',
   },
   {
     type: 'sidebar',
@@ -119,7 +119,7 @@ export const PAGE_STEPS: Record<string, PageStepDef[]> = {
     {
       target: 'page-dashboard-card-3',
       title: '수강권 관리 바로가기',
-      body: '수강권/상품 페이지로 이동합니다. 정규·팝업·워크샵 수강권과 할인 설정을 여기서 합니다.',
+      body: '수강권/상품 페이지로 이동합니다. 기간제·쿠폰제(횟수제)·워크샵(특강) 수강권과 할인 설정을 여기서 합니다.',
       actionHint: 'click',
     },
   ],
@@ -169,7 +169,7 @@ export const PAGE_STEPS: Record<string, PageStepDef[]> = {
     {
       target: 'page-products-0',
       title: '수강권/상품 화면',
-      body: '정규·팝업·워크샵 수강권과 할인 정책을 한 화면에서 관리합니다. 탭으로 유형별로 나누어 보고, 검색으로 이름·가격·유형을 찾을 수 있습니다.',
+      body: '기간제·쿠폰제(횟수제)·워크샵(특강) 수강권과 할인 정책을 한 화면에서 관리합니다. 탭으로 유형별로 나누어 보고, 검색으로 이름·가격·유형을 찾을 수 있습니다.',
     },
     {
       target: 'page-products-add',

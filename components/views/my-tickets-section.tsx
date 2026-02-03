@@ -208,8 +208,8 @@ export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
       {/* 안내 문구 */}
       <div className="text-xs text-neutral-500 bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-lg mb-4">
         {activeTab === 'regular' && '💡 정규권은 Regular 클래스를 기간 내 수강할 수 있습니다.'}
-        {activeTab === 'popup' && '💡 팝업 수강권은 Popup 클래스를 횟수만큼 수강할 수 있습니다.'}
-        {activeTab === 'workshop' && '💡 워크샵 수강권은 Workshop 클래스를 횟수만큼 수강할 수 있습니다.'}
+        {activeTab === 'popup' && '💡 쿠폰제(횟수제) 수강권은 Popup 클래스를 횟수만큼 수강할 수 있습니다.'}
+        {activeTab === 'workshop' && '💡 워크샵(특강) 수강권은 Workshop 클래스를 횟수만큼 수강할 수 있습니다.'}
         {activeTab === 'all' && '💡 수강권 유형에 따라 이용 가능한 클래스가 다릅니다.'}
       </div>
 

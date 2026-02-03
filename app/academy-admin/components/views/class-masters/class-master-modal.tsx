@@ -803,9 +803,9 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
   );
 
   const TICKET_SECTION_CONFIG: Record<'regular' | 'popup' | 'workshop', { label: string; headerBg: string; border: string; iconBg: string }> = {
-    regular: { label: '정규 수강권', headerBg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800', iconBg: 'bg-blue-100 dark:bg-blue-900/40' },
-    popup: { label: '팝업 수강권', headerBg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800', iconBg: 'bg-purple-100 dark:bg-purple-900/40' },
-    workshop: { label: '워크샵 수강권', headerBg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800', iconBg: 'bg-amber-100 dark:bg-amber-900/40' },
+    regular: { label: '기간제 수강권', headerBg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800', iconBg: 'bg-blue-100 dark:bg-blue-900/40' },
+    popup: { label: '쿠폰제(횟수제) 수강권', headerBg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800', iconBg: 'bg-purple-100 dark:bg-purple-900/40' },
+    workshop: { label: '워크샵(특강) 수강권', headerBg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800', iconBg: 'bg-amber-100 dark:bg-amber-900/40' },
   };
 
   const renderTicketCard = (ticket: any, isSelected: boolean) => (

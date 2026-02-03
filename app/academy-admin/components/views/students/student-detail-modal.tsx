@@ -184,31 +184,48 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
             </div>
 
             <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">수강권 정보</h4>
-              <div className="space-y-2">
+              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">보유 수강권</h4>
+              <div className="space-y-3">
                 {student.user_tickets && student.user_tickets.length > 0 ? (
-                  student.user_tickets.map((ticket: any) => (
-                    <div
-                      key={ticket.id}
-                      className="p-3 border dark:border-neutral-700 rounded-lg bg-gray-50 dark:bg-neutral-800"
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-gray-900 dark:text-white">
-                          {ticket.tickets?.name || '-'}
-                        </span>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                          잔여: {ticket.remaining_count}회
-                        </span>
-                      </div>
-                      {ticket.expiry_date && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          만료일: {new Date(ticket.expiry_date).toLocaleDateString('ko-KR')}
+                  student.user_tickets.map((ticket: any) => {
+                    const ticketType = ticket.tickets?.ticket_type;
+                    const cat = ticket.tickets?.ticket_category || ticket.tickets?.access_group;
+                    const categoryLabel =
+                      ticketType === 'COUNT'
+                        ? (cat === 'workshop' ? '워크샵(특강)' : '쿠폰제(횟수제)')
+                        : '기간제';
+                    const isPeriod = ticketType === 'PERIOD';
+                    return (
+                      <div
+                        key={ticket.id}
+                        className="p-3 border dark:border-neutral-700 rounded-lg bg-gray-50 dark:bg-neutral-800 space-y-1.5"
+                      >
+                        <div className="flex justify-between items-center flex-wrap gap-1">
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {ticket.tickets?.name || '-'}
+                          </span>
+                          <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-slate-200 dark:bg-neutral-700 text-slate-700 dark:text-slate-300">
+                            {categoryLabel}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  ))
+                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-gray-600 dark:text-gray-400">
+                          {isPeriod ? (
+                            <span>잔여: 무제한</span>
+                          ) : (
+                            <span>잔여: {ticket.remaining_count ?? 0}회</span>
+                          )}
+                          {ticket.expiry_date && (
+                            <span>만료: {new Date(ticket.expiry_date).toLocaleDateString('ko-KR')}</span>
+                          )}
+                          <span className="text-gray-500 dark:text-gray-500">
+                            {ticket.status === 'ACTIVE' ? '사용 중' : ticket.status}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
                 ) : (
-                  <div className="text-gray-500 dark:text-gray-400 text-sm">수강권이 없습니다.</div>
+                  <div className="text-gray-500 dark:text-gray-400 text-sm py-2">수강권이 없습니다.</div>
                 )}
               </div>
             </div>

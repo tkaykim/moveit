@@ -1,10 +1,11 @@
 "use client";
 
-import { ChevronLeft, Ticket, Calendar, Clock, Plus } from 'lucide-react';
+import { ChevronLeft, Ticket, Calendar, Clock, Plus, Pause } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { TicketRechargeModal } from '@/components/modals/ticket-recharge-modal';
+import { TicketExtensionRequestModal } from '@/components/modals/ticket-extension-request-modal';
 
 interface TicketsViewProps {
   onBack: () => void;
@@ -23,6 +24,11 @@ interface UserTicket {
   status: string;
   academy_name?: string;
   academy_id?: string;
+  ticket_type?: string;
+}
+
+interface AcademyMaxExtension {
+  [academyId: string]: number | null;
 }
 
 export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: TicketsViewProps) => {
@@ -30,6 +36,8 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'ALL' | 'ACTIVE' | 'EXPIRED' | 'USED'>('ALL');
   const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
+  const [extensionModalTicket, setExtensionModalTicket] = useState<UserTicket | null>(null);
+  const [academyMaxExtension, setAcademyMaxExtension] = useState<AcademyMaxExtension>({});
   const { user } = useAuth();
 
   const loadTickets = async () => {
@@ -54,9 +62,11 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
             name,
             is_general,
             academy_id,
+            ticket_type,
             academies (
               name_kr,
-              name_en
+              name_en,
+              max_extension_days
             )
           )
         `)
@@ -65,25 +75,28 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
 
       if (error) throw error;
 
+      const maxExt: AcademyMaxExtension = {};
       const formattedTickets: UserTicket[] = (data || []).map((item: any) => {
         const ticket = item.tickets;
         const academy = ticket?.academies;
         const academyId = ticket?.academy_id;
-        
+        if (academyId != null) maxExt[academyId] = academy?.max_extension_days ?? null;
         return {
           id: item.id,
           ticket_name: ticket?.name || '수강권',
-          remaining_count: item.remaining_count || 0,
+          remaining_count: item.remaining_count ?? 0,
           total_count: ticket?.total_count || 0,
           start_date: item.start_date,
           expiry_date: item.expiry_date,
           status: item.status || 'ACTIVE',
           academy_name: academy?.name_kr || academy?.name_en || '학원',
           academy_id: academyId,
+          ticket_type: ticket?.ticket_type,
         };
       });
 
       setTickets(formattedTickets);
+      setAcademyMaxExtension(maxExt);
     } catch (error) {
       console.error('Error loading tickets:', error);
     } finally {
@@ -275,6 +288,18 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
                             </div>
                           </div>
                         </div>
+                        {ticket.status === 'ACTIVE' && ticket.expiry_date && (
+                          <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-800">
+                            <button
+                              type="button"
+                              onClick={() => setExtensionModalTicket(ticket)}
+                              className="w-full py-2 rounded-xl border border-neutral-300 dark:border-neutral-600 text-sm font-medium text-neutral-700 dark:text-neutral-300 flex items-center justify-center gap-2 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                            >
+                              <Pause size={16} />
+                              연장/일시정지 신청
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -310,6 +335,16 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
           }
         }}
       />
+      {extensionModalTicket && (
+        <TicketExtensionRequestModal
+          isOpen={!!extensionModalTicket}
+          onClose={() => setExtensionModalTicket(null)}
+          userTicketId={extensionModalTicket.id}
+          ticketName={extensionModalTicket.ticket_name}
+          maxExtensionDays={extensionModalTicket.academy_id ? (academyMaxExtension[extensionModalTicket.academy_id] ?? null) : null}
+          onSuccess={loadTickets}
+        />
+      )}
     </div>
   );
 };

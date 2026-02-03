@@ -101,8 +101,17 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
         .eq('academy_id', academyId)
         .eq('is_on_sale', true);
 
+      const getTicketCategory = (t: any): 'regular' | 'popup' | 'workshop' => {
+        if (t.ticket_category === 'popup' || t.ticket_category === 'workshop') return t.ticket_category;
+        if (t.access_group === 'popup') return 'popup';
+        if (t.access_group === 'workshop') return 'workshop';
+        if (t.is_coupon === true && t.access_group !== 'regular') return 'popup';
+        return 'regular';
+      };
+
       const formattedProducts: any[] = [];
       for (const ticket of tickets || []) {
+        const category = getTicketCategory(ticket);
         const opts = ticket.count_options as { count?: number; price?: number; valid_days?: number | null }[] | null;
         const hasCountOptions = opts && Array.isArray(opts) && opts.length > 0 && (ticket.ticket_category === 'popup' || ticket.access_group === 'popup');
         if (hasCountOptions) {
@@ -114,6 +123,7 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
                 id: ticket.id,
                 productKey: `${ticket.id}_${count}`,
                 type: 'count',
+                category,
                 name: `${ticket.name} ${count}회권`,
                 amount: count,
                 days: o?.valid_days ?? ticket.valid_days,
@@ -126,6 +136,7 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
             id: ticket.id,
             productKey: ticket.id,
             type: ticket.ticket_type === 'COUNT' ? 'count' : 'period',
+            category,
             name: ticket.name,
             amount: ticket.total_count,
             days: ticket.valid_days,

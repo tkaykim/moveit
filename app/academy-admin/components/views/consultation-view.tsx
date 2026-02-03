@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { MoreHorizontal, Clock, Calendar, CheckCircle, Plus } from 'lucide-react';
+import { MoreHorizontal, Clock, Calendar, CheckCircle, Plus, Tag, Trash2, Loader2 } from 'lucide-react';
 import { SectionHeader } from '../common/section-header';
 import { ConsultationModal } from './consultations/consultation-modal';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -24,14 +24,40 @@ interface Consultation {
   created_at: string;
 }
 
+interface ConsultationCategory {
+  id: string;
+  name: string;
+  duration_minutes: number;
+  display_order: number | null;
+}
+
 export function ConsultationView({ academyId }: ConsultationViewProps) {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
+  const [categories, setCategories] = useState<ConsultationCategory[]>([]);
+  const [categoryName, setCategoryName] = useState('');
+  const [categoryMinutes, setCategoryMinutes] = useState(30);
+  const [presetLoading, setPresetLoading] = useState(false);
+  const [categoryLoading, setCategoryLoading] = useState(false);
 
   useEffect(() => {
     loadConsultations();
+  }, [academyId]);
+
+  const loadCategories = async () => {
+    try {
+      const res = await fetch(`/api/consultation-categories?academyId=${academyId}`);
+      const data = await res.json();
+      if (res.ok) setCategories(data.data || []);
+    } catch {
+      setCategories([]);
+    }
+  };
+
+  useEffect(() => {
+    loadCategories();
   }, [academyId]);
 
   const loadConsultations = async () => {
@@ -92,6 +118,53 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
     );
   }
 
+  const applyPreset = async () => {
+    setPresetLoading(true);
+    try {
+      const res = await fetch(`/api/consultation-categories/preset?academyId=${academyId}`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '적용 실패');
+      alert('프리셋이 적용되었습니다. (입시반 30분, 오디션반 30분, 전문반 30분, 일반 상담 10분)');
+      loadCategories();
+    } catch (e: any) {
+      alert(e.message || '적용 실패');
+    } finally {
+      setPresetLoading(false);
+    }
+  };
+
+  const addCategory = async () => {
+    if (!categoryName.trim()) return;
+    setCategoryLoading(true);
+    try {
+      const res = await fetch('/api/consultation-categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ academy_id: academyId, name: categoryName.trim(), duration_minutes: categoryMinutes }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '추가 실패');
+      setCategoryName('');
+      setCategoryMinutes(30);
+      loadCategories();
+    } catch (e: any) {
+      alert(e.message || '추가 실패');
+    } finally {
+      setCategoryLoading(false);
+    }
+  };
+
+  const deleteCategory = async (id: string) => {
+    if (!confirm('이 카테고리를 삭제하시겠습니까?')) return;
+    try {
+      const res = await fetch(`/api/consultation-categories/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('삭제 실패');
+      loadCategories();
+    } catch (e: any) {
+      alert(e.message || '삭제 실패');
+    }
+  };
+
   return (
     <>
       <div className="h-full flex flex-col" data-onboarding="page-consultations-0">
@@ -103,6 +176,64 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
             setShowModal(true);
           }}
         />
+
+        <div className="mb-4 p-4 bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800">
+          <h4 className="font-bold text-sm text-gray-800 dark:text-white mb-2 flex items-center gap-2">
+            <Tag size={16} /> 상담 카테고리
+          </h4>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            학원 상세 페이지 상담 신청 시 선택할 수 있는 카테고리입니다. 프리셋: 입시반 30분, 오디션반 30분, 전문반 30분, 일반 상담 10분
+          </p>
+          {categories.length === 0 && (
+            <button
+              type="button"
+              onClick={applyPreset}
+              disabled={presetLoading}
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50"
+            >
+              {presetLoading ? '적용 중...' : '프리셋 적용 (입시반·오디션반·전문반·일반 상담)'}
+            </button>
+          )}
+          <div className="flex flex-wrap gap-2 mt-2">
+            {categories.map((c) => (
+              <span
+                key={c.id}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100 dark:bg-neutral-800 text-sm"
+              >
+                {c.name} ({c.duration_minutes}분)
+                <button type="button" onClick={() => deleteCategory(c.id)} className="text-red-500 hover:text-red-600 p-0.5">
+                  <Trash2 size={12} />
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className="flex gap-2 mt-3">
+            <input
+              type="text"
+              placeholder="카테고리 이름"
+              value={categoryName}
+              onChange={(e) => setCategoryName(e.target.value)}
+              className="px-2 py-1.5 border dark:border-neutral-700 rounded text-sm w-32 bg-white dark:bg-neutral-800"
+            />
+            <input
+              type="number"
+              min={5}
+              max={120}
+              value={categoryMinutes}
+              onChange={(e) => setCategoryMinutes(Number(e.target.value) || 30)}
+              className="px-2 py-1.5 border dark:border-neutral-700 rounded text-sm w-20 bg-white dark:bg-neutral-800"
+            />
+            <span className="text-sm self-center text-gray-500">분</span>
+            <button
+              type="button"
+              onClick={addCategory}
+              disabled={categoryLoading || !categoryName.trim()}
+              className="px-3 py-1.5 rounded bg-blue-600 text-white text-sm disabled:opacity-50"
+            >
+              추가
+            </button>
+          </div>
+        </div>
 
         <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 overflow-y-auto sm:overflow-hidden pb-6">
           {/* 1. 신규 문의 */}

@@ -19,17 +19,24 @@ export function ProductSelection({
 }: ProductSelectionProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 검색 필터링된 상품 목록
+  const getCategoryLabel = (cat: string) =>
+    cat === 'workshop' ? '워크샵(특강)' : cat === 'popup' ? '쿠폰제(횟수제)' : '기간제';
+
+  // 검색 필터링된 상품 목록 (기간제/쿠폰제/워크샵 라벨로도 검색 가능)
   const filteredProducts = useMemo(() => {
     if (!searchQuery.trim()) return products;
     const query = searchQuery.toLowerCase();
-    return products.filter(product => 
-      (product.name?.toLowerCase().includes(query)) ||
-      (product.price?.toString().includes(query)) ||
-      (product.type?.toLowerCase().includes(query)) ||
-      (product.amount?.toString().includes(query)) ||
-      (product.days?.toString().includes(query))
-    );
+    return products.filter(product => {
+      const catLabel = getCategoryLabel(product.category || 'regular');
+      return (
+        (product.name?.toLowerCase().includes(query)) ||
+        (product.price?.toString().includes(query)) ||
+        (product.type?.toLowerCase().includes(query)) ||
+        (product.amount?.toString().includes(query)) ||
+        (product.days?.toString().includes(query)) ||
+        (catLabel?.toLowerCase().includes(query))
+      );
+    });
   }, [products, searchQuery]);
 
   return (
@@ -50,7 +57,7 @@ export function ProductSelection({
         <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
         <input
           type="text"
-          placeholder="수강권명, 가격, 유형으로 검색..."
+          placeholder="수강권명, 가격, 유형(기간제/쿠폰제/워크샵)으로 검색..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           disabled={disabled}
@@ -87,12 +94,14 @@ export function ProductSelection({
               <div className="flex justify-between items-start mb-1.5">
                 <span
                   className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                    product.type === 'count'
-                      ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
-                      : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+                    product.category === 'workshop'
+                      ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                      : product.category === 'popup'
+                      ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+                      : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
                   }`}
                 >
-                  {product.type === 'count' ? '횟수제' : '기간제'}
+                  {getCategoryLabel(product.category || 'regular')}
                 </span>
                 {isSelected && (
                   <div className="bg-blue-500 dark:bg-blue-400 text-white rounded-full p-0.5">

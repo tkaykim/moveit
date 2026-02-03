@@ -16,6 +16,7 @@ export function SettingsView({ academyId }: SettingsViewProps) {
     address: '',
     contact_number: '',
     description: '',
+    max_extension_days: '' as string | number,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -47,6 +48,7 @@ export function SettingsView({ academyId }: SettingsViewProps) {
         address: data.address || '',
         contact_number: data.contact_number || '',
         description: data.description || '',
+        max_extension_days: data.max_extension_days ?? '',
       });
     } catch (error) {
       console.error('Error loading academy:', error);
@@ -67,9 +69,17 @@ export function SettingsView({ academyId }: SettingsViewProps) {
     }
 
     try {
+      const payload = {
+        name_kr: formData.name_kr,
+        name_en: formData.name_en,
+        address: formData.address,
+        contact_number: formData.contact_number,
+        description: formData.description,
+        max_extension_days: formData.max_extension_days === '' ? null : Number(formData.max_extension_days) || null,
+      };
       const { error } = await supabase
         .from('academies')
-        .update(formData)
+        .update(payload)
         .eq('id', academyId);
 
       if (error) throw error;
@@ -156,6 +166,22 @@ export function SettingsView({ academyId }: SettingsViewProps) {
               />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 학원 소개, 특징, 운영 방식 등을 자유롭게 작성하세요.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                수강권 연장 신청 최대 일수
+              </label>
+              <input
+                type="number"
+                min={0}
+                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                value={formData.max_extension_days}
+                onChange={(e) => setFormData({ ...formData, max_extension_days: e.target.value === '' ? '' : e.target.value })}
+                placeholder="비워두면 제한 없음"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                회원이 연장/일시정지 신청 시 허용할 최대 일수. 비우면 제한 없음.
               </p>
             </div>
             <button
