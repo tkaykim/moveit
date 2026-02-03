@@ -115,6 +115,24 @@ export async function POST(request: Request) {
         payment_method: 'CARD_DEMO',
         payment_status: 'COMPLETED',
       });
+
+      // 학원 학생으로 자동 등록 (중복 방지: 이미 등록된 경우 무시)
+      const { data: existingStudent } = await supabase
+        .from('academy_students')
+        .select('id')
+        .eq('academy_id', ticket.academy_id)
+        .eq('user_id', guestUser.id)
+        .single();
+
+      if (!existingStudent) {
+        await supabase
+          .from('academy_students')
+          .insert({
+            academy_id: ticket.academy_id,
+            user_id: guestUser.id,
+          });
+        console.log(`게스트 학원 학생 자동 등록 완료: user_id=${guestUser.id}, academy_id=${ticket.academy_id}`);
+      }
     }
 
     let autoBookingResult = { created: 0, skipped: 0 };

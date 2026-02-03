@@ -227,7 +227,25 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
 
       if (transactionError) throw transactionError;
 
-      // 3. 로그 생성
+      // 3. 학원 학생으로 자동 등록 (중복 방지: 이미 등록된 경우 무시)
+      const { data: existingStudent } = await supabase
+        .from('academy_students')
+        .select('id')
+        .eq('academy_id', academyId)
+        .eq('user_id', selectedStudent.id)
+        .single();
+
+      if (!existingStudent) {
+        await supabase
+          .from('academy_students')
+          .insert({
+            academy_id: academyId,
+            user_id: selectedStudent.id,
+          });
+        console.log(`관리자 판매 - 학원 학생 자동 등록 완료: user_id=${selectedStudent.id}, academy_id=${academyId}`);
+      }
+
+      // 4. 로그 생성
       const newLog = {
         id: transaction.id,
         date: new Date().toISOString(),

@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { MyTab } from '@/components/auth/MyTab';
 import { UserMenu } from '@/components/auth/UserMenu';
 import { useRouter } from 'next/navigation';
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface TicketSummary {
   regular: number;
@@ -41,6 +42,7 @@ interface MyPageViewProps {
 export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
   const router = useRouter();
   const { user, profile, loading: authLoading } = useAuth();
+  const { t, language } = useLocale();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [ticketSummary, setTicketSummary] = useState<TicketSummary>({ regular: 0, popup: 0, workshop: 0, total: 0 });
   const [nextClass, setNextClass] = useState<UpcomingBooking | null>(null);
@@ -48,7 +50,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
   const [totalUpcoming, setTotalUpcoming] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const displayName = profile?.nickname || profile?.name || user?.email?.split('@')[0] || '사용자';
+  const displayName = profile?.nickname || profile?.name || user?.email?.split('@')[0] || (language === 'en' ? 'User' : '사용자');
   const profileImage = profile?.profile_image || null;
 
   // 데이터 로드
@@ -144,7 +146,9 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
               return startTime >= date && startTime < nextDay;
             }).length;
 
-            const dayLabels = ['일', '월', '화', '수', '목', '금', '토'];
+            const dayLabelsKo = ['일', '월', '화', '수', '목', '금', '토'];
+            const dayLabelsEn = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+            const dayLabels = dayLabelsKo; // will be selected in UI based on language
             weekDays.push({
               date,
               dayLabel: dayLabels[date.getDay()],
@@ -169,10 +173,15 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
     const date = new Date(dateString);
     const month = date.getMonth() + 1;
     const day = date.getDate();
-    const weekday = ['일', '월', '화', '수', '목', '금', '토'][date.getDay()];
+    const weekdayKo = ['일', '월', '화', '수', '목', '금', '토'][date.getDay()];
+    const weekdayEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()];
     const hours = date.getHours();
     const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${month}/${day}(${weekday}) ${hours}:${minutes}`;
+    
+    if (language === 'en') {
+      return `${month}/${day} (${weekdayEn}) ${hours}:${minutes}`;
+    }
+    return `${month}/${day}(${weekdayKo}) ${hours}:${minutes}`;
   };
 
   return (
@@ -181,7 +190,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
         {/* 헤더 */}
         <div className="bg-white dark:bg-neutral-900 px-5 pt-12 pb-6">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-xl font-bold text-black dark:text-white">마이페이지</h1>
+            <h1 className="text-xl font-bold text-black dark:text-white">{t('my.title')}</h1>
             <div className="flex gap-3 items-center">
               <ThemeToggle />
               {user && <UserMenu />}
@@ -213,7 +222,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
               </div>
               <div className="flex-1 text-left">
                 <h2 className="text-lg font-bold text-black dark:text-white">{displayName}</h2>
-                <p className="text-sm text-neutral-500">프로필 설정</p>
+                <p className="text-sm text-neutral-500">{t('settings.editProfile')}</p>
               </div>
               <ChevronRight className="text-neutral-400" size={20} />
             </button>
@@ -226,8 +235,8 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                 <User className="text-neutral-400" size={24} />
               </div>
               <div className="flex-1 text-left">
-                <h2 className="text-base font-bold text-black dark:text-white">로그인하세요</h2>
-                <p className="text-sm text-neutral-500">로그인하여 더 많은 기능을 이용하세요</p>
+                <h2 className="text-base font-bold text-black dark:text-white">{t('my.login')}</h2>
+                <p className="text-sm text-neutral-500">{language === 'en' ? 'Login to access more features' : '로그인하여 더 많은 기능을 이용하세요'}</p>
               </div>
               <ChevronRight className="text-neutral-400" size={20} />
             </button>
@@ -238,12 +247,12 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
         <div className="px-5 mt-4">
           <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold text-black dark:text-white">보유 수강권</h2>
+              <h2 className="text-base font-bold text-black dark:text-white">{t('my.myTickets')}</h2>
               <button
                 onClick={() => onNavigate?.('TICKETS')}
                 className="text-sm text-primary dark:text-[#CCFF00] font-medium flex items-center gap-1"
               >
-                전체보기 <ChevronRight size={16} />
+                {t('common.viewAll')} <ChevronRight size={16} />
               </button>
             </div>
 
@@ -258,12 +267,12 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
               </div>
             ) : !user ? (
               <div className="text-center py-6 text-neutral-500 text-sm">
-                로그인 후 확인할 수 있습니다
+                {language === 'en' ? 'Please login to view' : '로그인 후 확인할 수 있습니다'}
               </div>
             ) : ticketSummary.total === 0 ? (
               <div className="text-center py-6">
                 <Ticket size={40} className="text-neutral-300 dark:text-neutral-700 mx-auto mb-2" />
-                <p className="text-neutral-500 text-sm">보유한 수강권이 없습니다</p>
+                <p className="text-neutral-500 text-sm">{t('my.noTickets')}</p>
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-3">
@@ -271,19 +280,19 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                   <div className="text-2xl font-black text-blue-600 dark:text-blue-400 mb-1">
                     {ticketSummary.regular}
                   </div>
-                  <div className="text-xs font-medium text-blue-600 dark:text-blue-400">기간제</div>
+                  <div className="text-xs font-medium text-blue-600 dark:text-blue-400">{language === 'en' ? 'Period' : '기간제'}</div>
                 </div>
                 <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 text-center">
                   <div className="text-2xl font-black text-purple-600 dark:text-purple-400 mb-1">
                     {ticketSummary.popup}
                   </div>
-                  <div className="text-xs font-medium text-purple-600 dark:text-purple-400">쿠폰제(횟수제)</div>
+                  <div className="text-xs font-medium text-purple-600 dark:text-purple-400">{language === 'en' ? 'Count' : '쿠폰제(횟수제)'}</div>
                 </div>
                 <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 text-center">
                   <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mb-1">
                     {ticketSummary.workshop}
                   </div>
-                  <div className="text-xs font-medium text-amber-600 dark:text-amber-400">워크샵(특강)</div>
+                  <div className="text-xs font-medium text-amber-600 dark:text-amber-400">{language === 'en' ? 'Workshop' : '워크샵(특강)'}</div>
                 </div>
               </div>
             )}
@@ -296,10 +305,10 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
             <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold text-black dark:text-white">수강 예정</h2>
+                  <h2 className="text-base font-bold text-black dark:text-white">{t('my.myBookings')}</h2>
                   {totalUpcoming > 0 && (
                     <span className="px-2 py-0.5 text-xs font-bold bg-primary/10 dark:bg-[#CCFF00]/20 text-primary dark:text-[#CCFF00] rounded-full">
-                      {totalUpcoming}건
+                      {totalUpcoming}{language === 'en' ? '' : '건'}
                     </span>
                   )}
                 </div>
@@ -307,7 +316,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                   onClick={() => router.push('/schedule')}
                   className="text-sm text-primary dark:text-[#CCFF00] font-medium flex items-center gap-1"
                 >
-                  전체보기 <ChevronRight size={16} />
+                  {t('common.viewAll')} <ChevronRight size={16} />
                 </button>
               </div>
 
@@ -326,12 +335,12 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
               ) : !nextClass ? (
                 <div className="text-center py-6">
                   <Calendar size={40} className="text-neutral-300 dark:text-neutral-700 mx-auto mb-2" />
-                  <p className="text-neutral-500 text-sm">예정된 수업이 없습니다</p>
+                  <p className="text-neutral-500 text-sm">{t('my.noBookings')}</p>
                   <button
                     onClick={() => router.push('/search')}
                     className="mt-3 text-sm text-primary dark:text-[#CCFF00] font-medium"
                   >
-                    클래스 찾아보기
+                    {language === 'en' ? 'Find Classes' : '클래스 찾아보기'}
                   </button>
                 </div>
               ) : (
@@ -342,7 +351,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                       <div className="w-6 h-6 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center">
                         <Play size={12} className="text-white dark:text-black ml-0.5" />
                       </div>
-                      <span className="text-xs font-bold text-primary dark:text-[#CCFF00]">다음 수업</span>
+                      <span className="text-xs font-bold text-primary dark:text-[#CCFF00]">{language === 'en' ? 'Next Class' : '다음 수업'}</span>
                     </div>
                     <div className="font-bold text-black dark:text-white text-lg mb-2">
                       {nextClass.className}
@@ -364,7 +373,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                   {/* 이번 주 일정 미니 캘린더 */}
                   {weekSchedule.length > 0 && (
                     <div>
-                      <div className="text-xs font-medium text-neutral-500 mb-2">이번 주 일정</div>
+                      <div className="text-xs font-medium text-neutral-500 mb-2">{language === 'en' ? 'This Week' : '이번 주 일정'}</div>
                       <div className="grid grid-cols-7 gap-1">
                         {weekSchedule.map((day, idx) => (
                           <button
@@ -415,7 +424,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
               <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
                 <CreditCard size={20} className="text-neutral-600 dark:text-neutral-400" />
               </div>
-              <span className="flex-1 text-left font-medium text-black dark:text-white">결제 내역</span>
+              <span className="flex-1 text-left font-medium text-black dark:text-white">{t('my.paymentHistory')}</span>
               <ChevronRight size={18} className="text-neutral-400" />
             </button>
             <button
@@ -425,7 +434,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
               <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
                 <HelpCircle size={20} className="text-neutral-600 dark:text-neutral-400" />
               </div>
-              <span className="flex-1 text-left font-medium text-black dark:text-white">자주 묻는 질문</span>
+              <span className="flex-1 text-left font-medium text-black dark:text-white">{t('my.faq')}</span>
               <ChevronRight size={18} className="text-neutral-400" />
             </button>
             <button
@@ -435,7 +444,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
               <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
                 <Bell size={20} className="text-neutral-600 dark:text-neutral-400" />
               </div>
-              <span className="flex-1 text-left font-medium text-black dark:text-white">공지사항</span>
+              <span className="flex-1 text-left font-medium text-black dark:text-white">{t('my.notices')}</span>
               <ChevronRight size={18} className="text-neutral-400" />
             </button>
             <button
@@ -445,7 +454,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
               <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
                 <Settings size={20} className="text-neutral-600 dark:text-neutral-400" />
               </div>
-              <span className="flex-1 text-left font-medium text-black dark:text-white">설정</span>
+              <span className="flex-1 text-left font-medium text-black dark:text-white">{t('my.settings')}</span>
               <ChevronRight size={18} className="text-neutral-400" />
             </button>
           </div>

@@ -8,6 +8,7 @@ import { Academy } from '@/types';
 import { AcademyFilterModal, AcademyFilter } from '@/components/modals/academy-filter-modal';
 import { calculateDistance, parseAddressToCoordinates, formatDistance } from '@/lib/utils/distance';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface AcademyListViewProps {
   onAcademyClick: (academy: Academy) => void;
@@ -47,6 +48,7 @@ function transformAcademy(dbAcademy: any): Academy {
 }
 
 export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
+  const { t, language } = useLocale();
   const [academies, setAcademies] = useState<Academy[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -296,6 +298,14 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
   }, [academies, searchQuery, filter, sortOption, userLocation]);
 
   const getSortLabel = () => {
+    if (language === 'en') {
+      switch (sortOption) {
+        case 'distance': return 'Distance';
+        case 'price_asc': return 'Price: Low';
+        case 'price_desc': return 'Price: High';
+        default: return 'Default';
+      }
+    }
     switch (sortOption) {
       case 'distance': return '거리순';
       case 'price_asc': return '가격 낮은순';
@@ -319,8 +329,8 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
       {/* 헤더 */}
       <div className="sticky top-0 z-30 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md px-5 pt-14 pb-4">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold text-black dark:text-white">댄스학원</h1>
-          <span className="text-sm text-neutral-500">{filteredAndSortedAcademies.length}개</span>
+          <h1 className="text-xl font-bold text-black dark:text-white">{language === 'en' ? 'Dance Academy' : '댄스학원'}</h1>
+          <span className="text-sm text-neutral-500">{filteredAndSortedAcademies.length}{language === 'en' ? '' : '개'}</span>
         </div>
         
         {/* 검색 바 */}
@@ -328,7 +338,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
           <input
             type="text"
-            placeholder="학원명, 장르, 주소 검색..."
+            placeholder={language === 'en' ? 'Search academy, genre, address...' : '학원명, 장르, 주소 검색...'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-11 pr-10 py-3 bg-neutral-100 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 text-black dark:text-white placeholder-neutral-400 focus:outline-none focus:border-neutral-400 dark:focus:border-[#CCFF00] transition-colors"
@@ -350,7 +360,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
               onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
               className="flex items-center gap-1 px-3 py-2 bg-neutral-100 dark:bg-neutral-900 rounded-lg text-sm text-black dark:text-white border border-neutral-200 dark:border-neutral-800"
             >
-              {locationLoading && sortOption === 'distance' ? '위치 확인 중...' : getSortLabel()}
+              {locationLoading && sortOption === 'distance' ? (language === 'en' ? 'Getting location...' : '위치 확인 중...') : getSortLabel()}
               <ChevronDown size={14} className={`transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {isSortDropdownOpen && (
@@ -358,10 +368,10 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
                 <div className="fixed inset-0 z-40" onClick={() => setIsSortDropdownOpen(false)} />
                 <div className="absolute top-full left-0 mt-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-lg z-50 min-w-[120px]">
                   {[
-                    { value: 'default', label: '기본순' },
-                    { value: 'distance', label: '거리순' },
-                    { value: 'price_asc', label: '가격 낮은순' },
-                    { value: 'price_desc', label: '가격 높은순' },
+                    { value: 'default', label: language === 'en' ? 'Default' : '기본순' },
+                    { value: 'distance', label: language === 'en' ? 'Distance' : '거리순' },
+                    { value: 'price_asc', label: language === 'en' ? 'Price: Low' : '가격 낮은순' },
+                    { value: 'price_desc', label: language === 'en' ? 'Price: High' : '가격 높은순' },
                   ].map(option => (
                     <button
                       key={option.value}
@@ -391,7 +401,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
             }`}
           >
             <SlidersHorizontal size={14} />
-            필터
+            {language === 'en' ? 'Filter' : '필터'}
             {activeFilterCount > 0 && (
               <span className="ml-1 px-1.5 py-0.5 bg-white dark:bg-black text-primary dark:text-[#CCFF00] text-[10px] font-bold rounded-full">
                 {activeFilterCount}
@@ -407,7 +417,9 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
           <div className="text-center py-16 text-neutral-500">
             <MapPin className="mx-auto mb-3 text-neutral-400" size={40} />
             <p className="text-sm">
-              {searchQuery || activeFilterCount > 0 ? '검색 결과가 없습니다.' : '등록된 학원이 없습니다.'}
+              {searchQuery || activeFilterCount > 0 
+                ? (language === 'en' ? 'No results found.' : '검색 결과가 없습니다.') 
+                : t('academy.noAcademies')}
             </p>
           </div>
         ) : (

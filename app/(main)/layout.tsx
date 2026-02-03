@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { BottomNav } from '@/components/navigation/bottom-nav';
 import { ViewState } from '@/types';
 import { CSSLoader } from '@/components/common/css-loader';
+import { LocaleProvider } from '@/contexts/LocaleContext';
 
 export default function MainLayout({
   children,
@@ -50,7 +51,7 @@ export default function MainLayout({
   };
 
   return (
-    <>
+    <LocaleProvider>
       <CSSLoader />
       <div className="flex justify-center bg-neutral-50 dark:bg-black min-h-screen font-sans selection:bg-primary dark:selection:bg-[#CCFF00] selection:text-black">
         <div className="w-full max-w-[420px] bg-white dark:bg-neutral-950 min-h-screen relative shadow-2xl overflow-hidden flex flex-col border-x border-neutral-200 dark:border-neutral-900">
@@ -60,7 +61,7 @@ export default function MainLayout({
           <BottomNav activeTab={getActiveTab()} onTabChange={handleTabChange} />
         </div>
       </div>
-    </>
+    </LocaleProvider>
   );
 }
 

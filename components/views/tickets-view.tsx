@@ -341,6 +341,7 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
           onClose={() => setExtensionModalTicket(null)}
           userTicketId={extensionModalTicket.id}
           ticketName={extensionModalTicket.ticket_name}
+          expiryDate={extensionModalTicket.expiry_date ?? null}
           maxExtensionDays={extensionModalTicket.academy_id ? (academyMaxExtension[extensionModalTicket.academy_id] ?? null) : null}
           onSuccess={loadTickets}
         />

@@ -8,7 +8,13 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const supabase = await createClient() as any;
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    // 쿠키 기반 세션을 먼저 확인(클라이언트와 동기화). 없으면 서버 검증 시도
+    const { data: { session } } = await supabase.auth.getSession();
+    let authUser = session?.user ?? null;
+    if (!authUser) {
+      const { data: { user } } = await supabase.auth.getUser();
+      authUser = user;
+    }
     if (!authUser) {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }
@@ -87,7 +93,12 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   try {
     const supabase = await createClient() as any;
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    let authUser = session?.user ?? null;
+    if (!authUser) {
+      const { data: { user } } = await supabase.auth.getUser();
+      authUser = user;
+    }
     if (!authUser) {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }

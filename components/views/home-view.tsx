@@ -8,6 +8,7 @@ import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Academy, Dancer } from '@/types';
 import { ThemeToggle } from '@/components/common/theme-toggle';
 import { BannerCarousel } from '@/components/banner/banner-carousel';
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface HomeViewProps {
   onNavigate: (view: ViewState, query?: string) => void;
@@ -45,6 +46,7 @@ const DANCE_CATEGORIES = [
 ];
 
 export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeViewProps) => {
+  const { t, language } = useLocale();
   const [searchQuery, setSearchQuery] = useState('');
   const [recentAcademies, setRecentAcademies] = useState<Academy[]>([]);
   const [nearbyAcademies, setNearbyAcademies] = useState<Academy[]>([]);
@@ -349,7 +351,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             type="text" 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="장르, 강사, 학원 검색" 
+            placeholder={language === 'en' ? 'Search genre, instructor, academy' : '장르, 강사, 학원 검색'} 
             className="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl py-3 pl-11 pr-4 text-sm text-black dark:text-white focus:border-neutral-400 dark:focus:border-[#CCFF00] outline-none transition-colors" 
           />
         </form>
@@ -392,13 +394,13 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           <div className="flex items-center justify-between px-5 mb-3">
             <div className="flex items-center gap-2">
               <Flame className="text-red-500" size={20} />
-              <h2 className="text-lg font-bold text-black dark:text-white">HOT 강사</h2>
+              <h2 className="text-lg font-bold text-black dark:text-white">{language === 'en' ? 'HOT Instructors' : 'HOT 강사'}</h2>
             </div>
             <button 
               onClick={() => onNavigate('DANCER')}
               className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400"
             >
-              전체보기 <ChevronRight size={14} />
+              {t('common.viewAll')} <ChevronRight size={14} />
             </button>
           </div>
           <div className="flex gap-3 overflow-x-auto scrollbar-hide px-5 pb-2">
@@ -441,12 +443,12 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
       {recentAcademies.length > 0 && (
         <div className="mt-8">
           <div className="flex items-center justify-between px-5 mb-3">
-            <h2 className="text-lg font-bold text-black dark:text-white">최근 본 학원</h2>
+            <h2 className="text-lg font-bold text-black dark:text-white">{language === 'en' ? 'Recently Viewed' : '최근 본 학원'}</h2>
             <button 
               onClick={() => onNavigate('ACADEMY')}
               className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400"
             >
-              전체보기 <ChevronRight size={14} />
+              {t('common.viewAll')} <ChevronRight size={14} />
             </button>
           </div>
           <div className="flex gap-3 overflow-x-auto scrollbar-hide px-5 pb-2">
@@ -487,12 +489,12 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
       {nearbyAcademies.length > 0 && (
         <div className="mt-8">
           <div className="flex items-center justify-between px-5 mb-3">
-            <h2 className="text-lg font-bold text-black dark:text-white">주변 댄스학원</h2>
+            <h2 className="text-lg font-bold text-black dark:text-white">{language === 'en' ? 'Nearby Academies' : '주변 댄스학원'}</h2>
             <button 
               onClick={() => onNavigate('ACADEMY')}
               className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400"
             >
-              전체보기 <ChevronRight size={14} />
+              {t('common.viewAll')} <ChevronRight size={14} />
             </button>
           </div>
           <div className="px-5 space-y-3">

@@ -4,22 +4,24 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, MapPin, User, Calendar } from 'lucide-react';
 import { ViewState } from '@/types';
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface BottomNavProps {
   activeTab: ViewState;
   onTabChange: (tab: ViewState) => void;
 }
 
-const tabs = [
-  { id: 'HOME' as ViewState, icon: Home, label: '홈', href: '/home' },
-  { id: 'ACADEMY' as ViewState, icon: MapPin, label: '학원', href: '/academy' },
-  { id: 'DANCER' as ViewState, icon: User, label: '강사', href: '/instructor' },
-  { id: 'SAVED' as ViewState, icon: Calendar, label: '일정', href: '/schedule' },
-  { id: 'MY' as ViewState, icon: User, label: '마이', href: '/my' },
+const tabConfig = [
+  { id: 'HOME' as ViewState, icon: Home, labelKey: 'bottomNav.home', href: '/home' },
+  { id: 'ACADEMY' as ViewState, icon: MapPin, labelKey: 'bottomNav.academy', href: '/academy' },
+  { id: 'DANCER' as ViewState, icon: User, labelKey: 'bottomNav.instructor', href: '/instructor' },
+  { id: 'SAVED' as ViewState, icon: Calendar, labelKey: 'bottomNav.schedule', href: '/schedule' },
+  { id: 'MY' as ViewState, icon: User, labelKey: 'bottomNav.my', href: '/my' },
 ];
 
 export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
   const pathname = usePathname();
+  const { t } = useLocale();
   
   const isActive = (tabId: ViewState, href: string) => {
     if (tabId === 'HOME' && (pathname === '/' || pathname === '/home')) return true;
@@ -35,7 +37,7 @@ export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
 
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] bg-white/90 dark:bg-neutral-950/90 backdrop-blur-xl border-t border-neutral-200 dark:border-neutral-800 pb-safe pt-2 px-6 flex justify-between items-center z-40 h-[80px]">
-      {tabs.map((tab) => {
+      {tabConfig.map((tab) => {
         const Icon = tab.icon;
         const active = isActive(tab.id, tab.href);
         return (
@@ -50,7 +52,7 @@ export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
             }`}
           >
             <Icon size={24} strokeWidth={active ? 2.5 : 2} />
-            <span className="text-[10px] font-medium">{tab.label}</span>
+            <span className="text-[10px] font-medium">{t(tab.labelKey)}</span>
           </Link>
         );
       })}

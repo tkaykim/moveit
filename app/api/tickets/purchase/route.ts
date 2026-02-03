@@ -167,7 +167,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 거래 기록 생성 (revenue_transactions)
+    // 거래 기록 생성 (revenue_transactions) 및 학원 학생 등록
     if (ticket.academy_id) {
       // 카드결제인 경우 데모 결제로 처리
       const finalPaymentMethod = paymentMethod === 'card' ? 'CARD_DEMO' : (paymentMethod || 'TEST');
@@ -186,6 +186,24 @@ export async function POST(request: Request) {
           payment_method: finalPaymentMethod, // 데모 결제 방법
           payment_status: 'COMPLETED', // 데모 결제는 즉시 완료 처리
         });
+
+      // 학원 학생으로 자동 등록 (중복 방지: 이미 등록된 경우 무시)
+      const { data: existingStudent } = await (supabase as any)
+        .from('academy_students')
+        .select('id')
+        .eq('academy_id', ticket.academy_id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (!existingStudent) {
+        await (supabase as any)
+          .from('academy_students')
+          .insert({
+            academy_id: ticket.academy_id,
+            user_id: user.id,
+          });
+        console.log(`학원 학생 자동 등록 완료: user_id=${user.id}, academy_id=${ticket.academy_id}`);
+      }
     }
 
     // 기간권(PERIOD)인 경우: 해당 기간 내 스케줄 자동 예약 생성

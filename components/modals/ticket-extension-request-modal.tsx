@@ -8,6 +8,8 @@ interface TicketExtensionRequestModalProps {
   onClose: () => void;
   userTicketId: string;
   ticketName: string;
+  /** 현재 수강권 만료일 (YYYY-MM-DD). 없으면 표시 생략 */
+  expiryDate: string | null;
   maxExtensionDays: number | null;
   onSuccess: () => void;
 }
@@ -17,6 +19,7 @@ export function TicketExtensionRequestModal({
   onClose,
   userTicketId,
   ticketName,
+  expiryDate,
   maxExtensionDays,
   onSuccess,
 }: TicketExtensionRequestModalProps) {
@@ -25,6 +28,26 @@ export function TicketExtensionRequestModal({
   const [absentEnd, setAbsentEnd] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const formatDate = (d: Date) => d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const todayStr = (() => {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  })();
+
+  const extensionSummary = (() => {
+    if (!absentStart || !absentEnd) return null;
+    const start = new Date(absentStart);
+    const end = new Date(absentEnd);
+    if (end < start) return null;
+    const extensionDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const currentExpiry = expiryDate ? new Date(expiryDate) : null;
+    const newExpiry = currentExpiry
+      ? new Date(currentExpiry.getTime() + extensionDays * 24 * 60 * 60 * 1000)
+      : null;
+    return { extensionDays, currentExpiry, newExpiry };
+  })();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +62,10 @@ export function TicketExtensionRequestModal({
       setError('종료일은 시작일 이후여야 합니다.');
       return;
     }
+    if (start < new Date(todayStr) || end < new Date(todayStr)) {
+      setError('시작일과 종료일은 오늘 이후로 선택해주세요.');
+      return;
+    }
     if (requestType === 'EXTENSION' && maxExtensionDays != null) {
       const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
       if (days > maxExtensionDays) {
@@ -50,6 +77,7 @@ export function TicketExtensionRequestModal({
     try {
       const res = await fetch('/api/ticket-extension-requests', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_ticket_id: userTicketId,
@@ -125,6 +153,7 @@ export function TicketExtensionRequestModal({
               <input
                 type="date"
                 value={absentStart}
+                min={todayStr}
                 onChange={(e) => setAbsentStart(e.target.value)}
                 className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
               />
@@ -134,11 +163,33 @@ export function TicketExtensionRequestModal({
               <input
                 type="date"
                 value={absentEnd}
+                min={todayStr}
                 onChange={(e) => setAbsentEnd(e.target.value)}
                 className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
               />
             </div>
           </div>
+          {extensionSummary && (
+            <div className="rounded-lg border border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800/50 p-3 space-y-1.5 text-sm">
+              <p className="font-medium text-gray-900 dark:text-white">신청 기간 요약</p>
+              <p className="text-gray-600 dark:text-gray-400">
+                연장 일수: <span className="font-medium text-gray-900 dark:text-white">{extensionSummary.extensionDays}일</span>
+              </p>
+              {extensionSummary.currentExpiry && (
+                <p className="text-gray-600 dark:text-gray-400">
+                  연장 전 만료일: <span className="font-medium text-gray-900 dark:text-white">{formatDate(extensionSummary.currentExpiry)}</span>
+                </p>
+              )}
+              {extensionSummary.newExpiry && (
+                <p className="text-gray-600 dark:text-gray-400">
+                  연장 후 만료일: <span className="font-medium text-primary dark:text-[#CCFF00]">{formatDate(extensionSummary.newExpiry)}</span>
+                </p>
+              )}
+              {!extensionSummary.currentExpiry && (
+                <p className="text-gray-500 dark:text-gray-500 text-xs">이 수강권은 만료일이 없어 연장 후 만료일만 적용됩니다.</p>
+              )}
+            </div>
+          )}
           {maxExtensionDays != null && requestType === 'EXTENSION' && (
             <p className="text-xs text-gray-500 dark:text-gray-400">
               이 학원은 연장 신청 시 최대 {maxExtensionDays}일까지 가능합니다.
