@@ -3,12 +3,13 @@
 import Image from 'next/image';
 import { Bell, Search, MapPin, Flame, ChevronRight } from 'lucide-react';
 import { ViewState } from '@/types';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Academy, Dancer } from '@/types';
 import { ThemeToggle } from '@/components/common/theme-toggle';
 import { BannerCarousel } from '@/components/banner/banner-carousel';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface HomeViewProps {
   onNavigate: (view: ViewState, query?: string) => void;
@@ -47,6 +48,7 @@ const DANCE_CATEGORIES = [
 
 export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeViewProps) => {
   const { t, language } = useLocale();
+  const { translateTexts, isEnglish } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [recentAcademies, setRecentAcademies] = useState<Academy[]>([]);
   const [nearbyAcademies, setNearbyAcademies] = useState<Academy[]>([]);
@@ -56,6 +58,45 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
     auto_slide_interval: 5000,
     is_auto_slide_enabled: true,
   });
+
+  // 영어 모드일 때 학원/강사 이름 자동 번역
+  const translateContent = useCallback(async () => {
+    if (!isEnglish) return;
+
+    // 학원 이름 번역
+    const academyNames = [...recentAcademies, ...nearbyAcademies].map(a => a.name);
+    const instructorNames = hotInstructors.map(i => i.name);
+    const allTexts = [...new Set([...academyNames, ...instructorNames])];
+
+    if (allTexts.length === 0) return;
+
+    const translations = await translateTexts(allTexts);
+    const translationMap = new Map<string, string>();
+    allTexts.forEach((text, i) => {
+      translationMap.set(text, translations[i]);
+    });
+
+    // 번역된 이름 적용
+    setRecentAcademies(prev => prev.map(a => ({
+      ...a,
+      name: translationMap.get(a.name) || a.name,
+    })));
+    setNearbyAcademies(prev => prev.map(a => ({
+      ...a,
+      name: translationMap.get(a.name) || a.name,
+    })));
+    setHotInstructors(prev => prev.map(i => ({
+      ...i,
+      name: translationMap.get(i.name) || i.name,
+    })));
+  }, [isEnglish, recentAcademies, nearbyAcademies, hotInstructors, translateTexts]);
+
+  // 언어 변경 또는 데이터 로드 시 번역 실행
+  useEffect(() => {
+    if (isEnglish && (recentAcademies.length > 0 || nearbyAcademies.length > 0 || hotInstructors.length > 0)) {
+      translateContent();
+    }
+  }, [language]); // language 변경 시에만 실행
 
   useEffect(() => {
     let isMounted = true;

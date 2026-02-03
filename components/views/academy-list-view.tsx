@@ -2,13 +2,14 @@
 
 import Image from 'next/image';
 import { Star, MapPin, Search, X, Heart, SlidersHorizontal, ChevronDown } from 'lucide-react';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Academy } from '@/types';
 import { AcademyFilterModal, AcademyFilter } from '@/components/modals/academy-filter-modal';
 import { calculateDistance, parseAddressToCoordinates, formatDistance } from '@/lib/utils/distance';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface AcademyListViewProps {
   onAcademyClick: (academy: Academy) => void;
@@ -49,6 +50,7 @@ function transformAcademy(dbAcademy: any): Academy {
 
 export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
   const { t, language } = useLocale();
+  const { translateTexts, isEnglish } = useTranslation();
   const [academies, setAcademies] = useState<Academy[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -63,6 +65,33 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [favoritedAcademies, setFavoritedAcademies] = useState<Set<string>>(new Set());
   const { user } = useAuth();
+  const [isTranslated, setIsTranslated] = useState(false);
+
+  // 영어 모드일 때 학원 이름 자동 번역
+  const translateAcademies = useCallback(async () => {
+    if (!isEnglish || academies.length === 0 || isTranslated) return;
+
+    const names = academies.map(a => a.name);
+    const translations = await translateTexts(names);
+    
+    setAcademies(prev => prev.map((a, i) => ({
+      ...a,
+      name: translations[i] || a.name,
+    })));
+    setIsTranslated(true);
+  }, [isEnglish, academies, translateTexts, isTranslated]);
+
+  // 언어 변경 시 번역 상태 리셋
+  useEffect(() => {
+    setIsTranslated(false);
+  }, [language]);
+
+  // 영어 모드이고 데이터 로드 완료 시 번역
+  useEffect(() => {
+    if (isEnglish && !loading && academies.length > 0 && !isTranslated) {
+      translateAcademies();
+    }
+  }, [isEnglish, loading, academies.length, isTranslated, translateAcademies]);
 
   // 사용자 위치 가져오기
   useEffect(() => {
