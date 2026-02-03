@@ -23,15 +23,13 @@ const messages: Record<Language, Record<string, string>> = {
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>('ko');
-  const [isLoaded, setIsLoaded] = useState(false);
 
-  // 초기 언어 로드
+  // 초기 언어 로드 (클라이언트에서만)
   useEffect(() => {
     const savedLang = localStorage.getItem(STORAGE_KEY) as Language | null;
     if (savedLang && (savedLang === 'ko' || savedLang === 'en')) {
       setLanguageState(savedLang);
     }
-    setIsLoaded(true);
   }, []);
 
   // 언어 변경
@@ -58,11 +56,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     return key;
   }, [language]);
 
-  // localStorage 로드 전에는 기본값으로 렌더링 (hydration 불일치 방지)
-  if (!isLoaded) {
-    return null;
-  }
-
+  // 항상 렌더링 - 초기값은 'ko'로 설정되어 있으므로 바로 렌더링 가능
   return (
     <LocaleContext.Provider value={{ language, setLanguage, t }}>
       {children}
