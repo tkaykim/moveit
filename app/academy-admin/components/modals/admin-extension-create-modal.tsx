@@ -244,23 +244,78 @@ export function AdminExtensionCreateModal({
                       <User size={14} />
                       {s.name || s.nickname || s.phone || s.id}
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {(s.user_tickets || []).map((ut) => (
-                        <label key={ut.id} className={`inline-flex items-center gap-1.5 cursor-pointer px-2 py-1 rounded-lg border ${selectedUserTicketId === ut.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-200 dark:border-neutral-700'}`}>
-                          <input
-                            type="radio"
-                            name="adminUserTicket"
-                            checked={selectedUserTicketId === ut.id}
-                            onChange={() => setSelectedUserTicketId(ut.id)}
-                            className="sr-only"
-                          />
-                          <span className={`text-xs ${selectedUserTicketId === ut.id ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'}`}>
-                            {ut.tickets?.name} · 만료 {formatDate(ut.expiry_date)}
-                          </span>
-                        </label>
-                      ))}
+                    <div className="mt-3 space-y-2">
+                      {(s.user_tickets || []).map((ut) => {
+                        const isSelected = selectedUserTicketId === ut.id;
+                        const ticketType = ut.tickets?.ticket_type;
+                        const isCountBased = ticketType === 'COUNT' || ticketType === 'MIXED';
+                        const isPeriodBased = ticketType === 'PERIOD' || ticketType === 'MIXED';
+                        
+                        return (
+                          <label 
+                            key={ut.id} 
+                            className={`
+                              block cursor-pointer p-3 rounded-xl border-2 transition-all
+                              ${isSelected 
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-sm' 
+                                : 'border-gray-200 dark:border-neutral-700 hover:border-gray-300 dark:hover:border-neutral-600 hover:bg-gray-50 dark:hover:bg-neutral-800/50'}
+                            `}
+                          >
+                            <input
+                              type="radio"
+                              name="adminUserTicket"
+                              checked={isSelected}
+                              onChange={() => setSelectedUserTicketId(ut.id)}
+                              className="sr-only"
+                            />
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className={`font-medium text-sm truncate ${isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
+                                  {ut.tickets?.name}
+                                </p>
+                                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                                  {isCountBased && ut.remaining_count !== null && (
+                                    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+                                      isSelected 
+                                        ? 'bg-blue-100 dark:bg-blue-800/40 text-blue-700 dark:text-blue-300' 
+                                        : 'bg-gray-100 dark:bg-neutral-700 text-gray-600 dark:text-gray-400'
+                                    }`}>
+                                      잔여 {ut.remaining_count}회
+                                    </span>
+                                  )}
+                                  {isPeriodBased && ut.expiry_date && (
+                                    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+                                      isSelected 
+                                        ? 'bg-blue-100 dark:bg-blue-800/40 text-blue-700 dark:text-blue-300' 
+                                        : 'bg-gray-100 dark:bg-neutral-700 text-gray-600 dark:text-gray-400'
+                                    }`}>
+                                      만료 {formatDate(ut.expiry_date)}
+                                    </span>
+                                  )}
+                                  {!ut.expiry_date && (
+                                    <span className="text-xs text-gray-400 dark:text-gray-500">만료일 없음</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                isSelected 
+                                  ? 'border-blue-500 bg-blue-500' 
+                                  : 'border-gray-300 dark:border-neutral-600'
+                              }`}>
+                                {isSelected && (
+                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
+                            </div>
+                          </label>
+                        );
+                      })}
                       {(s.user_tickets?.length ?? 0) === 0 && (
-                        <span className="text-xs text-gray-400">보유 수강권 없음</span>
+                        <div className="py-2 px-3 rounded-lg bg-gray-50 dark:bg-neutral-800/50 border border-dashed border-gray-200 dark:border-neutral-700">
+                          <span className="text-xs text-gray-400 dark:text-gray-500">보유 수강권 없음</span>
+                        </div>
                       )}
                     </div>
                   </li>
