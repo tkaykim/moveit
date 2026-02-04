@@ -410,8 +410,6 @@ export function AcademyMapView({ onAcademyClick }: AcademyMapViewProps) {
     );
   }
 
-  const mapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
   return (
     <div className="flex flex-col min-h-[calc(100vh-5rem)] pb-0 animate-in fade-in duration-300">
       {/* 상단: 검색 + 내 주변 / 정렬·필터 */}
@@ -546,25 +544,15 @@ export function AcademyMapView({ onAcademyClick }: AcademyMapViewProps) {
 
       {/* 지도 영역 */}
       <div className="flex-1 min-h-0 w-full relative rounded-xl overflow-hidden">
-        {mapApiKey ? (
-          <GoogleMapBlock
-            center={mapCenter}
-            zoom={mapZoom}
-            academiesWithCoords={academiesWithCoords}
-            selectedAcademy={selectedAcademy}
-            onSelectAcademy={setSelectedAcademy}
-            onCenterChange={setMapCenter}
-            onZoomChange={setMapZoom}
-          />
-        ) : (
-          <div className="w-full h-full bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center rounded-xl">
-            <p className="text-neutral-500 dark:text-neutral-400 text-sm px-4 text-center">
-              {language === "en"
-                ? "Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in .env.local to show the map."
-                : ".env.local에 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY를 설정하면 지도가 표시됩니다."}
-            </p>
-          </div>
-        )}
+        <GoogleMapBlock
+          center={mapCenter}
+          zoom={mapZoom}
+          academiesWithCoords={academiesWithCoords}
+          selectedAcademy={selectedAcademy}
+          onSelectAcademy={setSelectedAcademy}
+          onCenterChange={setMapCenter}
+          onZoomChange={setMapZoom}
+        />
       </div>
 
       {/* 하단 패널: 드래그 확장 가능한 드로어 */}
