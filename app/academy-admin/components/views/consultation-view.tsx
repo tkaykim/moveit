@@ -21,12 +21,27 @@ interface Consultation {
   topic: string;
   status: 'NEW' | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
   scheduled_at?: string | null;
+  visit_datetime?: string | null;
   assigned_to?: string | null;
+  category_id?: string | null;
+  detail?: string | null;
   users?: {
+    name?: string | null;
+  } | null;
+  consultation_categories?: {
     name?: string | null;
   } | null;
   created_at: string;
   notes?: string | null;
+}
+
+interface ConsultationAvailability {
+  phone: {
+    [key: string]: { start: string; end: string }[];
+  };
+  visit: {
+    [key: string]: { start: string; end: string }[];
+  };
 }
 
 interface ConsultationCategory {
@@ -51,6 +66,14 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [availability, setAvailability] = useState<ConsultationAvailability>({
+    phone: {},
+    visit: {}
+  });
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+
+  const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
+  const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
   useEffect(() => {
     loadConsultations();
@@ -68,7 +91,68 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
 
   useEffect(() => {
     loadCategories();
+    loadAvailability();
   }, [academyId]);
+
+  const loadAvailability = async () => {
+    try {
+      const res = await fetch(`/api/academies/${academyId}/consultation-availability`);
+      const data = await res.json();
+      if (res.ok && data.data) {
+        setAvailability(data.data);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const saveAvailability = async (newAvailability: ConsultationAvailability) => {
+    setAvailabilityLoading(true);
+    try {
+      const res = await fetch(`/api/academies/${academyId}/consultation-availability`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newAvailability),
+      });
+      if (!res.ok) throw new Error('저장 실패');
+      setAvailability(newAvailability);
+      alert('상담 가능 시간이 저장되었습니다.');
+    } catch (e: any) {
+      alert(e.message || '저장 실패');
+    } finally {
+      setAvailabilityLoading(false);
+    }
+  };
+
+  const toggleDayTime = (type: 'phone' | 'visit', dayKey: string) => {
+    const current = availability[type][dayKey];
+    const newAvailability = { ...availability };
+    
+    if (current && current.length > 0) {
+      // 제거
+      newAvailability[type] = { ...newAvailability[type] };
+      delete newAvailability[type][dayKey];
+    } else {
+      // 기본값 추가
+      newAvailability[type] = {
+        ...newAvailability[type],
+        [dayKey]: [{ start: '09:00', end: '18:00' }]
+      };
+    }
+    setAvailability(newAvailability);
+  };
+
+  const updateDayTime = (type: 'phone' | 'visit', dayKey: string, field: 'start' | 'end', value: string) => {
+    const newAvailability = { ...availability };
+    if (!newAvailability[type][dayKey]) {
+      newAvailability[type][dayKey] = [{ start: '09:00', end: '18:00' }];
+    }
+    newAvailability[type] = {
+      ...newAvailability[type],
+      [dayKey]: [{ ...newAvailability[type][dayKey][0], [field]: value }]
+    };
+    setAvailability(newAvailability);
+  };
 
   const loadConsultations = async () => {
     const supabase = getSupabaseClient();
@@ -83,6 +167,9 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
         .select(`
           *,
           users!consultations_assigned_to_fkey (
+            name
+          ),
+          consultation_categories (
             name
           )
         `)
@@ -483,6 +570,12 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
                             </span>
                           )}
                         </div>
+                        {c.visit_datetime && (
+                          <div className="mt-2 text-xs text-orange-600 dark:text-orange-400 font-medium flex items-center gap-1">
+                            <Calendar size={12} />
+                            희망: {new Date(c.visit_datetime).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -537,6 +630,12 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
                           {item.users?.name || '-'}
                         </span>
                       </div>
+                      {item.visit_datetime && (
+                        <div className="mt-2 text-xs text-orange-600 dark:text-orange-400 font-medium flex items-center gap-1">
+                          <Calendar size={12} />
+                          희망: {new Date(item.visit_datetime).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      )}
                     </div>
                   ))}
                   <button
@@ -686,9 +785,9 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
                       <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">고객 정보</th>
                       <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">상담 주제</th>
                       <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">상태</th>
-                      <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">예정 일시</th>
+                      <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">희망 일시</th>
+                      <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">확정 일시</th>
                       <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">담당자</th>
-                      <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">등록일</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-neutral-800">
@@ -722,13 +821,30 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
                           </td>
                           <td className="px-5 py-4">
                             <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-1">{c.topic}</p>
+                            {c.consultation_categories?.name && (
+                              <span className="text-xs text-blue-600 dark:text-blue-400">{c.consultation_categories.name}</span>
+                            )}
                           </td>
                           <td className="px-5 py-4">
                             {getStatusBadge(c.status)}
                           </td>
                           <td className="px-5 py-4">
+                            {c.visit_datetime ? (
+                              <span className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+                                {new Date(c.visit_datetime).toLocaleString('ko-KR', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-4">
                             {c.scheduled_at ? (
-                              <span className="text-sm text-gray-700 dark:text-gray-300">
+                              <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">
                                 {new Date(c.scheduled_at).toLocaleString('ko-KR', {
                                   month: 'short',
                                   day: 'numeric',
@@ -742,11 +858,6 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
                           </td>
                           <td className="px-5 py-4">
                             <span className="text-sm text-gray-700 dark:text-gray-300">{c.users?.name || '-'}</span>
-                          </td>
-                          <td className="px-5 py-4">
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
-                              {new Date(c.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
-                            </span>
                           </td>
                         </tr>
                       ))
@@ -864,11 +975,136 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
                   </div>
                 </div>
 
+                {/* 상담 가능 시간 설정 */}
+                <div className="mt-6 bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 overflow-hidden">
+                  <div className="px-6 py-5 border-b border-gray-100 dark:border-neutral-800">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">상담 가능 시간</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">요일별로 전화/방문 상담 가능 시간을 설정하세요</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6 space-y-6">
+                    {/* 전화 상담 가능 시간 */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Phone size={16} className="text-blue-600 dark:text-blue-400" />
+                        <label className="text-sm font-semibold text-gray-900 dark:text-white">전화 상담 가능 시간</label>
+                      </div>
+                      <div className="space-y-2">
+                        {DAY_KEYS.map((dayKey, idx) => {
+                          const isActive = availability.phone[dayKey] && availability.phone[dayKey].length > 0;
+                          const times = availability.phone[dayKey]?.[0] || { start: '09:00', end: '18:00' };
+                          return (
+                            <div key={dayKey} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-neutral-800">
+                              <button
+                                type="button"
+                                onClick={() => toggleDayTime('phone', dayKey)}
+                                className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${
+                                  isActive
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-200 dark:bg-neutral-700 text-gray-500 dark:text-gray-400'
+                                }`}
+                              >
+                                {DAYS[idx]}
+                              </button>
+                              {isActive ? (
+                                <div className="flex items-center gap-2 flex-1">
+                                  <input
+                                    type="time"
+                                    value={times.start}
+                                    onChange={(e) => updateDayTime('phone', dayKey, 'start', e.target.value)}
+                                    className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                                  />
+                                  <span className="text-gray-400">~</span>
+                                  <input
+                                    type="time"
+                                    value={times.end}
+                                    onChange={(e) => updateDayTime('phone', dayKey, 'end', e.target.value)}
+                                    className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                                  />
+                                </div>
+                              ) : (
+                                <span className="text-sm text-gray-400">휴무</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* 방문 상담 가능 시간 */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Users size={16} className="text-purple-600 dark:text-purple-400" />
+                        <label className="text-sm font-semibold text-gray-900 dark:text-white">방문 상담 가능 시간</label>
+                      </div>
+                      <div className="space-y-2">
+                        {DAY_KEYS.map((dayKey, idx) => {
+                          const isActive = availability.visit[dayKey] && availability.visit[dayKey].length > 0;
+                          const times = availability.visit[dayKey]?.[0] || { start: '09:00', end: '18:00' };
+                          return (
+                            <div key={dayKey} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-neutral-800">
+                              <button
+                                type="button"
+                                onClick={() => toggleDayTime('visit', dayKey)}
+                                className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${
+                                  isActive
+                                    ? 'bg-purple-600 text-white'
+                                    : 'bg-gray-200 dark:bg-neutral-700 text-gray-500 dark:text-gray-400'
+                                }`}
+                              >
+                                {DAYS[idx]}
+                              </button>
+                              {isActive ? (
+                                <div className="flex items-center gap-2 flex-1">
+                                  <input
+                                    type="time"
+                                    value={times.start}
+                                    onChange={(e) => updateDayTime('visit', dayKey, 'start', e.target.value)}
+                                    className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                                  />
+                                  <span className="text-gray-400">~</span>
+                                  <input
+                                    type="time"
+                                    value={times.end}
+                                    onChange={(e) => updateDayTime('visit', dayKey, 'end', e.target.value)}
+                                    className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                                  />
+                                </div>
+                              ) : (
+                                <span className="text-sm text-gray-400">휴무</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* 저장 버튼 */}
+                    <div className="pt-4 border-t border-gray-100 dark:border-neutral-800">
+                      <button
+                        type="button"
+                        onClick={() => saveAvailability(availability)}
+                        disabled={availabilityLoading}
+                        className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                      >
+                        {availabilityLoading ? '저장 중...' : '상담 가능 시간 저장'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 {/* 추가 설정 안내 */}
                 <div className="mt-6 p-4 rounded-xl bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700">
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    <span className="font-medium text-gray-900 dark:text-white">Tip:</span> 상담 카테고리는 학원 상세 페이지의 상담 신청 폼에서 고객이 선택할 수 있습니다. 
-                    각 카테고리별로 소요 시간을 다르게 설정하여 상담 일정을 효율적으로 관리하세요.
+                    <span className="font-medium text-gray-900 dark:text-white">Tip:</span> 상담 카테고리와 상담 가능 시간은 학원 상세 페이지의 상담 신청 폼에서 사용됩니다. 
+                    고객이 희망 시간을 선택할 때 설정된 시간 내에서만 선택할 수 있습니다.
                   </p>
                 </div>
               </div>

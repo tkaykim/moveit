@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Calendar, Clock, User, Tag } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 
 interface ConsultationModalProps {
@@ -22,6 +22,11 @@ export function ConsultationModal({ academyId, consultation, onClose }: Consulta
   });
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // 희망 방문 정보 (읽기전용)
+  const visitDatetime = consultation?.visit_datetime;
+  const categoryName = consultation?.consultation_categories?.name;
+  const detail = consultation?.detail;
 
   useEffect(() => {
     loadUsers();
@@ -130,8 +135,8 @@ export function ConsultationModal({ academyId, consultation, onClose }: Consulta
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 dark:bg-black/60 backdrop-blur-sm">
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
-        <div className="p-6 border-b dark:border-neutral-800 flex justify-between items-center">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-6 border-b dark:border-neutral-800 flex justify-between items-center flex-shrink-0">
           <h3 className="text-xl font-bold text-gray-800 dark:text-white">
             {consultation ? '상담 수정' : '상담 등록'}
           </h3>
@@ -143,7 +148,51 @@ export function ConsultationModal({ academyId, consultation, onClose }: Consulta
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
+          {/* 고객 희망 정보 (읽기전용 - 기존 상담인 경우만) */}
+          {consultation && (visitDatetime || categoryName || detail) && (
+            <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 border border-orange-200 dark:border-orange-900/30 space-y-3">
+              <h4 className="text-sm font-semibold text-orange-800 dark:text-orange-400 flex items-center gap-2">
+                <User size={14} />
+                고객 신청 정보
+              </h4>
+              
+              {categoryName && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Tag size={14} className="text-orange-600 dark:text-orange-400" />
+                  <span className="text-gray-600 dark:text-gray-400">카테고리:</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{categoryName}</span>
+                </div>
+              )}
+              
+              {visitDatetime && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar size={14} className="text-orange-600 dark:text-orange-400" />
+                  <span className="text-gray-600 dark:text-gray-400">희망 방문일시:</span>
+                  <span className="font-medium text-orange-700 dark:text-orange-300">
+                    {new Date(visitDatetime).toLocaleString('ko-KR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      weekday: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+              )}
+              
+              {detail && (
+                <div className="text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">상세 내용:</span>
+                  <p className="mt-1 text-gray-900 dark:text-white bg-white dark:bg-neutral-800 rounded-lg p-2 text-sm">
+                    {detail}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               이름 *
@@ -151,7 +200,7 @@ export function ConsultationModal({ academyId, consultation, onClose }: Consulta
             <input
               type="text"
               required
-              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
@@ -163,7 +212,7 @@ export function ConsultationModal({ academyId, consultation, onClose }: Consulta
             </label>
             <input
               type="tel"
-              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             />
@@ -176,7 +225,7 @@ export function ConsultationModal({ academyId, consultation, onClose }: Consulta
             <input
               type="text"
               required
-              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
               value={formData.topic}
               onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
             />
@@ -187,7 +236,7 @@ export function ConsultationModal({ academyId, consultation, onClose }: Consulta
               상태
             </label>
             <select
-              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
             >
@@ -198,16 +247,20 @@ export function ConsultationModal({ academyId, consultation, onClose }: Consulta
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              상담 예정 시간
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-900/30">
+            <label className="block text-sm font-semibold text-blue-800 dark:text-blue-400 mb-2 flex items-center gap-2">
+              <Clock size={14} />
+              확정 상담 일시 (관리자 설정)
             </label>
             <input
               type="datetime-local"
-              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+              className="w-full border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
               value={formData.scheduled_at}
               onChange={(e) => setFormData({ ...formData, scheduled_at: e.target.value })}
             />
+            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1.5">
+              * 고객의 희망 일시를 참고하여 실제 상담 일정을 확정하세요
+            </p>
           </div>
 
           <div>
@@ -215,7 +268,7 @@ export function ConsultationModal({ academyId, consultation, onClose }: Consulta
               담당자
             </label>
             <select
-              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
               value={formData.assigned_to}
               onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value })}
             >
@@ -233,7 +286,7 @@ export function ConsultationModal({ academyId, consultation, onClose }: Consulta
               메모
             </label>
             <textarea
-              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
               rows={3}
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -244,14 +297,14 @@ export function ConsultationModal({ academyId, consultation, onClose }: Consulta
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border dark:border-neutral-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors"
+              className="flex-1 px-4 py-2.5 border dark:border-neutral-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors"
             >
               취소
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 font-medium"
             >
               {loading ? '저장 중...' : '저장'}
             </button>
@@ -261,13 +314,3 @@ export function ConsultationModal({ academyId, consultation, onClose }: Consulta
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
