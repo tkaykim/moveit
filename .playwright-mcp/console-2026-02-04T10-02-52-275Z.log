@@ -1,0 +1,2 @@
+[    1800ms] [WARNING] Image with src "https://search.pstatic.net/common/?src=http%3A%2F%2Fblogfiles.naver.net%2FMjAyMTEwMDhfNTYg%2FMDAxNjMzNjY5NzcwMTI1.2TAoBALu5aLq7j0DWTF0FwDZmbCzMO12_Iw_ih_112Ig.pACL6Z35GsZ5wwO38AaR6kipIEzoUgULCjNCoTQjlIkg.GIF.icnpluginjoy%2FGIFgdf.gif&type=sc960_832_gif" was detected as the Largest Contentful Paint (LCP). Please add the "priority" property if this image is above the fold.
+Read more: https://nextjs.org/docs/api-reference/next/image#priority @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/utils/warn-once.js:15

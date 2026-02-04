@@ -21,21 +21,37 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { academyId, user_ticket_id, request_type, absent_start_date, absent_end_date } = body;
-    if (!academyId || !user_ticket_id || !request_type || !absent_start_date || !absent_end_date) {
-      return NextResponse.json(
-        { error: 'academyId, user_ticket_id, request_type, absent_start_date, absent_end_date 가 필요합니다.' },
-        { status: 400 }
-      );
+    const { academyId, user_ticket_id, request_type, extension_days, absent_start_date, absent_end_date, reason } = body;
+
+    if (!academyId || !user_ticket_id || !request_type) {
+      return NextResponse.json({ error: 'academyId, user_ticket_id, request_type가 필요합니다.' }, { status: 400 });
     }
     if (!['EXTENSION', 'PAUSE'].includes(request_type)) {
       return NextResponse.json({ error: 'request_type는 EXTENSION 또는 PAUSE 여야 합니다.' }, { status: 400 });
     }
+    if (!reason || typeof reason !== 'string' || !reason.trim()) {
+      return NextResponse.json({ error: '사유를 입력해주세요.' }, { status: 400 });
+    }
 
-    const start = new Date(absent_start_date);
-    const end = new Date(absent_end_date);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
-      return NextResponse.json({ error: '유효한 absent 기간(시작일~종료일)을 입력해주세요.' }, { status: 400 });
+    // 연장: extension_days 필수
+    if (request_type === 'EXTENSION') {
+      if (!extension_days || typeof extension_days !== 'number' || extension_days <= 0) {
+        return NextResponse.json({ error: '연장 일수를 입력해주세요.' }, { status: 400 });
+      }
+    }
+
+    // 일시정지: 시작일/종료일 필수
+    let pauseDays = 0;
+    if (request_type === 'PAUSE') {
+      if (!absent_start_date || !absent_end_date) {
+        return NextResponse.json({ error: '일시정지 시작일과 종료일을 입력해주세요.' }, { status: 400 });
+      }
+      const start = new Date(absent_start_date);
+      const end = new Date(absent_end_date);
+      if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+        return NextResponse.json({ error: '유효한 일시정지 기간(시작일~종료일)을 입력해주세요.' }, { status: 400 });
+      }
+      pauseDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     }
 
     const { data: userTicket, error: utError } = await supabase
@@ -57,8 +73,10 @@ export async function POST(request: Request) {
       .insert({
         user_ticket_id,
         request_type,
-        absent_start_date,
-        absent_end_date,
+        extension_days: request_type === 'EXTENSION' ? extension_days : null,
+        absent_start_date: request_type === 'PAUSE' ? absent_start_date : null,
+        absent_end_date: request_type === 'PAUSE' ? absent_end_date : null,
+        reason: reason.trim(),
         status: 'APPROVED',
         processed_at: now,
         processed_by: adminUser.id,
@@ -72,8 +90,8 @@ export async function POST(request: Request) {
     }
 
     // 즉시 반영: 만료일 연장 및 기간권 예약 재생성
-    if (userTicket.expiry_date) {
-      const addDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const addDays = request_type === 'EXTENSION' ? extension_days : pauseDays;
+    if (userTicket.expiry_date && addDays > 0) {
       const currentExpiry = new Date(userTicket.expiry_date);
       const newExpiry = new Date(currentExpiry);
       newExpiry.setDate(newExpiry.getDate() + addDays);
@@ -88,7 +106,8 @@ export async function POST(request: Request) {
       const ticketId = userTicket.ticket_id;
       const userId = userTicket.user_id;
 
-      if (ticketType === 'PERIOD' && ticketId && userId) {
+      // 일시정지(PAUSE)일 때만 기간권 예약 취소 및 재생성
+      if (request_type === 'PAUSE' && ticketType === 'PERIOD' && ticketId && userId) {
         const schedulesInAbsent = await getSchedulesForPeriodTicket(ticketId, absent_start_date, absent_end_date);
         for (const sch of schedulesInAbsent || []) {
           const { data: toCancel } = await supabase

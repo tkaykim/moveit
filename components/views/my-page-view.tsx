@@ -148,7 +148,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
 
             const dayLabelsKo = ['일', '월', '화', '수', '목', '금', '토'];
             const dayLabelsEn = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-            const dayLabels = dayLabelsKo; // will be selected in UI based on language
+            const dayLabels = language === 'en' ? dayLabelsEn : dayLabelsKo;
             weekDays.push({
               date,
               dayLabel: dayLabels[date.getDay()],
@@ -236,7 +236,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
               </div>
               <div className="flex-1 text-left">
                 <h2 className="text-base font-bold text-black dark:text-white">{t('my.login')}</h2>
-                <p className="text-sm text-neutral-500">{language === 'en' ? 'Login to access more features' : '로그인하여 더 많은 기능을 이용하세요'}</p>
+                <p className="text-sm text-neutral-500">{t('my.loginForMore')}</p>
               </div>
               <ChevronRight className="text-neutral-400" size={20} />
             </button>
@@ -266,8 +266,8 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                 ))}
               </div>
             ) : !user ? (
-              <div className="text-center py-6 text-neutral-500 text-sm">
-                {language === 'en' ? 'Please login to view' : '로그인 후 확인할 수 있습니다'}
+                <div className="text-center py-6 text-neutral-500 text-sm">
+                {t('my.loginToView')}
               </div>
             ) : ticketSummary.total === 0 ? (
               <div className="text-center py-6">
@@ -280,19 +280,19 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                   <div className="text-2xl font-black text-blue-600 dark:text-blue-400 mb-1">
                     {ticketSummary.regular}
                   </div>
-                  <div className="text-xs font-medium text-blue-600 dark:text-blue-400">{language === 'en' ? 'Period' : '기간제'}</div>
+                  <div className="text-xs font-medium text-blue-600 dark:text-blue-400">{t('my.periodTicket')}</div>
                 </div>
                 <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 text-center">
                   <div className="text-2xl font-black text-purple-600 dark:text-purple-400 mb-1">
                     {ticketSummary.popup}
                   </div>
-                  <div className="text-xs font-medium text-purple-600 dark:text-purple-400">{language === 'en' ? 'Count' : '쿠폰제(횟수제)'}</div>
+                  <div className="text-xs font-medium text-purple-600 dark:text-purple-400">{t('my.countTicket')}</div>
                 </div>
                 <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 text-center">
                   <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mb-1">
                     {ticketSummary.workshop}
                   </div>
-                  <div className="text-xs font-medium text-amber-600 dark:text-amber-400">{language === 'en' ? 'Workshop' : '워크샵(특강)'}</div>
+                  <div className="text-xs font-medium text-amber-600 dark:text-amber-400">{t('my.workshopTicket')}</div>
                 </div>
               </div>
             )}
@@ -308,7 +308,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                   <h2 className="text-base font-bold text-black dark:text-white">{t('my.myBookings')}</h2>
                   {totalUpcoming > 0 && (
                     <span className="px-2 py-0.5 text-xs font-bold bg-primary/10 dark:bg-[#CCFF00]/20 text-primary dark:text-[#CCFF00] rounded-full">
-                      {totalUpcoming}{language === 'en' ? '' : '건'}
+                      {totalUpcoming}{language === 'ko' ? '건' : ''}
                     </span>
                   )}
                 </div>
@@ -340,7 +340,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                     onClick={() => router.push('/search')}
                     className="mt-3 text-sm text-primary dark:text-[#CCFF00] font-medium"
                   >
-                    {language === 'en' ? 'Find Classes' : '클래스 찾아보기'}
+                    {t('my.findClasses')}
                   </button>
                 </div>
               ) : (
@@ -351,7 +351,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                       <div className="w-6 h-6 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center">
                         <Play size={12} className="text-white dark:text-black ml-0.5" />
                       </div>
-                      <span className="text-xs font-bold text-primary dark:text-[#CCFF00]">{language === 'en' ? 'Next Class' : '다음 수업'}</span>
+                      <span className="text-xs font-bold text-primary dark:text-[#CCFF00]">{t('my.nextClass')}</span>
                     </div>
                     <div className="font-bold text-black dark:text-white text-lg mb-2">
                       {nextClass.className}
@@ -373,7 +373,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                   {/* 이번 주 일정 미니 캘린더 */}
                   {weekSchedule.length > 0 && (
                     <div>
-                      <div className="text-xs font-medium text-neutral-500 mb-2">{language === 'en' ? 'This Week' : '이번 주 일정'}</div>
+                      <div className="text-xs font-medium text-neutral-500 mb-2">{t('my.thisWeek')}</div>
                       <div className="grid grid-cols-7 gap-1">
                         {weekSchedule.map((day, idx) => (
                           <button

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { X, Calendar } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface TicketExtensionRequestModalProps {
   isOpen: boolean;
@@ -24,8 +24,10 @@ export function TicketExtensionRequestModal({
   onSuccess,
 }: TicketExtensionRequestModalProps) {
   const [requestType, setRequestType] = useState<'EXTENSION' | 'PAUSE'>('EXTENSION');
+  const [extensionDays, setExtensionDays] = useState<number | ''>('');
   const [absentStart, setAbsentStart] = useState('');
   const [absentEnd, setAbsentEnd] = useState('');
+  const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -36,43 +38,68 @@ export function TicketExtensionRequestModal({
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   })();
 
+  // 연장 요약 계산
   const extensionSummary = (() => {
-    if (!absentStart || !absentEnd) return null;
-    const start = new Date(absentStart);
-    const end = new Date(absentEnd);
-    if (end < start) return null;
-    const extensionDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    let days = 0;
+    if (requestType === 'EXTENSION') {
+      days = typeof extensionDays === 'number' && extensionDays > 0 ? extensionDays : 0;
+    } else if (requestType === 'PAUSE' && absentStart && absentEnd) {
+      const start = new Date(absentStart);
+      const end = new Date(absentEnd);
+      if (end >= start) {
+        days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      }
+    }
+    if (days <= 0) return null;
     const currentExpiry = expiryDate ? new Date(expiryDate) : null;
     const newExpiry = currentExpiry
-      ? new Date(currentExpiry.getTime() + extensionDays * 24 * 60 * 60 * 1000)
+      ? new Date(currentExpiry.getTime() + days * 24 * 60 * 60 * 1000)
       : null;
-    return { extensionDays, currentExpiry, newExpiry };
+    return { extensionDays: days, currentExpiry, newExpiry };
   })();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!absentStart || !absentEnd) {
-      setError('휴가/불참 기간(시작일·종료일)을 선택해주세요.');
+
+    if (!reason.trim()) {
+      setError('사유를 입력해주세요.');
       return;
     }
-    const start = new Date(absentStart);
-    const end = new Date(absentEnd);
-    if (end < start) {
-      setError('종료일은 시작일 이후여야 합니다.');
-      return;
-    }
-    if (start < new Date(todayStr) || end < new Date(todayStr)) {
-      setError('시작일과 종료일은 오늘 이후로 선택해주세요.');
-      return;
-    }
-    if (requestType === 'EXTENSION' && maxExtensionDays != null) {
-      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      if (days > maxExtensionDays) {
-        setError(`연장 신청은 최대 ${maxExtensionDays}일까지 가능합니다.`);
+
+    if (requestType === 'EXTENSION') {
+      if (!extensionDays || extensionDays <= 0) {
+        setError('연장 일수를 입력해주세요.');
+        return;
+      }
+      if (maxExtensionDays != null && extensionDays > maxExtensionDays) {
+        setError(`연장은 최대 ${maxExtensionDays}일까지 가능합니다.`);
         return;
       }
     }
+
+    if (requestType === 'PAUSE') {
+      if (!absentStart || !absentEnd) {
+        setError('일시정지 기간(시작일·종료일)을 선택해주세요.');
+        return;
+      }
+      const start = new Date(absentStart);
+      const end = new Date(absentEnd);
+      if (end < start) {
+        setError('종료일은 시작일 이후여야 합니다.');
+        return;
+      }
+      if (start < new Date(todayStr) || end < new Date(todayStr)) {
+        setError('시작일과 종료일은 오늘 이후로 선택해주세요.');
+        return;
+      }
+      const pauseDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      if (maxExtensionDays != null && pauseDays > maxExtensionDays) {
+        setError(`일시정지는 최대 ${maxExtensionDays}일까지 가능합니다.`);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const res = await fetch('/api/ticket-extension-requests', {
@@ -82,15 +109,19 @@ export function TicketExtensionRequestModal({
         body: JSON.stringify({
           user_ticket_id: userTicketId,
           request_type: requestType,
-          absent_start_date: absentStart,
-          absent_end_date: absentEnd,
+          extension_days: requestType === 'EXTENSION' ? extensionDays : undefined,
+          absent_start_date: requestType === 'PAUSE' ? absentStart : undefined,
+          absent_end_date: requestType === 'PAUSE' ? absentEnd : undefined,
+          reason: reason.trim(),
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '신청에 실패했습니다.');
       alert('신청이 접수되었습니다. 관리자 승인 후 반영됩니다.');
+      setExtensionDays('');
       setAbsentStart('');
       setAbsentEnd('');
+      setReason('');
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -143,35 +174,70 @@ export function TicketExtensionRequestModal({
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {requestType === 'EXTENSION'
-                ? '휴가/불참 기간만큼 만료일이 연장됩니다.'
-                : '해당 기간만큼 유효기간이 연장됩니다.'}
+                ? '입력한 일수만큼 만료일이 연장됩니다.'
+                : '일시정지 기간만큼 만료일이 뒤로 밀립니다.'}
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+
+          {requestType === 'EXTENSION' ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">시작일</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">연장 일수</label>
               <input
-                type="date"
-                value={absentStart}
-                min={todayStr}
-                onChange={(e) => setAbsentStart(e.target.value)}
+                type="number"
+                min={1}
+                max={maxExtensionDays ?? 365}
+                value={extensionDays}
+                onChange={(e) => setExtensionDays(e.target.value ? parseInt(e.target.value) : '')}
+                placeholder="예: 7"
                 className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
               />
+              {maxExtensionDays != null && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  이 학원은 최대 {maxExtensionDays}일까지 가능합니다.
+                </p>
+              )}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">종료일</label>
-              <input
-                type="date"
-                value={absentEnd}
-                min={todayStr}
-                onChange={(e) => setAbsentEnd(e.target.value)}
-                className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
-              />
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">시작일</label>
+                <input
+                  type="date"
+                  value={absentStart}
+                  min={todayStr}
+                  onChange={(e) => setAbsentStart(e.target.value)}
+                  className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">종료일</label>
+                <input
+                  type="date"
+                  value={absentEnd}
+                  min={todayStr}
+                  onChange={(e) => setAbsentEnd(e.target.value)}
+                  className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
+                />
+              </div>
             </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              사유 <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="연장/일시정지 사유를 입력해주세요."
+              rows={2}
+              className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white resize-none"
+            />
           </div>
+
           {extensionSummary && (
             <div className="rounded-lg border border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800/50 p-3 space-y-1.5 text-sm">
-              <p className="font-medium text-gray-900 dark:text-white">신청 기간 요약</p>
+              <p className="font-medium text-gray-900 dark:text-white">신청 요약</p>
               <p className="text-gray-600 dark:text-gray-400">
                 연장 일수: <span className="font-medium text-gray-900 dark:text-white">{extensionSummary.extensionDays}일</span>
               </p>
@@ -190,11 +256,7 @@ export function TicketExtensionRequestModal({
               )}
             </div>
           )}
-          {maxExtensionDays != null && requestType === 'EXTENSION' && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              이 학원은 연장 신청 시 최대 {maxExtensionDays}일까지 가능합니다.
-            </p>
-          )}
+
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           <div className="flex gap-2 pt-2">
             <button

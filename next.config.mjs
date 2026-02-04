@@ -13,7 +13,7 @@ const nextConfig = {
   
   // 브라우저 호환성 개선
   experimental: {
-    optimizePackageImports: ['lucide-react', '@supabase/supabase-js'],
+    optimizePackageImports: ['@supabase/supabase-js'],
   },
   
   // CSS 최적화 및 로딩 보장

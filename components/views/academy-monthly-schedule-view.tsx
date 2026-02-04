@@ -4,13 +4,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, X, Clock, User, MapPin } from 'lucide-react';
 import { ClassInfo } from '@/types';
 import { formatKSTTime, getKSTDateParts, convertKSTInputToUTC } from '@/lib/utils/kst-time';
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface AcademyMonthlyScheduleViewProps {
   academyId: string;
   onClassClick: (classInfo: ClassInfo & { time?: string }) => void;
 }
 
-const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
+const INSTRUCTOR_TBD = '강사 미정';
 
 // 난이도별 색상
 const LEVEL_COLORS: Record<string, { bg: string; border: string; text: string; dot: string }> = {
@@ -22,7 +23,7 @@ const LEVEL_COLORS: Record<string, { bg: string; border: string; text: string; d
 // Schedule을 ClassInfo로 변환
 function transformSchedule(scheduleData: any): ClassInfo & { time?: string; startTime?: string; endTime?: string; hallName?: string } {
   const classInfo = scheduleData.classes;
-  const instructor = scheduleData.instructors?.name_kr || scheduleData.instructors?.name_en || classInfo?.instructors?.name_kr || classInfo?.instructors?.name_en || '강사 미정';
+  const instructor = scheduleData.instructors?.name_kr || scheduleData.instructors?.name_en || classInfo?.instructors?.name_kr || classInfo?.instructors?.name_en || INSTRUCTOR_TBD;
   const genre = classInfo?.genre || '';
   const level = classInfo?.difficulty_level || 'All Level';
   const maxStudents = scheduleData.max_students || classInfo?.max_students || 0;
@@ -64,15 +65,16 @@ const getLevelColor = (level: string) => {
   return { bg: 'bg-neutral-100 dark:bg-neutral-800', border: 'border-neutral-300 dark:border-neutral-700', text: 'text-neutral-600 dark:text-neutral-400', dot: 'bg-neutral-400' };
 };
 
-const getLevelLabel = (level: string) => {
+const getLevelLabelKey = (level: string): 'schedule.levelBeginner' | 'schedule.levelIntermediate' | 'schedule.levelAdvanced' | null => {
   const upperLevel = level?.toUpperCase() || '';
-  if (upperLevel.includes('BEGINNER') || upperLevel.includes('초급')) return '초급';
-  if (upperLevel.includes('INTERMEDIATE') || upperLevel.includes('중급')) return '중급';
-  if (upperLevel.includes('ADVANCED') || upperLevel.includes('고급')) return '고급';
-  return 'All';
+  if (upperLevel.includes('BEGINNER') || upperLevel.includes('초급')) return 'schedule.levelBeginner';
+  if (upperLevel.includes('INTERMEDIATE') || upperLevel.includes('중급')) return 'schedule.levelIntermediate';
+  if (upperLevel.includes('ADVANCED') || upperLevel.includes('고급')) return 'schedule.levelAdvanced';
+  return null;
 };
 
 export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyMonthlyScheduleViewProps) => {
+  const { t } = useLocale();
   const [schedules, setSchedules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
@@ -261,6 +263,8 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
 
+  const dayLabels = [t('schedule.daySun'), t('schedule.dayMon'), t('schedule.dayTue'), t('schedule.dayWed'), t('schedule.dayThu'), t('schedule.dayFri'), t('schedule.daySat')];
+
   // 오늘 날짜 확인용
   const today = new Date();
   const todayParts = { year: today.getFullYear(), month: today.getMonth() + 1, day: today.getDate() };
@@ -270,7 +274,7 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
     if (!selectedDate) return '';
     const parts = getKSTDateParts(selectedDate);
     const dayOfWeek = selectedDate.getDay();
-    return `${parts.month}월 ${parts.day}일 (${DAY_NAMES[dayOfWeek]})`;
+    return t('schedule.dateWithDay', { month: String(parts.month), day: String(parts.day), dayName: dayLabels[dayOfWeek] });
   };
 
   if (loading) {
@@ -293,12 +297,12 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
             <ChevronLeft size={20} className="text-neutral-600 dark:text-neutral-400" />
           </button>
           <div className="flex items-center gap-3">
-            <span className="text-base font-bold text-black dark:text-white">{year}년 {month + 1}월</span>
+            <span className="text-base font-bold text-black dark:text-white">{t('schedule.monthYear', { year: String(year), month: String(month + 1) })}</span>
             <button
               onClick={goToToday}
               className="text-xs px-3 py-1.5 bg-primary/10 dark:bg-[#CCFF00]/10 text-primary dark:text-[#CCFF00] rounded-full font-medium hover:bg-primary/20 dark:hover:bg-[#CCFF00]/20 transition-colors"
             >
-              이번 달
+              {t('schedule.thisMonth')}
             </button>
           </div>
           <button
@@ -313,9 +317,9 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
         <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
           {/* 요일 헤더 */}
           <div className="grid grid-cols-7 border-b border-neutral-200 dark:border-neutral-800">
-            {DAY_NAMES.map((day, idx) => (
+            {dayLabels.map((day, idx) => (
               <div
-                key={day}
+                key={idx}
                 className={`p-2 text-center text-xs font-bold ${
                   idx === 0 ? 'text-rose-500' : idx === 6 ? 'text-blue-500' : 'text-neutral-600 dark:text-neutral-400'
                 } bg-neutral-50 dark:bg-neutral-950`}
@@ -391,7 +395,7 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
                       </div>
                       {/* 수업 개수 */}
                       <div className="text-[10px] text-primary dark:text-[#CCFF00] font-medium">
-                        {daySchedules.length}개 수업
+                        {t('schedule.classesCount', { count: String(daySchedules.length) })}
                       </div>
                     </div>
                   )}
@@ -405,15 +409,15 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
         <div className="flex items-center justify-center gap-4 pt-2">
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-            <span className="text-[10px] text-neutral-500 dark:text-neutral-400">초급</span>
+            <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{t('schedule.levelBeginner')}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-            <span className="text-[10px] text-neutral-500 dark:text-neutral-400">중급</span>
+            <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{t('schedule.levelIntermediate')}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-rose-500"></div>
-            <span className="text-[10px] text-neutral-500 dark:text-neutral-400">고급</span>
+            <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{t('schedule.levelAdvanced')}</span>
           </div>
         </div>
       </div>
@@ -441,7 +445,7 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
                 </button>
               </div>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-                {selectedDateSchedules.length}개의 수업
+                {t('schedule.classesCountShort', { count: String(selectedDateSchedules.length) })}
               </p>
             </div>
 
@@ -483,7 +487,7 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
                       <div className="flex-1 min-w-0">
                         {/* 수업명 */}
                         <div className="font-bold text-black dark:text-white text-base leading-tight">
-                          {classInfo.class_title || classInfo.genre || '수업'}
+                          {classInfo.class_title || classInfo.genre || t('schedule.classLabel')}
                         </div>
                         
                         {/* 강사 & 장르 */}
@@ -491,7 +495,7 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
                           <div className="flex items-center gap-1">
                             <User size={12} className="text-neutral-400" />
                             <span className="text-sm text-neutral-600 dark:text-neutral-300">
-                              {classInfo.instructor}
+                              {classInfo.instructor === INSTRUCTOR_TBD ? t('schedule.instructorTbd') : classInfo.instructor}
                             </span>
                           </div>
                           {classInfo.genre && classInfo.class_title && (
@@ -515,11 +519,11 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
                       {/* 난이도 & 상태 */}
                       <div className="flex-shrink-0 flex flex-col items-end gap-1">
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${levelColor.text} bg-white/50 dark:bg-black/20`}>
-                          {getLevelLabel(classInfo.level)}
+                          {getLevelLabelKey(classInfo.level) ? t(getLevelLabelKey(classInfo.level)!) : 'All'}
                         </span>
                         {isFull && (
                           <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400">
-                            마감
+                            {t('schedule.full')}
                           </span>
                         )}
                       </div>

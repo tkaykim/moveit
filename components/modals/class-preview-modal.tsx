@@ -5,6 +5,7 @@ import { Clock, Music, MapPin, Play, X, User, Tag, Calendar } from 'lucide-react
 import { LevelBadge } from '@/components/common/level-badge';
 import { ClassInfo } from '@/types';
 import Image from 'next/image';
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface ClassPreviewModalProps {
   classInfo: ClassInfo & { time?: string } | null;
@@ -55,6 +56,7 @@ const getYoutubeThumbnail = (url: string): string | null => {
 };
 
 export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewModalProps) => {
+  const { t } = useLocale();
   const [classDetails, setClassDetails] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
@@ -169,7 +171,7 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
                     className="absolute inset-0 w-full h-full"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
-                    title="수업 영상"
+                    title={t('classPreview.classVideo')}
                   />
                 ) : thumbnailUrl ? (
                   <button
@@ -188,7 +190,7 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
                       </div>
                     </div>
                     <div className="absolute bottom-3 left-3 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                      수업 영상 보기
+                      {t('classPreview.watchVideo')}
                     </div>
                   </button>
                 ) : embedUrl ? (
@@ -278,7 +280,7 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
             {/* 강사 소개 */}
             {(instructorBio || instructorSpecialties) && (
               <div className="bg-neutral-50 dark:bg-neutral-800/50 rounded-xl p-4 mb-4">
-                <h4 className="text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-2">강사 소개</h4>
+                <h4 className="text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-2">{t('classPreview.instructorIntro')}</h4>
                 {instructorSpecialties && (
                   <div className="flex flex-wrap gap-1 mb-2">
                     {instructorSpecialties.split(',').map((specialty: string, idx: number) => (
@@ -324,7 +326,7 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
             {isFull && (
               <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-xl p-3 mb-4">
                 <p className="text-sm text-rose-600 dark:text-rose-400 font-medium text-center">
-                  이 수업은 마감되었습니다
+                  {t('classPreview.classFull')}
                 </p>
               </div>
             )}
@@ -373,7 +375,7 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
               className="w-full h-full rounded-lg"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
-              title="수업 영상"
+              title={t('classPreview.classVideo')}
               onClick={(e) => e.stopPropagation()}
             />
           </div>

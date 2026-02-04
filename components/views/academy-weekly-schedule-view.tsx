@@ -4,13 +4,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronLeft, ChevronRight, MapPin, Clock, User } from 'lucide-react';
 import { ClassInfo } from '@/types';
 import { formatKSTTime, getKSTDateParts, getKSTDay, convertKSTInputToUTC } from '@/lib/utils/kst-time';
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface AcademyWeeklyScheduleViewProps {
   academyId: string;
   onClassClick: (classInfo: ClassInfo & { time?: string }) => void;
 }
 
-const DAYS_KR = ["월", "화", "수", "목", "금", "토", "일"];
 const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
 // 난이도별 색상
@@ -23,7 +23,7 @@ const LEVEL_COLORS: Record<string, { bg: string; border: string; text: string; d
 // Schedule을 ClassInfo로 변환
 function transformSchedule(scheduleData: any): ClassInfo & { time?: string; startTime?: string; endTime?: string; hallName?: string } {
   const classInfo = scheduleData.classes;
-  const instructor = scheduleData.instructors?.name_kr || scheduleData.instructors?.name_en || classInfo?.instructors?.name_kr || classInfo?.instructors?.name_en || '강사 미정';
+  const instructor = scheduleData.instructors?.name_kr || scheduleData.instructors?.name_en || classInfo?.instructors?.name_kr || classInfo?.instructors?.name_en || INSTRUCTOR_TBD;
   const genre = classInfo?.genre || '';
   const level = classInfo?.difficulty_level || 'All Level';
   const maxStudents = scheduleData.max_students || classInfo?.max_students || 0;
@@ -88,15 +88,19 @@ const getLevelColor = (level: string) => {
   return { bg: 'bg-neutral-100 dark:bg-neutral-800', border: 'border-neutral-300 dark:border-neutral-700', text: 'text-neutral-600 dark:text-neutral-400', dot: 'bg-neutral-400' };
 };
 
-const getLevelLabel = (level: string) => {
+const getLevelLabelKey = (level: string): 'schedule.levelBeginner' | 'schedule.levelIntermediate' | 'schedule.levelAdvanced' | null => {
   const upperLevel = level?.toUpperCase() || '';
-  if (upperLevel.includes('BEGINNER') || upperLevel.includes('초급')) return '초급';
-  if (upperLevel.includes('INTERMEDIATE') || upperLevel.includes('중급')) return '중급';
-  if (upperLevel.includes('ADVANCED') || upperLevel.includes('고급')) return '고급';
-  return 'All';
+  if (upperLevel.includes('BEGINNER') || upperLevel.includes('초급')) return 'schedule.levelBeginner';
+  if (upperLevel.includes('INTERMEDIATE') || upperLevel.includes('중급')) return 'schedule.levelIntermediate';
+  if (upperLevel.includes('ADVANCED') || upperLevel.includes('고급')) return 'schedule.levelAdvanced';
+  return null;
 };
 
+const UNSPECIFIED_HALL = '미지정';
+const INSTRUCTOR_TBD = '강사 미정';
+
 export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWeeklyScheduleViewProps) => {
+  const { t } = useLocale();
   const [schedules, setSchedules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [scheduleGrid, setScheduleGrid] = useState<Record<string, (ClassInfo & { time?: string; hallName?: string })[]>>({
@@ -309,10 +313,12 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
     const year = currentWeekStart.getFullYear();
     
     if (startMonth === endMonth) {
-      return `${year}년 ${startMonth}월`;
+      return t('schedule.monthYear', { year: String(year), month: String(startMonth) });
     }
-    return `${startMonth}월 ~ ${endMonth}월`;
+    return t('schedule.monthRange', { start: String(startMonth), end: String(endMonth) });
   };
+
+  const dayLabels = [t('schedule.dayMon'), t('schedule.dayTue'), t('schedule.dayWed'), t('schedule.dayThu'), t('schedule.dayFri'), t('schedule.daySat'), t('schedule.daySun')];
 
   const todayIndex = getTodayDayIndex();
   const inCurrentWeek = isCurrentWeek();
@@ -321,7 +327,7 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
 
   // 홀별로 그룹화
   const schedulesByHall = selectedDaySchedules.reduce((acc, schedule) => {
-    const hallName = (schedule as any).hallName || schedule.hall_name || '미지정';
+    const hallName = (schedule as any).hallName || schedule.hall_name || UNSPECIFIED_HALL;
     if (!acc[hallName]) {
       acc[hallName] = [];
     }
@@ -355,7 +361,7 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
             onClick={goToToday}
             className="text-xs px-3 py-1.5 bg-primary/10 dark:bg-[#CCFF00]/10 text-primary dark:text-[#CCFF00] rounded-full font-medium hover:bg-primary/20 dark:hover:bg-[#CCFF00]/20 transition-colors"
           >
-            오늘
+            {t('schedule.today')}
           </button>
         </div>
         <button
@@ -391,7 +397,7 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
                     : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
               }`}
             >
-              <span className="text-[10px] font-medium opacity-80">{DAYS_KR[index]}</span>
+              <span className="text-[10px] font-medium opacity-80">{dayLabels[index]}</span>
               <span className="text-lg font-bold">{dayDate}</span>
               {hasClasses && !isSelected && (
                 <div className="w-1.5 h-1.5 rounded-full bg-primary dark:bg-[#CCFF00] mt-0.5"></div>
@@ -409,7 +415,7 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
         {selectedDaySchedules.length === 0 ? (
           <div className="text-center py-12 bg-neutral-50 dark:bg-neutral-900/50 rounded-2xl">
             <p className="text-neutral-500 dark:text-neutral-400 text-sm">
-              {DAYS_KR[selectedDayIndex]}요일에는 예정된 수업이 없습니다
+              {t('schedule.noClassOnDay', { day: dayLabels[selectedDayIndex] })}
             </p>
           </div>
         ) : (
@@ -422,7 +428,7 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
                   <div className="flex items-center gap-2 px-1">
                     <MapPin size={12} className="text-neutral-400" />
                     <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                      {hallName}
+                      {hallName === UNSPECIFIED_HALL ? t('schedule.unspecified') : hallName}
                     </span>
                   </div>
                 )}
@@ -464,7 +470,7 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
                           <div className="flex-1 min-w-0">
                             {/* 수업명 */}
                             <div className="font-bold text-black dark:text-white text-base leading-tight">
-                              {classInfo.class_title || classInfo.genre || '수업'}
+                              {classInfo.class_title || classInfo.genre || t('schedule.classLabel')}
                             </div>
                             
                             {/* 강사 & 장르 */}
@@ -472,7 +478,7 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
                               <div className="flex items-center gap-1">
                                 <User size={12} className="text-neutral-400" />
                                 <span className="text-sm text-neutral-600 dark:text-neutral-300">
-                                  {classInfo.instructor}
+                                  {classInfo.instructor === INSTRUCTOR_TBD ? t('schedule.instructorTbd') : classInfo.instructor}
                                 </span>
                               </div>
                               {classInfo.genre && classInfo.class_title && (
@@ -483,7 +489,7 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
                             </div>
                             
                             {/* 홀 정보 (홀이 1개인 경우에만 여기 표시) */}
-                            {hallNames.length === 1 && hallName !== '미지정' && (
+                            {hallNames.length === 1 && hallName !== UNSPECIFIED_HALL && (
                               <div className="flex items-center gap-1 mt-1.5">
                                 <MapPin size={11} className="text-neutral-400" />
                                 <span className="text-xs text-neutral-500 dark:text-neutral-400">
@@ -496,11 +502,11 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
                           {/* 난이도 & 상태 */}
                           <div className="flex-shrink-0 flex flex-col items-end gap-1">
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${levelColor.text} bg-white/50 dark:bg-black/20`}>
-                              {getLevelLabel(classInfo.level)}
+                              {getLevelLabelKey(classInfo.level) ? t(getLevelLabelKey(classInfo.level)!) : 'All'}
                             </span>
                             {isFull && (
                               <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400">
-                                마감
+                                {t('schedule.full')}
                               </span>
                             )}
                           </div>
@@ -519,15 +525,15 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
       <div className="flex items-center justify-center gap-4 pt-2 border-t border-neutral-200 dark:border-neutral-800">
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-          <span className="text-[10px] text-neutral-500 dark:text-neutral-400">초급</span>
+          <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{t('schedule.levelBeginner')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-          <span className="text-[10px] text-neutral-500 dark:text-neutral-400">중급</span>
+          <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{t('schedule.levelIntermediate')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-rose-500"></div>
-          <span className="text-[10px] text-neutral-500 dark:text-neutral-400">고급</span>
+          <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{t('schedule.levelAdvanced')}</span>
         </div>
       </div>
     </div>

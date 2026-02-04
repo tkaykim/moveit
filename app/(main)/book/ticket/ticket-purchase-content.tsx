@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Ticket, Building2, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLocale } from '@/contexts/LocaleContext';
 
 type TicketData = {
   id: string;
@@ -53,12 +54,13 @@ export function TicketPurchaseContent({
 }: TicketPurchaseContentProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const { t, language } = useLocale();
 
   return (
     <div className="min-h-screen bg-white dark:bg-neutral-950 pt-12 px-5 pb-24">
       <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-6">
         <ChevronLeft size={20} />
-        뒤로
+        {t('ticketPurchase.back')}
       </button>
 
       <div className="bg-neutral-50 dark:bg-neutral-900 rounded-2xl p-5 border border-neutral-200 dark:border-neutral-800">
@@ -71,16 +73,16 @@ export function TicketPurchaseContent({
           {ticket.name}
         </h1>
         <div className="text-2xl font-black text-gray-900 dark:text-white mb-4">
-          {ticket.price != null ? `${Number(ticket.price).toLocaleString()}원` : '문의'}
+          {ticket.price != null ? `${Number(ticket.price).toLocaleString()}${language === 'ko' ? '원' : ' KRW'}` : t('ticketPurchase.inquire')}
         </div>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          {ticket.ticket_type === 'PERIOD' ? '기간제 수강권' : ticket.ticket_type === 'COUNT' ? '쿠폰제(횟수제) 수강권' : '워크샵(특강) 수강권'}
+          {ticket.ticket_type === 'PERIOD' ? t('ticketPurchase.periodTicket') : ticket.ticket_type === 'COUNT' ? t('ticketPurchase.countTicket') : t('ticketPurchase.workshopTicket')}
         </p>
 
         {isPeriod && (
           <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              시작일 (해당 수강권으로 들을 수 있는 수업이 있는 날만 선택 가능)
+              {t('ticketPurchase.startDateLabel')}
             </label>
             <select
               value={selectedStartDate}
@@ -88,11 +90,11 @@ export function TicketPurchaseContent({
               className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
             >
               {availableDates.length === 0 ? (
-                <option value="">선택 가능한 날짜 없음</option>
+                <option value="">{t('ticketPurchase.noDateAvailable')}</option>
               ) : (
                 availableDates.map((d) => (
                   <option key={d} value={d}>
-                    {new Date(d).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    {new Date(d).toLocaleDateString(language === 'en' ? 'en-US' : 'ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
                   </option>
                 ))
               )}
@@ -108,30 +110,30 @@ export function TicketPurchaseContent({
                 onClick={() => setGuestMode(true)}
                 className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
               >
-                비회원으로 결제 (이름·연락처만 입력)
+                {t('ticketPurchase.guestPayment')}
               </button>
             </div>
           )}
           {(guestMode || (!user && !guestMode)) && !user && (
             <div className="mb-4 p-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 space-y-3">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">비회원 결제 정보</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('ticketPurchase.guestInfo')}</p>
               <input
                 type="text"
-                placeholder="이름 *"
+                placeholder={t('ticketPurchase.nameRequired')}
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
                 className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
               />
               <input
                 type="tel"
-                placeholder="연락처"
+                placeholder={t('ticketPurchase.contact')}
                 value={guestPhone}
                 onChange={(e) => setGuestPhone(e.target.value)}
                 className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
               />
               <input
                 type="email"
-                placeholder="이메일"
+                placeholder={t('ticketPurchase.email')}
                 value={guestEmail}
                 onChange={(e) => setGuestEmail(e.target.value)}
                 className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
@@ -142,13 +144,13 @@ export function TicketPurchaseContent({
                   onClick={() => setGuestMode(false)}
                   className="text-xs text-gray-500 hover:underline"
                 >
-                  로그인하고 결제하기
+                  {t('ticketPurchase.loginAndPay')}
                 </button>
               )}
             </div>
           )}
           {user && !guestMode && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">로그인된 계정으로 결제합니다.</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{t('ticketPurchase.payingAs')}</p>
           )}
           <button
             type="button"
@@ -157,7 +159,7 @@ export function TicketPurchaseContent({
             className="w-full py-4 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {purchasing ? <Loader2 size={20} className="animate-spin" /> : null}
-            {purchasing ? '결제 중...' : user && !guestMode ? '결제하기' : guestMode || guestName ? '비회원 결제하기' : '로그인 후 결제'}
+            {purchasing ? t('ticketPurchase.paying') : user && !guestMode ? t('ticketPurchase.pay') : guestMode || guestName ? t('ticketPurchase.guestPay') : t('ticketPurchase.loginToPay')}
           </button>
           {!user && !guestMode && (
             <button
@@ -165,7 +167,7 @@ export function TicketPurchaseContent({
               onClick={() => router.push('/my')}
               className="w-full mt-3 py-3 rounded-xl border border-neutral-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 font-medium"
             >
-              로그인하기
+              {t('ticketPurchase.loginButton')}
             </button>
           )}
         </div>

@@ -93,6 +93,34 @@ export function formatDistance(distanceKm: number): string {
   return `${distanceKm.toFixed(1)}km`;
 }
 
+/** id 문자열로부터 -1~1 사이의 작은 오프셋 생성 (지도 마커 겹침 방지) */
+function idToOffset(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) {
+    h = (h << 5) - h + id.charCodeAt(i);
+    h |= 0;
+  }
+  return (Math.abs(h) % 100) / 100 - 0.5; // -0.5 ~ 0.5
+}
+
+/**
+ * 주소 + id로 지도 마커용 좌표 반환 (같은 지역 학원이 겹치지 않도록 소량 오프셋 적용)
+ */
+export function getMarkerCoordinates(
+  address: string | null | undefined,
+  id: string
+): { lat: number; lng: number } | null {
+  const coords = parseAddressToCoordinates(address);
+  if (!coords) return null;
+  const [lat, lng] = coords;
+  const o = idToOffset(id);
+  const o2 = idToOffset(id + '2');
+  return {
+    lat: lat + o * 0.008,
+    lng: lng + o2 * 0.01,
+  };
+}
+
 
 
 

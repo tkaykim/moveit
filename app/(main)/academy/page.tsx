@@ -1,8 +1,8 @@
 "use client";
 
-import { useRouter } from 'next/navigation';
-import { AcademyListView } from '@/components/views/academy-list-view';
-import { Academy } from '@/types';
+import { useRouter } from "next/navigation";
+import { AcademyMapView } from "@/components/views/academy-map-view";
+import { Academy } from "@/types";
 
 export default function AcademyPage() {
   const router = useRouter();
@@ -11,7 +11,7 @@ export default function AcademyPage() {
     router.push(`/academy/${academy.id}`);
   };
 
-  return <AcademyListView onAcademyClick={handleAcademyClick} />;
+  return <AcademyMapView onAcademyClick={handleAcademyClick} />;
 }
 
 

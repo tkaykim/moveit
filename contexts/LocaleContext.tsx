@@ -9,7 +9,7 @@ export type Language = 'ko' | 'en';
 interface LocaleContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: string, fallback?: string) => string;
+  t: (key: string, fallbackOrParams?: string | Record<string, string | number>) => string;
 }
 
 const LocaleContext = createContext<LocaleContextType | undefined>(undefined);
@@ -38,22 +38,16 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(STORAGE_KEY, lang);
   }, []);
 
-  // 번역 함수 - 키가 없으면 한국어로 fallback, 그것도 없으면 키 반환
-  const t = useCallback((key: string, fallback?: string): string => {
+  // 번역 함수 - 키가 없으면 한국어로 fallback. fallbackOrParams가 객체면 {key} 치환
+  const t = useCallback((key: string, fallbackOrParams?: string | Record<string, string | number>): string => {
     const langMessages = messages[language];
-    if (langMessages && langMessages[key]) {
-      return langMessages[key];
+    let raw = (langMessages && langMessages[key]) || (language !== 'ko' ? messages.ko[key] : undefined) || (typeof fallbackOrParams === 'string' ? fallbackOrParams : undefined) || key;
+    if (typeof fallbackOrParams === 'object' && fallbackOrParams !== null) {
+      Object.entries(fallbackOrParams).forEach(([k, v]) => {
+        raw = raw.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+      });
     }
-    // 한국어로 fallback
-    if (language !== 'ko' && messages.ko[key]) {
-      return messages.ko[key];
-    }
-    // fallback 문자열이 있으면 사용
-    if (fallback) {
-      return fallback;
-    }
-    // 최후에는 키 반환
-    return key;
+    return raw;
   }, [language]);
 
   // 항상 렌더링 - 초기값은 'ko'로 설정되어 있으므로 바로 렌더링 가능

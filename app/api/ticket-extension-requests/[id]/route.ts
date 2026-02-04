@@ -53,45 +53,54 @@ export async function PATCH(
     if (updateErr) throw updateErr;
 
     if (status === 'APPROVED' && reqRow.user_tickets?.expiry_date) {
-      const start = new Date(reqRow.absent_start_date);
-      const end = new Date(reqRow.absent_end_date);
-      const addDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      const currentExpiry = new Date(reqRow.user_tickets.expiry_date);
-      const newExpiry = new Date(currentExpiry);
-      newExpiry.setDate(newExpiry.getDate() + addDays);
-      const newExpiryStr = newExpiry.toISOString().slice(0, 10);
-      const oldExpiryStr = reqRow.user_tickets.expiry_date;
+      // 연장 일수 계산: EXTENSION은 extension_days, PAUSE는 absent 기간
+      let addDays = 0;
+      if (reqRow.request_type === 'EXTENSION' && reqRow.extension_days) {
+        addDays = reqRow.extension_days;
+      } else if (reqRow.request_type === 'PAUSE' && reqRow.absent_start_date && reqRow.absent_end_date) {
+        const start = new Date(reqRow.absent_start_date);
+        const end = new Date(reqRow.absent_end_date);
+        addDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      }
 
-      await supabase
-        .from('user_tickets')
-        .update({ expiry_date: newExpiryStr })
-        .eq('id', reqRow.user_ticket_id);
+      if (addDays > 0) {
+        const currentExpiry = new Date(reqRow.user_tickets.expiry_date);
+        const newExpiry = new Date(currentExpiry);
+        newExpiry.setDate(newExpiry.getDate() + addDays);
+        const newExpiryStr = newExpiry.toISOString().slice(0, 10);
 
-      const ticketType = reqRow.user_tickets?.tickets?.ticket_type;
-      const ticketId = reqRow.user_tickets?.ticket_id;
-      const userId = reqRow.user_tickets?.user_id;
+        await supabase
+          .from('user_tickets')
+          .update({ expiry_date: newExpiryStr })
+          .eq('id', reqRow.user_ticket_id);
 
-      if (ticketType === 'PERIOD' && ticketId && userId) {
-        const absentStart = reqRow.absent_start_date;
-        const absentEnd = reqRow.absent_end_date;
-        const schedulesInAbsent = await getSchedulesForPeriodTicket(ticketId, absentStart, absentEnd);
-        for (const sch of schedulesInAbsent || []) {
-          const { data: toCancel } = await supabase
-            .from('bookings')
-            .select('id')
-            .eq('user_ticket_id', reqRow.user_ticket_id)
-            .eq('schedule_id', sch.id)
-            .in('status', ['CONFIRMED', 'PENDING']);
-          if (toCancel?.length) {
-            await supabase.from('bookings').update({ status: 'CANCELLED' }).in('id', toCancel.map((b: any) => b.id));
-            const cur = (sch as any).current_students ?? 0;
-            await supabase.from('schedules').update({ current_students: Math.max(0, cur - toCancel.length) }).eq('id', sch.id);
+        const ticketType = reqRow.user_tickets?.tickets?.ticket_type;
+        const ticketId = reqRow.user_tickets?.ticket_id;
+        const userId = reqRow.user_tickets?.user_id;
+
+        // 일시정지(PAUSE)일 때만 기간권 예약 취소 및 재생성
+        if (reqRow.request_type === 'PAUSE' && ticketType === 'PERIOD' && ticketId && userId) {
+          const absentStart = reqRow.absent_start_date;
+          const absentEnd = reqRow.absent_end_date;
+          const schedulesInAbsent = await getSchedulesForPeriodTicket(ticketId, absentStart, absentEnd);
+          for (const sch of schedulesInAbsent || []) {
+            const { data: toCancel } = await supabase
+              .from('bookings')
+              .select('id')
+              .eq('user_ticket_id', reqRow.user_ticket_id)
+              .eq('schedule_id', sch.id)
+              .in('status', ['CONFIRMED', 'PENDING']);
+            if (toCancel?.length) {
+              await supabase.from('bookings').update({ status: 'CANCELLED' }).in('id', toCancel.map((b: any) => b.id));
+              const cur = (sch as any).current_students ?? 0;
+              await supabase.from('schedules').update({ current_students: Math.max(0, cur - toCancel.length) }).eq('id', sch.id);
+            }
           }
+          const extendStart = new Date(currentExpiry);
+          extendStart.setDate(extendStart.getDate() + 1);
+          const extendStartStr = extendStart.toISOString().slice(0, 10);
+          await createBookingsForPeriodTicket(userId, reqRow.user_ticket_id, ticketId, extendStartStr, newExpiryStr);
         }
-        const extendStart = new Date(currentExpiry);
-        extendStart.setDate(extendStart.getDate() + 1);
-        const extendStartStr = extendStart.toISOString().slice(0, 10);
-        await createBookingsForPeriodTicket(userId, reqRow.user_ticket_id, ticketId, extendStartStr, newExpiryStr);
       }
     }
 

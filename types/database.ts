@@ -1286,8 +1286,10 @@ export type Database = {
           id: string
           user_ticket_id: string
           request_type: string
-          absent_start_date: string
-          absent_end_date: string
+          absent_start_date: string | null
+          absent_end_date: string | null
+          extension_days: number | null
+          reason: string | null
           status: string
           reject_reason: string | null
           processed_at: string | null
@@ -1299,8 +1301,10 @@ export type Database = {
           id?: string
           user_ticket_id: string
           request_type: string
-          absent_start_date: string
-          absent_end_date: string
+          absent_start_date?: string | null
+          absent_end_date?: string | null
+          extension_days?: number | null
+          reason?: string | null
           status?: string
           reject_reason?: string | null
           processed_at?: string | null
@@ -1312,6 +1316,8 @@ export type Database = {
           id?: string
           user_ticket_id?: string
           request_type?: string
+          extension_days?: number | null
+          reason?: string | null
           absent_start_date?: string
           absent_end_date?: string
           status?: string

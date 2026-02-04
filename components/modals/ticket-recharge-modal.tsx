@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { X, Search, Ticket as TicketIcon, Loader2 } from 'lucide-react';
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface Ticket {
   id: string;
@@ -37,6 +38,7 @@ interface TicketRechargeModalProps {
 }
 
 export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academyId, classId, academyName }: TicketRechargeModalProps) => {
+  const { t } = useLocale();
   const [activeTab, setActiveTab] = useState<'all' | 'academy'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Academy[]>([]);
@@ -177,9 +179,9 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
       if (response.ok) {
         const result = await response.json();
         if (result.demo) {
-          alert('데모버전입니다. 구매가 완료되었습니다!');
+          alert(t('ticketRecharge.demoComplete'));
         } else {
-          alert('수강권 구매가 완료되었습니다!');
+          alert(t('ticketRecharge.purchaseComplete'));
         }
         if (onPurchaseSuccess) {
           onPurchaseSuccess();
@@ -194,11 +196,11 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
         }
       } else {
         const error = await response.json();
-        alert(error.error || '수강권 구매에 실패했습니다.');
+        alert(error.error || t('ticketRecharge.purchaseFailed'));
       }
     } catch (error) {
       console.error('Error purchasing ticket:', error);
-      alert('수강권 구매 중 오류가 발생했습니다.');
+      alert(t('ticketRecharge.purchaseError'));
     } finally {
       setPurchasing(null);
     }
@@ -227,7 +229,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
       >
         {/* 헤더 */}
         <div className="flex items-center justify-between p-6 border-b border-neutral-200 dark:border-neutral-800">
-          <h2 className="text-xl font-bold text-black dark:text-white">수강권 충전</h2>
+          <h2 className="text-xl font-bold text-black dark:text-white">{t('ticketRecharge.title')}</h2>
           <button 
             onClick={handleClose}
             className="text-neutral-400 hover:text-black dark:hover:text-white"
@@ -247,7 +249,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
                   : 'text-neutral-500 dark:text-neutral-400'
               }`}
             >
-              전체 수강권
+              {t('ticketRecharge.allTickets')}
             </button>
             <button
               onClick={() => setActiveTab('academy')}
@@ -257,7 +259,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
                   : 'text-neutral-500 dark:text-neutral-400'
               }`}
             >
-              학원별 수강권
+              {t('ticketRecharge.academyTickets')}
             </button>
           </div>
         )}
@@ -266,10 +268,10 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
         {academyId && (
           <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 bg-primary/5 dark:bg-[#CCFF00]/5">
             <div className="text-sm font-bold text-black dark:text-white mb-1">
-              {academyName || selectedAcademy?.name_kr || selectedAcademy?.name_en || '학원'} 수강권
+              {t('ticketRecharge.academyTicketsFor', { name: academyName || selectedAcademy?.name_kr || selectedAcademy?.name_en || '' })}
             </div>
             <div className="text-xs text-neutral-500 dark:text-neutral-400">
-              {classId ? '이 수업에 사용 가능한 수강권이 우선 표시됩니다' : '해당 학원의 수강권만 표시됩니다'}
+              {classId ? t('ticketRecharge.priorityForClass') : t('ticketRecharge.onlyAcademyTickets')}
             </div>
           </div>
         )}
@@ -285,7 +287,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
                   type="text"
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
-                  placeholder="학원 이름으로 검색"
+                  placeholder={t('ticketRecharge.searchAcademy')}
                   className="w-full pl-10 pr-4 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 text-black dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
                 />
                 {searching && (
@@ -309,7 +311,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
                       className="w-full text-left p-3 bg-neutral-100 dark:bg-neutral-800 rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                     >
                       <div className="font-bold text-black dark:text-white">
-                        {academy.name_kr || academy.name_en || '이름 없음'}
+                        {academy.name_kr || academy.name_en || t('ticketRecharge.noName')}
                       </div>
                       {academy.name_kr && academy.name_en && (
                         <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
@@ -326,7 +328,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
                 <div className="p-3 bg-primary/10 dark:bg-[#CCFF00]/10 rounded-xl flex items-center justify-between">
                   <div>
                     <div className="font-bold text-black dark:text-white">
-                      {selectedAcademy.name_kr || selectedAcademy.name_en || '이름 없음'}
+                      {selectedAcademy.name_kr || selectedAcademy.name_en || t('ticketRecharge.noName')}
                     </div>
                     {selectedAcademy.name_kr && selectedAcademy.name_en && (
                       <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
@@ -353,19 +355,19 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
             {loading ? (
               <div className="text-center py-12">
                 <Loader2 className="animate-spin text-neutral-400 mx-auto mb-2" size={24} />
-                <div className="text-neutral-500 dark:text-neutral-400">로딩 중...</div>
+                <div className="text-neutral-500 dark:text-neutral-400">{t('common.loading')}</div>
               </div>
             ) : activeTab === 'academy' && !selectedAcademy && !academyId ? (
               <div className="text-center py-12 text-neutral-500 dark:text-neutral-400">
-                학원을 검색하여 선택해주세요
+                {t('ticketRecharge.selectAcademy')}
               </div>
             ) : tickets.length === 0 ? (
               <div className="text-center py-12 text-neutral-500 dark:text-neutral-400">
                 {academyId 
-                  ? '해당 학원의 수강권이 없습니다' 
+                  ? t('ticketRecharge.noAcademyTickets')
                   : activeTab === 'all' 
-                    ? '전체 수강권이 없습니다' 
-                    : '해당 학원의 수강권이 없습니다'}
+                    ? t('ticketRecharge.noAllTickets')
+                    : t('ticketRecharge.noAcademyTickets')}
               </div>
             ) : (
               <div className="space-y-3">
@@ -392,7 +394,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
                       {isPriority && isAvailableForClass && (
                         <div className="mb-2">
                           <span className="text-xs font-bold px-2 py-1 bg-primary dark:bg-[#CCFF00] text-black rounded-full">
-                            이 수업에 사용 가능
+                            {t('ticketRecharge.availableForClass')}
                           </span>
                         </div>
                       )}
@@ -403,17 +405,17 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
                             <h3 className="font-bold text-black dark:text-white">{ticket.name}</h3>
                             {ticket.is_coupon && (
                               <span className="text-xs px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full">
-                                쿠폰
+                                {t('ticketRecharge.coupon')}
                               </span>
                             )}
                             {ticket.is_general && (
                               <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
-                                전체 이용
+                                {t('ticketRecharge.allUse')}
                               </span>
                             )}
                           </div>
                           <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                            {ticket.ticket_type} • {ticket.total_count || ticket.valid_days || '-'} {ticket.ticket_type === 'COUNT' ? '회' : '일'}
+                            {ticket.ticket_type} • {ticket.total_count || ticket.valid_days || '-'} {ticket.ticket_type === 'COUNT' ? t('ticketRecharge.count') : t('ticketRecharge.days')}
                           </div>
                         </div>
                         <div className="text-right">
@@ -430,10 +432,10 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
                         {purchasing === ticket.id ? (
                           <>
                             <Loader2 className="animate-spin" size={18} />
-                            구매 중...
+                            {t('ticketRecharge.purchasing')}
                           </>
                         ) : (
-                          '구매하기'
+                          t('ticketRecharge.purchase')
                         )}
                       </button>
                     </div>

@@ -13,6 +13,9 @@ import { ThemeToggle } from '@/components/common/theme-toggle';
 import { AcademyWeeklyScheduleView } from './academy-weekly-schedule-view';
 import { AcademyMonthlyScheduleView } from './academy-monthly-schedule-view';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLocale } from '@/contexts/LocaleContext';
+import { useTranslatedText } from '@/lib/i18n/useTranslation';
+import { TranslatedText } from '@/components/common/translated-text';
 
 interface AcademyDetailViewProps {
   academy: Academy | null;
@@ -33,6 +36,8 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
   const [showTicketPurchaseModal, setShowTicketPurchaseModal] = useState(false);
   const [showConsultationModal, setShowConsultationModal] = useState(false);
   const { user } = useAuth();
+  const { t } = useLocale();
+  const translatedAcademyName = useTranslatedText(academy?.name ?? '');
   const homeRef = useRef<HTMLDivElement>(null);
   const scheduleRef = useRef<HTMLDivElement>(null);
   const reviewsRef = useRef<HTMLDivElement>(null);
@@ -190,7 +195,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
 
   const handleBook = (classInfo: ClassInfo & { time?: string }) => {
     if (classInfo.status === 'FULL') {
-      alert("이미 마감된 클래스입니다.");
+      alert(t('academyDetail.classFull'));
       return;
     }
     // 프리뷰 모달을 닫고 예약 페이지로 이동
@@ -299,7 +304,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                 : 'border-transparent hover:text-black dark:hover:text-white'
             }`}
           >
-            홈
+            {t('academyDetail.tabHome')}
           </button>
           <button 
             onClick={() => scrollToTab('schedule')}
@@ -309,7 +314,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                 : 'border-transparent hover:text-black dark:hover:text-white'
             }`}
           >
-            시간표
+            {t('academyDetail.tabSchedule')}
           </button>
           <button 
             onClick={() => scrollToTab('reviews')}
@@ -319,18 +324,18 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                 : 'border-transparent hover:text-black dark:hover:text-white'
             }`}
           >
-            리뷰
+            {t('academyDetail.tabReviews')}
           </button>
         </div>
 
         {/* 홈 섹션 */}
         <div ref={homeRef} className="p-5 scroll-mt-20">
-          <h3 className="text-black dark:text-white font-bold text-lg mb-4">학원 정보</h3>
+          <h3 className="text-black dark:text-white font-bold text-lg mb-4">{t('academyDetail.academyInfo')}</h3>
           <div className="space-y-4">
             <div className="bg-neutral-100 dark:bg-neutral-900 rounded-2xl p-4">
-              <h4 className="text-sm font-bold text-black dark:text-white mb-2">소개</h4>
+              <h4 className="text-sm font-bold text-black dark:text-white mb-2">{t('academyDetail.intro')}</h4>
               <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                {academy.name}에 오신 것을 환영합니다. 최고의 댄스 교육을 제공합니다.
+                {t('academyDetail.introWelcome', { name: translatedAcademyName })}
               </p>
             </div>
             <button
@@ -339,15 +344,15 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-primary dark:border-[#CCFF00] text-primary dark:text-[#CCFF00] font-bold text-sm"
             >
               <MessageSquare size={18} />
-              상담 신청하기
+              {t('academyDetail.requestConsultation')}
             </button>
             {academy.tags && (
               <div>
-                <h4 className="text-sm font-bold text-black dark:text-white mb-2">태그</h4>
+                <h4 className="text-sm font-bold text-black dark:text-white mb-2">{t('academyDetail.tags')}</h4>
                 <div className="flex flex-wrap gap-2">
                   {academy.tags.split(',').map((tag, idx) => (
                     <span key={idx} className="text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-3 py-1 rounded-full">
-                      {tag.trim()}
+                      <TranslatedText>{tag.trim()}</TranslatedText>
                     </span>
                   ))}
                 </div>
@@ -357,11 +362,11 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
 
           {/* 최근 수업 영상 섹션 */}
           <div className="mt-6">
-            <h3 className="text-black dark:text-white font-bold text-lg mb-4">최근 수업 영상</h3>
+            <h3 className="text-black dark:text-white font-bold text-lg mb-4">{t('academyDetail.recentVideos')}</h3>
             {videosLoading ? (
-              <div className="text-center py-8 text-neutral-500">로딩 중...</div>
+              <div className="text-center py-8 text-neutral-500">{t('common.loading')}</div>
             ) : recentVideos.length === 0 ? (
-              <div className="text-center py-8 text-neutral-500">등록된 수업 영상이 없습니다.</div>
+              <div className="text-center py-8 text-neutral-500">{t('academyDetail.noVideos')}</div>
             ) : (
               <div 
                 className="overflow-x-auto -mx-5 px-5 scrollbar-hide"
@@ -384,7 +389,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                           <div className="relative w-full h-full">
                             <Image
                               src={video.thumbnail_url}
-                              alt={video.title || '수업 영상'}
+                              alt={video.title || t('academyDetail.classVideo')}
                               fill
                               className="object-cover"
                             />
@@ -422,13 +427,13 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
         {/* 시간표 섹션 */}
         <div ref={scheduleRef} className="p-5 scroll-mt-20">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-black dark:text-white font-bold text-lg">시간표</h3>
+            <h3 className="text-black dark:text-white font-bold text-lg">{t('academyDetail.tabSchedule')}</h3>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowTicketPurchaseModal(true)}
                 className="px-3 py-1.5 text-xs font-bold bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black rounded-lg hover:bg-neutral-800 dark:hover:bg-[#b8e600] transition-colors"
               >
-                수강권 구매
+                {t('academyDetail.buyTicket')}
               </button>
               <div className="flex gap-2 bg-neutral-100 dark:bg-neutral-900 rounded-lg p-1">
               <button
@@ -439,7 +444,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                     : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
                 }`}
               >
-                주간
+                {t('academyDetail.week')}
               </button>
               <button
                 onClick={() => setScheduleViewMode('month')}
@@ -449,7 +454,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                     : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
                 }`}
               >
-                월간
+                {t('academyDetail.month')}
               </button>
               </div>
             </div>
@@ -469,9 +474,9 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
 
         {/* 리뷰 섹션 */}
         <div ref={reviewsRef} className="p-5 scroll-mt-20">
-          <h3 className="text-black dark:text-white font-bold text-lg mb-4">리뷰</h3>
+          <h3 className="text-black dark:text-white font-bold text-lg mb-4">{t('academyDetail.reviews')}</h3>
           <div className="text-center py-12 text-neutral-500">
-            아직 리뷰가 없습니다.
+            {t('academyDetail.noReviews')}
           </div>
         </div>
       </div>
@@ -516,7 +521,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                 <div className="absolute inset-0 z-0">
                   <Image
                     src={selectedVideo.thumbnail}
-                    alt="영상 썸네일"
+                    alt={t('academyDetail.videoThumbnail')}
                     fill
                     className="object-cover opacity-0"
                     style={{ display: 'none' }}

@@ -5,6 +5,7 @@ import { X, Ticket, Check, AlertCircle, Gift, ShoppingCart } from 'lucide-react'
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { ClassInfo } from '@/types';
 import { useRouter } from 'next/navigation';
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface UserTicketInfo {
   id: string;
@@ -40,6 +41,7 @@ export const BookingConfirmModal = ({
   onBookingComplete,
 }: BookingConfirmModalProps) => {
   const router = useRouter();
+  const { t, language } = useLocale();
   const [userTickets, setUserTickets] = useState<UserTicketInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
@@ -151,7 +153,7 @@ export const BookingConfirmModal = ({
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+    return date.toLocaleDateString(language === 'en' ? 'en-US' : 'ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
   if (!isOpen || !classInfo) return null;
@@ -168,7 +170,7 @@ export const BookingConfirmModal = ({
         {/* 헤더 */}
         <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800">
           <div>
-            <h2 className="text-lg font-bold text-black dark:text-white">수업 예약</h2>
+            <h2 className="text-lg font-bold text-black dark:text-white">{t('bookingConfirm.title')}</h2>
             <p className="text-sm text-neutral-500">{classInfo.class_title || classInfo.instructor}</p>
           </div>
           <button
@@ -187,15 +189,15 @@ export const BookingConfirmModal = ({
                 <Check size={32} className="text-green-600 dark:text-green-400" />
               </div>
               <h3 className="text-xl font-bold text-black dark:text-white mb-2">
-                예약 완료!
+                {t('bookingConfirm.bookingComplete')}
               </h3>
               <p className="text-neutral-500">
-                수업 예약이 성공적으로 완료되었습니다.
+                {t('bookingConfirm.bookingCompleteMessage')}
               </p>
             </div>
           ) : loading ? (
             <div className="text-center py-12 text-neutral-500">
-              로딩 중...
+              {t('common.loading')}
             </div>
           ) : error ? (
             <div className="text-center py-12">
@@ -205,17 +207,17 @@ export const BookingConfirmModal = ({
           ) : userTickets.length === 0 ? (
             <div className="text-center py-12">
               <Ticket size={48} className="text-neutral-400 mx-auto mb-4" />
-              <p className="text-neutral-500 mb-2">사용 가능한 수강권이 없습니다.</p>
-              <p className="text-sm text-neutral-400 mb-4">수강권을 구매 후 예약해 주세요.</p>
+              <p className="text-neutral-500 mb-2">{t('bookingConfirm.noTicket')}</p>
+              <p className="text-sm text-neutral-400 mb-4">{t('bookingConfirm.purchaseFirst')}</p>
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mt-4">
                 <div className="flex items-start gap-3">
                   <ShoppingCart className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" size={20} />
                   <div className="flex-1 text-left">
                     <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-1">
-                      수강권이 없으신가요?
+                      {t('bookingConfirm.noTicketQuestion')}
                     </p>
                     <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">
-                      수강권을 구매하시면 더 저렴하게 수업을 이용하실 수 있습니다.
+                      {t('bookingConfirm.purchaseBenefit')}
                     </p>
                     <button
                       onClick={() => {
@@ -224,7 +226,7 @@ export const BookingConfirmModal = ({
                       }}
                       className="text-xs font-bold text-amber-700 dark:text-amber-300 underline hover:text-amber-800 dark:hover:text-amber-200"
                     >
-                      수강권 구매하러 가기 →
+                      {t('bookingConfirm.goToPurchase')}
                     </button>
                   </div>
                 </div>
@@ -250,7 +252,7 @@ export const BookingConfirmModal = ({
               {/* 수강권/쿠폰 선택 */}
               <div>
                 <h3 className="text-sm font-bold text-black dark:text-white mb-2">
-                  사용할 수강권/쿠폰 선택
+                  {t('bookingConfirm.selectTicket')}
                 </h3>
                 <div className="space-y-2">
                   {userTickets.map((userTicket) => (
@@ -263,7 +265,7 @@ export const BookingConfirmModal = ({
                           : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           {userTicket.tickets?.is_coupon ? (
                             <Gift size={16} className="text-orange-500" />
@@ -271,16 +273,16 @@ export const BookingConfirmModal = ({
                             <Ticket size={16} className="text-neutral-600 dark:text-neutral-400" />
                           )}
                           <span className="font-bold text-black dark:text-white">
-                            {userTicket.tickets?.name || (userTicket.tickets?.is_coupon ? '쿠폰' : '수강권')}
+                            {userTicket.tickets?.name || (userTicket.tickets?.is_coupon ? t('bookingConfirm.couponName') : t('bookingConfirm.ticketName'))}
                           </span>
                           {userTicket.tickets?.is_coupon && (
                             <span className="text-xs px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full">
-                              쿠폰
+                              {t('bookingConfirm.couponName')}
                             </span>
                           )}
                           {userTicket.tickets?.is_general && (
                             <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
-                              전체 이용
+                              {t('bookingConfirm.allUse')}
                             </span>
                           )}
                         </div>
@@ -290,9 +292,9 @@ export const BookingConfirmModal = ({
                       </div>
                       <div className="mt-2 text-sm text-neutral-500">
                         {userTicket.tickets?.ticket_type === 'COUNT' ? (
-                          <span>잔여 횟수: {userTicket.remaining_count}회</span>
+                          <span>{t('bookingConfirm.remainingCount', { count: userTicket.remaining_count })}</span>
                         ) : (
-                          <span>만료일: {formatDate(userTicket.expiry_date)}</span>
+                          <span>{t('bookingConfirm.expiryDate', { date: formatDate(userTicket.expiry_date) })}</span>
                         )}
                       </div>
                     </button>
@@ -311,7 +313,7 @@ export const BookingConfirmModal = ({
               disabled={booking || !selectedTicketId}
               className="w-full py-3 bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black font-bold rounded-xl hover:bg-neutral-800 dark:hover:bg-[#b8e600] transition-colors disabled:opacity-50"
             >
-              {booking ? '처리 중...' : '예약 확정하기'}
+              {booking ? t('bookingConfirm.processing') : t('bookingConfirm.confirmBooking')}
             </button>
           </div>
         )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslatedText } from '@/lib/i18n/useTranslation';
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface TranslatedTextProps {
   children: string;
@@ -52,8 +53,7 @@ export function TranslatedName({
   className,
   ...props
 }: TranslatedNameProps) {
-  // nameEn이 있으면 그것을 사용, 없으면 nameKr을 번역
-  const { language } = require('@/contexts/LocaleContext').useLocale();
+  const { language } = useLocale();
   
   // 영어 모드이고 nameEn이 있으면 그대로 사용
   if (language === 'en' && nameEn) {

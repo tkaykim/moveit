@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Ticket, Calendar, Hash, Check, Tag, Gift } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface TicketInfo {
   id: string;
@@ -41,6 +42,7 @@ export const TicketPurchaseModal = ({
   academyName,
   onPurchaseComplete,
 }: TicketPurchaseModalProps) => {
+  const { t, language } = useLocale();
   const [tickets, setTickets] = useState<TicketInfo[]>([]);
   const [discounts, setDiscounts] = useState<DiscountInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -156,7 +158,7 @@ export const TicketPurchaseModal = ({
       }, 2000);
     } catch (error: any) {
       console.error('Error purchasing ticket:', error);
-      alert(error.message || '구매에 실패했습니다.');
+      alert(error.message || t('ticketModal.purchaseFailed'));
     } finally {
       setPurchasing(false);
     }
@@ -186,20 +188,19 @@ export const TicketPurchaseModal = ({
       if (ticket.valid_days) {
         if (ticket.valid_days >= 30) {
           const months = Math.floor(ticket.valid_days / 30);
-          return `${months}개월`;
+          return t('ticketModal.months', { n: String(months) });
         }
-        return `${ticket.valid_days}일`;
+        return t('ticketModal.days', { n: String(ticket.valid_days) });
       }
-      return '무제한';
+      return t('ticketModal.unlimited');
     } else {
-      // COUNT type
-      let text = `${ticket.total_count}회`;
+      let text = language === 'ko' ? `${ticket.total_count}회` : `${ticket.total_count} ${t('ticket.count')}`;
       if (ticket.valid_days) {
         if (ticket.valid_days >= 30) {
           const months = Math.floor(ticket.valid_days / 30);
-          text += ` (${months}개월 유효)`;
+          text += ' ' + t('ticketModal.validMonths', { n: String(months) });
         } else {
-          text += ` (${ticket.valid_days}일 유효)`;
+          text += ' ' + t('ticketModal.validDays', { n: String(ticket.valid_days) });
         }
       }
       return text;
@@ -220,7 +221,7 @@ export const TicketPurchaseModal = ({
         {/* 헤더 */}
         <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800">
           <div>
-            <h2 className="text-lg font-bold text-black dark:text-white">수강권/쿠폰 구매</h2>
+            <h2 className="text-lg font-bold text-black dark:text-white">{t('ticketModal.title')}</h2>
             {academyName && (
               <p className="text-sm text-neutral-500">{academyName}</p>
             )}
@@ -245,7 +246,7 @@ export const TicketPurchaseModal = ({
               }`}
             >
               <Ticket size={14} className="inline mr-1" />
-              수강권 ({regularTickets.length})
+              {t('ticketModal.ticketTab')} ({regularTickets.length})
             </button>
             <button
               onClick={() => { setActiveTab('coupon'); setSelectedTicket(null); }}
@@ -256,7 +257,7 @@ export const TicketPurchaseModal = ({
               }`}
             >
               <Gift size={14} className="inline mr-1" />
-              쿠폰 ({couponTickets.length})
+              {t('ticketModal.couponTab')} ({couponTickets.length})
             </button>
           </div>
         )}
@@ -269,28 +270,25 @@ export const TicketPurchaseModal = ({
                 <Check size={32} className="text-green-600 dark:text-green-400" />
               </div>
               <h3 className="text-xl font-bold text-black dark:text-white mb-2">
-                구매 완료!
+                {t('ticketModal.purchaseComplete')}
               </h3>
               <p className="text-neutral-500">
-                {activeTab === 'ticket' ? '수강권이' : '쿠폰이'} 성공적으로 구매되었습니다.
+                {activeTab === 'ticket' ? t('ticketModal.ticketPurchased') : t('ticketModal.couponPurchased')}
               </p>
             </div>
           ) : loading ? (
             <div className="text-center py-12 text-neutral-500">
-              로딩 중...
+              {t('common.loading')}
             </div>
           ) : displayTickets.length === 0 ? (
             <div className="text-center py-12 text-neutral-500">
-              {activeTab === 'ticket' ? '판매 중인 수강권이 없습니다.' : '판매 중인 쿠폰이 없습니다.'}
+              {activeTab === 'ticket' ? t('ticketModal.noTickets') : t('ticketModal.noCoupons')}
             </div>
           ) : (
             <div className="space-y-4">
               {/* 상품 설명 */}
               <div className="text-xs text-neutral-500 bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-lg">
-                {activeTab === 'ticket' 
-                  ? '💡 수강권은 기간 내 정규수업을 수강할 수 있는 권한입니다.'
-                  : '💡 쿠폰은 쿠폰제 수업 또는 쿠폰 허용된 수업에 사용할 수 있습니다.'
-                }
+                {activeTab === 'ticket' ? t('ticketModal.ticketDesc') : t('ticketModal.couponDesc')}
               </div>
 
               {/* 상품 목록 */}
@@ -318,7 +316,7 @@ export const TicketPurchaseModal = ({
                           </span>
                           {ticket.is_general && (
                             <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
-                              전체 이용
+                              {t('ticketModal.allAcademy')}
                             </span>
                           )}
                         </div>
@@ -345,7 +343,7 @@ export const TicketPurchaseModal = ({
                         <span className="text-lg font-bold text-black dark:text-white">
                           {formatPrice(ticket.price)}
                         </span>
-                        <span className="text-sm text-neutral-500">원</span>
+                        <span className="text-sm text-neutral-500">{t('ticketModal.won')}</span>
                       </div>
                     </div>
                   </button>
@@ -356,7 +354,7 @@ export const TicketPurchaseModal = ({
               {selectedTicket && selectedTicket.ticket_type === 'PERIOD' && (
                 <div className="p-4 bg-neutral-100 dark:bg-neutral-800 rounded-xl">
                   <label className="block text-sm font-bold text-black dark:text-white mb-2">
-                    수강 시작일 선택
+                    {t('ticketModal.startDateSelect')}
                   </label>
                   <input
                     type="date"
@@ -366,7 +364,7 @@ export const TicketPurchaseModal = ({
                     className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
                   />
                   <p className="mt-2 text-xs text-neutral-500">
-                    선택한 날짜부터 {getValidityText(selectedTicket)} 동안 이용 가능합니다.
+                    {t('ticketModal.validFromTo', { period: getValidityText(selectedTicket) })}
                   </p>
                 </div>
               )}
@@ -376,7 +374,7 @@ export const TicketPurchaseModal = ({
                 <div className="p-4 bg-neutral-100 dark:bg-neutral-800 rounded-xl">
                   <label className="block text-sm font-bold text-black dark:text-white mb-2">
                     <Tag size={14} className="inline mr-1" />
-                    할인 적용
+                    {t('ticketModal.discountApply')}
                   </label>
                   <div className="space-y-2">
                     <button
@@ -387,7 +385,7 @@ export const TicketPurchaseModal = ({
                           : 'border-neutral-200 dark:border-neutral-700'
                       }`}
                     >
-                      할인 적용 안 함
+                      {t('ticketModal.noDiscount')}
                     </button>
                     {discounts.map((discount) => (
                       <button
@@ -425,23 +423,23 @@ export const TicketPurchaseModal = ({
             {/* 가격 정보 */}
             <div className="space-y-1 mb-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-neutral-500">상품 금액</span>
+                <span className="text-neutral-500">{t('ticketModal.productAmount')}</span>
                 <span className="text-neutral-600 dark:text-neutral-400">
-                  {formatPrice(selectedTicket.price)}원
+                  {formatPrice(selectedTicket.price)}{t('ticketModal.won')}
                 </span>
               </div>
               {discountAmount > 0 && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-red-500">할인</span>
+                  <span className="text-red-500">{t('ticketModal.discount')}</span>
                   <span className="text-red-500">
-                    -{formatPrice(discountAmount)}원
+                    -{formatPrice(discountAmount)}{t('ticketModal.won')}
                   </span>
                 </div>
               )}
               <div className="flex items-center justify-between pt-2 border-t border-neutral-200 dark:border-neutral-700">
-                <span className="font-bold text-black dark:text-white">결제 금액</span>
+                <span className="font-bold text-black dark:text-white">{t('ticketModal.paymentAmount')}</span>
                 <span className="text-xl font-bold text-black dark:text-white">
-                  {formatPrice(finalPrice)}원
+                  {formatPrice(finalPrice)}{t('ticketModal.won')}
                 </span>
               </div>
             </div>
@@ -450,10 +448,10 @@ export const TicketPurchaseModal = ({
               disabled={purchasing}
               className="w-full py-3 bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black font-bold rounded-xl hover:bg-neutral-800 dark:hover:bg-[#b8e600] transition-colors disabled:opacity-50"
             >
-              {purchasing ? '처리 중...' : `${activeTab === 'ticket' ? '수강권' : '쿠폰'} 구매하기 (테스트)`}
+              {purchasing ? t('ticketModal.processing') : t('ticketModal.purchaseButton', { type: activeTab === 'ticket' ? t('ticketModal.purchaseButtonTicket') : t('ticketModal.purchaseButtonCoupon') })}
             </button>
             <p className="mt-2 text-xs text-center text-neutral-400">
-              * 테스트 결제입니다. 실제 결제가 이루어지지 않습니다.
+              {t('ticketModal.testPaymentNote')}
             </p>
           </div>
         )}
