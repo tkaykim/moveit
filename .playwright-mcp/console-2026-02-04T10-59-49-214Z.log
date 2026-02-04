@@ -1,0 +1,4 @@
+[    2617ms] [ERROR] Refused to apply style from 'http://localhost:3001/_next/static/css/app/layout.css?v=1770202789515' because its MIME type ('text/html') is not a supported stylesheet MIME type, and strict MIME checking is enabled. @ http://localhost:3001/academy:0
+[    3253ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/_next/static/chunks/main-app.js?v=1770202789515:0
+[    3268ms] [ERROR] Refused to execute script from 'http://localhost:3001/_next/static/chunks/main-app.js?v=1770202789515' because its MIME type ('text/html') is not executable, and strict MIME type checking is enabled. @ http://localhost:3001/academy:0
+[    3355ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/favicon.ico:0
