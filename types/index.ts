@@ -73,6 +73,7 @@ export interface ClassInfo {
     name: string;
     address?: string | null;
   };
+  poster_url?: string | null;
   maxStudents?: number;
   currentStudents?: number;
 }

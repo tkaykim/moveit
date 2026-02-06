@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { ChevronLeft, Calendar, Clock, MapPin, User, Users, Wallet, CheckCircle, CreditCard, Building2, LogIn, AlertCircle, Ticket, Gift, CalendarDays, ChevronRight, Loader2 } from 'lucide-react';
+import Image from 'next/image';
 import { formatKSTTime, formatKSTDate } from '@/lib/utils/kst-time';
 import { MyTab } from '@/components/auth/MyTab';
 import { TicketRechargeModal } from '@/components/modals/ticket-recharge-modal';
@@ -137,7 +138,7 @@ export default function SessionBookingPage() {
         .select(`
           *,
           classes (
-            id, title, genre, difficulty_level, price, academy_id, class_type, access_config,
+            id, title, genre, difficulty_level, price, academy_id, class_type, access_config, poster_url,
             academies (id, name_kr, name_en, address)
           ),
           instructors (name_kr, name_en),
@@ -210,16 +211,24 @@ export default function SessionBookingPage() {
   }, [session?.id, session?.classes?.id, session?.start_time]);
 
   // 세션 로드 후 사용자 수강권 및 구매 가능 수강권 로드
-  // 데모 모드: user가 없어도 API에서 데모 사용자로 처리하므로 loadUserTickets 호출
   useEffect(() => {
     if (session?.classes?.id) {
-      loadUserTickets();
+      // 보유 수강권은 로그인한 사용자만 조회
+      if (user) {
+        loadUserTickets();
+      } else {
+        // 로그인하지 않은 경우 수강권 데이터 초기화
+        setUserTickets([]);
+        setSelectedUserTicketId('');
+        if (paymentMethod === 'ticket' || paymentMethod === 'purchase') {
+          setPaymentMethod('onsite');
+        }
+      }
       loadPurchasableTickets();
     }
   }, [session?.classes?.id, user]);
 
   // 사용자 보유 수강권 로드 (ticket_classes에 연결된 것만 + allowCoupon 적용)
-  // 데모 모드: user가 없어도 API에서 데모 사용자로 처리
   const loadUserTickets = async () => {
     if (!session?.classes?.id) return;
 
@@ -525,6 +534,19 @@ export default function SessionBookingPage() {
         <h2 className="text-xl font-bold text-black dark:text-white">{t('sessionBooking.title')}</h2>
       </div>
 
+      {/* 포스터 */}
+      {(session.classes as any)?.poster_url && (
+        <div className="relative w-full rounded-2xl overflow-hidden mb-4 bg-neutral-100 dark:bg-neutral-800">
+          <Image
+            src={(session.classes as any).poster_url}
+            alt={session.classes?.title || '수업 포스터'}
+            width={400}
+            height={560}
+            className="w-full h-auto object-contain max-h-[320px]"
+          />
+        </div>
+      )}
+
       {/* 세션 정보 카드 */}
       <div className="bg-neutral-100 dark:bg-neutral-900 rounded-2xl p-5 mb-6 border border-neutral-200 dark:border-neutral-800">
         <div className="text-xs text-neutral-500 mb-1">
@@ -758,8 +780,8 @@ export default function SessionBookingPage() {
             </button>
           </div>
 
-          {/* 수강권 선택 (수강권 사용 선택 시) */}
-          {paymentMethod === 'ticket' && userTickets.length > 0 && (
+          {/* 수강권 선택 (수강권 사용 선택 시, 로그인 필요) */}
+          {user && paymentMethod === 'ticket' && userTickets.length > 0 && (
             <div className="space-y-3">
               <h4 className="font-bold text-black dark:text-white">{t('sessionBooking.selectOwnedTicket')}</h4>
               {userTickets.map((ut) => {

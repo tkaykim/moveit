@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Settings, Lock, Unlock, BookOpen, ToggleLeft, ToggleRight } from 'lucide-react';
+import Image from 'next/image';
 import { SectionHeader } from '../common/section-header';
 import { ClassMasterModal } from './class-masters/class-master-modal';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -391,6 +392,19 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
                       setShowModal(true);
                     }}
                   >
+                    {/* 포스터 썸네일 */}
+                    {classItem.poster_url && (
+                      <div className="relative w-full h-32 rounded-lg overflow-hidden mb-3 bg-gray-100 dark:bg-neutral-800">
+                        <Image
+                          src={classItem.poster_url}
+                          alt={classItem.title || '포스터'}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                        />
+                      </div>
+                    )}
+
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">

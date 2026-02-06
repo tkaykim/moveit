@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { X, Ticket, Info, ToggleLeft, ToggleRight, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2, CheckSquare, Square, Plus, Search, Zap, Tag } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { TicketModal } from '../products/ticket-modal';
-// import { InstructorSelector } from '../classes/instructor-selector';
+import { ImageUpload } from '@/components/common/image-upload';
+import { uploadFile, deleteFile, extractFilePathFromUrl } from '@/lib/utils/storage';
 
 interface ClassMasterModalProps {
   academyId: string;
@@ -43,6 +44,8 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
     allowWorkshop: false,  // workshop 수강권 허용 여부
     is_active: true,
   });
+  const [posterFile, setPosterFile] = useState<File | null>(null);
+  const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [halls, setHalls] = useState<any[]>([]);
   const [linkedTickets, setLinkedTickets] = useState<LinkedTicket[]>([]);
   const [loading, setLoading] = useState(false);
@@ -114,6 +117,11 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         is_active: classData.is_active !== false,
       });
       
+      // 포스터 URL 로드
+      if (classData.poster_url) {
+        setPosterUrl(classData.poster_url);
+      }
+
       // instructor_id가 있으면 강사 이름 로드
       if (classData.instructor_id) {
         loadInstructorName(classData.instructor_id);
@@ -226,6 +234,23 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
     } catch (error) {
       console.error('Error loading linked tickets:', error);
       setSelectedTicketIds([]);
+    }
+  };
+
+  // 포스터 업로드/삭제 처리
+  const uploadPoster = async (classId: string): Promise<string | null> => {
+    if (!posterFile) return posterUrl; // 파일 변경 없으면 기존 URL 유지
+    try {
+      // 기존 포스터 삭제
+      if (posterUrl) {
+        const oldPath = extractFilePathFromUrl(posterUrl);
+        if (oldPath) await deleteFile('class-posters', oldPath).catch(() => {});
+      }
+      const url = await uploadFile('class-posters', posterFile, `${academyId}/${classId}`);
+      return url;
+    } catch (e) {
+      console.error('Poster upload failed:', e);
+      return posterUrl;
     }
   };
 
@@ -413,6 +438,12 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         classId = newClass.id;
       }
 
+      // 포스터 업로드
+      const finalPosterUrl = await uploadPoster(classId);
+      if (finalPosterUrl) {
+        await supabase.from('classes').update({ poster_url: finalPosterUrl }).eq('id', classId);
+      }
+
       // ticket_classes 테이블 처리
       // 1. 기존 연결 삭제 (신규 등록이므로 없을 수 있지만 안전을 위해)
       const { error: deleteError } = await supabase
@@ -535,6 +566,10 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         start_time: null,
         end_time: null,
       };
+
+      // 포스터 업로드
+      const finalPosterUrl = await uploadPoster(classData.id);
+      dataToSave.poster_url = finalPosterUrl;
 
       const { error } = await supabase
         .from('classes')
@@ -798,6 +833,15 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
             placeholder="클래스에 대한 설명을 입력하세요"
           />
         </div>
+
+        {/* 포스터 업로드 */}
+        <ImageUpload
+          currentImageUrl={posterUrl}
+          onImageChange={(file) => setPosterFile(file)}
+          onImageUrlChange={(url) => { setPosterUrl(url); setPosterFile(null); }}
+          label="수업 포스터 (선택)"
+          maxSizeMB={5}
+        />
       </div>
     </div>
   );
@@ -1178,6 +1222,15 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
+
+          {/* 포스터 업로드 */}
+          <ImageUpload
+            currentImageUrl={posterUrl}
+            onImageChange={(file) => setPosterFile(file)}
+            onImageUrlChange={(url) => { setPosterUrl(url); setPosterFile(null); }}
+            label="수업 포스터 (선택)"
+            maxSizeMB={5}
+          />
 
           {/* 수강권 설정 - 정규/팝업/워크샵 아코디언 (Step3와 동일) */}
           <div className="border-t dark:border-neutral-800 pt-4 mt-4">

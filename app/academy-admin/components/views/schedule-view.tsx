@@ -118,7 +118,8 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
               genre,
               difficulty_level,
               access_config,
-              class_type
+              class_type,
+              poster_url
             ),
             instructors (
               id,

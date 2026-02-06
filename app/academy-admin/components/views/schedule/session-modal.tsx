@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Users, Clock, MapPin, User, Lock, Unlock, Trash2, Ban, Link2, Check, Edit2, Save, UserCog } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { formatKSTTime, formatKSTDate } from '@/lib/utils/kst-time';
 import { AccessConfig } from '@/types/database';
@@ -398,6 +399,19 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
         </div>
 
         <div className="p-6 space-y-4">
+          {/* 포스터 */}
+          {session.classes?.poster_url && (
+            <div className="relative w-full aspect-[3/4] max-h-64 rounded-xl overflow-hidden bg-gray-100 dark:bg-neutral-800">
+              <Image
+                src={session.classes.poster_url}
+                alt={session.classes?.title || '수업 포스터'}
+                fill
+                className="object-contain"
+                sizes="(max-width: 768px) 100vw, 500px"
+              />
+            </div>
+          )}
+
           {/* 클래스 정보 (읽기 전용) */}
           <div>
             <h4 className="text-lg font-bold text-gray-900 dark:text-white">

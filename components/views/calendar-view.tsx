@@ -65,6 +65,7 @@ function transformSchedule(scheduleData: any): ClassInfo & { academy?: Academy; 
     price: 0,
     class_title: classData.title || '클래스',
     hall_name: scheduleData.halls?.name || classData.halls?.name,
+    poster_url: classData.poster_url || null,
     academy,
     time: startTimeStr,
     endTimeFormatted: endTimeStr,
@@ -176,6 +177,7 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
               genre,
               difficulty_level,
               class_type,
+              poster_url,
               academies (
                 id,
                 name_kr,

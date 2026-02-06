@@ -115,6 +115,9 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
 
   const isFull = classInfo.status === 'FULL';
   
+  // 포스터
+  const posterUrl = classDetails?.poster_url || (classInfo as any).poster_url;
+
   // 영상 URL 및 썸네일
   const videoUrl = classDetails?.video_url || (classInfo as any).video_url;
   const thumbnailUrl = classDetails?.thumbnail_url || (classInfo as any).thumbnail_url || getYoutubeThumbnail(videoUrl);
@@ -162,6 +165,19 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
           
           {/* 스크롤 가능한 콘텐츠 영역 */}
           <div className="flex-1 overflow-y-auto px-6 pb-6">
+            {/* 포스터 섹션 */}
+            {posterUrl && (
+              <div className="relative w-full rounded-2xl overflow-hidden mb-4 bg-neutral-200 dark:bg-neutral-800">
+                <Image
+                  src={posterUrl}
+                  alt="수업 포스터"
+                  width={400}
+                  height={560}
+                  className="w-full h-auto object-contain max-h-[360px]"
+                />
+              </div>
+            )}
+
             {/* 영상 섹션 */}
             {(thumbnailUrl || embedUrl) && (
               <div className="relative w-full aspect-video rounded-2xl overflow-hidden mb-4 bg-neutral-200 dark:bg-neutral-800">

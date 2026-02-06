@@ -412,6 +412,7 @@ export type Database = {
           price: number | null
           discount_config: DiscountConfig | null
           free_access_config: FreeAccessConfig | null
+          poster_url: string | null
           song: string | null
           start_time: string | null
           status: string | null
@@ -440,6 +441,7 @@ export type Database = {
           is_active?: boolean | null
           is_canceled?: boolean | null
           max_students?: number | null
+          poster_url?: string | null
           present_students?: number | null
           price?: number | null
           song?: string | null
@@ -470,6 +472,7 @@ export type Database = {
           is_active?: boolean | null
           is_canceled?: boolean | null
           max_students?: number | null
+          poster_url?: string | null
           present_students?: number | null
           price?: number | null
           song?: string | null

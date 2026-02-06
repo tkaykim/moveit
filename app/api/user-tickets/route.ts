@@ -12,34 +12,21 @@ export async function GET(request: Request) {
   try {
     const supabase = await createClient();
 
-    // 현재 사용자 확인 (데모 버전: 인증 우회)
-    let user: any = null;
+    // 현재 사용자 확인
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !authUser) {
-      // 데모 버전: 인증 없이도 진행 (임시 사용자 ID 사용)
-      // 구매 API와 동일한 순서로 사용자 선택 (created_at ASC)
-      const { data: demoUsersList } = await (supabase as any)
-        .from('users')
-        .select('id')
-        .order('created_at', { ascending: true })
-        .limit(1);
-      
-      if (demoUsersList && demoUsersList.length > 0) {
-        user = { id: demoUsersList[0].id };
-      } else {
-        // 사용자가 없으면 빈 데이터 반환
-        return NextResponse.json({
-          data: [],
-          counts: {
-            total: 0,
-            academySpecific: 0,
-          },
-        });
-      }
-    } else {
-      user = authUser;
+      // 로그인되지 않은 경우 빈 데이터 반환
+      return NextResponse.json({
+        data: [],
+        counts: {
+          total: 0,
+          academySpecific: 0,
+        },
+      });
     }
+
+    const user = authUser;
 
     const { searchParams } = new URL(request.url);
     const academyId = searchParams.get('academyId') || undefined;

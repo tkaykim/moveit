@@ -82,7 +82,8 @@ export function DailyScheduleModal({
             genre,
             difficulty_level,
             class_type,
-            price
+            price,
+            poster_url
           ),
           instructors (
             id,
