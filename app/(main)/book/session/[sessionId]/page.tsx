@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
-import { ChevronLeft, Calendar, Clock, MapPin, User, Users, Wallet, CheckCircle, CreditCard, Building2, LogIn, AlertCircle, Ticket, Gift, CalendarDays, ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronLeft, Calendar, Clock, MapPin, User, Users, Wallet, CheckCircle, CreditCard, Building2, LogIn, AlertCircle, Ticket, Gift, CalendarDays, ChevronRight, Loader2, AlertTriangle, X } from 'lucide-react';
 import Image from 'next/image';
 import { formatKSTTime, formatKSTDate } from '@/lib/utils/kst-time';
 import { MyTab } from '@/components/auth/MyTab';
@@ -109,6 +109,7 @@ export default function SessionBookingPage() {
   // 모달
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isTicketPurchaseModalOpen, setIsTicketPurchaseModalOpen] = useState(false);
+  const [showOnsiteWarning, setShowOnsiteWarning] = useState(false);
 
   // 종료된 수업일 때 같은 클래스의 다음 가능한 날짜 목록
   const [upcomingSessions, setUpcomingSessions] = useState<Array<{
@@ -472,9 +473,8 @@ export default function SessionBookingPage() {
     } else if (paymentMethod === 'purchase') {
       handlePurchaseBooking();
     } else {
-      // 현장 결제: 확인 팝업 후 진행 (docs/update .md 9-A)
-      const confirmed = window.confirm(t('sessionBooking.onSiteConfirm'));
-      if (confirmed) handleOnsiteBooking();
+      // 현장 결제: 커스텀 경고 팝업 표시
+      setShowOnsiteWarning(true);
     }
   };
 
@@ -1047,6 +1047,75 @@ export default function SessionBookingPage() {
               t('sessionBooking.requestBooking')
             )}
           </button>
+        </div>
+      )}
+
+      {/* 현장결제 경고 팝업 */}
+      {showOnsiteWarning && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowOnsiteWarning(false)} />
+          <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-in zoom-in-95 duration-200">
+            {/* 닫기 버튼 */}
+            <button
+              onClick={() => setShowOnsiteWarning(false)}
+              className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+            >
+              <X size={20} />
+            </button>
+
+            {/* 아이콘 */}
+            <div className="flex justify-center mb-4">
+              <div className="w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                <AlertTriangle size={28} className="text-amber-500" />
+              </div>
+            </div>
+
+            {/* 제목 */}
+            <h3 className="text-lg font-bold text-black dark:text-white text-center mb-3">
+              {t('sessionBooking.onsiteWarningTitle')}
+            </h3>
+
+            {/* 메시지 */}
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center mb-6 whitespace-pre-line leading-relaxed">
+              {t('sessionBooking.onsiteWarningMessage')}
+            </p>
+
+            {/* 버튼들 */}
+            <div className="space-y-2">
+              {/* 현장결제 진행 */}
+              <button
+                onClick={() => {
+                  setShowOnsiteWarning(false);
+                  handleOnsiteBooking();
+                }}
+                className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-colors"
+              >
+                {t('sessionBooking.onsiteWarningProceed')}
+              </button>
+
+              {/* 로그인하고 수강권으로 예약 (비로그인일 때만) */}
+              {!user && (
+                <button
+                  onClick={() => {
+                    setShowOnsiteWarning(false);
+                    setIsAuthModalOpen(true);
+                  }}
+                  className="w-full py-3 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <LogIn size={16} />
+                  {t('sessionBooking.onsiteWarningLogin')}
+                </button>
+              )}
+
+              {/* 취소 */}
+              <button
+                onClick={() => setShowOnsiteWarning(false)}
+                className="w-full py-3 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 font-medium rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+              >
+                {t('sessionBooking.onsiteWarningCancel')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
