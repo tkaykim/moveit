@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { formatKSTTime, formatKSTDate } from '@/lib/utils/kst-time';
 import { AccessConfig } from '@/types/database';
+import { formatExclusiveClassText } from '@/lib/utils/exclusive-class';
 
 interface SessionModalProps {
   session: any;
@@ -18,6 +19,7 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
   const [loading, setLoading] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [linkedTicketNames, setLinkedTicketNames] = useState<string[]>([]);
   
   // 편집 폼 상태
   const [formData, setFormData] = useState({
@@ -35,6 +37,12 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
   const [loadingData, setLoadingData] = useState(false);
 
   const accessConfig = session.classes?.access_config as AccessConfig | null;
+
+  const exclusiveText = formatExclusiveClassText({
+    ticketNames: linkedTicketNames,
+    requiredGroup: accessConfig?.requiredGroup,
+  });
+  const isExclusive = !!exclusiveText;
 
   // 세션 데이터에서 날짜/시간 파싱
   useEffect(() => {
@@ -71,6 +79,56 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
       }));
     }
   }, [session]);
+
+  // 클래스에 연결된 수강권 이름 로드 (내부 코드 'advanced' 등 노출 방지)
+  useEffect(() => {
+    const classId = session?.classes?.id;
+    if (!classId) {
+      setLinkedTicketNames([]);
+      return;
+    }
+
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setLinkedTicketNames([]);
+      return;
+    }
+
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const { data: ticketClassesData, error } = await (supabase as any)
+          .from('ticket_classes')
+          .select('ticket_id')
+          .eq('class_id', classId);
+
+        if (error) throw error;
+        const ticketIds = (ticketClassesData || []).map((tc: any) => tc?.ticket_id).filter(Boolean);
+        if (ticketIds.length === 0) {
+          if (!cancelled) setLinkedTicketNames([]);
+          return;
+        }
+
+        const { data: ticketsData } = await (supabase as any)
+          .from('tickets')
+          .select('id, name')
+          .in('id', ticketIds);
+
+        const names = (ticketsData || [])
+          .map((t: any) => (typeof t?.name === 'string' ? t.name : ''))
+          .filter(Boolean);
+
+        if (!cancelled) setLinkedTicketNames(names);
+      } catch (e) {
+        if (!cancelled) setLinkedTicketNames([]);
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.classes?.id]);
 
   // academyId가 있거나 편집 모드에 들어갈 때 강사/홀 데이터 로드
   const loadEditData = async () => {
@@ -535,16 +593,16 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
               {/* 접근 권한 */}
               <div className="bg-slate-50 dark:bg-neutral-800 p-4 rounded-lg">
                 <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
-                  {accessConfig?.requiredGroup ? <Lock size={14} /> : <Unlock size={14} />}
+                  {isExclusive ? <Lock size={14} /> : <Unlock size={14} />}
                   수강 권한
                 </h5>
                 <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                  {accessConfig?.requiredGroup ? (
+                  {isExclusive ? (
                     <div className="text-indigo-600 dark:text-indigo-400 font-medium">
-                      {accessConfig.requiredGroup} 전용
+                      {exclusiveText}
                     </div>
                   ) : (
-                    <div className="text-green-600 dark:text-green-400">그룹 제한 없음</div>
+                    <div className="text-green-600 dark:text-green-400">전용 제한 없음</div>
                   )}
                   <div className="flex gap-2">
                     {accessConfig?.allowRegularTicket !== false && (

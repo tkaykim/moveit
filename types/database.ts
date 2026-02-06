@@ -70,6 +70,8 @@ export type Database = {
           name_en: string | null
           name_kr: string | null
           other_url: string | null
+          kakao_channel_url: string | null
+          naver_map_url: string | null
           tags: string | null
           tiktok_handle: string | null
           website_url: string | null
@@ -90,6 +92,8 @@ export type Database = {
           name_en?: string | null
           name_kr?: string | null
           other_url?: string | null
+          kakao_channel_url?: string | null
+          naver_map_url?: string | null
           tags?: string | null
           tiktok_handle?: string | null
           website_url?: string | null
@@ -110,6 +114,8 @@ export type Database = {
           name_en?: string | null
           name_kr?: string | null
           other_url?: string | null
+          kakao_channel_url?: string | null
+          naver_map_url?: string | null
           tags?: string | null
           tiktok_handle?: string | null
           website_url?: string | null

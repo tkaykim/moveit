@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { SectionHeader } from '../common/section-header';
 import { Check, X, Loader2, Plus } from 'lucide-react';
 import { AdminExtensionCreateModal } from '../modals/admin-extension-create-modal';
+import { ExtensionPolicySettingsCard } from './extension-policy-settings-card';
 
 interface ExtensionRequest {
   id: string;
@@ -118,6 +119,8 @@ export function ExtensionRequestsView({ academyId }: ExtensionRequestsViewProps)
       <p className="text-sm text-gray-500 dark:text-gray-400">
         회원이 신청한 연장/일시정지를 승인하거나 거절합니다. 관리자가 직접 회원을 검색해 연장/일시정지를 생성(즉시 승인)할 수도 있습니다.
       </p>
+
+      <ExtensionPolicySettingsCard academyId={academyId} />
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <button

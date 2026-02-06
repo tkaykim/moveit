@@ -6,6 +6,7 @@ import { SectionHeader } from '../common/section-header';
 import { ClassMasterModal } from './class-masters/class-master-modal';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { AccessConfig } from '@/types/database';
+import { formatExclusiveClassText } from '@/lib/utils/exclusive-class';
 
 interface ClassMastersViewProps {
   academyId: string;
@@ -33,6 +34,7 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
   const [selectedClass, setSelectedClass] = useState<any>(null);
   const [filterTab, setFilterTab] = useState<FilterTab>('active');
   const [classTypeFilter, setClassTypeFilter] = useState<ClassTypeFilter>('all');
+  const [ticketNameById, setTicketNameById] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadData();
@@ -58,6 +60,9 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
           halls (
             id,
             name
+          ),
+          ticket_classes (
+            ticket_id
           )
         `)
         .eq('academy_id', academyId)
@@ -65,7 +70,32 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setClassMasters(data || []);
+      const rows = data || [];
+      setClassMasters(rows);
+
+      // 클래스에 연결된 수강권 이름을 한 번에 로드 (UI에 내부 코드 노출 방지)
+      const ticketIds = Array.from(
+        new Set(
+          rows
+            .flatMap((c: any) => (c.ticket_classes || []).map((tc: any) => tc?.ticket_id).filter(Boolean))
+            .filter(Boolean)
+        )
+      );
+
+      if (ticketIds.length > 0) {
+        const { data: ticketsData } = await (supabase as any)
+          .from('tickets')
+          .select('id, name')
+          .in('id', ticketIds);
+
+        const mapping: Record<string, string> = {};
+        (ticketsData || []).forEach((t: any) => {
+          if (t?.id && typeof t?.name === 'string') mapping[t.id] = t.name;
+        });
+        setTicketNameById(mapping);
+      } else {
+        setTicketNameById({});
+      }
     } catch (error) {
       console.error('Error loading class masters:', error);
     } finally {
@@ -163,9 +193,18 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
     
     // 특정 그룹 전용인 경우
     if (accessConfig?.requiredGroup) {
+      const ticketIds: string[] = (classItem.ticket_classes || [])
+        .map((tc: any) => tc?.ticket_id)
+        .filter(Boolean);
+      const ticketNames = ticketIds.map((id) => ticketNameById[id]).filter(Boolean);
+      const exclusiveText = formatExclusiveClassText({
+        ticketNames,
+        requiredGroup: accessConfig.requiredGroup,
+      });
+
       return {
         icon: Lock,
-        text: `${accessConfig.requiredGroup} 전용`,
+        text: exclusiveText || '전용 수업',
         color: 'text-indigo-600 dark:text-indigo-400',
         allowedTypes: [],
       };

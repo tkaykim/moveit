@@ -9,14 +9,16 @@ interface SettingsViewProps {
 }
 
 export function SettingsView({ academyId }: SettingsViewProps) {
-  const [academy, setAcademy] = useState<any>(null);
   const [formData, setFormData] = useState({
     name_kr: '',
     name_en: '',
     address: '',
     contact_number: '',
     description: '',
-    max_extension_days: '' as string | number,
+    instagram_handle: '',
+    youtube_url: '',
+    naver_map_url: '',
+    kakao_channel_url: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -41,14 +43,16 @@ export function SettingsView({ academyId }: SettingsViewProps) {
 
       if (error) throw error;
 
-      setAcademy(data);
       setFormData({
         name_kr: data.name_kr || '',
         name_en: data.name_en || '',
         address: data.address || '',
         contact_number: data.contact_number || '',
         description: data.description || '',
-        max_extension_days: data.max_extension_days ?? '',
+        instagram_handle: data.instagram_handle || '',
+        youtube_url: data.youtube_url || '',
+        naver_map_url: data.naver_map_url || '',
+        kakao_channel_url: data.kakao_channel_url || '',
       });
     } catch (error) {
       console.error('Error loading academy:', error);
@@ -75,7 +79,10 @@ export function SettingsView({ academyId }: SettingsViewProps) {
         address: formData.address,
         contact_number: formData.contact_number,
         description: formData.description,
-        max_extension_days: formData.max_extension_days === '' ? null : Number(formData.max_extension_days) || null,
+        instagram_handle: formData.instagram_handle.trim() ? formData.instagram_handle.trim() : null,
+        youtube_url: formData.youtube_url.trim() ? formData.youtube_url.trim() : null,
+        naver_map_url: formData.naver_map_url.trim() ? formData.naver_map_url.trim() : null,
+        kakao_channel_url: formData.kakao_channel_url.trim() ? formData.kakao_channel_url.trim() : null,
       };
       const { error } = await supabase
         .from('academies')
@@ -105,10 +112,10 @@ export function SettingsView({ academyId }: SettingsViewProps) {
     <div className="space-y-6" data-onboarding="page-settings-0">
       <SectionHeader title="시스템 설정" />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-neutral-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800">
           <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-white">학원 기본 정보</h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 학원명 (한글)
@@ -168,22 +175,6 @@ export function SettingsView({ academyId }: SettingsViewProps) {
                 학원 소개, 특징, 운영 방식 등을 자유롭게 작성하세요.
               </p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                수강권 연장 신청 최대 일수
-              </label>
-              <input
-                type="number"
-                min={0}
-                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                value={formData.max_extension_days}
-                onChange={(e) => setFormData({ ...formData, max_extension_days: e.target.value === '' ? '' : e.target.value })}
-                placeholder="비워두면 제한 없음"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                회원이 연장/일시정지 신청 시 허용할 최대 일수. 비우면 제한 없음.
-              </p>
-            </div>
             <button
               type="submit"
               disabled={saving}
@@ -191,14 +182,72 @@ export function SettingsView({ academyId }: SettingsViewProps) {
             >
               {saving ? '저장 중...' : '정보 수정 저장'}
             </button>
-          </form>
+          </div>
         </div>
 
         <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-neutral-800">
           <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-white">
-            알림 및 자동화 설정
+            링크 및 채널 설정
           </h3>
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                유튜브 링크
+              </label>
+              <input
+                type="url"
+                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                value={formData.youtube_url}
+                onChange={(e) => setFormData({ ...formData, youtube_url: e.target.value })}
+                placeholder="https://www.youtube.com/@채널명 또는 영상 URL"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                인스타그램 링크
+              </label>
+              <input
+                type="url"
+                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                value={formData.instagram_handle}
+                onChange={(e) => setFormData({ ...formData, instagram_handle: e.target.value })}
+                placeholder="https://www.instagram.com/계정명"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                네이버지도 링크
+              </label>
+              <input
+                type="url"
+                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                value={formData.naver_map_url}
+                onChange={(e) => setFormData({ ...formData, naver_map_url: e.target.value })}
+                placeholder="네이버지도 장소 공유 링크"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                카카오톡 채널 링크
+              </label>
+              <input
+                type="url"
+                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                value={formData.kakao_channel_url}
+                onChange={(e) => setFormData({ ...formData, kakao_channel_url: e.target.value })}
+                placeholder="https://pf.kakao.com/..."
+              />
+            </div>
+
+            <div className="pt-4 border-t border-gray-100 dark:border-neutral-800">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                링크는 저장 버튼을 누르면 함께 반영됩니다.
+              </p>
+            </div>
+
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-gray-800 dark:text-white">수강료 납부 알림</p>
@@ -232,7 +281,7 @@ export function SettingsView({ academyId }: SettingsViewProps) {
             </div>
           </div>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

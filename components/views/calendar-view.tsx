@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MapPin } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { ClassInfo, Academy } from '@/types';
 import { ClassPreviewModal } from '@/components/modals/class-preview-modal';
+import { LevelBadge } from '@/components/common/level-badge';
 import { 
   formatKSTTime, 
   getKSTWeekStart, 
@@ -27,9 +28,9 @@ const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const DAY_NAMES = ["월", "화", "수", "목", "금", "토", "일"];
 
 // Schedule을 ClassInfo로 변환
-function transformSchedule(scheduleData: any): ClassInfo & { academy?: Academy; time?: string; startTime?: string; endTime?: string; maxStudents?: number; currentStudents?: number } {
+function transformSchedule(scheduleData: any): ClassInfo & { academy?: Academy; time?: string; endTimeFormatted?: string; startTime?: string; endTime?: string; maxStudents?: number; currentStudents?: number } {
   const classData = scheduleData.classes || {};
-  const instructor = scheduleData.instructors?.name_kr || scheduleData.instructors?.name_en || classData.instructors?.name_kr || '강사 정보 없음';
+  const instructor = scheduleData.instructors?.name_kr || scheduleData.instructors?.name_en || classData.instructors?.name_kr || '';
   const genre = classData.genre || 'ALL';
   const level = classData.difficulty_level || 'All Level';
   const maxStudents = scheduleData.max_students || classData.max_students || 0;
@@ -52,6 +53,7 @@ function transformSchedule(scheduleData: any): ClassInfo & { academy?: Academy; 
 
   // 시간 정보 (UTC를 KST로 변환하여 표시)
   const startTimeStr = scheduleData.start_time ? formatKSTTime(scheduleData.start_time) : '';
+  const endTimeStr = scheduleData.end_time ? formatKSTTime(scheduleData.end_time) : '';
 
   return {
     id: classData.id || scheduleData.id,
@@ -65,6 +67,7 @@ function transformSchedule(scheduleData: any): ClassInfo & { academy?: Academy; 
     hall_name: scheduleData.halls?.name || classData.halls?.name,
     academy,
     time: startTimeStr,
+    endTimeFormatted: endTimeStr,
     startTime: scheduleData.start_time,
     endTime: scheduleData.end_time,
     maxStudents,
@@ -396,41 +399,58 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
           timeSlots.map((time: string) => (
             <div key={time} className="space-y-2">
               <h3 className="text-sm font-bold text-neutral-600 dark:text-neutral-400 px-2">{time}</h3>
-              {classesByTime[time].map((classInfo) => (
-                <div
-                  key={classInfo.id}
-                  className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-transform"
-                  onClick={() => handleClassClick(classInfo)}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex-1">
-                      <h4 className="text-base font-bold text-black dark:text-white mb-1">
+              {classesByTime[time].map((classInfo) => {
+                const endTimeStr = (classInfo as any).endTimeFormatted;
+
+                return (
+                  <div
+                    key={`${classInfo.schedule_id || classInfo.id}`}
+                    className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-transform"
+                    onClick={() => handleClassClick(classInfo)}
+                  >
+                    {/* 상단: 제목 + 난이도 + 상태 */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <h4 className="text-base font-bold text-black dark:text-white leading-tight truncate">
                         {classInfo.class_title || `${classInfo.genre} 클래스`}
                       </h4>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                        {classInfo.academy?.name || '학원 정보 없음'} {classInfo.academy?.address && `• ${classInfo.academy.address}`}
-                      </p>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
-                        {classInfo.instructor} • {classInfo.hall_name || '홀 정보 없음'}
-                      </p>
+                      <LevelBadge level={classInfo.level} />
+                      <div className="flex-1" />
+                      {classInfo.status === 'FULL' ? (
+                        <span className="flex-shrink-0 text-[10px] font-bold px-2 py-1 rounded bg-red-500/10 text-red-500 dark:text-red-400">
+                          마감
+                        </span>
+                      ) : classInfo.status === 'ALMOST_FULL' ? (
+                        <span className="flex-shrink-0 text-[10px] font-bold px-2 py-1 rounded bg-orange-500/10 text-orange-500 dark:text-orange-400">
+                          마감임박
+                        </span>
+                      ) : null}
                     </div>
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded ${
-                      classInfo.status === 'FULL'
-                        ? 'bg-red-500/10 dark:bg-red-500/10 text-red-500 dark:text-red-400'
-                        : classInfo.status === 'ALMOST_FULL'
-                        ? 'bg-orange-500/10 dark:bg-orange-500/10 text-orange-500 dark:text-orange-400'
-                        : 'bg-primary/10 dark:bg-[#CCFF00]/10 text-primary dark:text-[#CCFF00]'
-                    }`}>
-                      {classInfo.status === 'FULL' ? '마감' : classInfo.status === 'ALMOST_FULL' ? '임박' : '예약 가능'}
-                    </span>
+
+                    {/* 중단: 강사 */}
+                    {classInfo.instructor && (
+                      <div className="mb-2">
+                        <span className="text-sm text-neutral-700 dark:text-neutral-300 font-medium">
+                          {classInfo.instructor}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* 하단: 시간 · 학원 · 인원 */}
+                    <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-neutral-500 dark:text-neutral-400">
+                      <span className="inline-flex items-center gap-1">
+                        <Clock size={12} />
+                        {classInfo.time}{endTimeStr ? ` - ${endTimeStr}` : ''}
+                      </span>
+                      {classInfo.academy?.name && (
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin size={12} />
+                          {classInfo.academy.name}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {classInfo.price !== undefined && classInfo.price > 0 && (
-                    <p className="text-sm font-bold text-black dark:text-white mt-2">
-                      {classInfo.price.toLocaleString()}원
-                    </p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           ))
         )}

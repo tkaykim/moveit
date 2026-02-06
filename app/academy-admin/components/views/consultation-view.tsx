@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { 
-  MoreHorizontal, Clock, Calendar, CheckCircle, Plus, Tag, Trash2, 
+  MoreHorizontal, Clock, Calendar, CheckCircle, Plus, 
   LayoutDashboard, Columns3, List, Settings, Search, Filter,
-  CalendarDays, Users, TrendingUp, Phone, AlertCircle, ChevronRight
+  CalendarDays, TrendingUp, Phone, AlertCircle, ChevronRight
 } from 'lucide-react';
-import { SectionHeader } from '../common/section-header';
 import { ConsultationModal } from './consultations/consultation-modal';
+import { ConsultationSettingsTab } from './consultations/consultation-settings-tab';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 
 interface ConsultationViewProps {
@@ -35,22 +35,6 @@ interface Consultation {
   notes?: string | null;
 }
 
-interface ConsultationAvailability {
-  phone: {
-    [key: string]: { start: string; end: string }[];
-  };
-  visit: {
-    [key: string]: { start: string; end: string }[];
-  };
-}
-
-interface ConsultationCategory {
-  id: string;
-  name: string;
-  duration_minutes: number;
-  display_order: number | null;
-}
-
 type TabType = 'dashboard' | 'kanban' | 'list' | 'settings';
 
 export function ConsultationView({ academyId }: ConsultationViewProps) {
@@ -58,101 +42,13 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
-  const [categories, setCategories] = useState<ConsultationCategory[]>([]);
-  const [categoryName, setCategoryName] = useState('');
-  const [categoryMinutes, setCategoryMinutes] = useState(30);
-  const [presetLoading, setPresetLoading] = useState(false);
-  const [categoryLoading, setCategoryLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [availability, setAvailability] = useState<ConsultationAvailability>({
-    phone: {},
-    visit: {}
-  });
-  const [availabilityLoading, setAvailabilityLoading] = useState(false);
-
-  const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
-  const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
   useEffect(() => {
     loadConsultations();
   }, [academyId]);
-
-  const loadCategories = async () => {
-    try {
-      const res = await fetch(`/api/consultation-categories?academyId=${academyId}`);
-      const data = await res.json();
-      if (res.ok) setCategories(data.data || []);
-    } catch {
-      setCategories([]);
-    }
-  };
-
-  useEffect(() => {
-    loadCategories();
-    loadAvailability();
-  }, [academyId]);
-
-  const loadAvailability = async () => {
-    try {
-      const res = await fetch(`/api/academies/${academyId}/consultation-availability`);
-      const data = await res.json();
-      if (res.ok && data.data) {
-        setAvailability(data.data);
-      }
-    } catch {
-      // ignore
-    }
-  };
-
-  const saveAvailability = async (newAvailability: ConsultationAvailability) => {
-    setAvailabilityLoading(true);
-    try {
-      const res = await fetch(`/api/academies/${academyId}/consultation-availability`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newAvailability),
-      });
-      if (!res.ok) throw new Error('저장 실패');
-      setAvailability(newAvailability);
-      alert('상담 가능 시간이 저장되었습니다.');
-    } catch (e: any) {
-      alert(e.message || '저장 실패');
-    } finally {
-      setAvailabilityLoading(false);
-    }
-  };
-
-  const toggleDayTime = (type: 'phone' | 'visit', dayKey: string) => {
-    const current = availability[type][dayKey];
-    const newAvailability = { ...availability };
-    
-    if (current && current.length > 0) {
-      // 제거
-      newAvailability[type] = { ...newAvailability[type] };
-      delete newAvailability[type][dayKey];
-    } else {
-      // 기본값 추가
-      newAvailability[type] = {
-        ...newAvailability[type],
-        [dayKey]: [{ start: '09:00', end: '18:00' }]
-      };
-    }
-    setAvailability(newAvailability);
-  };
-
-  const updateDayTime = (type: 'phone' | 'visit', dayKey: string, field: 'start' | 'end', value: string) => {
-    const newAvailability = { ...availability };
-    if (!newAvailability[type][dayKey]) {
-      newAvailability[type][dayKey] = [{ start: '09:00', end: '18:00' }];
-    }
-    newAvailability[type] = {
-      ...newAvailability[type],
-      [dayKey]: [{ ...newAvailability[type][dayKey][0], [field]: value }]
-    };
-    setAvailability(newAvailability);
-  };
 
   const loadConsultations = async () => {
     const supabase = getSupabaseClient();
@@ -241,53 +137,6 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
     } catch (error: any) {
       console.error('Error updating consultation:', error);
       alert(`상태 변경에 실패했습니다: ${error.message}`);
-    }
-  };
-
-  const applyPreset = async () => {
-    setPresetLoading(true);
-    try {
-      const res = await fetch(`/api/consultation-categories/preset?academyId=${academyId}`, { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '적용 실패');
-      alert('프리셋이 적용되었습니다. (입시반 30분, 오디션반 30분, 전문반 30분, 일반 상담 10분)');
-      loadCategories();
-    } catch (e: any) {
-      alert(e.message || '적용 실패');
-    } finally {
-      setPresetLoading(false);
-    }
-  };
-
-  const addCategory = async () => {
-    if (!categoryName.trim()) return;
-    setCategoryLoading(true);
-    try {
-      const res = await fetch('/api/consultation-categories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ academy_id: academyId, name: categoryName.trim(), duration_minutes: categoryMinutes }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '추가 실패');
-      setCategoryName('');
-      setCategoryMinutes(30);
-      loadCategories();
-    } catch (e: any) {
-      alert(e.message || '추가 실패');
-    } finally {
-      setCategoryLoading(false);
-    }
-  };
-
-  const deleteCategory = async (id: string) => {
-    if (!confirm('이 카테고리를 삭제하시겠습니까?')) return;
-    try {
-      const res = await fetch(`/api/consultation-categories/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('삭제 실패');
-      loadCategories();
-    } catch (e: any) {
-      alert(e.message || '삭제 실패');
     }
   };
 
@@ -870,245 +719,7 @@ export function ConsultationView({ academyId }: ConsultationViewProps) {
 
           {/* 설정 탭 */}
           {activeTab === 'settings' && (
-            <div className="h-full overflow-y-auto pb-6">
-              <div className="max-w-2xl">
-                {/* 상담 카테고리 설정 */}
-                <div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 overflow-hidden">
-                  <div className="px-6 py-5 border-b border-gray-100 dark:border-neutral-800">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                        <Tag className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">상담 카테고리</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">학원 상세 페이지에서 상담 신청 시 선택할 수 있는 카테고리입니다</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-6 space-y-5">
-                    {/* 프리셋 적용 */}
-                    {categories.length === 0 && (
-                      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-100 dark:border-blue-900/30">
-                        <p className="text-sm text-blue-800 dark:text-blue-300 mb-3">
-                          아직 카테고리가 없습니다. 기본 프리셋을 적용해보세요.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={applyPreset}
-                          disabled={presetLoading}
-                          className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50"
-                        >
-                          {presetLoading ? '적용 중...' : '프리셋 적용 (입시반·오디션반·전문반·일반 상담)'}
-                        </button>
-                      </div>
-                    )}
-
-                    {/* 기존 카테고리 목록 */}
-                    {categories.length > 0 && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          등록된 카테고리
-                        </label>
-                        <div className="space-y-2">
-                          {categories.map((c) => (
-                            <div
-                              key={c.id}
-                              className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-neutral-800 border border-gray-100 dark:border-neutral-700"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-600 flex items-center justify-center">
-                                  <Tag size={14} className="text-gray-500 dark:text-gray-400" />
-                                </div>
-                                <div>
-                                  <p className="font-medium text-gray-900 dark:text-white">{c.name}</p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">소요시간: {c.duration_minutes}분</p>
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => deleteCategory(c.id)}
-                                className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 카테고리 추가 */}
-                    <div className="pt-4 border-t border-gray-100 dark:border-neutral-800">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                        새 카테고리 추가
-                      </label>
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <input
-                          type="text"
-                          placeholder="카테고리 이름"
-                          value={categoryName}
-                          onChange={(e) => setCategoryName(e.target.value)}
-                          className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-neutral-700 rounded-xl text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min={5}
-                            max={120}
-                            value={categoryMinutes}
-                            onChange={(e) => setCategoryMinutes(Number(e.target.value) || 30)}
-                            className="w-20 px-3 py-2.5 border border-gray-200 dark:border-neutral-700 rounded-xl text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center"
-                          />
-                          <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">분</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={addCategory}
-                          disabled={categoryLoading || !categoryName.trim()}
-                          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50 whitespace-nowrap"
-                        >
-                          {categoryLoading ? '추가 중...' : '추가'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 상담 가능 시간 설정 */}
-                <div className="mt-6 bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 overflow-hidden">
-                  <div className="px-6 py-5 border-b border-gray-100 dark:border-neutral-800">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                        <Clock className="w-5 h-5 text-green-600 dark:text-green-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">상담 가능 시간</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">요일별로 전화/방문 상담 가능 시간을 설정하세요</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-6 space-y-6">
-                    {/* 전화 상담 가능 시간 */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Phone size={16} className="text-blue-600 dark:text-blue-400" />
-                        <label className="text-sm font-semibold text-gray-900 dark:text-white">전화 상담 가능 시간</label>
-                      </div>
-                      <div className="space-y-2">
-                        {DAY_KEYS.map((dayKey, idx) => {
-                          const isActive = availability.phone[dayKey] && availability.phone[dayKey].length > 0;
-                          const times = availability.phone[dayKey]?.[0] || { start: '09:00', end: '18:00' };
-                          return (
-                            <div key={dayKey} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-neutral-800">
-                              <button
-                                type="button"
-                                onClick={() => toggleDayTime('phone', dayKey)}
-                                className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${
-                                  isActive
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-200 dark:bg-neutral-700 text-gray-500 dark:text-gray-400'
-                                }`}
-                              >
-                                {DAYS[idx]}
-                              </button>
-                              {isActive ? (
-                                <div className="flex items-center gap-2 flex-1">
-                                  <input
-                                    type="time"
-                                    value={times.start}
-                                    onChange={(e) => updateDayTime('phone', dayKey, 'start', e.target.value)}
-                                    className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                                  />
-                                  <span className="text-gray-400">~</span>
-                                  <input
-                                    type="time"
-                                    value={times.end}
-                                    onChange={(e) => updateDayTime('phone', dayKey, 'end', e.target.value)}
-                                    className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                                  />
-                                </div>
-                              ) : (
-                                <span className="text-sm text-gray-400">휴무</span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* 방문 상담 가능 시간 */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Users size={16} className="text-purple-600 dark:text-purple-400" />
-                        <label className="text-sm font-semibold text-gray-900 dark:text-white">방문 상담 가능 시간</label>
-                      </div>
-                      <div className="space-y-2">
-                        {DAY_KEYS.map((dayKey, idx) => {
-                          const isActive = availability.visit[dayKey] && availability.visit[dayKey].length > 0;
-                          const times = availability.visit[dayKey]?.[0] || { start: '09:00', end: '18:00' };
-                          return (
-                            <div key={dayKey} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-neutral-800">
-                              <button
-                                type="button"
-                                onClick={() => toggleDayTime('visit', dayKey)}
-                                className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${
-                                  isActive
-                                    ? 'bg-purple-600 text-white'
-                                    : 'bg-gray-200 dark:bg-neutral-700 text-gray-500 dark:text-gray-400'
-                                }`}
-                              >
-                                {DAYS[idx]}
-                              </button>
-                              {isActive ? (
-                                <div className="flex items-center gap-2 flex-1">
-                                  <input
-                                    type="time"
-                                    value={times.start}
-                                    onChange={(e) => updateDayTime('visit', dayKey, 'start', e.target.value)}
-                                    className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                                  />
-                                  <span className="text-gray-400">~</span>
-                                  <input
-                                    type="time"
-                                    value={times.end}
-                                    onChange={(e) => updateDayTime('visit', dayKey, 'end', e.target.value)}
-                                    className="px-3 py-2 border border-gray-200 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                                  />
-                                </div>
-                              ) : (
-                                <span className="text-sm text-gray-400">휴무</span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* 저장 버튼 */}
-                    <div className="pt-4 border-t border-gray-100 dark:border-neutral-800">
-                      <button
-                        type="button"
-                        onClick={() => saveAvailability(availability)}
-                        disabled={availabilityLoading}
-                        className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors disabled:opacity-50"
-                      >
-                        {availabilityLoading ? '저장 중...' : '상담 가능 시간 저장'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 추가 설정 안내 */}
-                <div className="mt-6 p-4 rounded-xl bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    <span className="font-medium text-gray-900 dark:text-white">Tip:</span> 상담 카테고리와 상담 가능 시간은 학원 상세 페이지의 상담 신청 폼에서 사용됩니다. 
-                    고객이 희망 시간을 선택할 때 설정된 시간 내에서만 선택할 수 있습니다.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <ConsultationSettingsTab academyId={academyId} />
           )}
         </div>
       </div>
