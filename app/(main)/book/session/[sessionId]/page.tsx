@@ -577,13 +577,14 @@ export default function SessionBookingPage() {
               <span>{session.halls.name}</span>
             </div>
           )}
-          <div className="flex items-center gap-3">
-            <Users size={18} className="text-neutral-400" />
-            <span className={isFull ? 'text-red-500 font-medium' : ''}>
-              {session.current_students || 0} / {session.max_students || 20}{language === 'ko' ? '명' : ''}
-              {isFull && ` (${t('sessionBooking.closed')})`}
-            </span>
-          </div>
+          {isFull && (
+            <div className="flex items-center gap-3">
+              <Users size={18} className="text-red-400" />
+              <span className="text-red-500 font-medium">
+                {t('sessionBooking.closed')}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -635,9 +636,7 @@ export default function SessionBookingPage() {
                             </div>
                             <div className="text-xs text-neutral-500 flex items-center gap-2">
                               <span>{formatKSTTime(s.start_time)}–{formatKSTTime(s.end_time)}</span>
-                              <span>·</span>
-                              <span>{s.current_students || 0}/{s.max_students || 20}{language === 'ko' ? '명' : ''}</span>
-                              {full && <span className="text-red-500">{t('sessionBooking.closed')}</span>}
+                              {full && <><span>·</span><span className="text-red-500">{t('sessionBooking.closed')}</span></>}
                             </div>
                           </div>
                         </div>
