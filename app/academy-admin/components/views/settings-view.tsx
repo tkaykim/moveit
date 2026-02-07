@@ -1,11 +1,95 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SectionHeader } from '../common/section-header';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import { 
+  SectionConfig, 
+  SectionConfigItem, 
+  DEFAULT_SECTION_CONFIG,
+  TAB_LABELS,
+  HOME_SECTION_LABELS
+} from '@/types/database';
+import { GripVertical, Eye, EyeOff, ChevronUp, ChevronDown, RotateCcw } from 'lucide-react';
 
 interface SettingsViewProps {
   academyId: string;
+}
+
+// --- 섹션 순서/표시 관리 컴포넌트 ---
+interface SectionOrderItemProps {
+  item: SectionConfigItem;
+  label: string;
+  isFirst: boolean;
+  isLast: boolean;
+  onToggleVisible: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onDragStart: (e: React.DragEvent, index: number) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent, index: number) => void;
+  index: number;
+}
+
+function SectionOrderItem({ 
+  item, label, isFirst, isLast, 
+  onToggleVisible, onMoveUp, onMoveDown,
+  onDragStart, onDragOver, onDrop, index
+}: SectionOrderItemProps) {
+  return (
+    <div
+      draggable
+      onDragStart={(e) => onDragStart(e, index)}
+      onDragOver={onDragOver}
+      onDrop={(e) => onDrop(e, index)}
+      className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all ${
+        item.visible
+          ? 'bg-white dark:bg-neutral-800 border-gray-200 dark:border-neutral-700'
+          : 'bg-gray-50 dark:bg-neutral-900 border-gray-100 dark:border-neutral-800 opacity-60'
+      } cursor-grab active:cursor-grabbing hover:shadow-sm`}
+    >
+      <GripVertical size={16} className="text-gray-400 dark:text-neutral-500 flex-shrink-0" />
+      <span className={`flex-1 text-sm font-medium ${
+        item.visible 
+          ? 'text-gray-800 dark:text-white' 
+          : 'text-gray-400 dark:text-neutral-500 line-through'
+      }`}>
+        {label}
+      </span>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={onMoveUp}
+          disabled={isFirst}
+          className="p-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          title="위로 이동"
+        >
+          <ChevronUp size={16} className="text-gray-500 dark:text-neutral-400" />
+        </button>
+        <button
+          type="button"
+          onClick={onMoveDown}
+          disabled={isLast}
+          className="p-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          title="아래로 이동"
+        >
+          <ChevronDown size={16} className="text-gray-500 dark:text-neutral-400" />
+        </button>
+        <button
+          type="button"
+          onClick={onToggleVisible}
+          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
+          title={item.visible ? '숨기기' : '표시하기'}
+        >
+          {item.visible ? (
+            <Eye size={16} className="text-blue-500 dark:text-blue-400" />
+          ) : (
+            <EyeOff size={16} className="text-gray-400 dark:text-neutral-500" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export function SettingsView({ academyId }: SettingsViewProps) {
@@ -20,8 +104,13 @@ export function SettingsView({ academyId }: SettingsViewProps) {
     naver_map_url: '',
     kakao_channel_url: '',
   });
+  const [sectionConfig, setSectionConfig] = useState<SectionConfig>(
+    JSON.parse(JSON.stringify(DEFAULT_SECTION_CONFIG))
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingSections, setSavingSections] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   useEffect(() => {
     loadAcademy();
@@ -54,10 +143,122 @@ export function SettingsView({ academyId }: SettingsViewProps) {
         naver_map_url: data.naver_map_url || '',
         kakao_channel_url: data.kakao_channel_url || '',
       });
+
+      // section_config 로드
+      if (data.section_config) {
+        const config = data.section_config as unknown as SectionConfig;
+        // 기존 설정에 새로 추가된 섹션이 있을 수 있으므로 병합
+        setSectionConfig(mergeSectionConfig(config));
+      } else {
+        setSectionConfig(JSON.parse(JSON.stringify(DEFAULT_SECTION_CONFIG)));
+      }
     } catch (error) {
       console.error('Error loading academy:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 기존 설정과 기본 설정을 병합 (새 섹션이 추가된 경우 대응)
+  const mergeSectionConfig = (saved: SectionConfig): SectionConfig => {
+    const mergeItems = (
+      savedItems: SectionConfigItem[], 
+      defaultItems: SectionConfigItem[]
+    ): SectionConfigItem[] => {
+      const result = [...savedItems];
+      for (const defaultItem of defaultItems) {
+        if (!result.find(item => item.id === defaultItem.id)) {
+          result.push({ ...defaultItem, order: result.length });
+        }
+      }
+      return result.sort((a, b) => a.order - b.order);
+    };
+
+    return {
+      tabs: mergeItems(saved.tabs || [], DEFAULT_SECTION_CONFIG.tabs),
+      homeSections: mergeItems(saved.homeSections || [], DEFAULT_SECTION_CONFIG.homeSections),
+    };
+  };
+
+  // 섹션 순서 변경 핸들러
+  const handleMoveItem = useCallback((
+    listKey: 'tabs' | 'homeSections',
+    fromIndex: number,
+    toIndex: number
+  ) => {
+    setSectionConfig(prev => {
+      const items = [...prev[listKey]];
+      const [moved] = items.splice(fromIndex, 1);
+      items.splice(toIndex, 0, moved);
+      // order 값 재정렬
+      const reordered = items.map((item, idx) => ({ ...item, order: idx }));
+      return { ...prev, [listKey]: reordered };
+    });
+  }, []);
+
+  // 섹션 표시/숨기기 토글
+  const handleToggleVisible = useCallback((
+    listKey: 'tabs' | 'homeSections',
+    index: number
+  ) => {
+    setSectionConfig(prev => {
+      const items = [...prev[listKey]];
+      items[index] = { ...items[index], visible: !items[index].visible };
+      return { ...prev, [listKey]: items };
+    });
+  }, []);
+
+  // 드래그앤드롭 핸들러
+  const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
+    setDragIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const createDropHandler = useCallback((listKey: 'tabs' | 'homeSections') => {
+    return (e: React.DragEvent, toIndex: number) => {
+      e.preventDefault();
+      if (dragIndex !== null && dragIndex !== toIndex) {
+        handleMoveItem(listKey, dragIndex, toIndex);
+      }
+      setDragIndex(null);
+    };
+  }, [dragIndex, handleMoveItem]);
+
+  // 섹션 설정 저장
+  const handleSaveSections = async () => {
+    setSavingSections(true);
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      alert('데이터베이스 연결에 실패했습니다.');
+      setSavingSections(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('academies')
+        .update({ section_config: sectionConfig as any })
+        .eq('id', academyId);
+
+      if (error) throw error;
+      alert('페이지 섹션 설정이 저장되었습니다.');
+    } catch (error: any) {
+      console.error('Error saving section config:', error);
+      alert(`섹션 설정 저장에 실패했습니다: ${error.message}`);
+    } finally {
+      setSavingSections(false);
+    }
+  };
+
+  // 섹션 설정 초기화
+  const handleResetSections = () => {
+    if (confirm('섹션 설정을 기본값으로 초기화하시겠습니까?')) {
+      setSectionConfig(JSON.parse(JSON.stringify(DEFAULT_SECTION_CONFIG)));
     }
   };
 
@@ -111,6 +312,93 @@ export function SettingsView({ academyId }: SettingsViewProps) {
   return (
     <div className="space-y-6" data-onboarding="page-settings-0">
       <SectionHeader title="시스템 설정" />
+
+      {/* 페이지 섹션 순서/표시 설정 */}
+      <div className="bg-white dark:bg-neutral-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-bold text-lg text-gray-800 dark:text-white">학원 페이지 섹션 설정</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              학원 상세 페이지에 표시되는 섹션의 순서를 변경하거나 숨길 수 있습니다.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleResetSections}
+            className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            title="기본값으로 초기화"
+          >
+            <RotateCcw size={14} />
+            초기화
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* 탭 순서 설정 */}
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">탭 순서</h4>
+            <div className="space-y-2">
+              {sectionConfig.tabs
+                .sort((a, b) => a.order - b.order)
+                .map((tab, index) => (
+                  <SectionOrderItem
+                    key={tab.id}
+                    item={tab}
+                    label={TAB_LABELS[tab.id] || tab.id}
+                    isFirst={index === 0}
+                    isLast={index === sectionConfig.tabs.length - 1}
+                    onToggleVisible={() => handleToggleVisible('tabs', index)}
+                    onMoveUp={() => handleMoveItem('tabs', index, index - 1)}
+                    onMoveDown={() => handleMoveItem('tabs', index, index + 1)}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={createDropHandler('tabs')}
+                    index={index}
+                  />
+                ))}
+            </div>
+          </div>
+
+          {/* 홈 탭 내 섹션 순서 설정 */}
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">홈 탭 내 섹션 순서</h4>
+            <div className="space-y-2">
+              {sectionConfig.homeSections
+                .sort((a, b) => a.order - b.order)
+                .map((section, index) => (
+                  <SectionOrderItem
+                    key={section.id}
+                    item={section}
+                    label={HOME_SECTION_LABELS[section.id] || section.id}
+                    isFirst={index === 0}
+                    isLast={index === sectionConfig.homeSections.length - 1}
+                    onToggleVisible={() => handleToggleVisible('homeSections', index)}
+                    onMoveUp={() => handleMoveItem('homeSections', index, index - 1)}
+                    onMoveDown={() => handleMoveItem('homeSections', index, index + 1)}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={createDropHandler('homeSections')}
+                    index={index}
+                  />
+                ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-neutral-800 flex items-center justify-between">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            드래그하거나 화살표 버튼으로 순서를 변경하고, 눈 아이콘으로 표시/숨기기를 설정하세요.
+          </p>
+          <button
+            type="button"
+            onClick={handleSaveSections}
+            disabled={savingSections}
+            className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50"
+          >
+            {savingSections ? '저장 중...' : '섹션 설정 저장'}
+          </button>
+        </div>
+      </div>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-neutral-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800">

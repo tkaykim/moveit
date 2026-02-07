@@ -61,6 +61,7 @@ export default function AcademyDetailPage() {
             img: imageUrl || undefined,
             academyId: data.id,
             address: data.address,
+            section_config: data.section_config || null,
           };
 
           setAcademy(transformedAcademy);

@@ -6,7 +6,7 @@ import { ClassPreviewModal } from '@/components/modals/class-preview-modal';
 import { TicketPurchaseModal } from '@/components/modals/ticket-purchase-modal';
 import { ConsultationRequestModal } from '@/components/modals/consultation-request-modal';
 import { Academy, ClassInfo } from '@/types';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { ThemeToggle } from '@/components/common/theme-toggle';
@@ -16,6 +16,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useTranslatedText } from '@/lib/i18n/useTranslation';
 import { TranslatedText } from '@/components/common/translated-text';
+import { SectionConfig, DEFAULT_SECTION_CONFIG } from '@/types/database';
+
+type TabId = 'home' | 'schedule' | 'reviews';
 
 interface AcademyDetailViewProps {
   academy: Academy | null;
@@ -26,7 +29,6 @@ interface AcademyDetailViewProps {
 export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetailViewProps) => {
   const router = useRouter();
   const [previewClass, setPreviewClass] = useState<(ClassInfo & { time?: string }) | null>(null);
-  const [activeTab, setActiveTab] = useState<'home' | 'schedule' | 'reviews'>('schedule');
   const [scheduleViewMode, setScheduleViewMode] = useState<'week' | 'month'>('week');
   const [recentVideos, setRecentVideos] = useState<any[]>([]);
   const [videosLoading, setVideosLoading] = useState(false);
@@ -42,6 +44,58 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
   const scheduleRef = useRef<HTMLDivElement>(null);
   const reviewsRef = useRef<HTMLDivElement>(null);
 
+  // 섹션 설정 파싱
+  const sectionConfig = useMemo<SectionConfig>(() => {
+    if (academy?.section_config) {
+      const config = academy.section_config;
+      // 기본 설정과 병합 (새 섹션이 추가된 경우 대응)
+      const mergeItems = (saved: any[], defaults: any[]) => {
+        const result = [...(saved || [])];
+        for (const def of defaults) {
+          if (!result.find((item: any) => item.id === def.id)) {
+            result.push({ ...def, order: result.length });
+          }
+        }
+        return result.sort((a: any, b: any) => a.order - b.order);
+      };
+      return {
+        tabs: mergeItems(config.tabs || [], DEFAULT_SECTION_CONFIG.tabs),
+        homeSections: mergeItems(config.homeSections || [], DEFAULT_SECTION_CONFIG.homeSections),
+      };
+    }
+    return DEFAULT_SECTION_CONFIG;
+  }, [academy?.section_config]);
+
+  // 표시할 탭 목록 (visible && 순서대로)
+  const visibleTabs = useMemo(() => {
+    return sectionConfig.tabs
+      .filter(tab => tab.visible)
+      .sort((a, b) => a.order - b.order);
+  }, [sectionConfig.tabs]);
+
+  // 표시할 홈 섹션 목록 (visible && 순서대로)
+  const visibleHomeSections = useMemo(() => {
+    return sectionConfig.homeSections
+      .filter(section => section.visible)
+      .sort((a, b) => a.order - b.order);
+  }, [sectionConfig.homeSections]);
+
+  // 첫 번째 표시할 탭을 기본 활성 탭으로 설정
+  const [activeTab, setActiveTab] = useState<TabId>('schedule');
+  
+  useEffect(() => {
+    if (visibleTabs.length > 0) {
+      setActiveTab(visibleTabs[0].id as TabId);
+    }
+  }, [visibleTabs]);
+
+  // 탭 ID → ref 매핑
+  const tabRefs: Record<string, React.RefObject<HTMLDivElement | null>> = useMemo(() => ({
+    home: homeRef,
+    schedule: scheduleRef,
+    reviews: reviewsRef,
+  }), []);
+
   // 스크롤 감지하여 탭 업데이트
   useEffect(() => {
     let ticking = false;
@@ -50,16 +104,15 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
       if (!ticking) {
         window.requestAnimationFrame(() => {
           const scrollTop = window.scrollY || document.documentElement.scrollTop;
-          const homeTop = homeRef.current?.offsetTop || 0;
-          const scheduleTop = scheduleRef.current?.offsetTop || 0;
-          const reviewsTop = reviewsRef.current?.offsetTop || 0;
-
-          if (reviewsRef.current && scrollTop >= reviewsTop - 150) {
-            setActiveTab('reviews');
-          } else if (scheduleRef.current && scrollTop >= scheduleTop - 150) {
-            setActiveTab('schedule');
-          } else if (homeRef.current && scrollTop >= homeTop - 150) {
-            setActiveTab('home');
+          
+          // 보이는 탭만 역순으로 체크 (아래에서 위로)
+          const reversedTabs = [...visibleTabs].reverse();
+          for (const tab of reversedTabs) {
+            const ref = tabRefs[tab.id];
+            if (ref?.current && scrollTop >= ref.current.offsetTop - 150) {
+              setActiveTab(tab.id as TabId);
+              break;
+            }
           }
           
           ticking = false;
@@ -70,18 +123,18 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [visibleTabs, tabRefs]);
 
   // 탭 클릭 시 해당 섹션으로 스크롤
-  const scrollToTab = useCallback((tab: 'home' | 'schedule' | 'reviews') => {
-    const ref = tab === 'home' ? homeRef : tab === 'schedule' ? scheduleRef : reviewsRef;
-    if (ref.current) {
+  const scrollToTab = useCallback((tab: TabId) => {
+    const ref = tabRefs[tab];
+    if (ref?.current) {
       const offset = 120; // sticky 탭 높이 고려
       const targetTop = ref.current.offsetTop - offset;
       window.scrollTo({ top: targetTop, behavior: 'smooth' });
       setActiveTab(tab);
     }
-  }, []);
+  }, [tabRefs]);
 
 
   // 최근 수업 영상 로드
@@ -295,190 +348,213 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
             )}
           </div>
         </div>
-        <div className="sticky top-0 bg-white dark:bg-neutral-950 z-20 border-b border-neutral-200 dark:border-neutral-800 flex text-sm font-bold text-neutral-500 dark:text-neutral-500">
-          <button 
-            onClick={() => scrollToTab('home')}
-            className={`flex-1 py-4 border-b-2 transition-colors ${
-              activeTab === 'home'
-                ? 'border-neutral-800 dark:border-[#CCFF00] text-black dark:text-white'
-                : 'border-transparent hover:text-black dark:hover:text-white'
-            }`}
-          >
-            {t('academyDetail.tabHome')}
-          </button>
-          <button 
-            onClick={() => scrollToTab('schedule')}
-            className={`flex-1 py-4 border-b-2 transition-colors ${
-              activeTab === 'schedule'
-                ? 'border-neutral-800 dark:border-[#CCFF00] text-black dark:text-white'
-                : 'border-transparent hover:text-black dark:hover:text-white'
-            }`}
-          >
-            {t('academyDetail.tabSchedule')}
-          </button>
-          <button 
-            onClick={() => scrollToTab('reviews')}
-            className={`flex-1 py-4 border-b-2 transition-colors ${
-              activeTab === 'reviews'
-                ? 'border-neutral-800 dark:border-[#CCFF00] text-black dark:text-white'
-                : 'border-transparent hover:text-black dark:hover:text-white'
-            }`}
-          >
-            {t('academyDetail.tabReviews')}
-          </button>
-        </div>
-
-        {/* 홈 섹션 */}
-        <div ref={homeRef} className="p-5 scroll-mt-20">
-          <h3 className="text-black dark:text-white font-bold text-lg mb-4">{t('academyDetail.academyInfo')}</h3>
-          <div className="space-y-4">
-            <div className="bg-neutral-100 dark:bg-neutral-900 rounded-2xl p-4">
-              <h4 className="text-sm font-bold text-black dark:text-white mb-2">{t('academyDetail.intro')}</h4>
-              <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                {t('academyDetail.introWelcome', { name: translatedAcademyName })}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowConsultationModal(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-primary dark:border-[#CCFF00] text-primary dark:text-[#CCFF00] font-bold text-sm"
-            >
-              <MessageSquare size={18} />
-              {t('academyDetail.requestConsultation')}
-            </button>
-            {academy.tags && (
-              <div>
-                <h4 className="text-sm font-bold text-black dark:text-white mb-2">{t('academyDetail.tags')}</h4>
-                <div className="flex flex-wrap gap-2">
-                  {academy.tags.split(',').map((tag, idx) => (
-                    <span key={idx} className="text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-3 py-1 rounded-full">
-                      <TranslatedText>{tag.trim()}</TranslatedText>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+        {/* 동적 탭 네비게이션 */}
+        {visibleTabs.length > 0 && (
+          <div className="sticky top-0 bg-white dark:bg-neutral-950 z-20 border-b border-neutral-200 dark:border-neutral-800 flex text-sm font-bold text-neutral-500 dark:text-neutral-500">
+            {visibleTabs.map(tab => {
+              const tabLabels: Record<string, string> = {
+                home: t('academyDetail.tabHome'),
+                schedule: t('academyDetail.tabSchedule'),
+                reviews: t('academyDetail.tabReviews'),
+              };
+              return (
+                <button 
+                  key={tab.id}
+                  onClick={() => scrollToTab(tab.id as TabId)}
+                  className={`flex-1 py-4 border-b-2 transition-colors ${
+                    activeTab === tab.id
+                      ? 'border-neutral-800 dark:border-[#CCFF00] text-black dark:text-white'
+                      : 'border-transparent hover:text-black dark:hover:text-white'
+                  }`}
+                >
+                  {tabLabels[tab.id] || tab.id}
+                </button>
+              );
+            })}
           </div>
+        )}
 
-          {/* 최근 수업 영상 섹션 */}
-          <div className="mt-6">
-            <h3 className="text-black dark:text-white font-bold text-lg mb-4">{t('academyDetail.recentVideos')}</h3>
-            {videosLoading ? (
-              <div className="text-center py-8 text-neutral-500">{t('common.loading')}</div>
-            ) : recentVideos.length === 0 ? (
-              <div className="text-center py-8 text-neutral-500">{t('academyDetail.noVideos')}</div>
-            ) : (
-              <div 
-                className="overflow-x-auto -mx-5 px-5 scrollbar-hide"
-                style={{ 
-                  WebkitOverflowScrolling: 'touch',
-                  touchAction: 'pan-x'
-                }}
-              >
-                <div className="flex gap-3 pb-2 w-max">
-                  {recentVideos.map((video) => {
-                    const embedUrl = getYoutubeEmbedUrl(video.video_url);
-                    
-                    return (
-                      <div
-                        key={video.id}
-                        className="flex-shrink-0 w-48 h-32 rounded-lg overflow-hidden bg-neutral-200 dark:bg-neutral-800 cursor-pointer"
-                        onClick={() => handleVideoClick(video.video_url, video.thumbnail_url)}
-                      >
-                        {video.thumbnail_url ? (
-                          <div className="relative w-full h-full">
-                            <Image
-                              src={video.thumbnail_url}
-                              alt={video.title || t('academyDetail.classVideo')}
-                              fill
-                              className="object-cover"
-                            />
+        {/* 동적 탭 컨텐츠 렌더링 (설정된 순서대로) */}
+        {visibleTabs.map(tab => {
+          switch (tab.id) {
+            case 'home':
+              return (
+                <div key="home" ref={homeRef} className="p-5 scroll-mt-20">
+                  {/* 홈 탭 내 섹션을 설정 순서대로 렌더링 */}
+                  {visibleHomeSections.map((section, sectionIndex) => {
+                    switch (section.id) {
+                      case 'info':
+                        return (
+                          <div key="info" className={sectionIndex > 0 ? 'mt-6' : ''}>
+                            <h3 className="text-black dark:text-white font-bold text-lg mb-4">{t('academyDetail.academyInfo')}</h3>
+                            <div className="space-y-4">
+                              <div className="bg-neutral-100 dark:bg-neutral-900 rounded-2xl p-4">
+                                <h4 className="text-sm font-bold text-black dark:text-white mb-2">{t('academyDetail.intro')}</h4>
+                                <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                                  {t('academyDetail.introWelcome', { name: translatedAcademyName })}
+                                </p>
+                              </div>
+                            </div>
                           </div>
-                        ) : embedUrl ? (
-                          <div className="relative w-full h-full">
-                            <iframe
-                              src={embedUrl}
-                              className="w-full h-full"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                              title={video.title || '수업 영상'}
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <svg 
-                              className="w-10 h-10 text-neutral-400" 
-                              fill="currentColor" 
-                              viewBox="0 0 20 20"
+                        );
+                      case 'consultation':
+                        return (
+                          <div key="consultation" className={sectionIndex > 0 ? 'mt-4' : ''}>
+                            <button
+                              type="button"
+                              onClick={() => setShowConsultationModal(true)}
+                              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-primary dark:border-[#CCFF00] text-primary dark:text-[#CCFF00] font-bold text-sm"
                             >
-                              <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                            </svg>
+                              <MessageSquare size={18} />
+                              {t('academyDetail.requestConsultation')}
+                            </button>
                           </div>
-                        )}
-                      </div>
-                    );
+                        );
+                      case 'tags':
+                        return academy.tags ? (
+                          <div key="tags" className={sectionIndex > 0 ? 'mt-4' : ''}>
+                            <h4 className="text-sm font-bold text-black dark:text-white mb-2">{t('academyDetail.tags')}</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {academy.tags.split(',').map((tag, idx) => (
+                                <span key={idx} className="text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-3 py-1 rounded-full">
+                                  <TranslatedText>{tag.trim()}</TranslatedText>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null;
+                      case 'recent_videos':
+                        return (
+                          <div key="recent_videos" className={sectionIndex > 0 ? 'mt-6' : ''}>
+                            <h3 className="text-black dark:text-white font-bold text-lg mb-4">{t('academyDetail.recentVideos')}</h3>
+                            {videosLoading ? (
+                              <div className="text-center py-8 text-neutral-500">{t('common.loading')}</div>
+                            ) : recentVideos.length === 0 ? (
+                              <div className="text-center py-8 text-neutral-500">{t('academyDetail.noVideos')}</div>
+                            ) : (
+                              <div 
+                                className="overflow-x-auto -mx-5 px-5 scrollbar-hide"
+                                style={{ 
+                                  WebkitOverflowScrolling: 'touch',
+                                  touchAction: 'pan-x'
+                                }}
+                              >
+                                <div className="flex gap-3 pb-2 w-max">
+                                  {recentVideos.map((video) => {
+                                    const embedUrl = getYoutubeEmbedUrl(video.video_url);
+                                    
+                                    return (
+                                      <div
+                                        key={video.id}
+                                        className="flex-shrink-0 w-48 h-32 rounded-lg overflow-hidden bg-neutral-200 dark:bg-neutral-800 cursor-pointer"
+                                        onClick={() => handleVideoClick(video.video_url, video.thumbnail_url)}
+                                      >
+                                        {video.thumbnail_url ? (
+                                          <div className="relative w-full h-full">
+                                            <Image
+                                              src={video.thumbnail_url}
+                                              alt={video.title || t('academyDetail.classVideo')}
+                                              fill
+                                              className="object-cover"
+                                            />
+                                          </div>
+                                        ) : embedUrl ? (
+                                          <div className="relative w-full h-full">
+                                            <iframe
+                                              src={embedUrl}
+                                              className="w-full h-full"
+                                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                              allowFullScreen
+                                              title={video.title || '수업 영상'}
+                                            />
+                                          </div>
+                                        ) : (
+                                          <div className="w-full h-full flex items-center justify-center">
+                                            <svg 
+                                              className="w-10 h-10 text-neutral-400" 
+                                              fill="currentColor" 
+                                              viewBox="0 0 20 20"
+                                            >
+                                              <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                                            </svg>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      default:
+                        return null;
+                    }
                   })}
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 시간표 섹션 */}
-        <div ref={scheduleRef} className="p-5 scroll-mt-20">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-black dark:text-white font-bold text-lg">{t('academyDetail.tabSchedule')}</h3>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowTicketPurchaseModal(true)}
-                className="px-3 py-1.5 text-xs font-bold bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black rounded-lg hover:bg-neutral-800 dark:hover:bg-[#b8e600] transition-colors"
-              >
-                {t('academyDetail.buyTicket')}
-              </button>
-              <div className="flex gap-2 bg-neutral-100 dark:bg-neutral-900 rounded-lg p-1">
-              <button
-                onClick={() => setScheduleViewMode('week')}
-                className={`px-3 py-1.5 text-xs font-bold rounded transition-colors ${
-                  scheduleViewMode === 'week'
-                    ? 'bg-white dark:bg-neutral-800 text-black dark:text-white shadow-sm'
-                    : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
-                }`}
-              >
-                {t('academyDetail.week')}
-              </button>
-              <button
-                onClick={() => setScheduleViewMode('month')}
-                className={`px-3 py-1.5 text-xs font-bold rounded transition-colors ${
-                  scheduleViewMode === 'month'
-                    ? 'bg-white dark:bg-neutral-800 text-black dark:text-white shadow-sm'
-                    : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
-                }`}
-              >
-                {t('academyDetail.month')}
-              </button>
-              </div>
-            </div>
-          </div>
-          {scheduleViewMode === 'week' ? (
-            <AcademyWeeklyScheduleView
-              academyId={(academy as any).academyId || academy.id}
-              onClassClick={handleClassClick}
-            />
-          ) : (
-            <AcademyMonthlyScheduleView
-              academyId={(academy as any).academyId || academy.id}
-              onClassClick={handleClassClick}
-            />
-          )}
-        </div>
-
-        {/* 리뷰 섹션 */}
-        <div ref={reviewsRef} className="p-5 scroll-mt-20">
-          <h3 className="text-black dark:text-white font-bold text-lg mb-4">{t('academyDetail.reviews')}</h3>
-          <div className="text-center py-12 text-neutral-500">
-            {t('academyDetail.noReviews')}
-          </div>
-        </div>
+              );
+            case 'schedule':
+              return (
+                <div key="schedule" ref={scheduleRef} className="p-5 scroll-mt-20">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-black dark:text-white font-bold text-lg">{t('academyDetail.tabSchedule')}</h3>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setShowTicketPurchaseModal(true)}
+                        className="px-3 py-1.5 text-xs font-bold bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black rounded-lg hover:bg-neutral-800 dark:hover:bg-[#b8e600] transition-colors"
+                      >
+                        {t('academyDetail.buyTicket')}
+                      </button>
+                      <div className="flex gap-2 bg-neutral-100 dark:bg-neutral-900 rounded-lg p-1">
+                      <button
+                        onClick={() => setScheduleViewMode('week')}
+                        className={`px-3 py-1.5 text-xs font-bold rounded transition-colors ${
+                          scheduleViewMode === 'week'
+                            ? 'bg-white dark:bg-neutral-800 text-black dark:text-white shadow-sm'
+                            : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+                        }`}
+                      >
+                        {t('academyDetail.week')}
+                      </button>
+                      <button
+                        onClick={() => setScheduleViewMode('month')}
+                        className={`px-3 py-1.5 text-xs font-bold rounded transition-colors ${
+                          scheduleViewMode === 'month'
+                            ? 'bg-white dark:bg-neutral-800 text-black dark:text-white shadow-sm'
+                            : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+                        }`}
+                      >
+                        {t('academyDetail.month')}
+                      </button>
+                      </div>
+                    </div>
+                  </div>
+                  {scheduleViewMode === 'week' ? (
+                    <AcademyWeeklyScheduleView
+                      academyId={(academy as any).academyId || academy.id}
+                      onClassClick={handleClassClick}
+                    />
+                  ) : (
+                    <AcademyMonthlyScheduleView
+                      academyId={(academy as any).academyId || academy.id}
+                      onClassClick={handleClassClick}
+                    />
+                  )}
+                </div>
+              );
+            case 'reviews':
+              return (
+                <div key="reviews" ref={reviewsRef} className="p-5 scroll-mt-20">
+                  <h3 className="text-black dark:text-white font-bold text-lg mb-4">{t('academyDetail.reviews')}</h3>
+                  <div className="text-center py-12 text-neutral-500">
+                    {t('academyDetail.noReviews')}
+                  </div>
+                </div>
+              );
+            default:
+              return null;
+          }
+        })}
       </div>
       <ClassPreviewModal
         classInfo={previewClass}

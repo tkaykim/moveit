@@ -1,4 +1,5 @@
 import { Academy as DBAcademy, Instructor as DBInstructor, Schedule as DBSchedule, Class as DBClass, Booking as DBBooking } from '@/lib/supabase/types';
+import { SectionConfig } from '@/types/database';
 
 export type ViewState = 
   | 'HOME' 
@@ -35,6 +36,7 @@ export interface Academy {
   badges?: string[]; // 배지 (추후 계산)
   img?: string; // logo_url 또는 academy_images 첫 번째 이미지
   academyId?: string; // 원본 학원 ID
+  section_config?: SectionConfig | null; // 페이지 섹션 순서/표시 설정
 }
 
 // Dancer 타입: Instructor 기반

@@ -25,6 +25,47 @@ export type Json =
  *    - 수강권/쿠폰과는 별개의 시스템
  */
 
+// 학원 상세 페이지 섹션 설정 타입
+export interface SectionConfigItem {
+  id: string;        // 섹션 식별자
+  visible: boolean;  // 표시 여부
+  order: number;     // 정렬 순서
+}
+
+export interface SectionConfig {
+  tabs: SectionConfigItem[];         // 탭 (home, schedule, reviews) 순서/표시
+  homeSections: SectionConfigItem[]; // 홈 탭 내 하위 섹션 순서/표시
+}
+
+// 기본 섹션 설정 (section_config가 null일 때 사용)
+export const DEFAULT_SECTION_CONFIG: SectionConfig = {
+  tabs: [
+    { id: 'home', visible: true, order: 0 },
+    { id: 'schedule', visible: true, order: 1 },
+    { id: 'reviews', visible: true, order: 2 },
+  ],
+  homeSections: [
+    { id: 'info', visible: true, order: 0 },
+    { id: 'consultation', visible: true, order: 1 },
+    { id: 'tags', visible: true, order: 2 },
+    { id: 'recent_videos', visible: true, order: 3 },
+  ],
+};
+
+// 섹션 ID → 한국어 라벨 매핑
+export const TAB_LABELS: Record<string, string> = {
+  home: '홈',
+  schedule: '시간표',
+  reviews: '리뷰',
+};
+
+export const HOME_SECTION_LABELS: Record<string, string> = {
+  info: '학원 소개',
+  consultation: '상담 신청',
+  tags: '태그',
+  recent_videos: '최근 수업 영상',
+};
+
 // 클래스 접근 제어 설정 타입
 export interface AccessConfig {
   requiredGroup?: string | null;  // 필수 수강권 그룹 (null이면 제한 없음)
@@ -78,6 +119,7 @@ export type Database = {
           youtube_url: string | null
           max_extension_days: number | null
           consultation_availability: Json | null
+          section_config: Json | null
         }
         Insert: {
           address?: string | null
@@ -100,6 +142,7 @@ export type Database = {
           youtube_url?: string | null
           max_extension_days?: number | null
           consultation_availability?: Json | null
+          section_config?: Json | null
         }
         Update: {
           address?: string | null
@@ -122,6 +165,7 @@ export type Database = {
           youtube_url?: string | null
           max_extension_days?: number | null
           consultation_availability?: Json | null
+          section_config?: Json | null
         }
         Relationships: []
       }
