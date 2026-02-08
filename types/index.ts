@@ -37,6 +37,7 @@ export interface Academy {
   img?: string; // logo_url 또는 academy_images 첫 번째 이미지
   academyId?: string; // 원본 학원 ID
   section_config?: SectionConfig | null; // 페이지 섹션 순서/표시 설정
+  introduction_html?: string | null; // 리치 텍스트 학원 소개
 }
 
 // Dancer 타입: Instructor 기반

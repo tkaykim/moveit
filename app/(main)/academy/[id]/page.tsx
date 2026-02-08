@@ -62,6 +62,7 @@ export default function AcademyDetailPage() {
             academyId: data.id,
             address: data.address,
             section_config: data.section_config || null,
+            introduction_html: data.introduction_html || null,
           };
 
           setAcademy(transformedAcademy);

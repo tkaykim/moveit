@@ -11,8 +11,9 @@ import {
   SECTION_DESCRIPTIONS,
   migrateSectionConfig
 } from '@/types/database';
-import { GripVertical, Eye, EyeOff, ChevronUp, ChevronDown, ChevronRight, RotateCcw, LayoutList, Info, Building2, Link2, MessageSquare } from 'lucide-react';
+import { GripVertical, Eye, EyeOff, ChevronUp, ChevronDown, ChevronRight, RotateCcw, LayoutList, Info, Building2, Link2, MessageSquare, FileText } from 'lucide-react';
 import { ConsultationSettingsTab } from './consultations/consultation-settings-tab';
+import { IntroductionEditor } from './introduction-editor';
 
 interface SettingsViewProps {
   academyId: string;
@@ -122,6 +123,7 @@ export function SettingsView({ academyId }: SettingsViewProps) {
   const [openPanels, setOpenPanels] = useState<Record<string, boolean>>({
     basicInfo: true,
     links: false,
+    introduction: false,
     sections: false,
     consultation: false,
   });
@@ -389,7 +391,29 @@ export function SettingsView({ academyId }: SettingsViewProps) {
         )}
       </div>
 
-      {/* ─── 아코디언 2: 링크 및 채널 설정 ─── */}
+      {/* ─── 아코디언 2: 학원 소개 편집 ─── */}
+      <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => togglePanel('introduction')}
+          className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors"
+        >
+          <FileText size={18} className="text-amber-500 dark:text-amber-400 flex-shrink-0" />
+          <span className="flex-1 font-bold text-gray-800 dark:text-white">학원 소개 편집</span>
+          <span className="text-xs text-gray-400 dark:text-neutral-500 mr-1">사진, 영상, 링크 포함 자유 작성</span>
+          <ChevronRight
+            size={18}
+            className={`text-gray-400 dark:text-neutral-500 transition-transform duration-200 ${openPanels.introduction ? 'rotate-90' : ''}`}
+          />
+        </button>
+        {openPanels.introduction && (
+          <div className="px-5 pb-5 border-t border-gray-100 dark:border-neutral-800 pt-4">
+            <IntroductionEditor academyId={academyId} />
+          </div>
+        )}
+      </div>
+
+      {/* ─── 아코디언 3: 링크 및 채널 설정 ─── */}
       <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 overflow-hidden">
         <button
           type="button"
