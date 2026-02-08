@@ -110,11 +110,11 @@ export default function AcademyMultiSelect({
         </div>
       )}
 
-      {/* 학원 검색 & 드롭다운 */}
-      <div className="relative" ref={dropdownRef}>
+      {/* 학원 검색 & 리스트 */}
+      <div ref={dropdownRef}>
         <div
           className="flex items-center border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-hidden cursor-text"
-          onClick={() => setIsDropdownOpen(true)}
+          onClick={() => setIsDropdownOpen((prev) => !prev)}
         >
           <Search className="ml-3 text-neutral-400 flex-shrink-0" size={16} />
           <input
@@ -137,7 +137,7 @@ export default function AcademyMultiSelect({
         </div>
 
         {isDropdownOpen && (
-          <div className="absolute z-20 w-full mt-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+          <div className="mt-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg max-h-52 overflow-y-auto">
             {filteredAcademies.length === 0 ? (
               <div className="px-4 py-3 text-sm text-neutral-500">검색 결과가 없습니다.</div>
             ) : (

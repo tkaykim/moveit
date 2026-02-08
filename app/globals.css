@@ -127,3 +127,26 @@
   border: 0;
 }
 
+/* 유저 뷰: 링크된 이미지 스타일 */
+.prose a > img {
+  transition: opacity 0.2s ease;
+  cursor: pointer;
+}
+.prose a > img:hover {
+  opacity: 0.8;
+}
+.prose a:has(> img) {
+  display: block;
+  text-decoration: none;
+  border-bottom: none;
+}
+
+/* 에디터 이미지 노드 뷰 */
+.image-node-wrapper {
+  text-align: center;
+}
+.image-node-wrapper img {
+  display: block;
+  margin: 0 auto;
+}
+

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Image from '@tiptap/extension-image';
+import ImageExt from '@tiptap/extension-image';
 import Youtube from '@tiptap/extension-youtube';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
@@ -15,7 +15,7 @@ import {
   Heading1, Heading2, Heading3,
   List, ListOrdered, Quote,
   AlignLeft, AlignCenter, AlignRight,
-  Link as LinkIcon, Unlink,
+  Link as LinkIcon, Unlink, ExternalLink,
   ImagePlus, Youtube as YoutubeIcon,
   Undo2, Redo2, Save, Loader2, Minus,
 } from 'lucide-react';
@@ -59,6 +59,113 @@ function ToolbarDivider() {
   return <div className="w-px h-6 bg-gray-200 dark:bg-neutral-700 mx-1" />;
 }
 
+// ─── 커스텀 이미지 노드 뷰 (링크 편집 UI 포함) ───
+function ImageNodeView({ node, updateAttributes, selected }: any) {
+  const { src, alt, href } = node.attrs;
+
+  const handleSetLink = () => {
+    const url = prompt('이미지 클릭 시 이동할 URL을 입력하세요:', href || 'https://');
+    if (url === null) return;
+    updateAttributes({ href: url.trim() || null, target: '_blank' });
+  };
+
+  return (
+    <NodeViewWrapper className="image-node-wrapper my-4">
+      <div className={`relative inline-block w-full ${selected ? 'ring-2 ring-blue-500 rounded-lg' : ''}`}>
+        <img
+          src={src}
+          alt={alt || ''}
+          draggable={false}
+          className="rounded-lg max-w-full h-auto mx-auto block"
+        />
+        {/* 링크 배지 (선택되지 않았을 때) */}
+        {href && !selected && (
+          <div className="absolute top-2 right-2 bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm pointer-events-none">
+            <ExternalLink size={10} />
+            링크 연결됨
+          </div>
+        )}
+        {/* 선택 시 편집 컨트롤 */}
+        {selected && (
+          <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 bg-white dark:bg-neutral-800 shadow-xl rounded-lg px-2 py-1.5 flex items-center gap-1 border border-gray-200 dark:border-neutral-700 z-10 whitespace-nowrap">
+            <button
+              type="button"
+              onClick={handleSetLink}
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-300"
+            >
+              <ExternalLink size={12} />
+              {href ? '링크 수정' : '링크 추가'}
+            </button>
+            {href && (
+              <button
+                type="button"
+                onClick={() => updateAttributes({ href: null })}
+                className="flex items-center gap-1 text-xs px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400"
+              >
+                <Unlink size={12} />
+                제거
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </NodeViewWrapper>
+  );
+}
+
+// ─── 링크 지원 이미지 확장 (Image + href/target 속성) ───
+const LinkedImage = ImageExt.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      href: {
+        default: null,
+        parseHTML: (element: HTMLElement) => {
+          const parent = element.parentElement;
+          return parent?.tagName === 'A' ? parent.getAttribute('href') : null;
+        },
+        renderHTML: () => ({}), // img 태그에 href 속성 추가 방지
+      },
+      target: {
+        default: '_blank',
+        parseHTML: (element: HTMLElement) => {
+          const parent = element.parentElement;
+          return parent?.tagName === 'A' ? (parent.getAttribute('target') || '_blank') : '_blank';
+        },
+        renderHTML: () => ({}),
+      },
+    };
+  },
+  renderHTML({ node, HTMLAttributes }: any) {
+    const { href, target } = node.attrs;
+    if (href) {
+      return ['a', { href, target: target || '_blank', rel: 'noopener noreferrer' }, ['img', HTMLAttributes]];
+    }
+    return ['img', HTMLAttributes];
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageNodeView);
+  },
+});
+
+// ─── Link 확장 오버라이드: <a><img></a> 충돌 방지 ───
+const SafeLink = Link.extend({
+  parseHTML() {
+    return [
+      {
+        tag: 'a[href]:not([href *= "javascript:" i])',
+        getAttrs: (dom: HTMLElement) => {
+          // <a> 안에 <img>만 있는 경우 Link 마크 적용 안 함 (LinkedImage가 처리)
+          if (dom.children.length === 1 && dom.children[0]?.tagName === 'IMG') {
+            return false;
+          }
+          return {};
+        },
+      },
+    ];
+  },
+});
+
 export function IntroductionEditor({ academyId }: IntroductionEditorProps) {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -71,7 +178,7 @@ export function IntroductionEditor({ academyId }: IntroductionEditorProps) {
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
       }),
-      Image.configure({
+      LinkedImage.configure({
         HTMLAttributes: {
           class: 'rounded-lg max-w-full h-auto mx-auto my-4',
         },
@@ -83,7 +190,7 @@ export function IntroductionEditor({ academyId }: IntroductionEditorProps) {
         width: 0,
         height: 0,
       }),
-      Link.configure({
+      SafeLink.configure({
         openOnClick: false,
         HTMLAttributes: {
           class: 'text-blue-600 dark:text-blue-400 underline cursor-pointer',
@@ -161,25 +268,42 @@ export function IntroductionEditor({ academyId }: IntroductionEditorProps) {
     }
   }, [editor, academyId]);
 
-  // 이미지 업로드
+  // 이미지 업로드 (클라이언트 측 Supabase SDK 직접 사용)
   const handleImageUpload = useCallback(async (file: File) => {
     if (!editor) return;
     setUploading(true);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('academyId', academyId);
+      // 파일 크기 제한 (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('파일 크기는 5MB 이하여야 합니다.');
+      }
 
-      const res = await fetch('/api/upload/image', {
-        method: 'POST',
-        body: formData,
-      });
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        throw new Error('JPG, PNG, GIF, WebP만 업로드 가능합니다.');
+      }
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '업로드 실패');
+      const supabase = getSupabaseClient();
+      if (!supabase) throw new Error('데이터베이스 연결 실패');
 
-      editor.chain().focus().setImage({ src: data.url }).run();
+      const ext = file.name.split('.').pop() || 'jpg';
+      const fileName = `introduction/${academyId}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+      const { data, error } = await supabase.storage
+        .from('academy-images')
+        .upload(fileName, file, {
+          contentType: file.type,
+          upsert: false,
+        });
+
+      if (error) throw new Error(`업로드 실패: ${error.message}`);
+
+      const { data: urlData } = supabase.storage
+        .from('academy-images')
+        .getPublicUrl(data.path);
+
+      editor.chain().focus().setImage({ src: urlData.publicUrl }).run();
     } catch (e: any) {
       alert(`이미지 업로드 실패: ${e.message}`);
     } finally {
