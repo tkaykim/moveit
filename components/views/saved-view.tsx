@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import { Academy, Dancer, ViewState } from '@/types';
+import { LanguageToggle } from '@/components/common/language-toggle';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface SavedViewProps {
@@ -170,7 +171,10 @@ export const SavedView = ({ onNavigate }: SavedViewProps) => {
 
   return (
     <div className="h-full pt-12 px-5 pb-24 animate-in fade-in">
-      <h2 className="text-xl font-bold text-black dark:text-white mb-6">찜한 목록</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-black dark:text-white">찜한 목록</h2>
+        <LanguageToggle />
+      </div>
       <div className="flex bg-neutral-100 dark:bg-neutral-900 p-1 rounded-xl mb-6 border border-neutral-200 dark:border-neutral-800">
         <button 
           onClick={() => setSavedTab('ACADEMY')}

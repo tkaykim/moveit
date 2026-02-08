@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Academy, Dancer } from '@/types';
 import { ThemeToggle } from '@/components/common/theme-toggle';
+import { LanguageToggle } from '@/components/common/language-toggle';
 import { BannerCarousel } from '@/components/banner/banner-carousel';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useTranslation } from '@/lib/i18n/useTranslation';
@@ -379,6 +380,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             MOVE<span className="text-neutral-800 dark:text-[#CCFF00]">.</span>IT
           </h1>
           <div className="flex gap-3 items-center">
+            <LanguageToggle />
             <ThemeToggle />
             <button className="relative">
               <Bell className="text-neutral-600 dark:text-neutral-400" size={22} />

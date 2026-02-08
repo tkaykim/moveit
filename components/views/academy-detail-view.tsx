@@ -296,21 +296,14 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
               return (
                 <div key="info" ref={homeRef} className="p-5 scroll-mt-20">
                   <h3 className="text-black dark:text-white font-bold text-lg mb-4">{t('academyDetail.academyInfo')}</h3>
-                  {academy.introduction_html ? (
-                    <div
-                      className="prose prose-sm dark:prose-invert max-w-none prose-img:rounded-lg prose-img:mx-auto prose-a:text-blue-600 dark:prose-a:text-blue-400"
-                      dangerouslySetInnerHTML={{ __html: academy.introduction_html }}
-                    />
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="bg-neutral-100 dark:bg-neutral-900 rounded-2xl p-4">
-                        <h4 className="text-sm font-bold text-black dark:text-white mb-2">{t('academyDetail.intro')}</h4>
-                        <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                          {t('academyDetail.introWelcome', { name: translatedAcademyName })}
-                        </p>
-                      </div>
+                  <div className="space-y-4">
+                    <div className="bg-neutral-100 dark:bg-neutral-900 rounded-2xl p-4">
+                      <h4 className="text-sm font-bold text-black dark:text-white mb-2">{t('academyDetail.intro')}</h4>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                        {t('academyDetail.introWelcome', { name: translatedAcademyName })}
+                      </p>
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             case 'consultation':

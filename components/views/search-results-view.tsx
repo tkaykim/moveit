@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { Search, X, MapPin, Star, Heart } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { LanguageToggle } from '@/components/common/language-toggle';
 import { searchAll, SearchResult } from '@/lib/utils/search';
 import { Academy, Dancer } from '@/types';
 
@@ -48,20 +49,23 @@ export const SearchResultsView = ({ query, onBack, onAcademyClick, onDancerClick
     <div className="pb-24 pt-12 animate-in fade-in">
       {/* 검색바 */}
       <div className="px-5 mb-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
-          <input 
-            type="text" 
-            value={query}
-            readOnly
-            className="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full py-3 pl-10 pr-10 text-sm text-black dark:text-white"
-          />
-          <button 
-            onClick={onBack}
-            className="absolute right-3 top-1/2 -translate-y-1/2"
-          >
-            <X className="text-neutral-500" size={18} />
-          </button>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
+            <input 
+              type="text" 
+              value={query}
+              readOnly
+              className="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full py-3 pl-10 pr-10 text-sm text-black dark:text-white"
+            />
+            <button 
+              onClick={onBack}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+            >
+              <X className="text-neutral-500" size={18} />
+            </button>
+          </div>
+          <LanguageToggle />
         </div>
       </div>
 

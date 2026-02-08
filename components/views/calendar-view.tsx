@@ -7,6 +7,7 @@ import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { ClassInfo, Academy } from '@/types';
 import { ClassPreviewModal } from '@/components/modals/class-preview-modal';
 import { LevelBadge } from '@/components/common/level-badge';
+import { LanguageToggle } from '@/components/common/language-toggle';
 import { 
   formatKSTTime, 
   getKSTWeekStart, 
@@ -331,7 +332,10 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
 
   return (
     <div className="h-full pt-12 px-5 pb-24 animate-in fade-in">
-      <h2 className="text-xl font-bold text-black dark:text-white mb-6">클래스 일정</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-black dark:text-white">클래스 일정</h2>
+        <LanguageToggle />
+      </div>
 
       {/* 주간 네비게이션 */}
       <div className="flex items-center justify-between mb-4">

@@ -7,6 +7,7 @@ import {
   Clock, MapPin, Play
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/common/theme-toggle';
+import { LanguageToggle } from '@/components/common/language-toggle';
 import { useAuth } from '@/contexts/AuthContext';
 import { MyTab } from '@/components/auth/MyTab';
 import { UserMenu } from '@/components/auth/UserMenu';
@@ -192,6 +193,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-xl font-bold text-black dark:text-white">{t('my.title')}</h1>
             <div className="flex gap-3 items-center">
+              <LanguageToggle />
               <ThemeToggle />
               {user && <UserMenu />}
             </div>

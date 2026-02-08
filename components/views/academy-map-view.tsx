@@ -27,6 +27,7 @@ import {
 } from "@/lib/utils/distance";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocale } from "@/contexts/LocaleContext";
+import { LanguageToggle } from "@/components/common/language-toggle";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import dynamic from "next/dynamic";
 
@@ -418,10 +419,13 @@ export function AcademyMapView({ onAcademyClick }: AcademyMapViewProps) {
           <h1 className="text-lg font-bold text-black dark:text-white truncate">
             {language === "en" ? "Dance Academy" : "댄스학원"}
           </h1>
-          <span className="text-sm text-neutral-500 flex-shrink-0">
-            {filteredAndSortedAcademies.length}
-            {language === "en" ? "" : "개"}
-          </span>
+          <div className="flex items-center gap-2">
+            <LanguageToggle />
+            <span className="text-sm text-neutral-500 flex-shrink-0">
+              {filteredAndSortedAcademies.length}
+              {language === "en" ? "" : "개"}
+            </span>
+          </div>
         </div>
         <div className="relative">
           <Search

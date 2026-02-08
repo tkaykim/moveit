@@ -2,6 +2,7 @@
 
 import { ChevronLeft, Ticket, Calendar, Clock, Plus, Pause } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { LanguageToggle } from '@/components/common/language-toggle';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { TicketRechargeModal } from '@/components/modals/ticket-recharge-modal';
@@ -177,11 +178,14 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
 
   return (
     <div className="bg-white dark:bg-neutral-950 min-h-screen pt-12 px-5 pb-24 animate-in slide-in-from-bottom duration-300">
-      <div className="flex items-center gap-4 mb-6">
-        <button onClick={onBack} className="p-2 -ml-2 text-black dark:text-white">
-          <ChevronLeft />
-        </button>
-        <h2 className="text-xl font-bold text-black dark:text-white">수강권</h2>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <button onClick={onBack} className="p-2 -ml-2 text-black dark:text-white">
+            <ChevronLeft />
+          </button>
+          <h2 className="text-xl font-bold text-black dark:text-white">수강권</h2>
+        </div>
+        <LanguageToggle />
       </div>
 
       {/* 필터 */}

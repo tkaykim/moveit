@@ -3,6 +3,7 @@
 import { ChevronLeft, User, Bell, Moon, Shield, Globe } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from '@/components/common/theme-toggle';
+import { LanguageToggle } from '@/components/common/language-toggle';
 import { useLocale, Language } from '@/contexts/LocaleContext';
 
 interface SettingsViewProps {
@@ -29,11 +30,14 @@ export const SettingsView = ({ onBack }: SettingsViewProps) => {
   if (loading) {
     return (
       <div className="bg-white dark:bg-neutral-950 min-h-screen pt-12 px-5 animate-in slide-in-from-bottom duration-300">
-        <div className="flex items-center gap-4 mb-8">
-          <button onClick={onBack} className="p-2 -ml-2 text-black dark:text-white">
-            <ChevronLeft />
-          </button>
-          <h2 className="text-xl font-bold text-black dark:text-white">{t('settings.title')}</h2>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <button onClick={onBack} className="p-2 -ml-2 text-black dark:text-white">
+              <ChevronLeft />
+            </button>
+            <h2 className="text-xl font-bold text-black dark:text-white">{t('settings.title')}</h2>
+          </div>
+          <LanguageToggle />
         </div>
         <div className="text-center py-12 text-neutral-500">{t('common.loading')}</div>
       </div>
@@ -42,11 +46,14 @@ export const SettingsView = ({ onBack }: SettingsViewProps) => {
 
   return (
     <div className="bg-white dark:bg-neutral-950 min-h-screen pt-12 px-5 pb-24 animate-in slide-in-from-bottom duration-300">
-      <div className="flex items-center gap-4 mb-6">
-        <button onClick={onBack} className="p-2 -ml-2 text-black dark:text-white">
-          <ChevronLeft />
-        </button>
-        <h2 className="text-xl font-bold text-black dark:text-white">{t('settings.title')}</h2>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <button onClick={onBack} className="p-2 -ml-2 text-black dark:text-white">
+            <ChevronLeft />
+          </button>
+          <h2 className="text-xl font-bold text-black dark:text-white">{t('settings.title')}</h2>
+        </div>
+        <LanguageToggle />
       </div>
 
       {/* 프로필 정보 */}

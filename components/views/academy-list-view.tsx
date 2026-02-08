@@ -9,6 +9,7 @@ import { AcademyFilterModal, AcademyFilter } from '@/components/modals/academy-f
 import { calculateDistance, parseAddressToCoordinates, formatDistance } from '@/lib/utils/distance';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocale } from '@/contexts/LocaleContext';
+import { LanguageToggle } from '@/components/common/language-toggle';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface AcademyListViewProps {
@@ -356,88 +357,95 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
   return (
     <div className="pb-24 animate-in fade-in duration-300">
       {/* 헤더 */}
-      <div className="sticky top-0 z-30 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md px-5 pt-14 pb-4">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold text-black dark:text-white">{language === 'en' ? 'Dance Academy' : '댄스학원'}</h1>
-          <span className="text-sm text-neutral-500">{filteredAndSortedAcademies.length}{language === 'en' ? '' : '개'}</span>
-        </div>
-        
-        {/* 검색 바 */}
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
-          <input
-            type="text"
-            placeholder={language === 'en' ? 'Search academy, genre, address...' : '학원명, 장르, 주소 검색...'}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-11 pr-10 py-3 bg-neutral-100 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 text-black dark:text-white placeholder-neutral-400 focus:outline-none focus:border-neutral-400 dark:focus:border-[#CCFF00] transition-colors"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black dark:hover:text-white"
-            >
-              <X size={18} />
-            </button>
-          )}
-        </div>
-
-        {/* 정렬 & 필터 */}
-        <div className="flex gap-2 mt-3">
+      <div className="sticky top-0 z-30">
+        <div className="px-5 pt-14 pb-4 bg-gradient-to-b from-white via-white to-white/95 dark:from-neutral-950 dark:via-neutral-950 dark:to-neutral-950/95 backdrop-blur-md">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-xl font-bold text-black dark:text-white">{language === 'en' ? 'Dance Academy' : '댄스학원'}</h1>
+            <div className="flex items-center gap-2">
+              <LanguageToggle />
+              <span className="text-sm text-neutral-500">{filteredAndSortedAcademies.length}{language === 'en' ? '' : '개'}</span>
+            </div>
+          </div>
+          
+          {/* 검색 바 */}
           <div className="relative">
-            <button
-              onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
-              className="flex items-center gap-1 px-3 py-2 bg-neutral-100 dark:bg-neutral-900 rounded-lg text-sm text-black dark:text-white border border-neutral-200 dark:border-neutral-800"
-            >
-              {locationLoading && sortOption === 'distance' ? (language === 'en' ? 'Getting location...' : '위치 확인 중...') : getSortLabel()}
-              <ChevronDown size={14} className={`transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {isSortDropdownOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setIsSortDropdownOpen(false)} />
-                <div className="absolute top-full left-0 mt-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-lg z-50 min-w-[120px]">
-                  {[
-                    { value: 'default', label: language === 'en' ? 'Default' : '기본순' },
-                    { value: 'distance', label: language === 'en' ? 'Distance' : '거리순' },
-                    { value: 'price_asc', label: language === 'en' ? 'Price: Low' : '가격 낮은순' },
-                    { value: 'price_desc', label: language === 'en' ? 'Price: High' : '가격 높은순' },
-                  ].map(option => (
-                    <button
-                      key={option.value}
-                      onClick={() => {
-                        setSortOption(option.value as SortOption);
-                        setIsSortDropdownOpen(false);
-                      }}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 first:rounded-t-lg last:rounded-b-lg ${
-                        sortOption === option.value 
-                          ? 'text-primary dark:text-[#CCFF00] font-medium' 
-                          : 'text-black dark:text-white'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </>
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
+            <input
+              type="text"
+              placeholder={language === 'en' ? 'Search academy, genre, address...' : '학원명, 장르, 주소 검색...'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-11 pr-10 py-3 bg-neutral-100 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 text-black dark:text-white placeholder-neutral-400 focus:outline-none focus:border-neutral-400 dark:focus:border-[#CCFF00] transition-colors"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black dark:hover:text-white"
+              >
+                <X size={18} />
+              </button>
             )}
           </div>
-          <button
-            onClick={() => setIsFilterModalOpen(true)}
-            className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm border transition-colors ${
-              activeFilterCount > 0
-                ? 'bg-primary dark:bg-[#CCFF00] text-black border-primary dark:border-[#CCFF00]'
-                : 'bg-neutral-100 dark:bg-neutral-900 text-black dark:text-white border-neutral-200 dark:border-neutral-800'
-            }`}
-          >
-            <SlidersHorizontal size={14} />
-            {language === 'en' ? 'Filter' : '필터'}
-            {activeFilterCount > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 bg-white dark:bg-black text-primary dark:text-[#CCFF00] text-[10px] font-bold rounded-full">
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
+
+          {/* 정렬 & 필터 */}
+          <div className="flex gap-2 mt-3">
+            <div className="relative">
+              <button
+                onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
+                className="flex items-center gap-1 px-3 py-2 bg-neutral-100 dark:bg-neutral-900 rounded-lg text-sm text-black dark:text-white border border-neutral-200 dark:border-neutral-800"
+              >
+                {locationLoading && sortOption === 'distance' ? (language === 'en' ? 'Getting location...' : '위치 확인 중...') : getSortLabel()}
+                <ChevronDown size={14} className={`transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isSortDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsSortDropdownOpen(false)} />
+                  <div className="absolute top-full left-0 mt-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-lg z-50 min-w-[120px]">
+                    {[
+                      { value: 'default', label: language === 'en' ? 'Default' : '기본순' },
+                      { value: 'distance', label: language === 'en' ? 'Distance' : '거리순' },
+                      { value: 'price_asc', label: language === 'en' ? 'Price: Low' : '가격 낮은순' },
+                      { value: 'price_desc', label: language === 'en' ? 'Price: High' : '가격 높은순' },
+                    ].map(option => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setSortOption(option.value as SortOption);
+                          setIsSortDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 first:rounded-t-lg last:rounded-b-lg ${
+                          sortOption === option.value 
+                            ? 'text-primary dark:text-[#CCFF00] font-medium' 
+                            : 'text-black dark:text-white'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <button
+              onClick={() => setIsFilterModalOpen(true)}
+              className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm border transition-colors ${
+                activeFilterCount > 0
+                  ? 'bg-primary dark:bg-[#CCFF00] text-black border-primary dark:border-[#CCFF00]'
+                  : 'bg-neutral-100 dark:bg-neutral-900 text-black dark:text-white border-neutral-200 dark:border-neutral-800'
+              }`}
+            >
+              <SlidersHorizontal size={14} />
+              {language === 'en' ? 'Filter' : '필터'}
+              {activeFilterCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 bg-white dark:bg-black text-primary dark:text-[#CCFF00] text-[10px] font-bold rounded-full">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
+        {/* 하단 그라데이션 페이드 */}
+        <div className="h-4 bg-gradient-to-b from-white/80 to-transparent dark:from-neutral-950/80 dark:to-transparent pointer-events-none" />
       </div>
 
       {/* 학원 목록 */}

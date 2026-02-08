@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { TicketPurchaseModal } from '@/components/modals/ticket-purchase-modal';
+import { LanguageToggle } from '@/components/common/language-toggle';
 
 interface DancerDetailViewProps {
   dancer: Dancer | null;
@@ -145,19 +146,22 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
           >
             <ChevronLeft />
           </button>
-          {user && (
-            <button
-              onClick={handleToggleFavorite}
-              disabled={favoriteLoading}
-              className="p-2 bg-black/30 backdrop-blur rounded-full text-white hover:bg-black/50 transition-colors disabled:opacity-50"
-            >
-              <Heart 
-                size={20} 
-                fill={isFavorited ? 'currentColor' : 'none'} 
-                className={isFavorited ? 'text-red-500' : ''}
-              />
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {user && (
+              <button
+                onClick={handleToggleFavorite}
+                disabled={favoriteLoading}
+                className="p-2 bg-black/30 backdrop-blur rounded-full text-white hover:bg-black/50 transition-colors disabled:opacity-50"
+              >
+                <Heart 
+                  size={20} 
+                  fill={isFavorited ? 'currentColor' : 'none'} 
+                  className={isFavorited ? 'text-red-500' : ''}
+                />
+              </button>
+            )}
+            <LanguageToggle />
+          </div>
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-neutral-950 via-transparent to-transparent" />
         <div className="absolute bottom-0 left-0 w-full p-6">

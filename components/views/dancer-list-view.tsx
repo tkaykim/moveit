@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Dancer } from '@/types';
 import { ThemeToggle } from '@/components/common/theme-toggle';
+import { LanguageToggle } from '@/components/common/language-toggle';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface DancerListViewProps {
@@ -317,6 +318,7 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-black dark:text-white">트레이너</h2>
           <div className="flex gap-2 items-center">
+            <LanguageToggle />
             <ThemeToggle />
             <button className="text-xs bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 flex items-center gap-1">
               <Filter size={12} />
