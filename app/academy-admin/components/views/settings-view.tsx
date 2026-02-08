@@ -11,7 +11,7 @@ import {
   SECTION_DESCRIPTIONS,
   migrateSectionConfig
 } from '@/types/database';
-import { GripVertical, Eye, EyeOff, ChevronUp, ChevronDown, RotateCcw, LayoutList, Info } from 'lucide-react';
+import { GripVertical, Eye, EyeOff, ChevronUp, ChevronDown, ChevronRight, RotateCcw, LayoutList, Info, Building2, Link2 } from 'lucide-react';
 
 interface SettingsViewProps {
   academyId: string;
@@ -118,6 +118,15 @@ export function SettingsView({ academyId }: SettingsViewProps) {
   const [saving, setSaving] = useState(false);
   const [savingSections, setSavingSections] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [openPanels, setOpenPanels] = useState<Record<string, boolean>>({
+    basicInfo: true,
+    links: false,
+    sections: false,
+  });
+
+  const togglePanel = (key: string) => {
+    setOpenPanels(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   useEffect(() => {
     loadAcademy();
@@ -297,248 +306,262 @@ export function SettingsView({ academyId }: SettingsViewProps) {
   }
 
   return (
-    <div className="space-y-6" data-onboarding="page-settings-0">
+    <div className="space-y-3" data-onboarding="page-settings-0">
       <SectionHeader title="시스템 설정" />
 
-      {/* 페이지 섹션 순서/표시 설정 */}
-      <div className="bg-white dark:bg-neutral-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <LayoutList size={20} className="text-blue-500 dark:text-blue-400" />
-            <h3 className="font-bold text-lg text-gray-800 dark:text-white">학원 페이지 섹션 설정</h3>
-          </div>
-          <button
-            type="button"
-            onClick={handleResetSections}
-            className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-            title="기본값으로 초기화"
-          >
-            <RotateCcw size={14} />
-            초기화
-          </button>
-        </div>
-
-        {/* 안내 박스 */}
-        <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 rounded-lg px-3 py-2.5 mb-4">
-          <Info size={14} className="text-blue-500 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-          <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
-            학원 상세 페이지에 표시되는 모든 섹션의 순서와 표시 여부를 설정합니다.
-            위에 있을수록 페이지 상단에 배치되며, 눈 아이콘을 클릭하면 해당 섹션을 숨길 수 있습니다.
-          </p>
-        </div>
-
-        {/* 단일 리스트 */}
-        <div className="space-y-2">
-          {sectionConfig.sections
-            .sort((a, b) => a.order - b.order)
-            .map((section, index) => (
-              <SectionOrderItem
-                key={section.id}
-                item={section}
-                label={SECTION_LABELS[section.id] || section.id}
-                description={SECTION_DESCRIPTIONS[section.id] || ''}
-                isFirst={index === 0}
-                isLast={index === sectionConfig.sections.length - 1}
-                onToggleVisible={() => handleToggleVisible(index)}
-                onMoveUp={() => handleMoveItem(index, index - 1)}
-                onMoveDown={() => handleMoveItem(index, index + 1)}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-                index={index}
-              />
-            ))}
-        </div>
-
-        {/* 하단 안내 */}
-        <p className="text-xs text-gray-400 dark:text-neutral-500 mt-3">
-          드래그하거나 화살표 버튼으로 순서를 변경하세요.
-        </p>
-      </div>
-
-      {/* 섹션 설정 저장 버튼 (분리) */}
-      <div className="flex items-center justify-end gap-3">
+      {/* ─── 아코디언 1: 학원 기본 정보 ─── */}
+      <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 overflow-hidden">
         <button
           type="button"
-          onClick={handleSaveSections}
-          disabled={savingSections}
-          className="flex items-center gap-2 bg-blue-600 dark:bg-blue-500 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 shadow-sm"
+          onClick={() => togglePanel('basicInfo')}
+          className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors"
         >
-          <LayoutList size={16} />
-          {savingSections ? '저장 중...' : '섹션 설정 저장'}
+          <Building2 size={18} className="text-blue-500 dark:text-blue-400 flex-shrink-0" />
+          <span className="flex-1 font-bold text-gray-800 dark:text-white">학원 기본 정보</span>
+          <span className="text-xs text-gray-400 dark:text-neutral-500 mr-1">학원명, 주소, 소개 등</span>
+          <ChevronRight
+            size={18}
+            className={`text-gray-400 dark:text-neutral-500 transition-transform duration-200 ${openPanels.basicInfo ? 'rotate-90' : ''}`}
+          />
         </button>
+        {openPanels.basicInfo && (
+          <form onSubmit={handleSubmit} className="px-5 pb-5 border-t border-gray-100 dark:border-neutral-800">
+            <div className="space-y-4 pt-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">학원명 (한글)</label>
+                <input
+                  type="text"
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={formData.name_kr}
+                  onChange={(e) => setFormData({ ...formData, name_kr: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">학원명 (영문)</label>
+                <input
+                  type="text"
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={formData.name_en}
+                  onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">대표 전화번호</label>
+                <input
+                  type="text"
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={formData.contact_number}
+                  onChange={(e) => setFormData({ ...formData, contact_number: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">주소</label>
+                <input
+                  type="text"
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">학원 설명</label>
+                <textarea
+                  rows={4}
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white resize-none"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="학원에 대한 상세 설명을 입력하세요..."
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50"
+                >
+                  {saving ? '저장 중...' : '기본 정보 저장'}
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
       </div>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-neutral-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800">
-          <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-white">학원 기본 정보</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                학원명 (한글)
-              </label>
-              <input
-                type="text"
-                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                value={formData.name_kr}
-                onChange={(e) => setFormData({ ...formData, name_kr: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                학원명 (영문)
-              </label>
-              <input
-                type="text"
-                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                value={formData.name_en}
-                onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                대표 전화번호
-              </label>
-              <input
-                type="text"
-                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                value={formData.contact_number}
-                onChange={(e) => setFormData({ ...formData, contact_number: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                주소
-              </label>
-              <input
-                type="text"
-                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                학원 설명
-              </label>
-              <textarea
-                rows={6}
-                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white resize-none"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="학원에 대한 상세 설명을 입력하세요..."
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                학원 소개, 특징, 운영 방식 등을 자유롭게 작성하세요.
-              </p>
-            </div>
-            <button
-              type="submit"
-              disabled={saving}
-              className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50"
-            >
-              {saving ? '저장 중...' : '정보 수정 저장'}
-            </button>
-          </div>
-        </div>
+      {/* ─── 아코디언 2: 링크 및 채널 설정 ─── */}
+      <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => togglePanel('links')}
+          className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors"
+        >
+          <Link2 size={18} className="text-green-500 dark:text-green-400 flex-shrink-0" />
+          <span className="flex-1 font-bold text-gray-800 dark:text-white">링크 및 채널 설정</span>
+          <span className="text-xs text-gray-400 dark:text-neutral-500 mr-1">SNS, 지도, 알림</span>
+          <ChevronRight
+            size={18}
+            className={`text-gray-400 dark:text-neutral-500 transition-transform duration-200 ${openPanels.links ? 'rotate-90' : ''}`}
+          />
+        </button>
+        {openPanels.links && (
+          <form onSubmit={handleSubmit} className="px-5 pb-5 border-t border-gray-100 dark:border-neutral-800">
+            <div className="space-y-4 pt-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">유튜브 링크</label>
+                <input
+                  type="url"
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={formData.youtube_url}
+                  onChange={(e) => setFormData({ ...formData, youtube_url: e.target.value })}
+                  placeholder="https://www.youtube.com/@채널명"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">인스타그램 링크</label>
+                <input
+                  type="url"
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={formData.instagram_handle}
+                  onChange={(e) => setFormData({ ...formData, instagram_handle: e.target.value })}
+                  placeholder="https://www.instagram.com/계정명"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">네이버지도 링크</label>
+                <input
+                  type="url"
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={formData.naver_map_url}
+                  onChange={(e) => setFormData({ ...formData, naver_map_url: e.target.value })}
+                  placeholder="네이버지도 장소 공유 링크"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">카카오톡 채널 링크</label>
+                <input
+                  type="url"
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={formData.kakao_channel_url}
+                  onChange={(e) => setFormData({ ...formData, kakao_channel_url: e.target.value })}
+                  placeholder="https://pf.kakao.com/..."
+                />
+              </div>
 
-        <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-neutral-800">
-          <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-white">
-            링크 및 채널 설정
-          </h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                유튜브 링크
-              </label>
-              <input
-                type="url"
-                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                value={formData.youtube_url}
-                onChange={(e) => setFormData({ ...formData, youtube_url: e.target.value })}
-                placeholder="https://www.youtube.com/@채널명 또는 영상 URL"
-              />
-            </div>
+              <div className="pt-3 border-t border-gray-100 dark:border-neutral-800 space-y-3">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">알림 설정</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 dark:text-white">수강료 납부 알림</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">만료 3일 전 자동 문자 발송</p>
+                  </div>
+                  <div className="w-10 h-5 bg-blue-600 dark:bg-blue-500 rounded-full relative cursor-pointer">
+                    <div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full"></div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 dark:text-white">상담 예약 리마인더</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">상담 당일 오전 10시 알림톡</p>
+                  </div>
+                  <div className="w-10 h-5 bg-blue-600 dark:bg-blue-500 rounded-full relative cursor-pointer">
+                    <div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full"></div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 dark:text-white">강사 급여 정산 알림</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">매월 1일 관리자에게 알림</p>
+                  </div>
+                  <div className="w-10 h-5 bg-gray-300 dark:bg-gray-600 rounded-full relative cursor-pointer">
+                    <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full"></div>
+                  </div>
+                </div>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                인스타그램 링크
-              </label>
-              <input
-                type="url"
-                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                value={formData.instagram_handle}
-                onChange={(e) => setFormData({ ...formData, instagram_handle: e.target.value })}
-                placeholder="https://www.instagram.com/계정명"
-              />
+              <div className="flex justify-end pt-1">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50"
+                >
+                  {saving ? '저장 중...' : '링크 설정 저장'}
+                </button>
+              </div>
             </div>
+          </form>
+        )}
+      </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                네이버지도 링크
-              </label>
-              <input
-                type="url"
-                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                value={formData.naver_map_url}
-                onChange={(e) => setFormData({ ...formData, naver_map_url: e.target.value })}
-                placeholder="네이버지도 장소 공유 링크"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                카카오톡 채널 링크
-              </label>
-              <input
-                type="url"
-                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-                value={formData.kakao_channel_url}
-                onChange={(e) => setFormData({ ...formData, kakao_channel_url: e.target.value })}
-                placeholder="https://pf.kakao.com/..."
-              />
-            </div>
-
-            <div className="pt-4 border-t border-gray-100 dark:border-neutral-800">
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                링크는 저장 버튼을 누르면 함께 반영됩니다.
+      {/* ─── 아코디언 3: 학원 페이지 섹션 설정 ─── */}
+      <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => togglePanel('sections')}
+          className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors"
+        >
+          <LayoutList size={18} className="text-purple-500 dark:text-purple-400 flex-shrink-0" />
+          <span className="flex-1 font-bold text-gray-800 dark:text-white">학원 페이지 섹션 설정</span>
+          <span className="text-xs text-gray-400 dark:text-neutral-500 mr-1">순서 및 표시 여부</span>
+          <ChevronRight
+            size={18}
+            className={`text-gray-400 dark:text-neutral-500 transition-transform duration-200 ${openPanels.sections ? 'rotate-90' : ''}`}
+          />
+        </button>
+        {openPanels.sections && (
+          <div className="px-5 pb-5 border-t border-gray-100 dark:border-neutral-800">
+            {/* 안내 박스 */}
+            <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 rounded-lg px-3 py-2.5 mt-4 mb-3">
+              <Info size={14} className="text-blue-500 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                학원 상세 페이지의 섹션 순서와 표시 여부를 설정합니다.
+                위에 있을수록 상단에 배치되며, 눈 아이콘으로 숨김 처리할 수 있습니다.
               </p>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-gray-800 dark:text-white">수강료 납부 알림</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  만료 3일 전 자동 문자 발송
-                </p>
-              </div>
-              <div className="w-10 h-5 bg-blue-600 dark:bg-blue-500 rounded-full relative cursor-pointer">
-                <div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full"></div>
-              </div>
+            {/* 섹션 리스트 */}
+            <div className="space-y-2">
+              {sectionConfig.sections
+                .sort((a, b) => a.order - b.order)
+                .map((section, index) => (
+                  <SectionOrderItem
+                    key={section.id}
+                    item={section}
+                    label={SECTION_LABELS[section.id] || section.id}
+                    description={SECTION_DESCRIPTIONS[section.id] || ''}
+                    isFirst={index === 0}
+                    isLast={index === sectionConfig.sections.length - 1}
+                    onToggleVisible={() => handleToggleVisible(index)}
+                    onMoveUp={() => handleMoveItem(index, index - 1)}
+                    onMoveDown={() => handleMoveItem(index, index + 1)}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    index={index}
+                  />
+                ))}
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-gray-800 dark:text-white">상담 예약 리마인더</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  상담 당일 오전 10시 알림톡
-                </p>
-              </div>
-              <div className="w-10 h-5 bg-blue-600 dark:bg-blue-500 rounded-full relative cursor-pointer">
-                <div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full"></div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-gray-800 dark:text-white">강사 급여 정산 알림</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">매월 1일 관리자에게 알림</p>
-              </div>
-              <div className="w-10 h-5 bg-gray-300 dark:bg-gray-600 rounded-full relative cursor-pointer">
-                <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full"></div>
-              </div>
+
+            {/* 하단: 초기화 + 저장 */}
+            <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 dark:border-neutral-800">
+              <button
+                type="button"
+                onClick={handleResetSections}
+                className="flex items-center gap-1 text-xs text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                <RotateCcw size={13} />
+                기본값으로 초기화
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveSections}
+                disabled={savingSections}
+                className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50"
+              >
+                {savingSections ? '저장 중...' : '섹션 설정 저장'}
+              </button>
             </div>
           </div>
-        </div>
-      </form>
+        )}
+      </div>
     </div>
   );
 }
