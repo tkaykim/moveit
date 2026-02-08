@@ -11,7 +11,8 @@ import {
   SECTION_DESCRIPTIONS,
   migrateSectionConfig
 } from '@/types/database';
-import { GripVertical, Eye, EyeOff, ChevronUp, ChevronDown, ChevronRight, RotateCcw, LayoutList, Info, Building2, Link2 } from 'lucide-react';
+import { GripVertical, Eye, EyeOff, ChevronUp, ChevronDown, ChevronRight, RotateCcw, LayoutList, Info, Building2, Link2, MessageSquare } from 'lucide-react';
+import { ConsultationSettingsTab } from './consultations/consultation-settings-tab';
 
 interface SettingsViewProps {
   academyId: string;
@@ -122,6 +123,7 @@ export function SettingsView({ academyId }: SettingsViewProps) {
     basicInfo: true,
     links: false,
     sections: false,
+    consultation: false,
   });
 
   const togglePanel = (key: string) => {
@@ -559,6 +561,28 @@ export function SettingsView({ academyId }: SettingsViewProps) {
                 {savingSections ? '저장 중...' : '섹션 설정 저장'}
               </button>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* ─── 아코디언 4: 상담 설정 ─── */}
+      <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => togglePanel('consultation')}
+          className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors"
+        >
+          <MessageSquare size={18} className="text-orange-500 dark:text-orange-400 flex-shrink-0" />
+          <span className="flex-1 font-bold text-gray-800 dark:text-white">상담 설정</span>
+          <span className="text-xs text-gray-400 dark:text-neutral-500 mr-1">카테고리, 가능 시간</span>
+          <ChevronRight
+            size={18}
+            className={`text-gray-400 dark:text-neutral-500 transition-transform duration-200 ${openPanels.consultation ? 'rotate-90' : ''}`}
+          />
+        </button>
+        {openPanels.consultation && (
+          <div className="border-t border-gray-100 dark:border-neutral-800">
+            <ConsultationSettingsTab academyId={academyId} />
           </div>
         )}
       </div>
