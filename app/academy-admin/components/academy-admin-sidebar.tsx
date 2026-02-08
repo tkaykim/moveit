@@ -21,6 +21,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SidebarItemProps {
   icon: LucideIcon;
@@ -35,7 +36,7 @@ const SidebarItem = ({ icon: Icon, label, href, active, onClick }: SidebarItemPr
   <Link
     href={href}
     onClick={onClick}
-    className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-all duration-200 rounded-lg mx-2 mb-1 ${
+    className={`flex items-center gap-3 px-4 py-2.5 lg:py-3 cursor-pointer transition-all duration-200 rounded-lg mx-2 mb-0.5 ${
       active
         ? 'bg-neutral-200 dark:bg-[#CCFF00]/10 text-neutral-900 dark:text-[#CCFF00] font-semibold shadow-sm'
         : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
@@ -58,6 +59,16 @@ interface AcademyAdminSidebarProps {
 export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdminSidebarProps) {
   const pathname = usePathname();
   const [academyName, setAcademyName] = useState<string | null>(null);
+  
+  // AuthContext에서 직접 프로필/역할 정보를 가져옴 (별도 Supabase 쿼리 불필요)
+  const { profile, loading: authLoading } = useAuth();
+
+  // 최고관리자(SUPER_ADMIN)는 어떤 학원이든 무조건 모든 메뉴를 볼 수 있음
+  const isSuperAdmin = profile?.role === 'SUPER_ADMIN';
+  
+  // SUPER_ADMIN이면 무조건 true, 그 외에는 ACADEMY_OWNER만 설정 접근 가능
+  const canAccessSettings = isSuperAdmin || profile?.role === 'ACADEMY_OWNER';
+
   const menuItems = [
     { icon: LayoutDashboard, label: '대시보드', href: `/academy-admin/${academyId}` },
     { icon: Users, label: '학생 관리', href: `/academy-admin/${academyId}/students` },
@@ -70,8 +81,12 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
     { icon: UserCheck, label: '강사 관리', href: `/academy-admin/${academyId}/instructors` },
     { icon: MessageSquare, label: '상담 관리', href: `/academy-admin/${academyId}/consultations` },
     { icon: CreditCard, label: '매출/정산', href: `/academy-admin/${academyId}/revenue` },
-    { icon: Settings, label: '설정', href: `/academy-admin/${academyId}/settings` },
   ];
+
+  // 설정 메뉴: SUPER_ADMIN이면 무조건 표시, auth 로딩 중이면 일단 표시, 그 외 ACADEMY_OWNER만 표시
+  if (isSuperAdmin || authLoading || canAccessSettings) {
+    menuItems.push({ icon: Settings, label: '설정', href: `/academy-admin/${academyId}/settings` });
+  }
   
   // 모바일에서 메뉴 클릭 시 드로어 닫기
   useEffect(() => {
@@ -140,12 +155,12 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
 
       {/* 사이드바 */}
       <aside
-        className={`fixed lg:sticky top-0 left-0 h-screen w-64 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 flex flex-col shadow-lg z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed lg:sticky top-0 left-0 h-[100dvh] w-64 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 flex flex-col shadow-lg z-50 transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 relative">
-          <Link href={`/academy-admin/${academyId}`} className="flex flex-col gap-2" onClick={handleLinkClick}>
+        <div className="px-6 py-3 lg:py-4 border-b border-neutral-200 dark:border-neutral-800 relative flex-shrink-0">
+          <Link href={`/academy-admin/${academyId}`} className="flex flex-col gap-1.5 lg:gap-2" onClick={handleLinkClick}>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-primary dark:bg-[#CCFF00] rounded-lg flex items-center justify-center text-black font-bold italic">
                 M
@@ -163,15 +178,15 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
           {/* 모바일 닫기 버튼 */}
           <button
             onClick={onClose}
-            className="lg:hidden absolute top-4 right-4 p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+            className="lg:hidden absolute top-3 right-3 p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
             aria-label="메뉴 닫기"
           >
             <X className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-6 space-y-1">
-          <div className="px-6 pt-6 pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+        <nav className="flex-1 overflow-y-auto py-2 lg:py-4 space-y-0.5 min-h-0">
+          <div className="px-6 pt-3 lg:pt-6 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             수업 관리
           </div>
           {menuItems.slice(0, 5).map((item, idx) => (
@@ -185,7 +200,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
             />
           ))}
 
-          <div className="px-6 pt-6 pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+          <div className="px-6 pt-3 lg:pt-6 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             운영 관리
           </div>
           {menuItems.slice(5, 8).map((item, idx) => (
@@ -199,7 +214,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
             />
           ))}
 
-          <div className="px-6 pt-6 pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+          <div className="px-6 pt-3 lg:pt-6 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             매출 및 설정
           </div>
           {menuItems.slice(8).map((item, idx) => (
@@ -212,6 +227,9 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
               onClick={handleLinkClick}
             />
           ))}
+
+          {/* 모바일에서 마지막 항목이 스크롤 영역 밖으로 잘리지 않도록 하단 여백 */}
+          <div className="h-8 lg:h-4 flex-shrink-0" />
         </nav>
 
       </aside>
