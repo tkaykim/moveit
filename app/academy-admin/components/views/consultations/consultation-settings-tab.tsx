@@ -48,11 +48,30 @@ const DAYS = [
 
 const DEFAULT_SLOT: TimeSlot = { start: "09:00", end: "18:00" };
 
+const ALL_DAYS_DEFAULT_SLOT: TimeSlot[] = [{ start: "00:00", end: "23:59" }];
+
+function getDefaultAllDaysAvailability(): ConsultationAvailability {
+  const allDays: Record<string, TimeSlot[]> = {};
+  for (const d of DAYS) {
+    allDays[d.key] = [{ ...ALL_DAYS_DEFAULT_SLOT[0] }];
+  }
+  return { phone: { ...allDays }, visit: { ...allDays } };
+}
+
 function normalizeAvailability(input: any): ConsultationAvailability {
-  if (!input || typeof input !== "object") return { phone: {}, visit: {} };
+  if (!input || typeof input !== "object") return getDefaultAllDaysAvailability();
+  const phone = typeof input.phone === "object" && input.phone ? input.phone : null;
+  const visit = typeof input.visit === "object" && input.visit ? input.visit : null;
+  // phone/visit 둘 다 비어있으면 기본값(모든 요일 24시간)
+  if (
+    (!phone || Object.keys(phone).length === 0) &&
+    (!visit || Object.keys(visit).length === 0)
+  ) {
+    return getDefaultAllDaysAvailability();
+  }
   return {
-    phone: typeof input.phone === "object" && input.phone ? input.phone : {},
-    visit: typeof input.visit === "object" && input.visit ? input.visit : {},
+    phone: phone || {},
+    visit: visit || {},
   };
 }
 
