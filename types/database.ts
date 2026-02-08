@@ -32,39 +32,70 @@ export interface SectionConfigItem {
   order: number;     // 정렬 순서
 }
 
+// 플랫 구조: 모든 섹션을 하나의 리스트로 관리
 export interface SectionConfig {
-  tabs: SectionConfigItem[];         // 탭 (home, schedule, reviews) 순서/표시
-  homeSections: SectionConfigItem[]; // 홈 탭 내 하위 섹션 순서/표시
+  sections: SectionConfigItem[];
 }
 
 // 기본 섹션 설정 (section_config가 null일 때 사용)
 export const DEFAULT_SECTION_CONFIG: SectionConfig = {
-  tabs: [
-    { id: 'home', visible: true, order: 0 },
-    { id: 'schedule', visible: true, order: 1 },
-    { id: 'reviews', visible: true, order: 2 },
-  ],
-  homeSections: [
+  sections: [
     { id: 'info', visible: true, order: 0 },
     { id: 'consultation', visible: true, order: 1 },
     { id: 'tags', visible: true, order: 2 },
     { id: 'recent_videos', visible: true, order: 3 },
+    { id: 'schedule', visible: true, order: 4 },
+    { id: 'reviews', visible: true, order: 5 },
   ],
 };
 
-// 섹션 ID → 한국어 라벨 매핑
-export const TAB_LABELS: Record<string, string> = {
-  home: '홈',
+// 섹션 ID → 한국어 라벨
+export const SECTION_LABELS: Record<string, string> = {
+  info: '학원 소개',
+  consultation: '상담 신청 버튼',
+  tags: '태그',
+  recent_videos: '최근 수업 영상',
   schedule: '시간표',
   reviews: '리뷰',
 };
 
-export const HOME_SECTION_LABELS: Record<string, string> = {
-  info: '학원 소개',
-  consultation: '상담 신청',
-  tags: '태그',
-  recent_videos: '최근 수업 영상',
+// 섹션 ID → 관리자용 설명
+export const SECTION_DESCRIPTIONS: Record<string, string> = {
+  info: '학원 이름, 소개글 등 기본 정보를 보여줍니다',
+  consultation: '방문자가 상담을 신청할 수 있는 버튼입니다',
+  tags: '학원에 등록된 장르·특징 태그를 보여줍니다',
+  recent_videos: '최근 등록된 수업 영상 목록을 보여줍니다',
+  schedule: '주간/월간 수업 시간표와 수강권 구매 버튼을 보여줍니다',
+  reviews: '수강생 리뷰 영역입니다 (준비 중)',
 };
+
+// 레거시 호환: 기존 tabs/homeSections 구조를 flat sections로 변환
+export function migrateSectionConfig(raw: any): SectionConfig {
+  // 이미 새 형식이면 그대로 반환
+  if (raw?.sections && Array.isArray(raw.sections)) {
+    return { sections: raw.sections };
+  }
+  // 기존 tabs + homeSections 형식 → flat sections 변환
+  if (raw?.tabs || raw?.homeSections) {
+    const homeSections = (raw.homeSections || []) as SectionConfigItem[];
+    const tabs = (raw.tabs || []) as SectionConfigItem[];
+    const sections: SectionConfigItem[] = [];
+    let order = 0;
+    // 홈 탭 내 섹션들 먼저 (home 탭이 보이는 경우)
+    const homeTab = tabs.find((t: any) => t.id === 'home');
+    const homeVisible = homeTab ? homeTab.visible : true;
+    for (const hs of homeSections.sort((a, b) => a.order - b.order)) {
+      sections.push({ id: hs.id, visible: homeVisible && hs.visible, order: order++ });
+    }
+    // schedule, reviews 등 나머지 탭
+    for (const tab of tabs.sort((a, b) => a.order - b.order)) {
+      if (tab.id === 'home') continue; // 이미 위에서 처리
+      sections.push({ id: tab.id, visible: tab.visible, order: order++ });
+    }
+    return { sections };
+  }
+  return JSON.parse(JSON.stringify(DEFAULT_SECTION_CONFIG));
+}
 
 // 클래스 접근 제어 설정 타입
 export interface AccessConfig {

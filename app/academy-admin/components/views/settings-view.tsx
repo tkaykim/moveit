@@ -7,10 +7,11 @@ import {
   SectionConfig, 
   SectionConfigItem, 
   DEFAULT_SECTION_CONFIG,
-  TAB_LABELS,
-  HOME_SECTION_LABELS
+  SECTION_LABELS,
+  SECTION_DESCRIPTIONS,
+  migrateSectionConfig
 } from '@/types/database';
-import { GripVertical, Eye, EyeOff, ChevronUp, ChevronDown, RotateCcw } from 'lucide-react';
+import { GripVertical, Eye, EyeOff, ChevronUp, ChevronDown, RotateCcw, LayoutList, Info } from 'lucide-react';
 
 interface SettingsViewProps {
   academyId: string;
@@ -20,6 +21,7 @@ interface SettingsViewProps {
 interface SectionOrderItemProps {
   item: SectionConfigItem;
   label: string;
+  description: string;
   isFirst: boolean;
   isLast: boolean;
   onToggleVisible: () => void;
@@ -32,7 +34,7 @@ interface SectionOrderItemProps {
 }
 
 function SectionOrderItem({ 
-  item, label, isFirst, isLast, 
+  item, label, description, isFirst, isLast, 
   onToggleVisible, onMoveUp, onMoveDown,
   onDragStart, onDragOver, onDrop, index
 }: SectionOrderItemProps) {
@@ -49,14 +51,19 @@ function SectionOrderItem({
       } cursor-grab active:cursor-grabbing hover:shadow-sm`}
     >
       <GripVertical size={16} className="text-gray-400 dark:text-neutral-500 flex-shrink-0" />
-      <span className={`flex-1 text-sm font-medium ${
-        item.visible 
-          ? 'text-gray-800 dark:text-white' 
-          : 'text-gray-400 dark:text-neutral-500 line-through'
-      }`}>
-        {label}
-      </span>
-      <div className="flex items-center gap-1">
+      <div className="flex-1 min-w-0">
+        <span className={`block text-sm font-medium ${
+          item.visible 
+            ? 'text-gray-800 dark:text-white' 
+            : 'text-gray-400 dark:text-neutral-500 line-through'
+        }`}>
+          {label}
+        </span>
+        <span className="block text-xs text-gray-400 dark:text-neutral-500 mt-0.5 truncate">
+          {description}
+        </span>
+      </div>
+      <div className="flex items-center gap-1 flex-shrink-0">
         <button
           type="button"
           onClick={onMoveUp}
@@ -144,11 +151,11 @@ export function SettingsView({ academyId }: SettingsViewProps) {
         kakao_channel_url: data.kakao_channel_url || '',
       });
 
-      // section_config 로드
+      // section_config 로드 (레거시 tabs/homeSections 형식도 자동 변환)
       if (data.section_config) {
-        const config = data.section_config as unknown as SectionConfig;
+        const config = migrateSectionConfig(data.section_config);
         // 기존 설정에 새로 추가된 섹션이 있을 수 있으므로 병합
-        setSectionConfig(mergeSectionConfig(config));
+        setSectionConfig(mergeSectionConfigFlat(config));
       } else {
         setSectionConfig(JSON.parse(JSON.stringify(DEFAULT_SECTION_CONFIG)));
       }
@@ -160,51 +167,33 @@ export function SettingsView({ academyId }: SettingsViewProps) {
   };
 
   // 기존 설정과 기본 설정을 병합 (새 섹션이 추가된 경우 대응)
-  const mergeSectionConfig = (saved: SectionConfig): SectionConfig => {
-    const mergeItems = (
-      savedItems: SectionConfigItem[], 
-      defaultItems: SectionConfigItem[]
-    ): SectionConfigItem[] => {
-      const result = [...savedItems];
-      for (const defaultItem of defaultItems) {
-        if (!result.find(item => item.id === defaultItem.id)) {
-          result.push({ ...defaultItem, order: result.length });
-        }
+  const mergeSectionConfigFlat = (saved: SectionConfig): SectionConfig => {
+    const result = [...(saved.sections || [])];
+    for (const defaultItem of DEFAULT_SECTION_CONFIG.sections) {
+      if (!result.find(item => item.id === defaultItem.id)) {
+        result.push({ ...defaultItem, order: result.length });
       }
-      return result.sort((a, b) => a.order - b.order);
-    };
-
-    return {
-      tabs: mergeItems(saved.tabs || [], DEFAULT_SECTION_CONFIG.tabs),
-      homeSections: mergeItems(saved.homeSections || [], DEFAULT_SECTION_CONFIG.homeSections),
-    };
+    }
+    return { sections: result.sort((a, b) => a.order - b.order) };
   };
 
   // 섹션 순서 변경 핸들러
-  const handleMoveItem = useCallback((
-    listKey: 'tabs' | 'homeSections',
-    fromIndex: number,
-    toIndex: number
-  ) => {
+  const handleMoveItem = useCallback((fromIndex: number, toIndex: number) => {
     setSectionConfig(prev => {
-      const items = [...prev[listKey]];
+      const items = [...prev.sections];
       const [moved] = items.splice(fromIndex, 1);
       items.splice(toIndex, 0, moved);
-      // order 값 재정렬
       const reordered = items.map((item, idx) => ({ ...item, order: idx }));
-      return { ...prev, [listKey]: reordered };
+      return { sections: reordered };
     });
   }, []);
 
   // 섹션 표시/숨기기 토글
-  const handleToggleVisible = useCallback((
-    listKey: 'tabs' | 'homeSections',
-    index: number
-  ) => {
+  const handleToggleVisible = useCallback((index: number) => {
     setSectionConfig(prev => {
-      const items = [...prev[listKey]];
+      const items = [...prev.sections];
       items[index] = { ...items[index], visible: !items[index].visible };
-      return { ...prev, [listKey]: items };
+      return { sections: items };
     });
   }, []);
 
@@ -219,14 +208,12 @@ export function SettingsView({ academyId }: SettingsViewProps) {
     e.dataTransfer.dropEffect = 'move';
   }, []);
 
-  const createDropHandler = useCallback((listKey: 'tabs' | 'homeSections') => {
-    return (e: React.DragEvent, toIndex: number) => {
-      e.preventDefault();
-      if (dragIndex !== null && dragIndex !== toIndex) {
-        handleMoveItem(listKey, dragIndex, toIndex);
-      }
-      setDragIndex(null);
-    };
+  const handleDrop = useCallback((e: React.DragEvent, toIndex: number) => {
+    e.preventDefault();
+    if (dragIndex !== null && dragIndex !== toIndex) {
+      handleMoveItem(dragIndex, toIndex);
+    }
+    setDragIndex(null);
   }, [dragIndex, handleMoveItem]);
 
   // 섹션 설정 저장
@@ -315,12 +302,10 @@ export function SettingsView({ academyId }: SettingsViewProps) {
 
       {/* 페이지 섹션 순서/표시 설정 */}
       <div className="bg-white dark:bg-neutral-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800">
-        <div className="flex items-center justify-between mb-4">
-          <div>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <LayoutList size={20} className="text-blue-500 dark:text-blue-400" />
             <h3 className="font-bold text-lg text-gray-800 dark:text-white">학원 페이지 섹션 설정</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              학원 상세 페이지에 표시되는 섹션의 순서를 변경하거나 숨길 수 있습니다.
-            </p>
           </div>
           <button
             type="button"
@@ -333,71 +318,55 @@ export function SettingsView({ academyId }: SettingsViewProps) {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* 탭 순서 설정 */}
-          <div>
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">탭 순서</h4>
-            <div className="space-y-2">
-              {sectionConfig.tabs
-                .sort((a, b) => a.order - b.order)
-                .map((tab, index) => (
-                  <SectionOrderItem
-                    key={tab.id}
-                    item={tab}
-                    label={TAB_LABELS[tab.id] || tab.id}
-                    isFirst={index === 0}
-                    isLast={index === sectionConfig.tabs.length - 1}
-                    onToggleVisible={() => handleToggleVisible('tabs', index)}
-                    onMoveUp={() => handleMoveItem('tabs', index, index - 1)}
-                    onMoveDown={() => handleMoveItem('tabs', index, index + 1)}
-                    onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
-                    onDrop={createDropHandler('tabs')}
-                    index={index}
-                  />
-                ))}
-            </div>
-          </div>
-
-          {/* 홈 탭 내 섹션 순서 설정 */}
-          <div>
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">홈 탭 내 섹션 순서</h4>
-            <div className="space-y-2">
-              {sectionConfig.homeSections
-                .sort((a, b) => a.order - b.order)
-                .map((section, index) => (
-                  <SectionOrderItem
-                    key={section.id}
-                    item={section}
-                    label={HOME_SECTION_LABELS[section.id] || section.id}
-                    isFirst={index === 0}
-                    isLast={index === sectionConfig.homeSections.length - 1}
-                    onToggleVisible={() => handleToggleVisible('homeSections', index)}
-                    onMoveUp={() => handleMoveItem('homeSections', index, index - 1)}
-                    onMoveDown={() => handleMoveItem('homeSections', index, index + 1)}
-                    onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
-                    onDrop={createDropHandler('homeSections')}
-                    index={index}
-                  />
-                ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-neutral-800 flex items-center justify-between">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            드래그하거나 화살표 버튼으로 순서를 변경하고, 눈 아이콘으로 표시/숨기기를 설정하세요.
+        {/* 안내 박스 */}
+        <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 rounded-lg px-3 py-2.5 mb-4">
+          <Info size={14} className="text-blue-500 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+            학원 상세 페이지에 표시되는 모든 섹션의 순서와 표시 여부를 설정합니다.
+            위에 있을수록 페이지 상단에 배치되며, 눈 아이콘을 클릭하면 해당 섹션을 숨길 수 있습니다.
           </p>
-          <button
-            type="button"
-            onClick={handleSaveSections}
-            disabled={savingSections}
-            className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50"
-          >
-            {savingSections ? '저장 중...' : '섹션 설정 저장'}
-          </button>
         </div>
+
+        {/* 단일 리스트 */}
+        <div className="space-y-2">
+          {sectionConfig.sections
+            .sort((a, b) => a.order - b.order)
+            .map((section, index) => (
+              <SectionOrderItem
+                key={section.id}
+                item={section}
+                label={SECTION_LABELS[section.id] || section.id}
+                description={SECTION_DESCRIPTIONS[section.id] || ''}
+                isFirst={index === 0}
+                isLast={index === sectionConfig.sections.length - 1}
+                onToggleVisible={() => handleToggleVisible(index)}
+                onMoveUp={() => handleMoveItem(index, index - 1)}
+                onMoveDown={() => handleMoveItem(index, index + 1)}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                index={index}
+              />
+            ))}
+        </div>
+
+        {/* 하단 안내 */}
+        <p className="text-xs text-gray-400 dark:text-neutral-500 mt-3">
+          드래그하거나 화살표 버튼으로 순서를 변경하세요.
+        </p>
+      </div>
+
+      {/* 섹션 설정 저장 버튼 (분리) */}
+      <div className="flex items-center justify-end gap-3">
+        <button
+          type="button"
+          onClick={handleSaveSections}
+          disabled={savingSections}
+          className="flex items-center gap-2 bg-blue-600 dark:bg-blue-500 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 shadow-sm"
+        >
+          <LayoutList size={16} />
+          {savingSections ? '저장 중...' : '섹션 설정 저장'}
+        </button>
       </div>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">

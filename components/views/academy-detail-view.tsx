@@ -10,15 +10,14 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { ThemeToggle } from '@/components/common/theme-toggle';
+import { LanguageToggle } from '@/components/common/language-toggle';
 import { AcademyWeeklyScheduleView } from './academy-weekly-schedule-view';
 import { AcademyMonthlyScheduleView } from './academy-monthly-schedule-view';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useTranslatedText } from '@/lib/i18n/useTranslation';
 import { TranslatedText } from '@/components/common/translated-text';
-import { SectionConfig, DEFAULT_SECTION_CONFIG } from '@/types/database';
-
-type TabId = 'home' | 'schedule' | 'reviews';
+import { SectionConfig, SectionConfigItem, DEFAULT_SECTION_CONFIG, migrateSectionConfig } from '@/types/database';
 
 interface AcademyDetailViewProps {
   academy: Academy | null;
@@ -44,97 +43,38 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
   const scheduleRef = useRef<HTMLDivElement>(null);
   const reviewsRef = useRef<HTMLDivElement>(null);
 
-  // 섹션 설정 파싱
+  // 섹션 설정 파싱 (레거시 호환 포함)
   const sectionConfig = useMemo<SectionConfig>(() => {
     if (academy?.section_config) {
-      const config = academy.section_config;
-      // 기본 설정과 병합 (새 섹션이 추가된 경우 대응)
-      const mergeItems = (saved: any[], defaults: any[]) => {
-        const result = [...(saved || [])];
-        for (const def of defaults) {
-          if (!result.find((item: any) => item.id === def.id)) {
-            result.push({ ...def, order: result.length });
-          }
+      const config = migrateSectionConfig(academy.section_config);
+      // 기본 설정에 새로 추가된 섹션 병합
+      const result = [...(config.sections || [])];
+      for (const def of DEFAULT_SECTION_CONFIG.sections) {
+        if (!result.find(item => item.id === def.id)) {
+          result.push({ ...def, order: result.length });
         }
-        return result.sort((a: any, b: any) => a.order - b.order);
-      };
-      return {
-        tabs: mergeItems(config.tabs || [], DEFAULT_SECTION_CONFIG.tabs),
-        homeSections: mergeItems(config.homeSections || [], DEFAULT_SECTION_CONFIG.homeSections),
-      };
+      }
+      return { sections: result.sort((a, b) => a.order - b.order) };
     }
     return DEFAULT_SECTION_CONFIG;
   }, [academy?.section_config]);
 
-  // 표시할 탭 목록 (visible && 순서대로)
-  const visibleTabs = useMemo(() => {
-    return sectionConfig.tabs
-      .filter(tab => tab.visible)
-      .sort((a, b) => a.order - b.order);
-  }, [sectionConfig.tabs]);
-
-  // 표시할 홈 섹션 목록 (visible && 순서대로)
-  const visibleHomeSections = useMemo(() => {
-    return sectionConfig.homeSections
+  // 표시할 섹션 목록 (visible && 순서대로)
+  const visibleSections = useMemo(() => {
+    return sectionConfig.sections
       .filter(section => section.visible)
       .sort((a, b) => a.order - b.order);
-  }, [sectionConfig.homeSections]);
+  }, [sectionConfig.sections]);
 
-  // 첫 번째 표시할 탭을 기본 활성 탭으로 설정
-  const [activeTab, setActiveTab] = useState<TabId>('schedule');
-  
-  useEffect(() => {
-    if (visibleTabs.length > 0) {
-      setActiveTab(visibleTabs[0].id as TabId);
-    }
-  }, [visibleTabs]);
-
-  // 탭 ID → ref 매핑
-  const tabRefs: Record<string, React.RefObject<HTMLDivElement | null>> = useMemo(() => ({
-    home: homeRef,
+  // 섹션 ID → ref 매핑
+  const sectionRefs: Record<string, React.RefObject<HTMLDivElement | null>> = useMemo(() => ({
+    info: homeRef,
+    consultation: homeRef,
+    tags: homeRef,
+    recent_videos: homeRef,
     schedule: scheduleRef,
     reviews: reviewsRef,
   }), []);
-
-  // 스크롤 감지하여 탭 업데이트
-  useEffect(() => {
-    let ticking = false;
-    
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const scrollTop = window.scrollY || document.documentElement.scrollTop;
-          
-          // 보이는 탭만 역순으로 체크 (아래에서 위로)
-          const reversedTabs = [...visibleTabs].reverse();
-          for (const tab of reversedTabs) {
-            const ref = tabRefs[tab.id];
-            if (ref?.current && scrollTop >= ref.current.offsetTop - 150) {
-              setActiveTab(tab.id as TabId);
-              break;
-            }
-          }
-          
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [visibleTabs, tabRefs]);
-
-  // 탭 클릭 시 해당 섹션으로 스크롤
-  const scrollToTab = useCallback((tab: TabId) => {
-    const ref = tabRefs[tab];
-    if (ref?.current) {
-      const offset = 120; // sticky 탭 높이 고려
-      const targetTop = ref.current.offsetTop - offset;
-      window.scrollTo({ top: targetTop, behavior: 'smooth' });
-      setActiveTab(tab);
-    }
-  }, [tabRefs]);
 
 
   // 최근 수업 영상 로드
@@ -334,6 +274,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                   />
                 </button>
               )}
+              <LanguageToggle />
               <ThemeToggle />
             </div>
           </div>
@@ -348,149 +289,111 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
             )}
           </div>
         </div>
-        {/* 동적 탭 네비게이션 */}
-        {visibleTabs.length > 0 && (
-          <div className="sticky top-0 bg-white dark:bg-neutral-950 z-20 border-b border-neutral-200 dark:border-neutral-800 flex text-sm font-bold text-neutral-500 dark:text-neutral-500">
-            {visibleTabs.map(tab => {
-              const tabLabels: Record<string, string> = {
-                home: t('academyDetail.tabHome'),
-                schedule: t('academyDetail.tabSchedule'),
-                reviews: t('academyDetail.tabReviews'),
-              };
+        {/* 모든 섹션을 설정 순서대로 렌더링 (탭 없이 플랫) */}
+        {visibleSections.map((section, sectionIndex) => {
+          switch (section.id) {
+            case 'info':
               return (
-                <button 
-                  key={tab.id}
-                  onClick={() => scrollToTab(tab.id as TabId)}
-                  className={`flex-1 py-4 border-b-2 transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-neutral-800 dark:border-[#CCFF00] text-black dark:text-white'
-                      : 'border-transparent hover:text-black dark:hover:text-white'
-                  }`}
-                >
-                  {tabLabels[tab.id] || tab.id}
-                </button>
+                <div key="info" ref={homeRef} className="p-5 scroll-mt-20">
+                  <h3 className="text-black dark:text-white font-bold text-lg mb-4">{t('academyDetail.academyInfo')}</h3>
+                  <div className="space-y-4">
+                    <div className="bg-neutral-100 dark:bg-neutral-900 rounded-2xl p-4">
+                      <h4 className="text-sm font-bold text-black dark:text-white mb-2">{t('academyDetail.intro')}</h4>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                        {t('academyDetail.introWelcome', { name: translatedAcademyName })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               );
-            })}
-          </div>
-        )}
-
-        {/* 동적 탭 컨텐츠 렌더링 (설정된 순서대로) */}
-        {visibleTabs.map(tab => {
-          switch (tab.id) {
-            case 'home':
+            case 'consultation':
               return (
-                <div key="home" ref={homeRef} className="p-5 scroll-mt-20">
-                  {/* 홈 탭 내 섹션을 설정 순서대로 렌더링 */}
-                  {visibleHomeSections.map((section, sectionIndex) => {
-                    switch (section.id) {
-                      case 'info':
-                        return (
-                          <div key="info" className={sectionIndex > 0 ? 'mt-6' : ''}>
-                            <h3 className="text-black dark:text-white font-bold text-lg mb-4">{t('academyDetail.academyInfo')}</h3>
-                            <div className="space-y-4">
-                              <div className="bg-neutral-100 dark:bg-neutral-900 rounded-2xl p-4">
-                                <h4 className="text-sm font-bold text-black dark:text-white mb-2">{t('academyDetail.intro')}</h4>
-                                <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                                  {t('academyDetail.introWelcome', { name: translatedAcademyName })}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      case 'consultation':
-                        return (
-                          <div key="consultation" className={sectionIndex > 0 ? 'mt-4' : ''}>
-                            <button
-                              type="button"
-                              onClick={() => setShowConsultationModal(true)}
-                              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-primary dark:border-[#CCFF00] text-primary dark:text-[#CCFF00] font-bold text-sm"
+                <div key="consultation" className="px-5 pb-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowConsultationModal(true)}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-primary dark:border-[#CCFF00] text-primary dark:text-[#CCFF00] font-bold text-sm"
+                  >
+                    <MessageSquare size={18} />
+                    {t('academyDetail.requestConsultation')}
+                  </button>
+                </div>
+              );
+            case 'tags':
+              return academy.tags ? (
+                <div key="tags" className="px-5 pb-2">
+                  <h4 className="text-sm font-bold text-black dark:text-white mb-2">{t('academyDetail.tags')}</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {academy.tags.split(',').map((tag, idx) => (
+                      <span key={idx} className="text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-3 py-1 rounded-full">
+                        <TranslatedText>{tag.trim()}</TranslatedText>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null;
+            case 'recent_videos':
+              return (
+                <div key="recent_videos" className="p-5 scroll-mt-20">
+                  <h3 className="text-black dark:text-white font-bold text-lg mb-4">{t('academyDetail.recentVideos')}</h3>
+                  {videosLoading ? (
+                    <div className="text-center py-8 text-neutral-500">{t('common.loading')}</div>
+                  ) : recentVideos.length === 0 ? (
+                    <div className="text-center py-8 text-neutral-500">{t('academyDetail.noVideos')}</div>
+                  ) : (
+                    <div 
+                      className="overflow-x-auto -mx-5 px-5 scrollbar-hide"
+                      style={{ 
+                        WebkitOverflowScrolling: 'touch',
+                        touchAction: 'pan-x'
+                      }}
+                    >
+                      <div className="flex gap-3 pb-2 w-max">
+                        {recentVideos.map((video) => {
+                          const embedUrl = getYoutubeEmbedUrl(video.video_url);
+                          
+                          return (
+                            <div
+                              key={video.id}
+                              className="flex-shrink-0 w-48 h-32 rounded-lg overflow-hidden bg-neutral-200 dark:bg-neutral-800 cursor-pointer"
+                              onClick={() => handleVideoClick(video.video_url, video.thumbnail_url)}
                             >
-                              <MessageSquare size={18} />
-                              {t('academyDetail.requestConsultation')}
-                            </button>
-                          </div>
-                        );
-                      case 'tags':
-                        return academy.tags ? (
-                          <div key="tags" className={sectionIndex > 0 ? 'mt-4' : ''}>
-                            <h4 className="text-sm font-bold text-black dark:text-white mb-2">{t('academyDetail.tags')}</h4>
-                            <div className="flex flex-wrap gap-2">
-                              {academy.tags.split(',').map((tag, idx) => (
-                                <span key={idx} className="text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-3 py-1 rounded-full">
-                                  <TranslatedText>{tag.trim()}</TranslatedText>
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        ) : null;
-                      case 'recent_videos':
-                        return (
-                          <div key="recent_videos" className={sectionIndex > 0 ? 'mt-6' : ''}>
-                            <h3 className="text-black dark:text-white font-bold text-lg mb-4">{t('academyDetail.recentVideos')}</h3>
-                            {videosLoading ? (
-                              <div className="text-center py-8 text-neutral-500">{t('common.loading')}</div>
-                            ) : recentVideos.length === 0 ? (
-                              <div className="text-center py-8 text-neutral-500">{t('academyDetail.noVideos')}</div>
-                            ) : (
-                              <div 
-                                className="overflow-x-auto -mx-5 px-5 scrollbar-hide"
-                                style={{ 
-                                  WebkitOverflowScrolling: 'touch',
-                                  touchAction: 'pan-x'
-                                }}
-                              >
-                                <div className="flex gap-3 pb-2 w-max">
-                                  {recentVideos.map((video) => {
-                                    const embedUrl = getYoutubeEmbedUrl(video.video_url);
-                                    
-                                    return (
-                                      <div
-                                        key={video.id}
-                                        className="flex-shrink-0 w-48 h-32 rounded-lg overflow-hidden bg-neutral-200 dark:bg-neutral-800 cursor-pointer"
-                                        onClick={() => handleVideoClick(video.video_url, video.thumbnail_url)}
-                                      >
-                                        {video.thumbnail_url ? (
-                                          <div className="relative w-full h-full">
-                                            <Image
-                                              src={video.thumbnail_url}
-                                              alt={video.title || t('academyDetail.classVideo')}
-                                              fill
-                                              className="object-cover"
-                                            />
-                                          </div>
-                                        ) : embedUrl ? (
-                                          <div className="relative w-full h-full">
-                                            <iframe
-                                              src={embedUrl}
-                                              className="w-full h-full"
-                                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                              allowFullScreen
-                                              title={video.title || '수업 영상'}
-                                            />
-                                          </div>
-                                        ) : (
-                                          <div className="w-full h-full flex items-center justify-center">
-                                            <svg 
-                                              className="w-10 h-10 text-neutral-400" 
-                                              fill="currentColor" 
-                                              viewBox="0 0 20 20"
-                                            >
-                                              <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                                            </svg>
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
+                              {video.thumbnail_url ? (
+                                <div className="relative w-full h-full">
+                                  <Image
+                                    src={video.thumbnail_url}
+                                    alt={video.title || t('academyDetail.classVideo')}
+                                    fill
+                                    className="object-cover"
+                                  />
                                 </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      default:
-                        return null;
-                    }
-                  })}
+                              ) : embedUrl ? (
+                                <div className="relative w-full h-full">
+                                  <iframe
+                                    src={embedUrl}
+                                    className="w-full h-full"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                    title={video.title || '수업 영상'}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <svg 
+                                    className="w-10 h-10 text-neutral-400" 
+                                    fill="currentColor" 
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                                  </svg>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             case 'schedule':
