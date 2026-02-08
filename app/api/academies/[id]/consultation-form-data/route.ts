@@ -19,7 +19,13 @@ export async function GET(
     ]);
 
     const categories = catRes.data || [];
-    const availability = academyRes.data?.consultation_availability || { phone: [], visit: [] };
+    // 기본값: 모든 요일 24시간 가능
+    const allDaysSlot = [{ start: "00:00", end: "23:59" }];
+    const defaultAvailability = {
+      phone: { mon: allDaysSlot, tue: allDaysSlot, wed: allDaysSlot, thu: allDaysSlot, fri: allDaysSlot, sat: allDaysSlot, sun: allDaysSlot },
+      visit: { mon: allDaysSlot, tue: allDaysSlot, wed: allDaysSlot, thu: allDaysSlot, fri: allDaysSlot, sat: allDaysSlot, sun: allDaysSlot },
+    };
+    const availability = academyRes.data?.consultation_availability || defaultAvailability;
 
     return NextResponse.json({ data: { categories, availability } });
   } catch (e: any) {

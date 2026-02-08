@@ -24,10 +24,11 @@ export async function GET(
       return NextResponse.json({ error: '조회에 실패했습니다.' }, { status: 500 });
     }
 
-    // 기본값 설정
+    // 기본값 설정: 모든 요일 24시간 가능
+    const allDaysSlot = [{ start: "00:00", end: "23:59" }];
     const defaultAvailability = {
-      phone: {},
-      visit: {}
+      phone: { mon: allDaysSlot, tue: allDaysSlot, wed: allDaysSlot, thu: allDaysSlot, fri: allDaysSlot, sat: allDaysSlot, sun: allDaysSlot },
+      visit: { mon: allDaysSlot, tue: allDaysSlot, wed: allDaysSlot, thu: allDaysSlot, fri: allDaysSlot, sat: allDaysSlot, sun: allDaysSlot },
     };
 
     return NextResponse.json({ 
