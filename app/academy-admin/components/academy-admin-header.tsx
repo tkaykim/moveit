@@ -1,10 +1,12 @@
 "use client";
 
-import { Search, Bell, Moon, Sun, Menu, CreditCard, Plus, MessageSquare, ChevronDown, BookOpen } from 'lucide-react';
+import { Search, Bell, Moon, Sun, Menu, CreditCard, Plus, MessageSquare, ChevronDown, BookOpen, LogIn, LogOut, User } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useEffect, useState, useRef } from 'react';
 import { useOnboardingOptional } from '../contexts/onboarding-context';
+import { useAuth } from '@/contexts/AuthContext';
+import { AdminLoginModal } from '@/components/auth/AdminLoginModal';
 
 interface AcademyAdminHeaderProps {
   academyId: string;
@@ -36,8 +38,12 @@ export function AcademyAdminHeader({ academyId, onMenuClick }: AcademyAdminHeade
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const quickActionsRef = useRef<HTMLDivElement>(null);
   const onboarding = useOnboardingOptional();
+  const { user, profile, signOut } = useAuth();
+
+  const displayName = profile?.nickname || profile?.name || user?.email?.split('@')[0] || '';
 
   useEffect(() => {
     setMounted(true);
@@ -119,6 +125,24 @@ export function AcademyAdminHeader({ academyId, onMenuClick }: AcademyAdminHeade
                 </div>
               )}
             </div>
+            {/* 모바일 로그인/로그아웃 버튼 */}
+            {user ? (
+              <button
+                onClick={signOut}
+                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                aria-label="로그아웃"
+              >
+                <LogOut size={18} className="text-neutral-700 dark:text-neutral-300" />
+              </button>
+            ) : (
+              <button
+                onClick={() => setLoginModalOpen(true)}
+                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                aria-label="로그인"
+              >
+                <LogIn size={18} className="text-neutral-700 dark:text-neutral-300" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -216,8 +240,51 @@ export function AcademyAdminHeader({ academyId, onMenuClick }: AcademyAdminHeade
             <Bell size={20} />
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-neutral-900"></span>
           </button>
+
+          {/* 데스크톱 로그인/로그아웃 */}
+          {user ? (
+            <div className="flex items-center gap-2 ml-2 pl-2 border-l border-neutral-200 dark:border-neutral-700">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[1.5px]">
+                <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center overflow-hidden">
+                  {profile?.profile_image ? (
+                    <img
+                      src={profile.profile_image}
+                      alt={displayName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="text-black dark:text-white" size={13} />
+                  )}
+                </div>
+              </div>
+              <span className="text-sm font-medium text-black dark:text-white max-w-[100px] truncate">
+                {displayName}
+              </span>
+              <button
+                onClick={signOut}
+                className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+              >
+                <LogOut size={14} />
+                로그아웃
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setLoginModalOpen(true)}
+              className="flex items-center gap-1.5 ml-2 px-3 py-1.5 bg-neutral-900 dark:bg-neutral-100 text-white dark:text-black rounded-lg font-medium text-sm hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
+            >
+              <LogIn size={16} />
+              로그인
+            </button>
+          )}
         </div>
       </header>
+
+      {/* 관리자 로그인 모달 */}
+      <AdminLoginModal
+        isOpen={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+      />
     </>
   );
 }
