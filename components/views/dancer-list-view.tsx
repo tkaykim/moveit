@@ -316,7 +316,7 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
     <div className="h-full flex flex-col pb-24 animate-in slide-in-from-right-10 duration-300">
       <div className="px-5 pt-12 pb-4 bg-white dark:bg-neutral-950 sticky top-0 z-20 border-b border-neutral-200 dark:border-neutral-800">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-black dark:text-white">트레이너</h2>
+          <h2 className="text-xl font-bold text-black dark:text-white">강사</h2>
           <div className="flex gap-2 items-center">
             <LanguageToggle />
             <ThemeToggle />
@@ -326,7 +326,7 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
             </button>
             <button className="text-xs bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 flex items-center gap-1">
               <Tag size={12} />
-              지업권
+              수강권
             </button>
           </div>
         </div>
@@ -439,7 +439,7 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
                         {dancer.price.toLocaleString()}원~
                       </span>
                     ) : null}
-                    <span className="text-xs text-neutral-500">,회</span>
+                    <span className="text-xs text-neutral-500">/회</span>
                   </div>
                 </div>
               </div>
