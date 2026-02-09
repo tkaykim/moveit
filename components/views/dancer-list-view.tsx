@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { Star, Heart, Filter, Tag } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Dancer } from '@/types';
 import { ThemeToggle } from '@/components/common/theme-toggle';
@@ -22,23 +22,12 @@ interface InstructorWithDetails extends Dancer {
   upcomingClassesCount?: number;
 }
 
-// DB 데이터를 UI 타입으로 변환
-function transformInstructor(dbInstructor: any, classes: any[]): InstructorWithDetails {
+// DB 데이터를 UI 타입으로 변환 (기본 정보만)
+function transformInstructorBasic(dbInstructor: any): InstructorWithDetails {
   const name = dbInstructor.name_kr || dbInstructor.name_en || '이름 없음';
   const specialties = dbInstructor.specialties || '';
   const genre = specialties.split(',')[0]?.trim() || 'ALL';
   const crew = specialties.split(',')[1]?.trim() || '';
-
-  // 가격 정보 추출
-  const prices = classes.filter(c => c.price && c.price > 0).map(c => c.price);
-  const minPrice = prices.length > 0 ? Math.min(...prices) : undefined;
-
-  // 할인 정보 (예시 - 실제로는 DB에서 가져와야 함)
-  const discount = minPrice && minPrice < 70000 ? {
-    originalPrice: minPrice + Math.floor(minPrice * 0.1),
-    discountPercent: 10,
-    finalPrice: minPrice
-  } : undefined;
 
   return {
     id: dbInstructor.id,
@@ -52,67 +41,113 @@ function transformInstructor(dbInstructor: any, classes: any[]): InstructorWithD
     genre: genre || undefined,
     followers: undefined,
     img: dbInstructor.profile_image_url || undefined,
-    price: minPrice,
-    location: '서울 마포구 합정동', // 실제로는 스케줄에서 가져와야 함
-    rating: 5.0, // 실제로는 리뷰에서 계산해야 함
-    discount,
+    mainGenre: genre || undefined,
   };
 }
 
+const INITIAL_LOAD_COUNT = 10;
+
+// 스켈레톤 카드 컴포넌트
+const InstructorCardSkeleton = () => (
+  <div className="bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 animate-pulse">
+    <div className="flex gap-3 p-3">
+      <div className="w-24 h-24 rounded-xl bg-neutral-200 dark:bg-neutral-800 flex-shrink-0" />
+      <div className="flex-1 min-w-0 py-1">
+        <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-24 mb-2" />
+        <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-16 mb-3" />
+        <div className="flex gap-2">
+          <div className="h-5 bg-neutral-200 dark:bg-neutral-800 rounded w-14" />
+          <div className="h-5 bg-neutral-200 dark:bg-neutral-800 rounded w-20" />
+        </div>
+        <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-20 mt-2" />
+      </div>
+    </div>
+  </div>
+);
+
 export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
   const [dancers, setDancers] = useState<InstructorWithDetails[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [enriching, setEnriching] = useState(false);
   const [dancerFilter, setDancerFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [favoritedInstructors, setFavoritedInstructors] = useState<Set<string>>(new Set());
   const { user } = useAuth();
+  const enrichedRef = useRef(false);
 
+  // Phase 1: 기본 강사 정보만 빠르게 로드 (처음 10명 우선)
   useEffect(() => {
     let isMounted = true;
 
-    async function loadInstructors() {
+    async function loadInstructorsPhase1() {
       try {
         const supabase = getSupabaseClient();
         if (!supabase) {
-          setLoading(false);
+          setInitialLoading(false);
           return;
         }
 
-        // 필요한 필드만 선택하여 성능 최적화
-        const { data: instructorsData, error: instructorsError } = await supabase
+        // 처음 10명만 빠르게 로드
+        const { data: initialData, error } = await supabase
           .from('instructors')
-          .select(`
-            id,
-            name_kr,
-            name_en,
-            bio,
-            instagram_url,
-            specialties,
-            profile_image_url
-          `)
+          .select(`id, name_kr, name_en, bio, instagram_url, specialties, profile_image_url`)
           .order('created_at', { ascending: false })
-          .limit(100); // 최대 100명만
+          .limit(INITIAL_LOAD_COUNT);
 
-        if (instructorsError) {
-          console.error('Error loading instructors:', instructorsError);
-          throw instructorsError;
-        }
-
+        if (error) throw error;
         if (!isMounted) return;
 
-        // 강사 ID 목록
-        const instructorIds = (instructorsData || []).map((i: any) => i.id);
+        const transformed = (initialData || []).map(transformInstructorBasic);
+        setDancers(transformed);
+        setInitialLoading(false);
+
+        // 나머지 강사를 백그라운드에서 로드
+        const { data: allData, error: allError } = await supabase
+          .from('instructors')
+          .select(`id, name_kr, name_en, bio, instagram_url, specialties, profile_image_url`)
+          .order('created_at', { ascending: false })
+          .limit(100);
+
+        if (allError) throw allError;
+        if (!isMounted) return;
+
+        const allTransformed = (allData || []).map(transformInstructorBasic);
+        setDancers(allTransformed);
+      } catch (error) {
+        console.error('Error loading instructors:', error);
+        if (isMounted) {
+          setDancers([]);
+          setInitialLoading(false);
+        }
+      }
+    }
+    
+    loadInstructorsPhase1();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Phase 2: 가격, 수업 개수 등 보조 정보를 백그라운드로 로드
+  useEffect(() => {
+    if (dancers.length === 0 || initialLoading || enrichedRef.current) return;
+
+    let isMounted = true;
+    enrichedRef.current = true;
+
+    async function enrichInstructors() {
+      setEnriching(true);
+      try {
+        const supabase = getSupabaseClient();
+        if (!supabase) return;
+
+        const instructorIds = dancers.map(d => d.id);
 
         // 클래스 정보와 스케줄 정보를 병렬로 가져오기
         const [classesResult, schedulesResult] = await Promise.all([
-          // 강사별 클래스와 학원 정보
           supabase
             .from('classes')
             .select('id, instructor_id, academy_id')
             .in('instructor_id', instructorIds)
             .limit(500),
-          
-          // 진행 예정인 스케줄만
           supabase
             .from('schedules')
             .select('class_id, start_time, is_canceled')
@@ -169,7 +204,9 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
           });
         }
 
-        // 강사별 최저 가격 계산 (소속 학원들의 수강권 중 최저가)
+        if (!isMounted) return;
+
+        // 강사별 최저 가격 계산
         const priceMap = new Map<string, number>();
         instructorAcademyMap.forEach((academyIds, instructorId) => {
           let minPrice: number | undefined;
@@ -193,43 +230,37 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
           }
         });
 
-        // 데이터 변환
-        const transformed = (instructorsData || []).map((instructor: any) => {
-          const minPrice = priceMap.get(instructor.id);
-          const upcomingClassesCount = upcomingCountMap.get(instructor.id) || 0;
-          const specialties = instructor.specialties || '';
-          const mainGenre = specialties.split(',')[0]?.trim() || '';
-
-          const instructorData = transformInstructor(instructor, []);
-          instructorData.price = minPrice;
-          instructorData.mainGenre = mainGenre;
-          instructorData.upcomingClassesCount = upcomingClassesCount;
-          return instructorData;
-        });
-
+        // 기존 데이터에 보조 정보 병합
         if (isMounted) {
-          setDancers(transformed);
+          setDancers(prev => prev.map(dancer => {
+            const minPrice = priceMap.get(dancer.id);
+            const upcomingClassesCount = upcomingCountMap.get(dancer.id) || 0;
+            const discount = minPrice && minPrice < 70000 ? {
+              originalPrice: minPrice + Math.floor(minPrice * 0.1),
+              discountPercent: 10,
+              finalPrice: minPrice
+            } : undefined;
+
+            return {
+              ...dancer,
+              price: minPrice,
+              upcomingClassesCount,
+              discount,
+            };
+          }));
         }
       } catch (error) {
-        console.error('Error loading instructors:', error);
-        if (isMounted) {
-          setDancers([]);
-        }
+        console.error('Error enriching instructors:', error);
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setEnriching(false);
       }
     }
-    
-    loadInstructors();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
-  // 찜한 강사 목록 로드
+    enrichInstructors();
+    return () => { isMounted = false; };
+  }, [dancers.length, initialLoading]);
+
+  // 찜한 강사 목록 로드 (독립적으로 실행)
   useEffect(() => {
     const loadFavoritedInstructors = async () => {
       if (!user) {
@@ -293,7 +324,6 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
       const nameEn = (d.name_en || '').toLowerCase();
       const name = (d.name || '').toLowerCase();
       
-      // 한글 이름, 영어 이름, 또는 표시 이름 중 하나라도 일치하면 통과
       if (!nameKr.includes(query) && !nameEn.includes(query) && !name.includes(query)) {
         return false;
       }
@@ -304,19 +334,11 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
   // 사용 가능한 장르 목록 추출
   const availableGenres = ['ALL', ...Array.from(new Set(dancers.map(d => d.genre?.toUpperCase()).filter((g): g is string => !!g)))];
 
-  if (loading) {
-    return (
-      <div className="h-full flex flex-col pb-24 animate-in slide-in-from-right-10 duration-300">
-        <div className="text-center py-12 text-neutral-500">로딩 중...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="h-full flex flex-col pb-24 animate-in slide-in-from-right-10 duration-300">
       <div className="px-5 pt-12 pb-4 bg-white dark:bg-neutral-950 sticky top-0 z-20 border-b border-neutral-200 dark:border-neutral-800">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-black dark:text-white">트레이너</h2>
+          <h2 className="text-xl font-bold text-black dark:text-white">강사</h2>
           <div className="flex gap-2 items-center">
             <LanguageToggle />
             <ThemeToggle />
@@ -326,7 +348,7 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
             </button>
             <button className="text-xs bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 flex items-center gap-1">
               <Tag size={12} />
-              지업권
+              수강권
             </button>
           </div>
         </div>
@@ -360,9 +382,16 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
         </div>
       </div>
 
-      {/* 목록 형태로 표시 */}
+      {/* 목록 */}
       <div className="px-4 space-y-3 overflow-y-auto pb-24">
-        {filteredDancers.length === 0 ? (
+        {initialLoading ? (
+          // 스켈레톤 UI
+          <>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <InstructorCardSkeleton key={i} />
+            ))}
+          </>
+        ) : filteredDancers.length === 0 ? (
           <div className="text-center py-12 text-neutral-500">등록된 강사가 없습니다.</div>
         ) : (
           filteredDancers.map(dancer => (
@@ -387,12 +416,6 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
                   <div className="flex items-start justify-between mb-1">
                     <div className="flex-1 min-w-0">
                       <h3 className="text-base font-bold text-black dark:text-white truncate">{dancer.name}</h3>
-                      {dancer.rating && (
-                        <div className="flex items-center gap-1 text-xs text-neutral-600 dark:text-neutral-400">
-                          <Star size={10} fill="currentColor" className="text-yellow-500" />
-                          {dancer.rating} (1)
-                        </div>
-                      )}
                     </div>
                     {/* 찜 버튼 */}
                     {user && (
@@ -416,9 +439,14 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
                         {dancer.mainGenre}
                       </span>
                     )}
-                    {dancer.upcomingClassesCount !== undefined && (
+                    {dancer.upcomingClassesCount !== undefined && dancer.upcomingClassesCount > 0 && (
                       <span className="text-xs text-neutral-600 dark:text-neutral-400">
                         진행 예정 {dancer.upcomingClassesCount}개
+                      </span>
+                    )}
+                    {enriching && dancer.upcomingClassesCount === undefined && (
+                      <span className="text-xs text-neutral-400 dark:text-neutral-600 animate-pulse">
+                        정보 로딩 중...
                       </span>
                     )}
                   </div>
@@ -438,8 +466,12 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
                       <span className="text-sm font-bold text-black dark:text-white">
                         {dancer.price.toLocaleString()}원~
                       </span>
+                    ) : enriching ? (
+                      <div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded w-16 animate-pulse" />
                     ) : null}
-                    <span className="text-xs text-neutral-500">,회</span>
+                    {(dancer.price || dancer.discount) && (
+                      <span className="text-xs text-neutral-500">/회</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -450,4 +482,3 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
     </div>
   );
 };
-

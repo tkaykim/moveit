@@ -298,14 +298,6 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
     }
   };
 
-  if (loading) {
-    return (
-      <div className="h-full pt-12 px-5 pb-24 animate-in fade-in">
-        <div className="text-center py-12 text-neutral-500">로딩 중...</div>
-      </div>
-    );
-  }
-
   const weekDates = getWeekDates();
   const displayClasses = selectedDay 
     ? scheduleGrid[selectedDay] || []
@@ -397,7 +389,32 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
 
       {/* 클래스 목록 */}
       <div className="space-y-4">
-        {timeSlots.length === 0 ? (
+        {loading ? (
+          // 스켈레톤 UI
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, groupIdx) => (
+              <div key={groupIdx} className="space-y-2">
+                <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-12 mx-2 animate-pulse" />
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 animate-pulse"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-5 bg-neutral-200 dark:bg-neutral-800 rounded w-32" />
+                      <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-12" />
+                    </div>
+                    <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-20 mb-2" />
+                    <div className="flex gap-3">
+                      <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-24" />
+                      <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-28" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : timeSlots.length === 0 ? (
           <div className="text-center py-12 text-neutral-500 dark:text-neutral-400">
             {selectedDay ? `${DAY_NAMES[DAYS.indexOf(selectedDay)]}요일 클래스가 없습니다.` : '이번 주 클래스가 없습니다.'}
           </div>

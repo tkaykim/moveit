@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { Star, MapPin, Search, X, Heart, SlidersHorizontal, ChevronDown } from 'lucide-react';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Academy } from '@/types';
 import { AcademyFilterModal, AcademyFilter } from '@/components/modals/academy-filter-modal';
@@ -49,11 +49,32 @@ function transformAcademy(dbAcademy: any): Academy {
   };
 }
 
+// 스켈레톤 카드 컴포넌트
+const AcademyCardSkeleton = () => (
+  <div className="flex gap-4 bg-white dark:bg-neutral-900 rounded-2xl p-3 border border-neutral-200 dark:border-neutral-800 animate-pulse">
+    <div className="w-24 h-24 rounded-xl bg-neutral-200 dark:bg-neutral-800 flex-shrink-0" />
+    <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+      <div>
+        <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-32 mb-2" />
+        <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-48 mt-1" />
+      </div>
+      <div className="flex items-center justify-between mt-2">
+        <div className="flex gap-1">
+          <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-12" />
+          <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-14" />
+        </div>
+        <div className="h-5 bg-neutral-200 dark:bg-neutral-800 rounded w-16" />
+      </div>
+    </div>
+  </div>
+);
+
 export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
   const { t, language } = useLocale();
   const { translateTexts, isEnglish } = useTranslation();
   const [academies, setAcademies] = useState<Academy[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [pricesLoading, setPricesLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('default');
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -67,6 +88,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
   const [favoritedAcademies, setFavoritedAcademies] = useState<Set<string>>(new Set());
   const { user } = useAuth();
   const [isTranslated, setIsTranslated] = useState(false);
+  const pricesLoadedRef = useRef(false);
 
   // 영어 모드일 때 학원 이름 자동 번역
   const translateAcademies = useCallback(async () => {
@@ -89,10 +111,10 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
 
   // 영어 모드이고 데이터 로드 완료 시 번역
   useEffect(() => {
-    if (isEnglish && !loading && academies.length > 0 && !isTranslated) {
+    if (isEnglish && !initialLoading && academies.length > 0 && !isTranslated) {
       translateAcademies();
     }
-  }, [isEnglish, loading, academies.length, isTranslated, translateAcademies]);
+  }, [isEnglish, initialLoading, academies.length, isTranslated, translateAcademies]);
 
   // 사용자 위치 가져오기
   useEffect(() => {
@@ -137,6 +159,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
     }
   }, [sortOption, userLocation]);
 
+  // Phase 1: 학원 기본 정보 로드 (가격 없이)
   useEffect(() => {
     let isMounted = true;
     
@@ -144,7 +167,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
       try {
         const supabase = getSupabaseClient();
         if (!supabase) {
-          if (isMounted) setLoading(false);
+          if (isMounted) setInitialLoading(false);
           return;
         }
 
@@ -158,55 +181,81 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
         if (error) throw error;
         if (!isMounted) return;
         
-        const academyIds = (data || []).map((a: any) => a.id);
-        let priceMap = new Map<string, number>();
-        
-        if (academyIds.length > 0) {
-          // 수강권 기반 최저가 조회
-          const { data: ticketsData } = await supabase
-            .from('tickets')
-            .select('academy_id, price')
-            .in('academy_id', academyIds)
-            .eq('is_on_sale', true)
-            .or('is_public.eq.true,is_public.is.null')
-            .not('price', 'is', null)
-            .gt('price', 0)
-            .limit(500);
-          
-          if (!isMounted) return;
-          
-          (ticketsData || []).forEach((ticket: any) => {
-            if (ticket.academy_id && ticket.price) {
-              const current = priceMap.get(ticket.academy_id);
-              if (!current || ticket.price < current) {
-                priceMap.set(ticket.academy_id, ticket.price);
-              }
-            }
-          });
-        }
-        
         const transformed = (data || []).map((dbAcademy: any) => {
-          const academy = transformAcademy({ ...dbAcademy, classes: [] });
-          const minPrice = priceMap.get(dbAcademy.id);
-          if (minPrice) {
-            academy.price = minPrice;
-          }
-          return academy;
+          return transformAcademy({ ...dbAcademy, classes: [] });
         });
         
         if (isMounted) {
           setAcademies(transformed);
+          setInitialLoading(false);
         }
       } catch (error) {
         console.error('Error loading academies:', error);
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted) setInitialLoading(false);
       }
     }
     
     loadAcademies();
     return () => { isMounted = false; };
   }, []);
+
+  // Phase 2: 가격 정보 백그라운드 로드
+  useEffect(() => {
+    if (academies.length === 0 || initialLoading || pricesLoadedRef.current) return;
+
+    let isMounted = true;
+    pricesLoadedRef.current = true;
+
+    async function loadPrices() {
+      setPricesLoading(true);
+      try {
+        const supabase = getSupabaseClient();
+        if (!supabase) return;
+
+        const academyIds = academies.map(a => a.id);
+        
+        const { data: ticketsData } = await supabase
+          .from('tickets')
+          .select('academy_id, price')
+          .in('academy_id', academyIds)
+          .eq('is_on_sale', true)
+          .or('is_public.eq.true,is_public.is.null')
+          .not('price', 'is', null)
+          .gt('price', 0)
+          .limit(500);
+        
+        if (!isMounted) return;
+        
+        const priceMap = new Map<string, number>();
+        (ticketsData || []).forEach((ticket: any) => {
+          if (ticket.academy_id && ticket.price) {
+            const current = priceMap.get(ticket.academy_id);
+            if (!current || ticket.price < current) {
+              priceMap.set(ticket.academy_id, ticket.price);
+            }
+          }
+        });
+
+        if (isMounted && priceMap.size > 0) {
+          setAcademies(prev => prev.map(academy => {
+            const minPrice = priceMap.get(academy.id);
+            if (minPrice) {
+              return { ...academy, price: minPrice };
+            }
+            return academy;
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading prices:', error);
+      } finally {
+        if (isMounted) setPricesLoading(false);
+      }
+    }
+
+    loadPrices();
+    return () => { isMounted = false; };
+  }, [academies.length, initialLoading]);
 
   // 찜한 학원 목록 로드
   useEffect(() => {
@@ -346,14 +395,6 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
 
   const activeFilterCount = filter.tags.length + (filter.priceRange.min !== null || filter.priceRange.max !== null ? 1 : 0);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-neutral-300 dark:border-neutral-600 border-t-primary dark:border-t-[#CCFF00] rounded-full" />
-      </div>
-    );
-  }
-
   return (
     <div className="pb-24 animate-in fade-in duration-300">
       {/* 헤더 */}
@@ -450,7 +491,14 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
 
       {/* 학원 목록 */}
       <div className="px-5 mt-4 space-y-3">
-        {filteredAndSortedAcademies.length === 0 ? (
+        {initialLoading ? (
+          // 스켈레톤 UI
+          <>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <AcademyCardSkeleton key={i} />
+            ))}
+          </>
+        ) : filteredAndSortedAcademies.length === 0 ? (
           <div className="text-center py-16 text-neutral-500">
             <MapPin className="mx-auto mb-3 text-neutral-400" size={40} />
             <p className="text-sm">
@@ -530,11 +578,13 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
                         <span>{academy.rating}</span>
                       </div>
                     )}
-                    {academy.price && (
+                    {academy.price ? (
                       <span className="text-sm font-bold text-neutral-800 dark:text-[#CCFF00]">
                         {academy.price.toLocaleString()}원~
                       </span>
-                    )}
+                    ) : pricesLoading ? (
+                      <div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded w-14 animate-pulse" />
+                    ) : null}
                   </div>
                 </div>
               </div>
