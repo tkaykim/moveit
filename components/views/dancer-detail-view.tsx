@@ -133,12 +133,20 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
   return (
     <div className="bg-white dark:bg-neutral-950 min-h-screen pb-24 animate-in slide-in-from-right duration-300">
       <div className="relative h-80 overflow-hidden">
-        <Image 
-          src={dancer.img || `https://picsum.photos/seed/dancer${dancer.id}/800/320`}
-          alt={dancer.name}
-          fill
-          className="object-cover"
-        />
+        {dancer.img ? (
+          <Image 
+            src={dancer.img}
+            alt={dancer.name}
+            fill
+            className="object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center">
+            <span className="text-6xl font-black text-neutral-400 dark:text-neutral-600 italic tracking-tighter">
+              {dancer.name}
+            </span>
+          </div>
+        )}
         <div className="absolute top-12 left-5 right-5 z-20 flex justify-between items-center">
           <button 
             onClick={onBack} 

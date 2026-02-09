@@ -403,12 +403,20 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
               <div className="flex gap-3 p-3 relative">
                 {/* 이미지 */}
                 <div className="relative w-24 h-24 rounded-xl overflow-hidden flex-shrink-0">
-                  <Image
-                    src={dancer.img || `https://picsum.photos/seed/dancer${dancer.id}/200/200`}
-                    alt={dancer.name}
-                    fill
-                    className="object-cover"
-                  />
+                  {dancer.img ? (
+                    <Image
+                      src={dancer.img}
+                      alt={dancer.name}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center">
+                      <span className="text-lg font-bold text-neutral-400 dark:text-neutral-600">
+                        {dancer.name}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* 정보 */}

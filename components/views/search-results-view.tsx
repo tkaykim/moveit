@@ -179,12 +179,20 @@ export const SearchResultsView = ({ query, onBack, onAcademyClick, onDancerClick
                       onClick={() => onDancerClick(dancer)}
                       className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 group active:scale-[0.98] transition-all"
                     >
-                      <Image
-                        src={dancer.img || `https://picsum.photos/seed/dancer${dancer.id}/300/400`}
-                        alt={dancer.name}
-                        fill
-                        className="object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                      />
+                      {dancer.img ? (
+                        <Image
+                          src={dancer.img}
+                          alt={dancer.name}
+                          fill
+                          className="object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center">
+                          <span className="text-2xl font-black text-neutral-400 dark:text-neutral-600 italic tracking-tighter">
+                            {dancer.name}
+                          </span>
+                        </div>
+                      )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
                       <div className="absolute top-3 right-3">
                         <button className="w-8 h-8 bg-black/30 backdrop-blur rounded-full flex items-center justify-center">

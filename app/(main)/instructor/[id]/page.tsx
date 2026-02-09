@@ -44,7 +44,7 @@ export default function InstructorDetailPage() {
             crew: crew || undefined,
             genre: genre || undefined,
             followers: undefined,
-            img: undefined,
+            img: data.profile_image_url || undefined,
           };
 
           setDancer(transformedDancer);
