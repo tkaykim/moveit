@@ -47,6 +47,31 @@ const DANCE_CATEGORIES = [
   { id: 'house', name: 'House', icon: '🏠' },
 ];
 
+// 섹션별 스켈레톤 컴포넌트들
+const InstructorCarouselSkeleton = () => (
+  <div className="flex gap-3 overflow-x-auto scrollbar-hide px-5 pb-2">
+    {Array.from({ length: 4 }).map((_, i) => (
+      <div key={i} className="flex-shrink-0 w-32 animate-pulse">
+        <div className="aspect-[3/4] rounded-2xl bg-neutral-200 dark:bg-neutral-800" />
+      </div>
+    ))}
+  </div>
+);
+
+const AcademyListSkeleton = () => (
+  <div className="px-5 space-y-3">
+    {Array.from({ length: 3 }).map((_, i) => (
+      <div key={i} className="flex gap-3 bg-white dark:bg-neutral-900 rounded-2xl p-3 border border-neutral-200 dark:border-neutral-800 animate-pulse">
+        <div className="w-20 h-20 rounded-xl bg-neutral-200 dark:bg-neutral-800 flex-shrink-0" />
+        <div className="flex-1 flex flex-col justify-center">
+          <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-28 mb-2" />
+          <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-36" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeViewProps) => {
   const { t, language } = useLocale();
   const { translateTexts, isEnglish } = useTranslation();
@@ -59,12 +84,15 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
     auto_slide_interval: 5000,
     is_auto_slide_enabled: true,
   });
+  // 섹션별 독립 로딩 상태
+  const [instructorsLoading, setInstructorsLoading] = useState(true);
+  const [academiesLoading, setAcademiesLoading] = useState(true);
+  const [bannersLoading, setBannersLoading] = useState(true);
 
   // 영어 모드일 때 학원/강사 이름 자동 번역
   const translateContent = useCallback(async () => {
     if (!isEnglish) return;
 
-    // 학원 이름 번역
     const academyNames = [...recentAcademies, ...nearbyAcademies].map(a => a.name);
     const instructorNames = hotInstructors.map(i => i.name);
     const allTexts = [...new Set([...academyNames, ...instructorNames])];
@@ -77,7 +105,6 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
       translationMap.set(text, translations[i]);
     });
 
-    // 번역된 이름 적용
     setRecentAcademies(prev => prev.map(a => ({
       ...a,
       name: translationMap.get(a.name) || a.name,
@@ -92,17 +119,17 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
     })));
   }, [isEnglish, recentAcademies, nearbyAcademies, hotInstructors, translateTexts]);
 
-  // 언어 변경 또는 데이터 로드 시 번역 실행
+  // 언어 변경 시 번역 실행
   useEffect(() => {
     if (isEnglish && (recentAcademies.length > 0 || nearbyAcademies.length > 0 || hotInstructors.length > 0)) {
       translateContent();
     }
-  }, [language]); // language 변경 시에만 실행
+  }, [language]);
 
   useEffect(() => {
     let isMounted = true;
     
-    // 최근 본 학원 로드
+    // 최근 본 학원 (즉시 - localStorage)
     const loadRecentAcademies = () => {
       try {
         const recent = localStorage.getItem('recent_academies');
@@ -115,7 +142,25 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
       }
     };
 
-    // 주변 학원 로드
+    // 배너 로드 (가벼움 - 우선 로드)
+    const loadBanners = async () => {
+      try {
+        const response = await fetch('/api/banners');
+        const data = await response.json();
+        if (isMounted) {
+          setBanners(data.banners || []);
+          if (data.settings) {
+            setBannerSettings(data.settings);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading banners:', error);
+      } finally {
+        if (isMounted) setBannersLoading(false);
+      }
+    };
+
+    // 주변 학원 로드 (Phase 1: 기본 정보만 먼저, Phase 2: 가격)
     const loadNearbyAcademies = async () => {
       try {
         const supabase = getSupabaseClient();
@@ -131,11 +176,34 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
         if (error) throw error;
         if (!isMounted) return;
 
+        // Phase 1: 기본 정보만으로 즉시 표시
+        const transformed = (data || []).map((dbAcademy: any) => {
+          const name = dbAcademy.name_kr || dbAcademy.name_en || '이름 없음';
+          const images = (dbAcademy.images && Array.isArray(dbAcademy.images)) ? dbAcademy.images : [];
+          const sortedImages = images.sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+          const imageUrl = sortedImages.length > 0 ? sortedImages[0].url : dbAcademy.logo_url;
+
+          return {
+            id: dbAcademy.id,
+            name_kr: dbAcademy.name_kr,
+            name_en: dbAcademy.name_en,
+            tags: dbAcademy.tags,
+            logo_url: dbAcademy.logo_url,
+            name,
+            img: imageUrl || undefined,
+            academyId: dbAcademy.id,
+            address: dbAcademy.address,
+          } as any;
+        });
+
+        if (isMounted) {
+          setNearbyAcademies(transformed);
+          setAcademiesLoading(false);
+        }
+
+        // Phase 2: 가격 정보 백그라운드 로드
         const academyIds = (data || []).map((a: any) => a.id);
-        let priceMap = new Map<string, number>();
-        
         if (academyIds.length > 0) {
-          // 수강권 기반 최저가 조회
           const { data: ticketsData } = await (supabase as any)
             .from('tickets')
             .select('academy_id, price')
@@ -145,6 +213,9 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             .gt('price', 0)
             .limit(100);
           
+          if (!isMounted) return;
+
+          const priceMap = new Map<string, number>();
           (ticketsData || []).forEach((ticket: any) => {
             if (ticket.academy_id && ticket.price) {
               const current = priceMap.get(ticket.academy_id);
@@ -153,47 +224,31 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
               }
             }
           });
-        }
 
-        const transformed = (data || []).map((dbAcademy: any) => {
-          const name = dbAcademy.name_kr || dbAcademy.name_en || '이름 없음';
-          const images = (dbAcademy.images && Array.isArray(dbAcademy.images)) ? dbAcademy.images : [];
-          const sortedImages = images.sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
-          const imageUrl = sortedImages.length > 0 ? sortedImages[0].url : dbAcademy.logo_url;
-          const minPrice = priceMap.get(dbAcademy.id);
-
-          return {
-            id: dbAcademy.id,
-            name_kr: dbAcademy.name_kr,
-            name_en: dbAcademy.name_en,
-            tags: dbAcademy.tags,
-            logo_url: dbAcademy.logo_url,
-            name,
-            price: minPrice || undefined,
-            img: imageUrl || undefined,
-            academyId: dbAcademy.id,
-            address: dbAcademy.address,
-          } as any;
-        });
-
-        if (isMounted) {
-          setNearbyAcademies(transformed);
+          if (isMounted && priceMap.size > 0) {
+            setNearbyAcademies(prev => prev.map(a => ({
+              ...a,
+              price: priceMap.get(a.id) || (a as any).price,
+            })));
+          }
         }
       } catch (error) {
         console.error('Error loading nearby academies:', error);
+        if (isMounted) setAcademiesLoading(false);
       }
     };
 
-    // HOT한 강사 로드
+    // HOT한 강사 로드 (Phase 1: 기본만, Phase 2: 가격)
     const loadHotInstructors = async () => {
       try {
         const supabase = getSupabaseClient();
         if (!supabase) return;
 
+        // Phase 1: 기본 강사 정보만 (limit 10)
         const { data: instructorsData, error: instructorsError } = await (supabase as any)
           .from('instructors')
           .select(`id, name_kr, name_en, specialties, profile_image_url`)
-          .limit(20);
+          .limit(10);
 
         if (instructorsError) {
           if (instructorsError.code !== 'PGRST200') {
@@ -204,6 +259,32 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
 
         if (!isMounted) return;
 
+        // Phase 1: 기본 정보만으로 즉시 표시
+        const basicInstructors = (instructorsData || []).map((instructor: any) => {
+          const name = instructor.name_kr || instructor.name_en || '이름 없음';
+          const specialties = instructor.specialties || '';
+          const genre = specialties.split(',')[0]?.trim() || 'ALL';
+          const crew = specialties.split(',')[1]?.trim() || '';
+
+          return {
+            id: instructor.id,
+            name_kr: instructor.name_kr,
+            name_en: instructor.name_en,
+            specialties: instructor.specialties,
+            name,
+            crew: crew || undefined,
+            genre: genre || undefined,
+            img: instructor.profile_image_url || undefined,
+            favoriteCount: 0,
+          } as InstructorWithFavorites;
+        });
+
+        if (isMounted) {
+          setHotInstructors(basicInstructors);
+          setInstructorsLoading(false);
+        }
+
+        // Phase 2: 찜 수, 가격 정보 백그라운드 로드
         const instructorIds = (instructorsData || []).map((i: any) => i.id);
         
         const [favoritesResult, classesResult] = await Promise.all([
@@ -266,6 +347,8 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           });
         }
 
+        if (!isMounted) return;
+
         // 강사별 최저 가격 계산
         const priceMap = new Map<string, number>();
         instructorAcademyMap.forEach((academyIds, instructorId) => {
@@ -281,58 +364,31 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           }
         });
 
-        const instructorsWithFavorites = (instructorsData || []).map((instructor: any) => {
-          const name = instructor.name_kr || instructor.name_en || '이름 없음';
-          const specialties = instructor.specialties || '';
-          const genre = specialties.split(',')[0]?.trim() || 'ALL';
-          const crew = specialties.split(',')[1]?.trim() || '';
-          const favoriteCount = favoriteCountMap.get(instructor.id) || Math.floor(Math.random() * 50) + 10;
-
-          return {
-            id: instructor.id,
-            name_kr: instructor.name_kr,
-            name_en: instructor.name_en,
-            specialties: instructor.specialties,
-            name,
-            crew: crew || undefined,
-            genre: genre || undefined,
-            img: instructor.profile_image_url || undefined,
-            favoriteCount,
-            price: priceMap.get(instructor.id),
-          } as InstructorWithFavorites;
-        });
-
-        const sorted = instructorsWithFavorites
-          .sort((a: InstructorWithFavorites, b: InstructorWithFavorites) => b.favoriteCount - a.favoriteCount)
-          .slice(0, 10);
-
+        // Phase 2 업데이트: 찜 수와 가격 병합 후 정렬
         if (isMounted) {
-          setHotInstructors(sorted);
+          setHotInstructors(prev => {
+            const updated = prev.map(instructor => ({
+              ...instructor,
+              favoriteCount: favoriteCountMap.get(instructor.id) || Math.floor(Math.random() * 50) + 10,
+              price: priceMap.get(instructor.id),
+            }));
+            return updated
+              .sort((a, b) => b.favoriteCount - a.favoriteCount)
+              .slice(0, 10);
+          });
         }
       } catch (error) {
         console.error('Error loading hot instructors:', error);
+        if (isMounted) setInstructorsLoading(false);
       }
     };
 
-    // 배너 로드
-    const loadBanners = async () => {
-      try {
-        const response = await fetch('/api/banners');
-        const data = await response.json();
-        console.log('Banners loaded:', data);
-        if (isMounted) {
-          setBanners(data.banners || []);
-          if (data.settings) {
-            setBannerSettings(data.settings);
-          }
-        }
-      } catch (error) {
-        console.error('Error loading banners:', error);
-      }
-    };
-
+    // 즉시 실행 (localStorage - 동기)
     loadRecentAcademies();
-    Promise.all([loadNearbyAcademies(), loadHotInstructors(), loadBanners()]);
+    // 병렬 비동기 로드
+    loadBanners();
+    loadNearbyAcademies();
+    loadHotInstructors();
     
     return () => {
       isMounted = false;
@@ -401,7 +457,11 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
       </header>
 
       {/* 배너 캐러셀 */}
-      {banners.length > 0 && (
+      {bannersLoading ? (
+        <div className="px-5 mt-2">
+          <div className="aspect-[2.5/1] rounded-2xl bg-neutral-200 dark:bg-neutral-800 animate-pulse" />
+        </div>
+      ) : banners.length > 0 ? (
         <div className="px-5 mt-2">
           <BannerCarousel
             banners={banners}
@@ -409,7 +469,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             isAutoSlideEnabled={bannerSettings.is_auto_slide_enabled}
           />
         </div>
-      )}
+      ) : null}
 
       {/* 카테고리 아이콘 */}
       <div className="px-5 mt-6">
@@ -432,20 +492,22 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
       </div>
 
       {/* HOT한 강사 */}
-      {hotInstructors.length > 0 && (
-        <div className="mt-8">
-          <div className="flex items-center justify-between px-5 mb-3">
-            <div className="flex items-center gap-2">
-              <Flame className="text-red-500" size={20} />
-              <h2 className="text-lg font-bold text-black dark:text-white">{language === 'en' ? 'HOT Instructors' : 'HOT 강사'}</h2>
-            </div>
-            <button 
-              onClick={() => onNavigate('DANCER')}
-              className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400"
-            >
-              {t('common.viewAll')} <ChevronRight size={14} />
-            </button>
+      <div className="mt-8">
+        <div className="flex items-center justify-between px-5 mb-3">
+          <div className="flex items-center gap-2">
+            <Flame className="text-red-500" size={20} />
+            <h2 className="text-lg font-bold text-black dark:text-white">{language === 'en' ? 'HOT Instructors' : 'HOT 강사'}</h2>
           </div>
+          <button 
+            onClick={() => onNavigate('DANCER')}
+            className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400"
+          >
+            {t('common.viewAll')} <ChevronRight size={14} />
+          </button>
+        </div>
+        {instructorsLoading ? (
+          <InstructorCarouselSkeleton />
+        ) : hotInstructors.length > 0 ? (
           <div className="flex gap-3 overflow-x-auto scrollbar-hide px-5 pb-2">
             {hotInstructors.map((instructor, index) => (
               <div
@@ -479,8 +541,12 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="px-5 text-center py-6 text-neutral-400 text-sm">
+            {language === 'en' ? 'No instructors yet' : '등록된 강사가 없습니다'}
+          </div>
+        )}
+      </div>
 
       {/* 최근 본 학원 */}
       {recentAcademies.length > 0 && (
@@ -529,17 +595,19 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
       )}
 
       {/* 주변 학원 */}
-      {nearbyAcademies.length > 0 && (
-        <div className="mt-8">
-          <div className="flex items-center justify-between px-5 mb-3">
-            <h2 className="text-lg font-bold text-black dark:text-white">{language === 'en' ? 'Nearby Academies' : '주변 댄스학원'}</h2>
-            <button 
-              onClick={() => onNavigate('ACADEMY')}
-              className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400"
-            >
-              {t('common.viewAll')} <ChevronRight size={14} />
-            </button>
-          </div>
+      <div className="mt-8">
+        <div className="flex items-center justify-between px-5 mb-3">
+          <h2 className="text-lg font-bold text-black dark:text-white">{language === 'en' ? 'Nearby Academies' : '주변 댄스학원'}</h2>
+          <button 
+            onClick={() => onNavigate('ACADEMY')}
+            className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400"
+          >
+            {t('common.viewAll')} <ChevronRight size={14} />
+          </button>
+        </div>
+        {academiesLoading ? (
+          <AcademyListSkeleton />
+        ) : nearbyAcademies.length > 0 ? (
           <div className="px-5 space-y-3">
             {nearbyAcademies.slice(0, 4).map(academy => (
               <div
@@ -587,8 +655,12 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="px-5 text-center py-6 text-neutral-400 text-sm">
+            {language === 'en' ? 'No academies found' : '학원이 없습니다'}
+          </div>
+        )}
+      </div>
 
       {/* 하단 여백 */}
       <div className="h-8" />
