@@ -18,6 +18,7 @@ import {
   BookOpen,
   UserCog,
   Pause,
+  AlertTriangle,
   type LucideIcon,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -227,6 +228,17 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
               onClick={handleLinkClick}
             />
           ))}
+
+          <div className="px-6 pt-3 lg:pt-6 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+            기타
+          </div>
+          <SidebarItem
+            icon={AlertTriangle}
+            label="고장신고/개발요청"
+            href={`/academy-admin/${academyId}/support`}
+            active={isActive(`/academy-admin/${academyId}/support`)}
+            onClick={handleLinkClick}
+          />
 
           {/* 모바일에서 마지막 항목이 스크롤 영역 밖으로 잘리지 않도록 하단 여백 */}
           <div className="h-8 lg:h-4 flex-shrink-0" />

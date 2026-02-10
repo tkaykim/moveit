@@ -27,10 +27,20 @@ export type Json =
 
 // 학원 상세 페이지 섹션 설정 타입
 export interface SectionConfigItem {
-  id: string;        // 섹션 식별자
+  id: string;        // 섹션 식별자 (기본: 'info', 'schedule' 등 / 커스텀: 'custom_xxx')
   visible: boolean;  // 표시 여부
   order: number;     // 정렬 순서
+  // 커스텀 섹션 전용 필드
+  isCustom?: boolean;                     // 커스텀 섹션 여부
+  type?: 'image' | 'text' | 'video';     // 커스텀 섹션 타입
+  title?: string;                         // 커스텀 섹션 제목
+  content?: string;                       // 텍스트 내용 (type: 'text')
+  media_url?: string;                     // 이미지/영상 URL (type: 'image' | 'video')
+  link_url?: string;                      // 클릭 시 이동할 URL
 }
+
+// 기본(빌트인) 섹션 ID 목록
+export const BUILTIN_SECTION_IDS = ['info', 'consultation', 'tags', 'recent_videos', 'schedule', 'reviews'];
 
 // 플랫 구조: 모든 섹션을 하나의 리스트로 관리
 export interface SectionConfig {
@@ -67,6 +77,13 @@ export const SECTION_DESCRIPTIONS: Record<string, string> = {
   recent_videos: '최근 등록된 수업 영상 목록을 보여줍니다',
   schedule: '주간/월간 수업 시간표와 수강권 구매 버튼을 보여줍니다',
   reviews: '수강생 리뷰 영역입니다 (준비 중)',
+};
+
+// 커스텀 섹션 타입 라벨
+export const CUSTOM_SECTION_TYPE_LABELS: Record<string, string> = {
+  image: '이미지',
+  text: '글',
+  video: '영상',
 };
 
 // 레거시 호환: 기존 tabs/homeSections 구조를 flat sections로 변환
@@ -1293,6 +1310,66 @@ export type Database = {
             columns: ["recurring_schedule_id"]
             isOneToOne: false
             referencedRelation: "recurring_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_requests: {
+        Row: {
+          id: string
+          request_type: string
+          status: string
+          title: string
+          bug_situation: string | null
+          current_state: string
+          improvement_request: string
+          user_id: string
+          academy_id: string
+          admin_note: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          request_type: string
+          status?: string
+          title: string
+          bug_situation?: string | null
+          current_state: string
+          improvement_request: string
+          user_id: string
+          academy_id: string
+          admin_note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          request_type?: string
+          status?: string
+          title?: string
+          bug_situation?: string | null
+          current_state?: string
+          improvement_request?: string
+          user_id?: string
+          academy_id?: string
+          admin_note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_requests_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]

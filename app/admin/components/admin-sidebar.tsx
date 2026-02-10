@@ -12,6 +12,7 @@ import {
   Ticket,
   Image as ImageIcon,
   UserCheck,
+  AlertTriangle,
   type LucideIcon,
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
@@ -59,6 +60,11 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       icon: ImageIcon,
       href: '/admin/banners',
     },
+    {
+      title: '고장신고/개발요청',
+      icon: AlertTriangle,
+      href: '/admin/support-requests',
+    },
   ], []);
 
   // 모바일에서 메뉴 클릭 시 드로어 닫기
@@ -83,7 +89,8 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
   const isActive = (href?: string) => {
     if (!href) return false;
-    return pathname === href;
+    if (pathname === href) return true;
+    return pathname?.startsWith(href + '/') || false;
   };
 
   const isParentActive = (children?: MenuItem[]) => {

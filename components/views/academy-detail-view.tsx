@@ -1,7 +1,7 @@
 "use client";
 
 import Image from 'next/image';
-import { ChevronLeft, Heart, X, MessageSquare } from 'lucide-react';
+import { ChevronLeft, Heart, X, MessageSquare, ExternalLink } from 'lucide-react';
 import { ClassPreviewModal } from '@/components/modals/class-preview-modal';
 import { TicketPurchaseModal } from '@/components/modals/ticket-purchase-modal';
 import { ConsultationRequestModal } from '@/components/modals/consultation-request-modal';
@@ -18,6 +18,117 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { useTranslatedText } from '@/lib/i18n/useTranslation';
 import { TranslatedText } from '@/components/common/translated-text';
 import { SectionConfig, SectionConfigItem, DEFAULT_SECTION_CONFIG, migrateSectionConfig } from '@/types/database';
+
+// --- 커스텀 섹션 렌더러 ---
+function CustomSectionRenderer({ section }: { section: SectionConfigItem }) {
+  // 유튜브 URL을 embed URL로 변환
+  const getYoutubeEmbedUrl = (url: string): string | null => {
+    if (!url) return null;
+    if (url.includes('youtube.com/embed/')) return url;
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+    ];
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return `https://www.youtube.com/embed/${match[1]}`;
+      }
+    }
+    return null;
+  };
+
+  const wrapWithLink = (children: React.ReactNode) => {
+    if (section.link_url) {
+      return (
+        <a 
+          href={section.link_url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="block group"
+        >
+          {children}
+          <div className="flex items-center gap-1 mt-2 text-xs text-blue-500 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+            <ExternalLink size={12} />
+            <span>링크 열기</span>
+          </div>
+        </a>
+      );
+    }
+    return children;
+  };
+
+  return (
+    <div className="p-5 scroll-mt-20">
+      {section.title && (
+        <h3 className="text-black dark:text-white font-bold text-lg mb-4">{section.title}</h3>
+      )}
+
+      {/* 이미지 섹션 */}
+      {section.type === 'image' && section.media_url && (
+        wrapWithLink(
+          <div className="relative w-full rounded-xl overflow-hidden">
+            <Image
+              src={section.media_url}
+              alt={section.title || '커스텀 이미지'}
+              width={800}
+              height={450}
+              className={`w-full h-auto object-cover rounded-xl ${section.link_url ? 'group-hover:opacity-90 transition-opacity' : ''}`}
+              style={{ maxHeight: '500px' }}
+            />
+          </div>
+        )
+      )}
+
+      {/* 영상 섹션 */}
+      {section.type === 'video' && section.media_url && (() => {
+        const embedUrl = getYoutubeEmbedUrl(section.media_url);
+        if (embedUrl) {
+          return wrapWithLink(
+            <div className="relative w-full rounded-xl overflow-hidden" style={{ paddingBottom: '56.25%' }}>
+              <iframe
+                src={embedUrl}
+                className="absolute top-0 left-0 w-full h-full rounded-xl"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                title={section.title || '영상'}
+              />
+            </div>
+          );
+        }
+        // 유튜브가 아닌 경우 일반 video 태그
+        return wrapWithLink(
+          <video
+            src={section.media_url}
+            controls
+            className="w-full rounded-xl"
+            style={{ maxHeight: '500px' }}
+          >
+            브라우저가 영상 재생을 지원하지 않습니다.
+          </video>
+        );
+      })()}
+
+      {/* 글 섹션 (HTML 리치 텍스트) */}
+      {section.type === 'text' && section.content && (
+        wrapWithLink(
+          section.content.startsWith('<') ? (
+            <div
+              className="prose prose-sm dark:prose-invert max-w-none
+                prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:underline
+                prose-img:rounded-lg prose-img:mx-auto prose-img:max-w-full"
+              dangerouslySetInnerHTML={{ __html: section.content }}
+            />
+          ) : (
+            <div className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap">
+              {section.content}
+            </div>
+          )
+        )
+      )}
+    </div>
+  );
+}
 
 interface AcademyDetailViewProps {
   academy: Academy | null;
@@ -465,6 +576,12 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                 </div>
               );
             default:
+              // 커스텀 섹션 렌더링
+              if (section.isCustom) {
+                return (
+                  <CustomSectionRenderer key={section.id} section={section} />
+                );
+              }
               return null;
           }
         })}

@@ -1,10 +1,11 @@
 "use client";
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useCallback } from 'react';
 import { AdminSidebar } from './components/admin-sidebar';
 import { Menu, LogIn, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AdminLoginModal } from '@/components/auth/AdminLoginModal';
+import { AccessDenied } from '@/components/auth/AccessDenied';
 
 export default function AdminLayout({
   children,
@@ -13,9 +14,59 @@ export default function AdminLayout({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
+
+  const handleLoginSuccess = useCallback(() => {
+    // auth context가 업데이트되면 자동으로 재렌더링
+  }, []);
 
   const displayName = profile?.nickname || profile?.name || user?.email?.split('@')[0] || '';
+
+  // 로딩 중
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-neutral-300 dark:border-neutral-600 border-t-primary dark:border-t-[#CCFF00] rounded-full animate-spin" />
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">권한 확인 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 로그인되지 않은 경우
+  if (!user) {
+    return (
+      <AccessDenied
+        isLoggedIn={false}
+        onLoginSuccess={handleLoginSuccess}
+        message="관리자 페이지에 접근하려면 최고관리자 계정으로 로그인해주세요."
+      />
+    );
+  }
+
+  // 프로필이 아직 로딩 중이면 대기
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-neutral-300 dark:border-neutral-600 border-t-primary dark:border-t-[#CCFF00] rounded-full animate-spin" />
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">프로필 로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 최고관리자가 아닌 경우
+  if (profile.role !== 'SUPER_ADMIN') {
+    return (
+      <AccessDenied
+        isLoggedIn={true}
+        onLoginSuccess={handleLoginSuccess}
+        message="최고관리자(SUPER_ADMIN)만 접근할 수 있는 페이지입니다."
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex">
@@ -35,70 +86,48 @@ export default function AdminLayout({
               관리자
             </h1>
             {/* 모바일 로그인/로그아웃 버튼 */}
-            {user ? (
-              <button
-                onClick={signOut}
-                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
-                aria-label="로그아웃"
-              >
-                <LogOut className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
-              </button>
-            ) : (
-              <button
-                onClick={() => setLoginModalOpen(true)}
-                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
-                aria-label="로그인"
-              >
-                <LogIn className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
-              </button>
-            )}
+            <button
+              onClick={signOut}
+              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+              aria-label="로그아웃"
+            >
+              <LogOut className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
+            </button>
           </div>
         </div>
 
         {/* 데스크톱 상단 헤더 */}
         <header className="hidden lg:flex h-14 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 items-center justify-end px-8 shadow-sm z-10 sticky top-0">
-          {user ? (
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px]">
-                  <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center overflow-hidden">
-                    {profile?.profile_image ? (
-                      <img
-                        src={profile.profile_image}
-                        alt={displayName}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <User className="text-black dark:text-white" size={14} />
-                    )}
-                  </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px]">
+                <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center overflow-hidden">
+                  {profile?.profile_image ? (
+                    <img
+                      src={profile.profile_image}
+                      alt={displayName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="text-black dark:text-white" size={14} />
+                  )}
                 </div>
-                <span className="text-sm font-medium text-black dark:text-white">
-                  {displayName}
-                </span>
-                {profile?.role && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
-                    {profile.role === 'SUPER_ADMIN' ? '최고관리자' : profile.role}
-                  </span>
-                )}
               </div>
-              <button
-                onClick={signOut}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-              >
-                <LogOut size={16} />
-                로그아웃
-              </button>
+              <span className="text-sm font-medium text-black dark:text-white">
+                {displayName}
+              </span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                최고관리자
+              </span>
             </div>
-          ) : (
             <button
-              onClick={() => setLoginModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-neutral-900 dark:bg-neutral-100 text-white dark:text-black rounded-lg font-medium text-sm hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
+              onClick={signOut}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
             >
-              <LogIn size={16} />
-              로그인
+              <LogOut size={16} />
+              로그아웃
             </button>
-          )}
+          </div>
         </header>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 lg:pt-4 sm:pt-4 pt-16">

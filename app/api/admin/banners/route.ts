@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 import {
   getAllBanners,
   createBanner,
@@ -6,9 +7,29 @@ import {
   updateBannerSettings,
 } from '@/lib/db/banners';
 
+async function requireSuperAdmin() {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { error: NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 }) };
+  }
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+  if (!profile || (profile as { role: string }).role !== 'SUPER_ADMIN') {
+    return { error: NextResponse.json({ error: '최고관리자만 접근할 수 있습니다.' }, { status: 403 }) };
+  }
+  return { error: null };
+}
+
 // 관리자용: 모든 배너 목록 조회
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireSuperAdmin();
+    if (auth.error) return auth.error;
+
     let banners: any[] = [];
     let settings: any = null;
     
@@ -46,6 +67,9 @@ export async function GET(request: NextRequest) {
 // 배너 생성
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireSuperAdmin();
+    if (auth.error) return auth.error;
+
     const body = await request.json();
     console.log('Creating banner with data:', body);
     
@@ -90,6 +114,9 @@ export async function POST(request: NextRequest) {
 // 배너 설정 수정
 export async function PATCH(request: NextRequest) {
   try {
+    const auth = await requireSuperAdmin();
+    if (auth.error) return auth.error;
+
     const body = await request.json();
     
     const { auto_slide_interval, is_auto_slide_enabled } = body;

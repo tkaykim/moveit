@@ -1,0 +1,2 @@
+[     796ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/admin/users/academy-roles:0
+[     855ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/admin/users/academy-roles:0

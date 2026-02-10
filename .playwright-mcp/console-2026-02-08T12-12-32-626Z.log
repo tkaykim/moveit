@@ -1,0 +1,12 @@
+[     912ms] [ERROR] Refused to apply style from 'http://localhost:3000/_next/static/css/app/layout.css?v=1770552749094' because its MIME type ('text/html') is not a supported stylesheet MIME type, and strict MIME checking is enabled. @ http://localhost:3000/admin/users:0
+[    1389ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/admin/users. Falling back to browser navigation. TypeError: Failed to fetch
+    at fetchServerResponse (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:59:27)
+    at fastRefreshReducerImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/fast-refresh-reducer.js:33:67)
+    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:41:67)
+    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:150:55)
+    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:56:38)
+    at runRemainingActions (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:30:13)
+    at handleResult (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:66:9) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32
+[    1577ms] [ERROR] Refused to apply style from 'http://localhost:3000/_next/static/css/app/layout.css?v=1770552753955' because its MIME type ('text/html') is not a supported stylesheet MIME type, and strict MIME checking is enabled. @ http://localhost:3000/admin/users:0
+[    1749ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/chunks/main-app.js?v=1770552753955:0
+[    1749ms] [ERROR] Refused to execute script from 'http://localhost:3000/_next/static/chunks/main-app.js?v=1770552753955' because its MIME type ('text/html') is not executable, and strict MIME type checking is enabled. @ http://localhost:3000/admin/users:0

@@ -9,11 +9,10 @@ export default async function AcademyAdminLayout({
   params: Promise<{ academyId: string }>;
 }) {
   const { academyId } = await params;
-  
+
   return (
     <AcademyAdminLayoutWrapper academyId={academyId}>
       {children}
     </AcademyAdminLayoutWrapper>
   );
 }
-
