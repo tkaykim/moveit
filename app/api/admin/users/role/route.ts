@@ -1,42 +1,12 @@
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
+import { requireSuperAdmin } from '@/lib/supabase/admin-auth';
 import { NextResponse } from 'next/server';
-import { User } from '@/lib/supabase/types';
-import { Database } from '@/types/database';
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-
-    // 현재 사용자 확인
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: '인증이 필요합니다.' },
-        { status: 401 }
-      );
-    }
-
-    // 현재 사용자 프로필 확인
-    const { data: currentProfile, error: profileError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !currentProfile) {
-      return NextResponse.json(
-        { error: '사용자 프로필을 찾을 수 없습니다.' },
-        { status: 404 }
-      );
-    }
-
-    // SUPER_ADMIN만 권한 변경 가능
-    if ((currentProfile as Pick<User, 'role'>).role !== 'SUPER_ADMIN') {
-      return NextResponse.json(
-        { error: '관리자 권한이 필요합니다.' },
-        { status: 403 }
-      );
+    const auth = await requireSuperAdmin();
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     const { userId, role } = await request.json();
@@ -60,17 +30,18 @@ export async function POST(request: Request) {
     }
 
     // 자신의 역할은 변경할 수 없음
-    if (userId === user.id) {
+    if (userId === auth.user!.id) {
       return NextResponse.json(
         { error: '자신의 역할은 변경할 수 없습니다.' },
         { status: 400 }
       );
     }
 
-    // 사용자 역할 업데이트
-    const { error: updateError } = await (supabase
-      .from('users') as any)
-      .update({ role: role as ValidRole })
+    // 서비스 클라이언트로 사용자 역할 업데이트 (RLS 우회)
+    const serviceClient = createServiceClient();
+    const { error: updateError } = await serviceClient
+      .from('users')
+      .update({ role: role as ValidRole } as any)
       .eq('id', userId);
 
     if (updateError) {
@@ -94,4 +65,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

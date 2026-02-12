@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { Database } from '@/types/database';
 
@@ -28,8 +29,6 @@ export async function createClient() {
         schema: 'public',
       },
       auth: {
-        persistSession: false, // 서버에서는 세션을 쿠키로만 관리
-        autoRefreshToken: false,
         detectSessionInUrl: false,
       },
       global: {
@@ -46,4 +45,22 @@ export async function createClient() {
       },
     }
   );
+}
+
+/**
+ * 관리자 전용 서비스 클라이언트 생성
+ * - SUPABASE_SERVICE_ROLE_KEY가 있으면 서비스 역할 키를 사용 (RLS 우회)
+ * - 없으면 anon 키로 대체
+ * - 인증 없이 DB 작업에 사용 (인증은 별도로 수행해야 함)
+ */
+export function createServiceClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  return createSupabaseClient<Database>(supabaseUrl, supabaseKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
 }
