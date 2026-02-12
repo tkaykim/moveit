@@ -1,30 +1,20 @@
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
+import { requireSuperAdmin } from '@/lib/supabase/admin-auth';
 import { NextResponse } from 'next/server';
 
 // GET: 학원-유저 역할 매핑 목록 조회
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
-    }
-
-    const { data: currentProfile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!currentProfile || (currentProfile as any).role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 });
+    const auth = await requireSuperAdmin();
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
-    let query = (supabase as any)
+    const serviceClient = createServiceClient();
+    let query = serviceClient
       .from('academy_user_roles')
       .select(`
         id,
@@ -53,21 +43,9 @@ export async function GET(request: Request) {
 // POST: 학원-유저 역할 매핑 추가
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
-    }
-
-    const { data: currentProfile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!currentProfile || (currentProfile as any).role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 });
+    const auth = await requireSuperAdmin();
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     const { userId, academyId, role } = await request.json();
@@ -86,8 +64,10 @@ export async function POST(request: Request) {
       );
     }
 
+    const serviceClient = createServiceClient();
+
     // 유저의 role도 함께 업데이트 (가장 높은 학원 역할로)
-    const { data: existingRoles } = await (supabase as any)
+    const { data: existingRoles } = await serviceClient
       .from('academy_user_roles')
       .select('role')
       .eq('user_id', userId);
@@ -96,7 +76,7 @@ export async function POST(request: Request) {
     const highestRole = allRoles.includes('ACADEMY_OWNER') ? 'ACADEMY_OWNER' : 'ACADEMY_MANAGER';
 
     // 매핑 추가
-    const { data, error } = await (supabase as any)
+    const { data, error } = await serviceClient
       .from('academy_user_roles')
       .insert({
         user_id: userId,
@@ -117,9 +97,9 @@ export async function POST(request: Request) {
     }
 
     // 유저의 role 업데이트
-    await (supabase as any)
+    await serviceClient
       .from('users')
-      .update({ role: highestRole })
+      .update({ role: highestRole } as any)
       .eq('id', userId);
 
     return NextResponse.json({ data, message: '학원 역할이 할당되었습니다.' });
@@ -132,21 +112,9 @@ export async function POST(request: Request) {
 // DELETE: 학원-유저 역할 매핑 삭제
 export async function DELETE(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
-    }
-
-    const { data: currentProfile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!currentProfile || (currentProfile as any).role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 });
+    const auth = await requireSuperAdmin();
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     const { id, userId } = await request.json();
@@ -155,7 +123,9 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: '매핑 ID가 필요합니다.' }, { status: 400 });
     }
 
-    const { error } = await (supabase as any)
+    const serviceClient = createServiceClient();
+
+    const { error } = await serviceClient
       .from('academy_user_roles')
       .delete()
       .eq('id', id);
@@ -164,24 +134,24 @@ export async function DELETE(request: Request) {
 
     // 남은 매핑을 확인하여 유저의 role 업데이트
     if (userId) {
-      const { data: remainingRoles } = await (supabase as any)
+      const { data: remainingRoles } = await serviceClient
         .from('academy_user_roles')
         .select('role')
         .eq('user_id', userId);
 
       if (!remainingRoles || remainingRoles.length === 0) {
         // 학원 역할이 더 이상 없으면 USER로 되돌림
-        await (supabase as any)
+        await serviceClient
           .from('users')
-          .update({ role: 'USER' })
+          .update({ role: 'USER' } as any)
           .eq('id', userId);
       } else {
         const highestRole = remainingRoles.some((r: any) => r.role === 'ACADEMY_OWNER')
           ? 'ACADEMY_OWNER'
           : 'ACADEMY_MANAGER';
-        await (supabase as any)
+        await serviceClient
           .from('users')
-          .update({ role: highestRole })
+          .update({ role: highestRole } as any)
           .eq('id', userId);
       }
     }
