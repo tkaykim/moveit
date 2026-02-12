@@ -516,13 +516,21 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
                 className="flex-shrink-0 w-32 active:scale-[0.98] transition-transform cursor-pointer"
               >
                 <div className="aspect-[3/4] relative rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-                  <Image
-                    src={instructor.img || `https://picsum.photos/seed/instructor${instructor.id}/200/300`}
-                    alt={instructor.name}
-                    fill
-                    sizes="128px"
-                    className="object-cover"
-                  />
+                  {instructor.img ? (
+                    <Image
+                      src={instructor.img}
+                      alt={instructor.name}
+                      fill
+                      sizes="128px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center">
+                      <span className="text-sm font-bold text-neutral-400 dark:text-neutral-600 text-center px-1">
+                        {instructor.name}
+                      </span>
+                    </div>
+                  )}
                   {/* 순위 배지 */}
                   {index < 3 && (
                     <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">

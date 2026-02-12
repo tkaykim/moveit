@@ -256,12 +256,20 @@ export const SavedView = ({ onNavigate }: SavedViewProps) => {
                 className="bg-white dark:bg-neutral-900 p-3 rounded-2xl flex gap-3 items-center border border-neutral-200 dark:border-neutral-800"
               >
                 <div className="w-16 h-16 rounded-xl flex-shrink-0 relative overflow-hidden">
-                  <Image 
-                    src={item.img || `https://picsum.photos/seed/dancer${item.id}/64/64`}
-                    alt={item.name}
-                    fill
-                    className="object-cover"
-                  />
+                  {item.img ? (
+                    <Image 
+                      src={item.img}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center">
+                      <span className="text-xs font-bold text-neutral-400 dark:text-neutral-600">
+                        {item.name}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1">
                   <h3 className="text-black dark:text-white font-bold text-sm">{item.name}</h3>
