@@ -513,7 +513,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           <InstructorCarouselSkeleton />
         ) : hotInstructors.length > 0 ? (
           <div className="flex gap-3 overflow-x-auto scrollbar-hide px-5 pb-2">
-            {hotInstructors.map((instructor, index) => (
+            {hotInstructors.map((instructor) => (
               <div
                 key={instructor.id}
                 onClick={() => handleDancerClickInternal(instructor)}
@@ -533,12 +533,6 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
                       <span className="text-sm font-bold text-neutral-400 dark:text-neutral-600 text-center px-1">
                         {instructor.name}
                       </span>
-                    </div>
-                  )}
-                  {/* 순위 배지 */}
-                  {index < 3 && (
-                    <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
-                      {index + 1}
                     </div>
                   )}
                   {/* 하단 그라데이션 */}
