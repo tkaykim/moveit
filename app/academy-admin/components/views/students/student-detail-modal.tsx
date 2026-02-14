@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, User } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { normalizePhone, formatPhoneDisplay, parsePhoneInput } from '@/lib/utils/phone';
+import { ProfileImageUpload } from '@/components/common/profile-image-upload';
 
 interface StudentDetailModalProps {
   student: any;
@@ -20,6 +21,7 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
     email: '',
   });
   const [loading, setLoading] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (student) {
@@ -29,6 +31,7 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
         phone: normalizePhone(student.phone || ''),
         email: student.email || '',
       });
+      setProfileImageUrl(student.profile_image || null);
     }
   }, [student]);
 
@@ -83,6 +86,17 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
 
         {isEditing ? (
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            {/* 프로필 사진 수정 */}
+            <div className="flex justify-center py-2">
+              <ProfileImageUpload
+                currentImageUrl={profileImageUrl}
+                targetUserId={student.id}
+                onImageUploaded={(url) => setProfileImageUrl(url)}
+                size={80}
+                displayName={formData.name || student.name || '학생'}
+              />
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 이름
@@ -153,6 +167,19 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
           </form>
         ) : (
           <div className="p-6 space-y-6">
+            {/* 프로필 사진 표시 */}
+            <div className="flex justify-center">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px]">
+                <div className="w-full h-full rounded-full bg-white dark:bg-neutral-900 flex items-center justify-center overflow-hidden">
+                  {profileImageUrl ? (
+                    <img src={profileImageUrl} alt={student.name || '학생'} className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="text-neutral-400 dark:text-neutral-500" size={32} />
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div>
               <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">기본 정보</h4>
               <div className="space-y-2">

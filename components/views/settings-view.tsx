@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react';
 import { ThemeToggle } from '@/components/common/theme-toggle';
 import { LanguageToggle } from '@/components/common/language-toggle';
 import { useLocale, Language } from '@/contexts/LocaleContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { ProfileImageUpload } from '@/components/common/profile-image-upload';
 
 interface SettingsViewProps {
   onBack: () => void;
@@ -12,19 +14,26 @@ interface SettingsViewProps {
 
 export const SettingsView = ({ onBack }: SettingsViewProps) => {
   const { language, setLanguage, t } = useLocale();
-  const [userName, setUserName] = useState('사용자');
-  const [userEmail, setUserEmail] = useState('');
+  const { user, profile, refreshProfile } = useAuth();
   const [loading, setLoading] = useState(true);
 
+  const userName = profile?.nickname || profile?.name || user?.email?.split('@')[0] || (language === 'en' ? 'User' : '사용자');
+  const userEmail = profile?.email || user?.email || '';
+  const profileImageUrl = profile?.profile_image || null;
+
   useEffect(() => {
-    // 인증 기능 제거로 인해 기본값 설정
-    setUserName('사용자');
-    setUserEmail('');
     setLoading(false);
   }, []);
 
   const handleLanguageChange = (lang: Language) => {
     setLanguage(lang);
+  };
+
+  const handleProfileImageUploaded = (url: string | null) => {
+    // 프로필 새로고침하여 AuthContext의 데이터를 업데이트
+    if (refreshProfile) {
+      refreshProfile();
+    }
   };
 
   if (loading) {
@@ -56,17 +65,28 @@ export const SettingsView = ({ onBack }: SettingsViewProps) => {
         <LanguageToggle />
       </div>
 
-      {/* 프로필 정보 */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px]">
-            <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center">
-              <User className="text-black dark:text-white" size={20} />
+      {/* 프로필 정보 + 사진 변경 */}
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 mb-6">
+        <div className="flex flex-col items-center gap-3">
+          {user ? (
+            <ProfileImageUpload
+              currentImageUrl={profileImageUrl}
+              onImageUploaded={handleProfileImageUploaded}
+              size={88}
+              displayName={userName}
+            />
+          ) : (
+            <div className="w-[88px] h-[88px] rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px]">
+              <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center">
+                <User className="text-black dark:text-white" size={32} />
+              </div>
             </div>
-          </div>
-          <div className="flex-1">
+          )}
+          <div className="text-center">
             <div className="text-base font-bold text-black dark:text-white">{userName}</div>
-            <div className="text-xs text-neutral-500 dark:text-neutral-400">{userEmail}</div>
+            {userEmail && (
+              <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">{userEmail}</div>
+            )}
           </div>
         </div>
       </div>
@@ -165,12 +185,6 @@ export const SettingsView = ({ onBack }: SettingsViewProps) => {
           <span className="text-xs text-neutral-500 dark:text-neutral-400">1.0.0</span>
         </button>
       </div>
-
     </div>
   );
 };
-
-
-
-
-

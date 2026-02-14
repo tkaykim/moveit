@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, Download, MoreHorizontal, Plus } from 'lucide-react';
+import { Search, Filter, Download, MoreHorizontal, Plus, User } from 'lucide-react';
 import { SectionHeader } from '../common/section-header';
 import { StatusBadge } from '../common/status-badge';
 import { StudentRegisterModal } from './students/student-register-modal';
@@ -19,6 +19,7 @@ interface Student {
   nickname?: string | null;
   phone?: string | null;
   email?: string | null;
+  profile_image?: string | null;
   user_tickets?: Array<{
     id: string;
     remaining_count: number | null;
@@ -338,7 +339,16 @@ export function StudentView({ academyId }: StudentViewProps) {
                         }}
                       >
                         <td className="px-4 sm:px-6 py-4 font-bold text-gray-800 dark:text-white">
-                          {student.name || student.nickname || '-'}
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-700 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                              {student.profile_image ? (
+                                <img src={student.profile_image} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <User size={14} className="text-neutral-400" />
+                              )}
+                            </div>
+                            <span>{student.name || student.nickname || '-'}</span>
+                          </div>
                         </td>
                         <td className="px-4 sm:px-6 py-4 text-gray-600 dark:text-gray-400">
                           {student.phone ? formatPhoneDisplay(student.phone) : '-'}

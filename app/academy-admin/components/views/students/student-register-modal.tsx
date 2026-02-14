@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { normalizePhone, formatPhoneDisplay, parsePhoneInput } from '@/lib/utils/phone';
+import { ProfileImageUpload } from '@/components/common/profile-image-upload';
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 
 const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)', 'heels', 'kpop', 'house', '기타'] as const;
 
@@ -39,6 +41,7 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
     level: '',
   });
   const [loading, setLoading] = useState(false);
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,6 +172,11 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
           if (updateRelationError) throw updateRelationError;
         }
 
+        // 프로필 이미지 업로드 (파일이 선택되어 있으면)
+        if (profileImageFile) {
+          await uploadProfileImage(userId, profileImageFile);
+        }
+
         alert('기존 학생을 해당 학원의 수강생으로 등록했습니다. 이제 해당 학원에서 조회 가능합니다.');
       } else {
         // 5. 신규 사용자 생성 (RPC로 id를 서버에서 생성해 users_pkey 오류 방지)
@@ -219,6 +227,11 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
           throw relationError;
         }
 
+        // 프로필 이미지 업로드 (파일이 선택되어 있으면)
+        if (profileImageFile) {
+          await uploadProfileImage(userId, profileImageFile);
+        }
+
         alert('학생이 등록되었습니다.');
       }
 
@@ -230,6 +243,24 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
       alert(`학생 등록에 실패했습니다: ${errorMessage}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 프로필 이미지 업로드 헬퍼
+  const uploadProfileImage = async (userId: string, file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('targetUserId', userId);
+      const res = await fetchWithAuth('/api/upload/profile-image', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) {
+        console.error('프로필 이미지 업로드 실패:', await res.text());
+      }
+    } catch (err) {
+      console.error('프로필 이미지 업로드 오류:', err);
     }
   };
 
@@ -256,6 +287,16 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
+          {/* 프로필 사진 */}
+          <div className="flex justify-center py-2">
+            <ProfileImageUpload
+              localOnly
+              onFileSelect={(file) => setProfileImageFile(file)}
+              size={80}
+              displayName={formData.name || '학생'}
+            />
+          </div>
+
           {/* 기본 정보 섹션 */}
           <div className="space-y-4">
             <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 border-b dark:border-neutral-700 pb-2">
