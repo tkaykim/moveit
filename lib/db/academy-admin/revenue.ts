@@ -13,6 +13,11 @@ export interface RevenueTransaction {
   payment_method?: string | null;
   payment_status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
   transaction_date: string;
+  registration_type?: 'NEW' | 'RE_REGISTRATION' | null;
+  quantity?: number | null;
+  valid_days?: number | null;
+  ticket_name?: string | null;
+  ticket_type_snapshot?: string | null;
   notes?: string | null;
   created_at: string;
 }
@@ -22,7 +27,25 @@ export async function getRevenueTransactions(academyId: string, startDate?: stri
   let query = supabase
     .from('revenue_transactions')
     .select(`
-      *,
+      id,
+      academy_id,
+      user_id,
+      ticket_id,
+      user_ticket_id,
+      discount_id,
+      original_price,
+      discount_amount,
+      final_price,
+      payment_method,
+      payment_status,
+      transaction_date,
+      registration_type,
+      quantity,
+      valid_days,
+      ticket_name,
+      ticket_type_snapshot,
+      notes,
+      created_at,
       users (
         id,
         name,
@@ -31,7 +54,10 @@ export async function getRevenueTransactions(academyId: string, startDate?: stri
       tickets (
         id,
         name,
-        ticket_type
+        ticket_type,
+        ticket_category,
+        valid_days,
+        total_count
       ),
       discounts (
         id,

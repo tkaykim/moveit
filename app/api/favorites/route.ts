@@ -1,16 +1,13 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { toggleAcademyFavorite, toggleInstructorFavorite, getAcademyFavorites, getInstructorFavorites } from '@/lib/db/favorites';
+import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 
-// 찜 추가/삭제 (토글)
+// 찜 추가/삭제 (토글) - 쿠키 또는 Authorization Bearer
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
+    const user = await getAuthenticatedUser(request);
 
-    // 현재 사용자 확인
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json(
         { error: '인증이 필요합니다.' },
         { status: 401 }
@@ -54,15 +51,12 @@ export async function POST(request: Request) {
   }
 }
 
-// 찜 목록 조회
+// 찜 목록 조회 - 쿠키 또는 Authorization Bearer
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient();
+    const user = await getAuthenticatedUser(request);
 
-    // 현재 사용자 확인
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json(
         { error: '인증이 필요합니다.' },
         { status: 401 }

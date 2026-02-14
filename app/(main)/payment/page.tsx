@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
+
 import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -107,7 +109,7 @@ function PaymentContent() {
           return;
         }
 
-        const response = await fetch('/api/bookings', {
+        const response = await fetchWithAuth('/api/bookings', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from 'next/image';
-import { Bell, Search, MapPin, Flame, ChevronRight } from 'lucide-react';
+import { Bell, Search, MapPin, Flame, ChevronRight, Navigation, LayoutGrid } from 'lucide-react';
 import { ViewState } from '@/types';
 import { useState, useEffect, useCallback } from 'react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -35,17 +35,6 @@ interface BannerSettings {
   is_auto_slide_enabled: boolean;
 }
 
-// 댄스 장르 카테고리
-const DANCE_CATEGORIES = [
-  { id: 'hiphop', name: 'Hiphop', icon: '🎤' },
-  { id: 'kpop', name: 'K-Pop', icon: '🎵' },
-  { id: 'jazz', name: 'Jazz', icon: '🎷' },
-  { id: 'contemporary', name: 'Contemporary', icon: '🩰' },
-  { id: 'waacking', name: 'Waacking', icon: '💃' },
-  { id: 'popping', name: 'Popping', icon: '🤖' },
-  { id: 'locking', name: 'Locking', icon: '🔒' },
-  { id: 'house', name: 'House', icon: '🏠' },
-];
 
 // 섹션별 스켈레톤 컴포넌트들
 const InstructorCarouselSkeleton = () => (
@@ -402,9 +391,6 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
     }
   };
 
-  const handleCategoryClick = (categoryId: string) => {
-    onNavigate('SEARCH_RESULTS', categoryId);
-  };
 
   const handleAcademyClickInternal = (academy: Academy) => {
     try {
@@ -471,23 +457,41 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
         </div>
       ) : null}
 
-      {/* 카테고리 아이콘 */}
+      {/* 학원 찾기 버튼 */}
       <div className="px-5 mt-6">
-        <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
-          {DANCE_CATEGORIES.map(category => (
-            <button
-              key={category.id}
-              onClick={() => handleCategoryClick(category.id)}
-              className="flex flex-col items-center gap-2 min-w-[60px] active:scale-95 transition-transform"
-            >
-              <div className="w-14 h-14 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-2xl">
-                {category.icon}
-              </div>
-              <span className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300 whitespace-nowrap">
-                {category.name}
-              </span>
-            </button>
-          ))}
+        <div className="flex gap-3">
+          <button
+            onClick={() => onNavigate('ACADEMY')}
+            className="flex-1 flex items-center gap-3 px-4 py-4 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/40 dark:to-blue-900/30 border border-blue-200/60 dark:border-blue-800/40 active:scale-[0.98] transition-all hover:shadow-md"
+          >
+            <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center flex-shrink-0">
+              <Navigation className="text-white" size={20} />
+            </div>
+            <div className="text-left">
+              <p className="text-[13px] font-bold text-blue-900 dark:text-blue-100">
+                {language === 'en' ? 'Nearby Studios' : '내 주변'}
+              </p>
+              <p className="text-[11px] text-blue-600/80 dark:text-blue-300/70">
+                {language === 'en' ? 'Find dance studios near you' : '댄스학원 찾기'}
+              </p>
+            </div>
+          </button>
+          <button
+            onClick={() => onNavigate('SEARCH_RESULTS', 'genre')}
+            className="flex-1 flex items-center gap-3 px-4 py-4 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/40 dark:to-purple-900/30 border border-purple-200/60 dark:border-purple-800/40 active:scale-[0.98] transition-all hover:shadow-md"
+          >
+            <div className="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center flex-shrink-0">
+              <LayoutGrid className="text-white" size={20} />
+            </div>
+            <div className="text-left">
+              <p className="text-[13px] font-bold text-purple-900 dark:text-purple-100">
+                {language === 'en' ? 'By Genre' : '장르별'}
+              </p>
+              <p className="text-[11px] text-purple-600/80 dark:text-purple-300/70">
+                {language === 'en' ? 'Browse by dance genre' : '댄스학원 찾기'}
+              </p>
+            </div>
+          </button>
         </div>
       </div>
 

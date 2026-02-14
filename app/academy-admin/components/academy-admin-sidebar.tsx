@@ -19,6 +19,7 @@ import {
   UserCog,
   Pause,
   AlertTriangle,
+  QrCode,
   type LucideIcon,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -76,6 +77,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
     { icon: BookOpen, label: '클래스(반) 관리', href: `/academy-admin/${academyId}/class-masters` },
     { icon: CalendarDays, label: '스케줄 관리', href: `/academy-admin/${academyId}/schedule` },
     { icon: UserCog, label: '출석/신청 관리', href: `/academy-admin/${academyId}/enrollments` },
+    { icon: QrCode, label: 'QR 출석 리더', href: `/academy-admin/${academyId}/qr-reader` },
     { icon: Pause, label: '연장/일시정지 관리', href: `/academy-admin/${academyId}/extension-requests` },
     { icon: Ticket, label: '수강권/상품', href: `/academy-admin/${academyId}/products` },
     { icon: ClipboardList, label: '업무/수업 일지', href: `/academy-admin/${academyId}/logs` },
@@ -190,7 +192,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
           <div className="px-6 pt-3 lg:pt-6 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             수업 관리
           </div>
-          {menuItems.slice(0, 5).map((item, idx) => (
+          {menuItems.slice(0, 6).map((item, idx) => (
             <SidebarItem
               key={item.href}
               icon={item.icon}
@@ -204,7 +206,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
           <div className="px-6 pt-3 lg:pt-6 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             운영 관리
           </div>
-          {menuItems.slice(5, 8).map((item, idx) => (
+          {menuItems.slice(6, 9).map((item, idx) => (
             <SidebarItem
               key={item.href}
               icon={item.icon}
@@ -218,7 +220,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
           <div className="px-6 pt-3 lg:pt-6 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             매출 및 설정
           </div>
-          {menuItems.slice(8).map((item, idx) => (
+          {menuItems.slice(9).map((item, idx) => (
             <SidebarItem
               key={item.href}
               icon={item.icon}

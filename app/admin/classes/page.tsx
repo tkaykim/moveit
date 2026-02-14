@@ -7,7 +7,7 @@ import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Class, Academy, Hall, Instructor, Schedule, Booking, User } from '@/lib/supabase/types';
 import { formatNumberInput, parseNumberFromString, formatNumberWithCommas } from '@/lib/utils/number-format';
 
-const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)'] as const;
+const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)', 'heels', 'kpop', 'house', '기타'] as const;
 
 type ClassWithRelations = Class & {
   academies: Academy | null;
@@ -42,6 +42,7 @@ export default function ClassesPage() {
     title: '',
     description: '',
     thumbnail_url: '',
+    poster_url: '',
     song: '',
     // 시간표 정보
     start_time: '',
@@ -170,6 +171,7 @@ export default function ClassesPage() {
         genre: formData.selectedGenres.length > 0 ? formData.selectedGenres.join(', ') : null,
         class_type: formData.class_type || 'regular',
         thumbnail_url: formData.thumbnail_url || null,
+        poster_url: formData.poster_url || null,
         price: formData.price || 0,
         base_salary: parseNumberFromString(formData.base_salary),
         base_student_count: formData.base_student_count ? parseInt(formData.base_student_count, 10) : null,
@@ -235,6 +237,7 @@ export default function ClassesPage() {
       title: '',
       description: '',
       thumbnail_url: '',
+      poster_url: '',
       song: '',
       start_time: '',
       end_time: '',
@@ -264,6 +267,7 @@ export default function ClassesPage() {
       title: classItem.title || '',
       description: classItem.description || '',
       thumbnail_url: classItem.thumbnail_url || '',
+      poster_url: classItem.poster_url || '',
       song: (classItem as any).song || '',
       start_time: (firstSchedule && firstSchedule.start_time) ? new Date(firstSchedule.start_time).toISOString().slice(0, 16) : '',
       end_time: (firstSchedule && firstSchedule.end_time) ? new Date(firstSchedule.end_time).toISOString().slice(0, 16) : '',
@@ -764,6 +768,19 @@ export default function ClassesPage() {
                     type="url"
                     value={formData.thumbnail_url}
                     onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
+                    placeholder="영상 썸네일 URL"
+                    className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-2">
+                    포스터 URL
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.poster_url}
+                    onChange={(e) => setFormData({ ...formData, poster_url: e.target.value })}
+                    placeholder="수업 포스터 이미지 URL"
                     className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
                   />
                 </div>

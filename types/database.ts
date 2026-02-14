@@ -1168,10 +1168,15 @@ export type Database = {
           original_price: number
           payment_method: string | null
           payment_status: string | null
+          quantity: number | null
+          registration_type: string | null
           ticket_id: string | null
+          ticket_name: string | null
+          ticket_type_snapshot: string | null
           transaction_date: string | null
           user_id: string
           user_ticket_id: string | null
+          valid_days: number | null
         }
         Insert: {
           academy_id: string
@@ -1184,10 +1189,15 @@ export type Database = {
           original_price?: number
           payment_method?: string | null
           payment_status?: string | null
+          quantity?: number | null
+          registration_type?: string | null
           ticket_id?: string | null
+          ticket_name?: string | null
+          ticket_type_snapshot?: string | null
           transaction_date?: string | null
           user_id: string
           user_ticket_id?: string | null
+          valid_days?: number | null
         }
         Update: {
           academy_id?: string
@@ -1200,10 +1210,15 @@ export type Database = {
           original_price?: number
           payment_method?: string | null
           payment_status?: string | null
+          quantity?: number | null
+          registration_type?: string | null
           ticket_id?: string | null
+          ticket_name?: string | null
+          ticket_type_snapshot?: string | null
           transaction_date?: string | null
           user_id?: string
           user_ticket_id?: string | null
+          valid_days?: number | null
         }
         Relationships: [
           {

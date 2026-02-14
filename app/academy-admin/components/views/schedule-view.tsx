@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, ChevronLeft, ChevronRight, Repeat, Zap, Lock } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Repeat, Zap, Lock, Search } from 'lucide-react';
 import { SectionHeader } from '../common/section-header';
 import { RecurringScheduleModal } from './schedule/recurring-schedule-modal';
 import { SessionModal } from './schedule/session-modal';
@@ -45,6 +45,7 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [clickedDate, setClickedDate] = useState<Date | null>(null);
   const [selectedHallFilter, setSelectedHallFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // 현재 월의 모든 날짜 배열 생성
   const monthDays = useMemo(() => {
@@ -156,12 +157,31 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
+    const query = searchQuery.trim().toLowerCase();
+
     return sessions.filter((session) => {
       if (!session.start_time) return false;
       const sessionDate = new Date(session.start_time);
       const isInDay = sessionDate >= startOfDay && sessionDate <= endOfDay;
       const matchesHall = !hallId || session.hall_id === hallId;
-      return isInDay && matchesHall;
+
+      // 검색어 필터: 수업명, 강사명, 장르에서 검색
+      const matchesSearch = !query || (() => {
+        const title = (session.classes?.title || '').toLowerCase();
+        const genre = (session.classes?.genre || '').toLowerCase();
+        const instructorKr = (session.instructors?.name_kr || '').toLowerCase();
+        const instructorEn = (session.instructors?.name_en || '').toLowerCase();
+        const hallName = (session.halls?.name || '').toLowerCase();
+        return (
+          title.includes(query) ||
+          genre.includes(query) ||
+          instructorKr.includes(query) ||
+          instructorEn.includes(query) ||
+          hallName.includes(query)
+        );
+      })();
+
+      return isInDay && matchesHall && matchesSearch;
     });
   };
 
@@ -212,9 +232,31 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
           </div>
         ) : (
           <>
-            {/* 홀 필터 */}
-            {halls.length > 0 && (
-              <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 p-4">
+            {/* 검색 및 홀 필터 */}
+            <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 p-4 space-y-4">
+              {/* 검색 */}
+              <div className="relative">
+                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="수업명, 강사명, 장르, 홀명으로 검색..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-neutral-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
+              {/* 홀 필터 */}
+              {halls.length > 0 && (
                 <div className="flex flex-wrap gap-2 items-center">
                   <button
                     onClick={() => setSelectedHallFilter('all')}
@@ -240,8 +282,8 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* 달력 */}
             <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 p-4 sm:p-6 overflow-x-auto">

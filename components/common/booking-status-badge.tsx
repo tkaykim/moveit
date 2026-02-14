@@ -5,10 +5,22 @@ import { CheckCircle2, XCircle, Clock, CheckCircle } from 'lucide-react';
 interface BookingStatusBadgeProps {
   status: string;
   className?: string;
+  /** CONFIRMED인데 수업 시간이 지난 경우 '미출석'으로 표시 */
+  startTime?: string;
 }
 
-export function BookingStatusBadge({ status, className = '' }: BookingStatusBadgeProps) {
+export function BookingStatusBadge({ status, className = '', startTime }: BookingStatusBadgeProps) {
   const getStatusConfig = () => {
+    // CONFIRMED + 수업 지남 → 미출석
+    if (status === 'CONFIRMED' && startTime && new Date(startTime) <= new Date()) {
+      return {
+        icon: Clock,
+        text: '미출석',
+        bgColor: 'bg-amber-100 dark:bg-amber-900/30',
+        textColor: 'text-amber-800 dark:text-amber-400',
+        iconColor: 'text-amber-600 dark:text-amber-400',
+      };
+    }
     switch (status) {
       case 'CONFIRMED':
         return {

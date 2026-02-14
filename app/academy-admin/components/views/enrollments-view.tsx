@@ -2,10 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Search, Download, User, Users, Calendar, X, RefreshCw, Loader2, Clock, MapPin, UserPlus } from 'lucide-react';
+import { Search, Download, User, Users, Calendar, X, RefreshCw, Loader2, Clock, MapPin, UserPlus, ChevronDown } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { BookingStatusBadge } from '@/components/common/booking-status-badge';
-import { ScheduleSelector } from '@/components/common/schedule-selector';
 import { EnrollmentActionMenu } from './enrollments/enrollment-action-menu';
 import { AdminAddEnrollmentModal } from './enrollments/admin-add-enrollment-modal';
 import { convertKSTInputToUTC } from '@/lib/utils/kst-time';
@@ -49,6 +48,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
   const [totalCount, setTotalCount] = useState(0);
   const [selectedDate, setSelectedDate] = useState<string>(initialDate);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(initialClassId);
+  const [allClasses, setAllClasses] = useState<{ id: string; title: string }[]>([]);
   const [classesOnSelectedDate, setClassesOnSelectedDate] = useState<{ id: string; title: string }[]>([]);
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({
     ALL: 0,
@@ -58,7 +58,42 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
     COMPLETED: 0,
   });
   const [isAdminAddModalOpen, setIsAdminAddModalOpen] = useState(false);
+  const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
+  const [classSearchTerm, setClassSearchTerm] = useState('');
+  const classDropdownRef = useRef<HTMLDivElement>(null);
   const isFirstLoad = useRef(true);
+
+  // 클래스 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (classDropdownRef.current && !classDropdownRef.current.contains(event.target as Node)) {
+        setIsClassDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // 학원의 전체 클래스(반) 목록 로드
+  useEffect(() => {
+    if (!academyId) {
+      setAllClasses([]);
+      return;
+    }
+    const supabase = getSupabaseClient() as any;
+    if (!supabase) return;
+
+    (async () => {
+      const { data: classesData } = await supabase
+        .from('classes')
+        .select('id, title')
+        .eq('academy_id', academyId)
+        .order('title', { ascending: true });
+      setAllClasses(
+        (classesData || []).map((c: any) => ({ id: c.id, title: c.title || '(제목 없음)' }))
+      );
+    })();
+  }, [academyId]);
 
   // 날짜 선택 시 해당 날짜에 수업이 있는 클래스 목록 (class 기준 하나씩) — 4-A
   useEffect(() => {
@@ -586,45 +621,116 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
               </div>
             </div>
 
-            {/* 수업 선택: 날짜 선택 시 class 기준 하나만, 미선택 시 기존 스케줄 드롭다운 */}
+            {/* 수업(반) 선택: 검색+드롭다운 */}
             <div className="w-72">
-              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">수업</label>
-              {selectedDate ? (
-                <select
-                  value={selectedClassId || ''}
-                  onChange={(e) => {
-                    const id = e.target.value || null;
-                    setSelectedClassId(id);
-                    setSelectedScheduleId(null);
-                    setCurrentPage(1);
-                    const params = new URLSearchParams();
-                    params.set('date', selectedDate);
-                    if (id) params.set('class_id', id);
-                    router.push(`/academy-admin/${academyId}/enrollments?${params.toString()}`);
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">수업(반)</label>
+              <div className="relative" ref={classDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsClassDropdownOpen(!isClassDropdownOpen);
+                    setClassSearchTerm('');
                   }}
-                  className="w-full pl-3 pr-8 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00] text-gray-900 dark:text-white"
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-left flex items-center justify-between hover:border-primary dark:hover:border-[#CCFF00] transition-colors"
                 >
-                  <option value="">수업 선택</option>
-                  {classesOnSelectedDate.map((c) => (
-                    <option key={c.id} value={c.id}>{c.title}</option>
-                  ))}
-                </select>
-              ) : (
-                <ScheduleSelector
-                  value={selectedScheduleId || undefined}
-                  academyId={academyId}
-                  dateFilter={undefined}
-                  onChange={(id) => {
-                    setSelectedScheduleId(id);
-                    setSelectedClassId(null);
-                    setCurrentPage(1);
-                    const params = new URLSearchParams();
-                    if (id) params.set('schedule_id', id);
-                    const queryString = params.toString();
-                    router.push(`/academy-admin/${academyId}/enrollments${queryString ? `?${queryString}` : ''}`);
-                  }}
-                />
-              )}
+                  <span className="text-sm text-gray-900 dark:text-white truncate">
+                    {selectedClassId
+                      ? (selectedDate ? classesOnSelectedDate : allClasses).find(c => c.id === selectedClassId)?.title || '수업 선택'
+                      : '전체 수업'}
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    className={`text-gray-400 transition-transform flex-shrink-0 ml-1 ${isClassDropdownOpen ? 'rotate-180' : ''}`}
+                  />
+                </button>
+
+                {isClassDropdownOpen && (
+                  <div className="absolute z-50 w-full mt-1 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-80 overflow-hidden">
+                    {/* 검색 입력 */}
+                    <div className="p-2 border-b border-gray-200 dark:border-neutral-700">
+                      <div className="relative">
+                        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="수업명 검색..."
+                          value={classSearchTerm}
+                          onChange={(e) => setClassSearchTerm(e.target.value)}
+                          className="w-full pl-8 pr-7 py-1.5 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+                          autoFocus
+                        />
+                        {classSearchTerm && (
+                          <button
+                            onClick={() => setClassSearchTerm('')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 목록 */}
+                    <div className="overflow-y-auto max-h-60">
+                      <button
+                        onClick={() => {
+                          setSelectedClassId(null);
+                          setSelectedScheduleId(null);
+                          setCurrentPage(1);
+                          setIsClassDropdownOpen(false);
+                          setClassSearchTerm('');
+                          const params = new URLSearchParams();
+                          if (selectedDate) params.set('date', selectedDate);
+                          const queryString = params.toString();
+                          router.push(`/academy-admin/${academyId}/enrollments${queryString ? `?${queryString}` : ''}`);
+                        }}
+                        className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors ${
+                          !selectedClassId ? 'bg-primary/10 dark:bg-[#CCFF00]/10 font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        전체 수업
+                      </button>
+                      {(() => {
+                        const classList = selectedDate ? classesOnSelectedDate : allClasses;
+                        const filtered = classSearchTerm
+                          ? classList.filter(c => c.title.toLowerCase().includes(classSearchTerm.toLowerCase()))
+                          : classList;
+
+                        if (filtered.length === 0) {
+                          return (
+                            <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                              {classSearchTerm ? '검색 결과가 없습니다.' : '등록된 수업이 없습니다.'}
+                            </div>
+                          );
+                        }
+
+                        return filtered.map((c) => (
+                          <button
+                            key={c.id}
+                            onClick={() => {
+                              setSelectedClassId(c.id);
+                              setSelectedScheduleId(null);
+                              setCurrentPage(1);
+                              setIsClassDropdownOpen(false);
+                              setClassSearchTerm('');
+                              const params = new URLSearchParams();
+                              if (selectedDate) params.set('date', selectedDate);
+                              params.set('class_id', c.id);
+                              router.push(`/academy-admin/${academyId}/enrollments?${params.toString()}`);
+                            }}
+                            className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors ${
+                              selectedClassId === c.id
+                                ? 'bg-primary/10 dark:bg-[#CCFF00]/10 font-medium text-gray-900 dark:text-white'
+                                : 'text-gray-700 dark:text-gray-300'
+                            }`}
+                          >
+                            {c.title}
+                          </button>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 필터 초기화 */}
@@ -781,7 +887,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                               <div className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[180px]">
                                 {enrollment.user_tickets.tickets.name || '-'}
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                              <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 flex-wrap">
                                 {enrollment.user_tickets.tickets.ticket_type === 'PERIOD' ? (
                                   <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-[10px] font-medium">
                                     기간권
@@ -791,11 +897,27 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                                     횟수권
                                   </span>
                                 )}
-                                {enrollment.user_tickets.tickets.valid_days && (
-                                  <span>{enrollment.user_tickets.tickets.valid_days}일</span>
+                                {/* 잔여 횟수 표시 (횟수권) */}
+                                {enrollment.user_tickets.tickets.ticket_type === 'COUNT' && enrollment.user_tickets.remaining_count != null && (
+                                  <span className="font-medium">
+                                    잔여 {enrollment.user_tickets.remaining_count}회
+                                  </span>
                                 )}
-                                {enrollment.user_tickets.tickets.total_count && (
-                                  <span>{enrollment.user_tickets.tickets.total_count}회</span>
+                                {/* 만료일 표시 */}
+                                {enrollment.user_tickets.expiry_date && (
+                                  <span>
+                                    ~{new Date(enrollment.user_tickets.expiry_date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                                  </span>
+                                )}
+                                {/* 수강권 상태 */}
+                                {enrollment.user_tickets.status && enrollment.user_tickets.status !== 'ACTIVE' && (
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                    enrollment.user_tickets.status === 'EXPIRED' 
+                                      ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' 
+                                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                                  }`}>
+                                    {enrollment.user_tickets.status === 'EXPIRED' ? '만료' : enrollment.user_tickets.status === 'USED' ? '소진' : enrollment.user_tickets.status}
+                                  </span>
                                 )}
                               </div>
                             </div>

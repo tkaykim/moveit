@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import { X, Search, Ticket as TicketIcon, Loader2 } from 'lucide-react';
 import { useLocale } from '@/contexts/LocaleContext';
 
@@ -168,7 +169,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
   const handlePurchase = async (ticketId: string) => {
     setPurchasing(ticketId);
     try {
-      const response = await fetch('/api/tickets/purchase', {
+      const response = await fetchWithAuth('/api/tickets/purchase', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

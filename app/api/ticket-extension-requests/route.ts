@@ -1,23 +1,18 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 
 /**
- * POST: 사용자 연장/일시정지 신청
+ * POST: 사용자 연장/일시정지 신청 - 쿠키 또는 Authorization Bearer
  * GET: ?academyId=xxx → 해당 학원 신청 목록(관리자), 없으면 현재 사용자 신청 목록
  */
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient() as any;
-    // 쿠키 기반 세션을 먼저 확인(클라이언트와 동기화). 없으면 서버 검증 시도
-    const { data: { session } } = await supabase.auth.getSession();
-    let authUser = session?.user ?? null;
-    if (!authUser) {
-      const { data: { user } } = await supabase.auth.getUser();
-      authUser = user;
-    }
+    const authUser = await getAuthenticatedUser(request);
     if (!authUser) {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }
+
+    const supabase = await getAuthenticatedSupabase(request) as any;
 
     const body = await request.json();
     const { user_ticket_id, request_type, extension_days, absent_start_date, absent_end_date, reason } = body;
@@ -108,16 +103,12 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient() as any;
-    const { data: { session } } = await supabase.auth.getSession();
-    let authUser = session?.user ?? null;
-    if (!authUser) {
-      const { data: { user } } = await supabase.auth.getUser();
-      authUser = user;
-    }
+    const authUser = await getAuthenticatedUser(request);
     if (!authUser) {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }
+
+    const supabase = await getAuthenticatedSupabase(request) as any;
 
     const { searchParams } = new URL(request.url);
     const academyId = searchParams.get('academyId');

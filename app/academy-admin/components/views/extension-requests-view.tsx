@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
+
 import { useState, useEffect } from 'react';
 import { SectionHeader } from '../common/section-header';
 import { Check, X, Loader2, Plus } from 'lucide-react';
@@ -49,7 +51,7 @@ export function ExtensionRequestsView({ academyId }: ExtensionRequestsViewProps)
   const loadRequests = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/ticket-extension-requests?academyId=${academyId}`, { credentials: 'include' });
+      const res = await fetchWithAuth(`/api/ticket-extension-requests?academyId=${academyId}`);
       const data = await res.json();
       if (res.ok) setRequests(data.data || []);
       else setRequests([]);
@@ -67,9 +69,8 @@ export function ExtensionRequestsView({ academyId }: ExtensionRequestsViewProps)
   const handleApprove = async (id: string) => {
     setProcessingId(id);
     try {
-      const res = await fetch(`/api/ticket-extension-requests/${id}`, {
+      const res = await fetchWithAuth(`/api/ticket-extension-requests/${id}`, {
         method: 'PATCH',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'APPROVED' }),
       });
@@ -92,9 +93,8 @@ export function ExtensionRequestsView({ academyId }: ExtensionRequestsViewProps)
     }
     setProcessingId(id);
     try {
-      const res = await fetch(`/api/ticket-extension-requests/${id}`, {
+      const res = await fetchWithAuth(`/api/ticket-extension-requests/${id}`, {
         method: 'PATCH',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'REJECTED', reject_reason: reason }),
       });

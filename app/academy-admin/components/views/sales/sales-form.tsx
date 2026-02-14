@@ -132,10 +132,11 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
             }
           }
         } else {
+          const isCountTicket = (ticket.ticket_type || '').toUpperCase() === 'COUNT';
           formattedProducts.push({
             id: ticket.id,
             productKey: ticket.id,
-            type: ticket.ticket_type === 'COUNT' ? 'count' : 'period',
+            type: isCountTicket ? 'count' : 'period',
             category,
             name: ticket.name,
             amount: ticket.total_count,
@@ -183,6 +184,39 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
     if (!supabase || !selectedStudent || !selectedProduct) return;
 
     try {
+      // 기간제(PERIOD): remaining_count = null, 횟수제(COUNT): remaining_count = 횟수
+      const isPeriodTicket = selectedProduct.type === 'period';
+      const remainingCount = isPeriodTicket ? null : (selectedProduct.amount ?? 0);
+      const startDate = new Date().toISOString().split('T')[0];
+      let expiryDate: string | null;
+      const productValidDays = selectedProduct.days ?? (isPeriodTicket ? 365 : null);
+      if (isPeriodTicket) {
+        // 기간제: valid_days 기반 유효기간 (없으면 1년)
+        const days = productValidDays ?? 365;
+        const end = new Date();
+        end.setDate(end.getDate() + days);
+        expiryDate = end.toISOString().split('T')[0];
+      } else {
+        // 횟수제(쿠폰/워크샵): 옵션별 valid_days, 없으면 null(무기한)
+        expiryDate = productValidDays
+          ? new Date(Date.now() + productValidDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          : null;
+      }
+
+      // 신규/재등록 판별: 해당 학원에서 이전 결제 기록이 있으면 재등록
+      const { data: prevTransactions } = await supabase
+        .from('revenue_transactions')
+        .select('id')
+        .eq('academy_id', academyId)
+        .eq('user_id', selectedStudent.id)
+        .eq('payment_status', 'COMPLETED')
+        .limit(1);
+
+      const registrationType = (prevTransactions && prevTransactions.length > 0) ? 'RE_REGISTRATION' : 'NEW';
+
+      // 수량: 횟수제는 횟수, 기간제는 1
+      const quantity = isPeriodTicket ? 1 : (selectedProduct.amount ?? 1);
+
       // 1. user_ticket 생성
       const { data: userTicket, error: ticketError } = await supabase
         .from('user_tickets')
@@ -190,13 +224,9 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
           {
             user_id: selectedStudent.id,
             ticket_id: selectedProduct.id,
-            remaining_count: selectedProduct.amount || 0,
-            start_date: new Date().toISOString().split('T')[0],
-            expiry_date: selectedProduct.days
-              ? new Date(
-                  Date.now() + selectedProduct.days * 24 * 60 * 60 * 1000
-                ).toISOString().split('T')[0]
-              : null,
+            remaining_count: remainingCount,
+            start_date: startDate,
+            expiry_date: expiryDate,
             status: 'ACTIVE',
           },
         ])
@@ -205,7 +235,7 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
 
       if (ticketError) throw ticketError;
 
-      // 2. revenue_transaction 생성
+      // 2. revenue_transaction 생성 (구매 시점 상품 스냅샷 포함)
       const { data: transaction, error: transactionError } = await supabase
         .from('revenue_transactions')
         .insert([
@@ -220,6 +250,11 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
             final_price: pricing.final,
             payment_method: 'CARD',
             payment_status: 'COMPLETED',
+            registration_type: registrationType,
+            quantity: quantity,
+            valid_days: productValidDays,
+            ticket_name: selectedProduct.name,
+            ticket_type_snapshot: isPeriodTicket ? 'PERIOD' : 'COUNT',
           },
         ])
         .select()
@@ -260,6 +295,9 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
           discountMode === 'policy'
             ? discountPolicies.find((d) => d.id === selectedPolicyId)?.name || '선택 없음'
             : `직접 입력 (${manualDiscountType === 'percent' ? `${manualDiscountValue}%` : `${manualDiscountValue}원`})`,
+        registrationType,
+        quantity,
+        validDays: productValidDays,
       };
 
       onPaymentComplete(newLog);

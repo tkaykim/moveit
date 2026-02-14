@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Ticket, Calendar, Hash, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 
 interface UserTicketDetail {
   id: string;
@@ -61,7 +62,7 @@ export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
 
     try {
       setLoading(true);
-      const response = await fetch('/api/user-tickets');
+      const response = await fetchWithAuth('/api/user-tickets');
       if (response.ok) {
         const result = await response.json();
         setTickets(result.data || []);
@@ -240,10 +241,10 @@ export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
               <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
                 {group.tickets.map((ticket) => (
                   <div key={ticket.id} className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-start justify-between mb-2 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
                         {getCategoryBadge(ticket.category)}
-                        <span className="font-bold text-black dark:text-white">
+                        <span className="font-bold text-black dark:text-white break-words [word-break:keep-all] min-w-0">
                           {ticket.tickets?.name || '수강권'}
                         </span>
                       </div>

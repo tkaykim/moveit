@@ -1,12 +1,12 @@
 "use client";
 
-import { ChevronLeft, Ticket, Calendar, Clock, Plus, Pause } from 'lucide-react';
+import { ChevronLeft, Ticket, Calendar, Plus, Pause } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { LanguageToggle } from '@/components/common/language-toggle';
-import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { TicketRechargeModal } from '@/components/modals/ticket-recharge-modal';
 import { TicketExtensionRequestModal } from '@/components/modals/ticket-extension-request-modal';
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 
 interface TicketsViewProps {
   onBack: () => void;
@@ -49,49 +49,49 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
     }
 
     try {
-      const supabase = getSupabaseClient();
-      if (!supabase) {
-        setLoading(false);
-        return;
+      setLoading(true);
+      const res = await fetchWithAuth('/api/user-tickets?includeAll=true');
+      const json = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          setTickets([]);
+          return;
+        }
+        throw new Error(json.error || '수강권 조회 실패');
       }
 
-      const { data, error } = await (supabase as any)
-        .from('user_tickets')
-        .select(`
-          *,
-          tickets (
-            name,
-            is_general,
-            academy_id,
-            ticket_type,
-            academies (
-              name_kr,
-              name_en,
-              max_extension_days
-            )
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
+      const data = json.data || [];
       const maxExt: AcademyMaxExtension = {};
-      const formattedTickets: UserTicket[] = (data || []).map((item: any) => {
+      const today = new Date().toISOString().split('T')[0];
+
+      const formattedTickets: UserTicket[] = data.map((item: any) => {
         const ticket = item.tickets;
         const academy = ticket?.academies;
-        const academyId = ticket?.academy_id;
-        if (academyId != null) maxExt[academyId] = academy?.max_extension_days ?? null;
+        const acadId = ticket?.academy_id;
+        if (acadId != null) maxExt[acadId] = academy?.max_extension_days ?? null;
+        const isPeriod = ticket?.ticket_type === 'PERIOD';
+
+        // 만료 상태 계산: DB status + expiry_date/remaining_count 기반
+        let effectiveStatus = item.status || 'ACTIVE';
+        if (effectiveStatus === 'ACTIVE') {
+          if (item.expiry_date && item.expiry_date < today) {
+            effectiveStatus = 'EXPIRED';
+          } else if (!isPeriod && item.remaining_count !== null && item.remaining_count <= 0) {
+            effectiveStatus = 'USED';
+          }
+        }
+
         return {
           id: item.id,
           ticket_name: ticket?.name || '수강권',
-          remaining_count: item.remaining_count ?? 0,
+          remaining_count: isPeriod ? -1 : (item.remaining_count ?? 0),
           total_count: ticket?.total_count || 0,
           start_date: item.start_date,
           expiry_date: item.expiry_date,
-          status: item.status || 'ACTIVE',
+          status: effectiveStatus,
           academy_name: academy?.name_kr || academy?.name_en || '학원',
-          academy_id: academyId,
+          academy_id: acadId,
           ticket_type: ticket?.ticket_type,
         };
       });
@@ -262,11 +262,11 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
                         key={ticket.id}
                         className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4"
                       >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Ticket className="text-primary dark:text-[#CCFF00]" size={20} />
-                              <h3 className="text-base font-bold text-black dark:text-white">
+                        <div className="flex items-start justify-between mb-3 min-w-0">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <Ticket className="text-primary dark:text-[#CCFF00] flex-shrink-0" size={20} />
+                              <h3 className="text-base font-bold text-black dark:text-white break-words [word-break:keep-all] min-w-0">
                                 {ticket.ticket_name}
                               </h3>
                             </div>
@@ -279,16 +279,24 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
 
                         <div className="grid grid-cols-2 gap-4 pt-3 border-t border-neutral-200 dark:border-neutral-800">
                           <div>
-                            <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">잔여 횟수</div>
+                            <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+                              {ticket.ticket_type === 'PERIOD' ? '유형' : '잔여 횟수'}
+                            </div>
                             <div className="text-lg font-black text-black dark:text-white">
-                              {ticket.remaining_count}회
+                              {ticket.ticket_type === 'PERIOD' || ticket.remaining_count === -1
+                                ? '기간권'
+                                : `${ticket.remaining_count}회`}
                             </div>
                           </div>
                           <div>
-                            <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">만료일</div>
+                            <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
+                              {ticket.ticket_type === 'PERIOD' ? '이용 기간' : '만료일'}
+                            </div>
                             <div className="text-sm font-bold text-black dark:text-white flex items-center gap-1">
                               <Calendar size={14} />
-                              {formatDate(ticket.expiry_date)}
+                              {ticket.ticket_type === 'PERIOD' && ticket.start_date
+                                ? `${formatDate(ticket.start_date)} ~ ${formatDate(ticket.expiry_date)}`
+                                : formatDate(ticket.expiry_date)}
                             </div>
                           </div>
                         </div>

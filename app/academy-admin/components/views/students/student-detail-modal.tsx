@@ -195,32 +195,73 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
                         ? (cat === 'workshop' ? '워크샵(특강)' : '쿠폰제(횟수제)')
                         : '기간제';
                     const isPeriod = ticketType === 'PERIOD';
+                    
+                    // 실제 상태 계산 (DB가 ACTIVE지만 실제 만료/소진인 경우)
+                    const today = new Date().toISOString().split('T')[0];
+                    let effectiveStatus = ticket.status || 'ACTIVE';
+                    if (effectiveStatus === 'ACTIVE') {
+                      if (ticket.expiry_date && ticket.expiry_date < today) {
+                        effectiveStatus = 'EXPIRED';
+                      } else if (!isPeriod && ticket.remaining_count !== null && ticket.remaining_count <= 0) {
+                        effectiveStatus = 'USED';
+                      }
+                    }
+                    
+                    const statusConfig: Record<string, { label: string; color: string }> = {
+                      ACTIVE: { label: '사용 중', color: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' },
+                      EXPIRED: { label: '만료', color: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' },
+                      USED: { label: '소진', color: 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400' },
+                    };
+                    const statusInfo = statusConfig[effectiveStatus] || { label: effectiveStatus, color: 'bg-gray-200 dark:bg-gray-700 text-gray-600' };
+                    
+                    // 만료 임박 (7일 이내)
+                    let isExpiringSoon = false;
+                    if (effectiveStatus === 'ACTIVE' && ticket.expiry_date) {
+                      const daysLeft = Math.ceil((new Date(ticket.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                      isExpiringSoon = daysLeft <= 7 && daysLeft > 0;
+                    }
+                    
                     return (
                       <div
                         key={ticket.id}
-                        className="p-3 border dark:border-neutral-700 rounded-lg bg-gray-50 dark:bg-neutral-800 space-y-1.5"
+                        className={`p-3 border rounded-lg space-y-1.5 ${
+                          effectiveStatus === 'ACTIVE' 
+                            ? 'border-green-200 dark:border-green-900/50 bg-green-50/50 dark:bg-green-900/10' 
+                            : 'border-neutral-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800'
+                        }`}
                       >
                         <div className="flex justify-between items-center flex-wrap gap-1">
                           <span className="font-medium text-gray-900 dark:text-white">
                             {ticket.tickets?.name || '-'}
                           </span>
-                          <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-slate-200 dark:bg-neutral-700 text-slate-700 dark:text-slate-300">
-                            {categoryLabel}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-slate-200 dark:bg-neutral-700 text-slate-700 dark:text-slate-300">
+                              {categoryLabel}
+                            </span>
+                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${statusInfo.color}`}>
+                              {statusInfo.label}
+                            </span>
+                          </div>
                         </div>
                         <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-gray-600 dark:text-gray-400">
                           {isPeriod ? (
                             <span>잔여: 무제한</span>
                           ) : (
-                            <span>잔여: {ticket.remaining_count ?? 0}회</span>
+                            <span>잔여: {ticket.remaining_count ?? 0}회 / {ticket.tickets?.total_count ?? '-'}회</span>
                           )}
-                          {ticket.expiry_date && (
+                          {ticket.start_date && ticket.expiry_date ? (
+                            <span>기간: {new Date(ticket.start_date).toLocaleDateString('ko-KR')} ~ {new Date(ticket.expiry_date).toLocaleDateString('ko-KR')}</span>
+                          ) : ticket.expiry_date ? (
                             <span>만료: {new Date(ticket.expiry_date).toLocaleDateString('ko-KR')}</span>
+                          ) : (
+                            <span>만료: 무기한</span>
                           )}
-                          <span className="text-gray-500 dark:text-gray-500">
-                            {ticket.status === 'ACTIVE' ? '사용 중' : ticket.status}
-                          </span>
                         </div>
+                        {isExpiringSoon && (
+                          <div className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                            ⚠ 곧 만료됩니다
+                          </div>
+                        )}
                       </div>
                     );
                   })

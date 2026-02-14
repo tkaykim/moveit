@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from 'next/navigation';
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import { useState, useEffect } from 'react';
 import { PaymentSuccessView } from '@/components/views/payment-success-view';
 
@@ -12,7 +13,7 @@ export default function PaymentSuccessPage() {
     const loadTickets = async () => {
       try {
         // 수강권 개수 조회
-        const response = await fetch('/api/user-tickets');
+        const response = await fetchWithAuth('/api/user-tickets');
         if (response.ok) {
           const result = await response.json();
           const count = result.counts?.total || 0;

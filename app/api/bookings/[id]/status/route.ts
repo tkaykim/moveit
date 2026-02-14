@@ -75,15 +75,22 @@ export async function PATCH(
     if (status === 'CANCELLED' && restoreTicket && currentBooking.user_ticket_id) {
       const { data: userTicket, error: utError } = await (supabase as any)
         .from('user_tickets')
-        .select('id, remaining_count, tickets(ticket_type)')
+        .select('id, remaining_count, status, tickets(ticket_type, total_count)')
         .eq('id', currentBooking.user_ticket_id)
         .single();
 
       if (!utError && userTicket?.tickets?.ticket_type === 'COUNT' && typeof userTicket.remaining_count === 'number') {
         const newRemaining = userTicket.remaining_count + 1;
+        const updateData: any = { remaining_count: newRemaining };
+        
+        // USED 상태였다면 복원 시 ACTIVE로 변경
+        if (userTicket.status === 'USED' && newRemaining > 0) {
+          updateData.status = 'ACTIVE';
+        }
+        
         await (supabase as any)
           .from('user_tickets')
-          .update({ remaining_count: newRemaining })
+          .update(updateData)
           .eq('id', currentBooking.user_ticket_id);
       }
     }

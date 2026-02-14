@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Ticket, Check, AlertCircle, Gift, ShoppingCart } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import { ClassInfo } from '@/types';
 import { useRouter } from 'next/navigation';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -67,7 +68,7 @@ export const BookingConfirmModal = ({
         queryParams.append('classId', classId);
       }
       
-      const response = await fetch(`/api/user-tickets?${queryParams.toString()}`);
+      const response = await fetchWithAuth(`/api/user-tickets?${queryParams.toString()}`);
       const result = await response.json();
       
       if (!response.ok) {
@@ -112,11 +113,9 @@ export const BookingConfirmModal = ({
       setBooking(true);
       setError(null);
 
-      const response = await fetch('/api/bookings', {
+      const response = await fetchWithAuth('/api/bookings', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           classId: classInfo.id,
           scheduleId: classInfo.schedule_id,

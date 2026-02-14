@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SectionHeader } from '../common/section-header';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -283,7 +285,7 @@ function CustomSectionModal({ isOpen, onClose, onSave, editingSection, academyId
       formData.append('file', file);
       formData.append('academyId', academyId);
 
-      const response = await fetch('/api/upload/image', {
+      const response = await fetchWithAuth('/api/upload/image', {
         method: 'POST',
         body: formData,
       });

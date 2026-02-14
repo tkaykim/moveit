@@ -20,7 +20,7 @@ interface LinkedTicket {
   price: number | null;
 }
 
-const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)'];
+const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)', 'heels', 'kpop', 'house', '기타'];
 const DIFFICULTY_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
 const CLASS_TYPES = [
   { value: 'regular', label: 'Regular (정규)' },
@@ -101,7 +101,7 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
       
       setFormData({
         title: classData.title || '',
-        genre: classData.genre || '',
+        genre: classData.genre?.split(',')[0]?.trim() || classData.genre || '',
         difficulty_level: classData.difficulty_level || '',
         class_type: (classData.class_type && ['regular', 'popup', 'workshop'].includes(classData.class_type)) 
           ? classData.class_type 

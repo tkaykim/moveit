@@ -1,10 +1,12 @@
 "use client";
 
 import { Calendar, Clock, MapPin, User, ChevronRight } from 'lucide-react';
+import { BookingStatusBadge } from '@/components/common/booking-status-badge';
 import { useState, useEffect } from 'react';
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 
 interface Booking {
   id: string;
@@ -79,7 +81,7 @@ export const MyBookingsSection = ({ onAcademyClick, initialTab = 'upcoming', sec
 
       try {
         setLoading(true);
-        const response = await fetch('/api/bookings');
+        const response = await fetchWithAuth('/api/bookings');
         if (response.ok) {
           const result = await response.json();
           setBookings(result.data || []);
@@ -116,18 +118,18 @@ export const MyBookingsSection = ({ onAcademyClick, initialTab = 'upcoming', sec
     return null;
   };
 
-  // 수강 예정: start_time이 미래이고 status가 CONFIRMED
+  // 수강 예정: start_time이 미래이고 status가 CONFIRMED 또는 PENDING
   const upcomingBookings = bookings.filter((booking) => {
     const startTime = getStartTime(booking);
     if (!startTime) return false;
-    return startTime > now && booking.status === 'CONFIRMED';
+    return startTime > now && ['CONFIRMED', 'PENDING'].includes(booking.status);
   });
 
-  // 수강 완료: start_time이 과거이거나 status가 COMPLETED
+  // 수강 완료/지남: start_time이 과거이거나 status가 COMPLETED 또는 CANCELLED
   const completedBookings = bookings.filter((booking) => {
     const startTime = getStartTime(booking);
-    if (!startTime) return booking.status === 'COMPLETED';
-    return startTime <= now || booking.status === 'COMPLETED';
+    if (!startTime) return ['COMPLETED', 'CANCELLED'].includes(booking.status);
+    return startTime <= now || ['COMPLETED', 'CANCELLED'].includes(booking.status);
   });
 
   const displayBookings = activeTab === 'upcoming' ? upcomingBookings : completedBookings;
@@ -231,16 +233,11 @@ export const MyBookingsSection = ({ onAcademyClick, initialTab = 'upcoming', sec
                         <h3 className="font-bold text-black dark:text-white text-sm truncate">
                           {className}
                         </h3>
-                        {booking.status === 'CONFIRMED' && (
-                          <span className="bg-primary/20 dark:bg-[#CCFF00]/20 text-primary dark:text-[#CCFF00] text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
-                            예약 확정
-                          </span>
-                        )}
-                        {booking.status === 'COMPLETED' && (
-                          <span className="bg-green-500/20 text-green-600 dark:text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
-                            완료
-                          </span>
-                        )}
+                        <BookingStatusBadge
+                          status={booking.status}
+                          startTime={startTime || undefined}
+                          className="flex-shrink-0"
+                        />
                       </div>
 
                       <div className="space-y-1.5 text-xs text-neutral-600 dark:text-neutral-400">

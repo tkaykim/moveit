@@ -1,20 +1,19 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 
 /**
  * POST /api/upload/image
- * 에디터용 이미지 업로드 (academy-images 버킷)
+ * 에디터용 이미지 업로드 (academy-images 버킷) - 쿠키 또는 Authorization Bearer
  * FormData: file (이미지), academyId (학원 ID)
  */
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient() as any;
-
-    // 인증 확인
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }
+
+    const supabase = await getAuthenticatedSupabase(request) as any;
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;

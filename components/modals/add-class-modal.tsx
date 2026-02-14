@@ -6,7 +6,7 @@ import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Academy, Hall, Instructor, Class } from '@/lib/supabase/types';
 import { convertKSTInputToUTC } from '@/lib/utils/kst-time';
 
-const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)'] as const;
+const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)', 'heels', 'kpop', 'house', '기타'] as const;
 
 // 클래스 유형 한글 매핑
 const CLASS_TYPE_OPTIONS = [

@@ -1,5 +1,6 @@
 "use client";
 
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
@@ -40,7 +41,7 @@ export const SavedView = ({ onNavigate }: SavedViewProps) => {
         setLoading(true);
 
         // 학원 찜 목록 로드
-        const academyResponse = await fetch('/api/favorites?type=academy');
+        const academyResponse = await fetchWithAuth('/api/favorites?type=academy');
         if (academyResponse.ok) {
           const academyData = await academyResponse.json();
           const academies = (academyData.data || []).map((item: any) => {
@@ -60,7 +61,7 @@ export const SavedView = ({ onNavigate }: SavedViewProps) => {
         }
 
         // 강사 찜 목록 로드
-        const instructorResponse = await fetch('/api/favorites?type=instructor');
+        const instructorResponse = await fetchWithAuth('/api/favorites?type=instructor');
         if (instructorResponse.ok) {
           const instructorData = await instructorResponse.json();
           const dancers = (instructorData.data || []).map((item: any) => {
@@ -96,7 +97,7 @@ export const SavedView = ({ onNavigate }: SavedViewProps) => {
     if (!user) return;
 
     try {
-      const response = await fetch('/api/favorites', {
+      const response = await fetchWithAuth('/api/favorites', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,7 +117,7 @@ export const SavedView = ({ onNavigate }: SavedViewProps) => {
           }
         } else {
           // 다시 로드 (추가된 경우)
-          const favoritesResponse = await fetch(`/api/favorites?type=${type}`);
+          const favoritesResponse = await fetchWithAuth(`/api/favorites?type=${type}`);
           if (favoritesResponse.ok) {
             const favoritesData = await favoritesResponse.json();
             if (type === 'academy') {

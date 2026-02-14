@@ -2,40 +2,28 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { consumeUserTicket, getAvailableUserTickets, updateUserTicket } from '@/lib/db/user-tickets';
 import { Database } from '@/types/database';
+import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
+
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/bookings
- * 사용자의 예약 목록 조회
+ * 사용자의 예약 목록 조회 (쿠키 또는 Authorization: Bearer 토큰)
  */
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient();
+    const user = await getAuthenticatedUser(request);
 
-    // 현재 사용자 확인 (데모 버전: 인증 우회)
-    let user: any = null;
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !authUser) {
-      // 데모 버전: 인증 없이도 진행 (created_at ASC로 정렬하여 일관된 사용자 선택)
-      const { data: demoUsersList } = await (supabase as any)
-        .from('users')
-        .select('id')
-        .order('created_at', { ascending: true })
-        .limit(1);
-      
-      if (demoUsersList && demoUsersList.length > 0) {
-        user = { id: demoUsersList[0].id };
-      } else {
-        return NextResponse.json(
-          { error: '인증이 필요합니다.' },
-          { status: 401 }
-        );
-      }
-    } else {
-      user = authUser;
+    if (!user) {
+      return NextResponse.json(
+        { error: '로그인이 필요합니다.', data: [] },
+        { status: 401 }
+      );
     }
 
-    // 예약 목록 조회 (classes, schedules와 academies, instructors 조인)
+    const supabase = await getAuthenticatedSupabase(request);
+
+    // 예약 목록 조회 (schedules, classes, academies, halls 포함)
     const { data: bookings, error } = await (supabase as any)
       .from('bookings')
       .select(`
@@ -49,6 +37,8 @@ export async function GET(request: Request) {
           start_time,
           end_time,
           class_id,
+          hall_id,
+          halls (id, name),
           classes (
             id,
             title,
@@ -61,11 +51,8 @@ export async function GET(request: Request) {
               logo_url,
               address
             ),
-            instructors (
-              id,
-              name_kr,
-              name_en
-            )
+            instructors (id, name_kr, name_en),
+            halls (id, name)
           )
         ),
         classes (
@@ -82,12 +69,10 @@ export async function GET(request: Request) {
             logo_url,
             address
           ),
-          instructors (
-            id,
-            name_kr,
-            name_en
-          )
-        )
+          instructors (id, name_kr, name_en),
+          halls (id, name)
+        ),
+        halls (id, name)
       `)
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
@@ -123,32 +108,16 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
+    const user = await getAuthenticatedUser(request);
 
-    // 현재 사용자 확인 (데모 버전: 인증 우회)
-    let user: any = null;
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !authUser) {
-      // 데모 버전: 인증 없이도 진행 (created_at ASC로 정렬하여 일관된 사용자 선택)
-      const { data: demoUsersList } = await (supabase as any)
-        .from('users')
-        .select('id')
-        .order('created_at', { ascending: true })
-        .limit(1);
-      
-      if (demoUsersList && demoUsersList.length > 0) {
-        user = { id: demoUsersList[0].id };
-      } else {
-        return NextResponse.json(
-          { error: '인증이 필요합니다.' },
-          { status: 401 }
-        );
-      }
-    } else {
-      user = authUser;
+    if (!user) {
+      return NextResponse.json(
+        { error: '로그인이 필요합니다.' },
+        { status: 401 }
+      );
     }
 
+    const supabase = await getAuthenticatedSupabase(request);
     const { classId, scheduleId, userTicketId, paymentMethod, paymentStatus } = await request.json();
 
     if (!classId && !scheduleId) {
@@ -166,13 +135,17 @@ export async function POST(request: Request) {
     let academyId: string;
     let resolvedClassId = classId;
 
-    // scheduleId가 있으면 스케줄에서 classId 가져오기
+    // scheduleId가 있으면 스케줄에서 classId 가져오기 + 정원/상태 검증
     if (scheduleId) {
       const { data: scheduleData, error: scheduleError } = await (supabase as any)
         .from('schedules')
         .select(`
           id,
           class_id,
+          start_time,
+          max_students,
+          current_students,
+          is_canceled,
           classes (
             academy_id
           )
@@ -184,6 +157,48 @@ export async function POST(request: Request) {
         return NextResponse.json(
           { error: '스케줄 정보를 찾을 수 없습니다.' },
           { status: 404 }
+        );
+      }
+
+      // 취소된 수업 검증
+      if (scheduleData.is_canceled) {
+        return NextResponse.json(
+          { error: '취소된 수업에는 예약할 수 없습니다.' },
+          { status: 400 }
+        );
+      }
+
+      // 이미 종료된 수업 검증
+      if (new Date(scheduleData.start_time) < new Date()) {
+        return NextResponse.json(
+          { error: '이미 종료된 수업에는 예약할 수 없습니다.' },
+          { status: 400 }
+        );
+      }
+
+      // 정원 초과 검증
+      const maxStudents = scheduleData.max_students || 20;
+      const currentStudents = scheduleData.current_students || 0;
+      if (currentStudents >= maxStudents) {
+        return NextResponse.json(
+          { error: '정원이 마감되었습니다.' },
+          { status: 400 }
+        );
+      }
+
+      // 동일 사용자 중복 예약 방지
+      const { data: existingBooking } = await (supabase as any)
+        .from('bookings')
+        .select('id')
+        .eq('schedule_id', scheduleId)
+        .eq('user_id', user.id)
+        .in('status', ['CONFIRMED', 'PENDING', 'COMPLETED'])
+        .single();
+
+      if (existingBooking) {
+        return NextResponse.json(
+          { error: '이미 예약된 수업입니다.' },
+          { status: 400 }
         );
       }
 
@@ -267,7 +282,7 @@ export async function POST(request: Request) {
       // 수강권 차감 (카드결제 데모인 경우에도 수강권 차감)
       if (selectedUserTicketId) {
         try {
-          await consumeUserTicket(selectedUserTicketId, 1);
+          await consumeUserTicket(selectedUserTicketId, resolvedClassId, 1);
         } catch (ticketError: any) {
           console.error('Ticket usage error:', ticketError);
           return NextResponse.json(
@@ -303,7 +318,7 @@ export async function POST(request: Request) {
 
     if (bookingError) {
       console.error('Booking creation error:', bookingError);
-      // 예약 생성 실패 시 수강권 차감 롤백 (수강권 사용인 경우만)
+      // 예약 생성 실패 시 수강권 차감 롤백 (횟수권만, 기간권은 차감하지 않았으므로 롤백 불필요)
       if (!isImmediatePayment && selectedUserTicketId) {
         try {
           const ticketBeforeUse = await (supabase as any)
@@ -312,8 +327,9 @@ export async function POST(request: Request) {
             .eq('id', selectedUserTicketId)
             .single();
 
-          if (ticketBeforeUse.data) {
-            const newRemainingCount = (ticketBeforeUse.data.remaining_count || 0) + 1;
+          if (ticketBeforeUse.data && ticketBeforeUse.data.remaining_count != null) {
+            // 기간권(remaining_count=null)은 consumeUserTicket에서 차감하지 않았으므로 롤백 제외
+            const newRemainingCount = ticketBeforeUse.data.remaining_count + 1;
             const newStatus = newRemainingCount > 0 ? 'ACTIVE' : ticketBeforeUse.data.status;
 
             await updateUserTicket(selectedUserTicketId, {
@@ -332,26 +348,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // 스케줄이 있으면 current_students 증가
+    // 스케줄이 있으면 current_students 재계산 (정확한 수치 보장)
     if (scheduleId) {
+      const { data: confirmedBookings } = await (supabase as any)
+        .from('bookings')
+        .select('id')
+        .eq('schedule_id', scheduleId)
+        .in('status', ['CONFIRMED', 'COMPLETED']);
+
+      const actualCount = confirmedBookings?.length || 0;
       await (supabase as any)
         .from('schedules')
-        .update({ current_students: (supabase as any).rpc('increment_current_students', { row_id: scheduleId }) })
+        .update({ current_students: actualCount })
         .eq('id', scheduleId);
-      
-      // 간단한 방법으로 현재 학생 수 증가
-      const { data: currentSchedule } = await (supabase as any)
-        .from('schedules')
-        .select('current_students')
-        .eq('id', scheduleId)
-        .single();
-      
-      if (currentSchedule) {
-        await (supabase as any)
-          .from('schedules')
-          .update({ current_students: (currentSchedule.current_students || 0) + 1 })
-          .eq('id', scheduleId);
-      }
     }
 
     return NextResponse.json({

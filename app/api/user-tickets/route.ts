@@ -1,43 +1,48 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { getAvailableUserTickets, getUserTicketCounts } from '@/lib/db/user-tickets';
+import { getAvailableUserTickets, getAllUserTickets, getUserTicketCounts } from '@/lib/db/user-tickets';
+import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
+
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/user-tickets
- * 사용자의 사용 가능한 수강권 조회
+ * 사용자의 수강권 조회 (쿠키 또는 Authorization: Bearer 토큰)
  * Query params:
- *   - academyId (optional): 특정 학원에서 사용 가능한 수강권만 조회
+ *   - includeAll (optional): true면 전체 수강권(만료/사용완료 포함), 기본은 사용가능만
+ *   - academyId (optional): 특정 학원에서 사용 가능한 수강권만 조회 (includeAll=false일 때)
+ *   - classId (optional): 특정 클래스에서 사용 가능한 수강권만 조회
+ *   - allowCoupon (optional): 쿠폰 포함 여부
  */
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient();
+    const user = await getAuthenticatedUser(request);
 
-    // 현재 사용자 확인
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !authUser) {
-      // 로그인되지 않은 경우 빈 데이터 반환
-      return NextResponse.json({
-        data: [],
-        counts: {
-          total: 0,
-          academySpecific: 0,
-        },
-      });
+    if (!user) {
+      return NextResponse.json(
+        { error: '로그인이 필요합니다.', data: [] },
+        { status: 401 }
+      );
     }
 
-    const user = authUser;
+    const supabase = await getAuthenticatedSupabase(request);
 
     const { searchParams } = new URL(request.url);
+    const includeAll = searchParams.get('includeAll') === 'true';
     const academyId = searchParams.get('academyId') || undefined;
     const classId = searchParams.get('classId') || undefined;
     const allowCoupon = searchParams.get('allowCoupon') === 'true';
 
-    // 수강권 목록 조회
-    const tickets = await getAvailableUserTickets(user.id, academyId, classId, allowCoupon);
+    let tickets: any[];
 
-    // 수강권 개수 조회
-    const counts = await getUserTicketCounts(user.id, academyId || undefined);
+    if (includeAll) {
+      tickets = await getAllUserTickets(user.id, supabase);
+    } else {
+      tickets = await getAvailableUserTickets(user.id, academyId, classId, allowCoupon, supabase);
+    }
+
+    const counts = includeAll
+      ? { total: tickets.length, academySpecific: tickets.length }
+      : await getUserTicketCounts(user.id, academyId || undefined, supabase);
 
     return NextResponse.json({
       data: tickets,

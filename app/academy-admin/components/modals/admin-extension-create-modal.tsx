@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
+
 import { useState, useEffect } from 'react';
 import { X, Search, User, Loader2 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -154,7 +156,7 @@ export function AdminExtensionCreateModal({
     setError('');
     setSubmitting(true);
     try {
-      const res = await fetch('/api/ticket-extension-requests/admin', {
+      const res = await fetchWithAuth('/api/ticket-extension-requests/admin', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

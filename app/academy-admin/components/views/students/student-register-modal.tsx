@@ -5,7 +5,7 @@ import { X } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { normalizePhone, formatPhoneDisplay, parsePhoneInput } from '@/lib/utils/phone';
 
-const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)'] as const;
+const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)', 'heels', 'kpop', 'house', '기타'] as const;
 
 const REFERRAL_SOURCES = [
   { value: 'INSTAGRAM', label: '인스타그램' },

@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
+
 import { useState } from 'react';
 import { X } from 'lucide-react';
 
@@ -102,7 +104,7 @@ export function TicketExtensionRequestModal({
 
     setLoading(true);
     try {
-      const res = await fetch('/api/ticket-extension-requests', {
+      const res = await fetchWithAuth('/api/ticket-extension-requests', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

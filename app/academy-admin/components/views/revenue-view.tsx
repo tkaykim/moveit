@@ -62,11 +62,29 @@ export function RevenueView({ academyId }: RevenueViewProps) {
         netProfit,
       });
 
-      // 최근 결제 내역
+      // 최근 결제 내역 (명시적 컬럼 선택 - 구매 시점 스냅샷 포함)
       const { data: transactionsData, error } = await supabase
         .from('revenue_transactions')
         .select(`
-          *,
+          id,
+          academy_id,
+          user_id,
+          ticket_id,
+          user_ticket_id,
+          discount_id,
+          original_price,
+          discount_amount,
+          final_price,
+          payment_method,
+          payment_status,
+          transaction_date,
+          registration_type,
+          quantity,
+          valid_days,
+          ticket_name,
+          ticket_type_snapshot,
+          notes,
+          created_at,
           users (
             id,
             name,
@@ -74,7 +92,11 @@ export function RevenueView({ academyId }: RevenueViewProps) {
           ),
           tickets (
             id,
-            name
+            name,
+            ticket_type,
+            ticket_category,
+            valid_days,
+            total_count
           )
         `)
         .eq('academy_id', academyId)
@@ -143,39 +165,87 @@ export function RevenueView({ academyId }: RevenueViewProps) {
             <table className="w-full text-sm text-left">
               <thead className="bg-gray-50 dark:bg-neutral-800 text-gray-500 dark:text-gray-400">
                 <tr>
-                  <th className="px-4 py-3">날짜</th>
-                  <th className="px-4 py-3">회원명</th>
-                  <th className="px-4 py-3">구매 항목</th>
-                  <th className="px-4 py-3">결제 금액</th>
-                  <th className="px-4 py-3">결제 수단</th>
-                  <th className="px-4 py-3 text-right">영수증</th>
+                  <th className="px-3 py-3">날짜</th>
+                  <th className="px-3 py-3">구분</th>
+                  <th className="px-3 py-3">회원명</th>
+                  <th className="px-3 py-3">구매항목</th>
+                  <th className="px-3 py-3 text-center">수량</th>
+                  <th className="px-3 py-3 text-center">유효기간</th>
+                  <th className="px-3 py-3">결제 금액</th>
+                  <th className="px-3 py-3">결제 수단</th>
+                  <th className="px-3 py-3 text-right">영수증</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-neutral-800">
-                {transactions.map((rev) => (
-                  <tr key={rev.id} className="hover:bg-gray-50 dark:hover:bg-neutral-800">
-                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
-                      {new Date(rev.transaction_date).toLocaleDateString('ko-KR')}
-                    </td>
-                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                      {rev.users?.name || rev.users?.nickname || '-'}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                      {rev.tickets?.name || '-'}
-                    </td>
-                    <td className="px-4 py-3 font-bold text-gray-900 dark:text-white">
-                      {formatCurrency(rev.final_price)}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                      {rev.payment_method || '-'}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button className="text-xs border dark:border-neutral-700 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-800 text-gray-700 dark:text-gray-300 transition-colors">
-                        보기
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {transactions.map((rev) => {
+                  const hasLiveTicket = !!rev.tickets;
+                  // 상품명: 스냅샷(ticket_name) → 현재 티켓(tickets.name) 순서로 표시
+                  const displayName = rev.ticket_name || rev.tickets?.name || '알 수 없음';
+                  // 상품 유형: 스냅샷 → 현재 티켓 순서로 판별
+                  const typeStr = (rev.ticket_type_snapshot || rev.tickets?.ticket_type || '').toUpperCase();
+                  const isCountType = typeStr === 'COUNT';
+                  const ticketType = isCountType ? 'count' : 'period';
+                  const displayQuantity = rev.quantity || (isCountType ? (rev.tickets?.total_count || 1) : 1);
+                  // valid_days: revenue_transactions → tickets fallback
+                  const rawValidDays = rev.valid_days != null ? rev.valid_days : (rev.tickets?.valid_days ?? null);
+                  return (
+                    <tr key={rev.id} className="hover:bg-gray-50 dark:hover:bg-neutral-800">
+                      <td className="px-3 py-3 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
+                        {new Date(rev.transaction_date).toLocaleDateString('ko-KR')}
+                      </td>
+                      <td className="px-3 py-3">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${
+                            rev.registration_type === 'RE_REGISTRATION'
+                              ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                              : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                          }`}
+                        >
+                          {rev.registration_type === 'RE_REGISTRATION' ? '재등록' : '신규'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 font-medium text-gray-900 dark:text-white">
+                        {rev.users?.name || rev.users?.nickname || '-'}
+                      </td>
+                      <td className="px-3 py-3">
+                        <span
+                          className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium mr-1 ${
+                            ticketType === 'count'
+                              ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-400'
+                              : 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400'
+                          }`}
+                        >
+                          {ticketType === 'count' ? '횟수' : '기간'}
+                        </span>
+                        <span className="text-gray-700 dark:text-gray-300">{displayName}</span>
+                        {!hasLiveTicket && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ml-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                            삭제됨
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-center text-gray-700 dark:text-gray-300">
+                        {ticketType === 'count'
+                          ? `${displayQuantity}회`
+                          : `${displayQuantity}개월`}
+                      </td>
+                      <td className="px-3 py-3 text-center text-gray-700 dark:text-gray-300">
+                        {rawValidDays != null && rawValidDays > 0 ? `${rawValidDays}일` : '무기한'}
+                      </td>
+                      <td className="px-3 py-3 font-bold text-gray-900 dark:text-white">
+                        {formatCurrency(rev.final_price)}
+                      </td>
+                      <td className="px-3 py-3 text-gray-600 dark:text-gray-400">
+                        {rev.payment_method || '-'}
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <button className="text-xs border dark:border-neutral-700 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-800 text-gray-700 dark:text-gray-300 transition-colors">
+                          보기
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

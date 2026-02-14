@@ -1,5 +1,6 @@
 "use client";
 
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import Image from 'next/image';
 import { ChevronLeft, User, Instagram, Heart, Ticket, Calendar, Clock, MapPin } from 'lucide-react';
 import { Dancer, ClassInfo } from '@/types';
@@ -87,7 +88,7 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
       }
 
       try {
-        const response = await fetch('/api/favorites?type=instructor');
+        const response = await fetchWithAuth('/api/favorites?type=instructor');
         if (response.ok) {
           const data = await response.json();
           const isFavorite = (data.data || []).some((item: any) => 
@@ -109,7 +110,7 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
 
     try {
       setFavoriteLoading(true);
-      const response = await fetch('/api/favorites', {
+      const response = await fetchWithAuth('/api/favorites', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

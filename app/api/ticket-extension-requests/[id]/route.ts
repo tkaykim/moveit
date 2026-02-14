@@ -1,10 +1,10 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getSchedulesForPeriodTicket } from '@/lib/db/period-ticket-bookings';
+import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 
 /**
- * PATCH: 연장/일시정지 신청 승인 또는 거절 (관리자)
+ * PATCH: 연장/일시정지 신청 승인 또는 거절 (관리자) - 쿠키 또는 Authorization Bearer
  * Body: { status: 'APPROVED' | 'REJECTED', reject_reason?: string }
  */
 export async function PATCH(
@@ -12,8 +12,13 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const adminUser = await getAuthenticatedUser(request);
+    if (!adminUser) {
+      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+    }
+
     const { id } = await params;
-    const supabase = await createClient() as any;
+    const supabase = await getAuthenticatedSupabase(request) as any;
     const body = await request.json();
     const { status, reject_reason } = body;
     if (!status || !['APPROVED', 'REJECTED'].includes(status)) {

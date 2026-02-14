@@ -3,7 +3,8 @@
 import { ChevronLeft, CreditCard, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { LanguageToggle } from '@/components/common/language-toggle';
-import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import { useAuth } from '@/contexts/AuthContext';
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 
 interface PaymentHistoryViewProps {
   onBack: () => void;
@@ -11,48 +12,50 @@ interface PaymentHistoryViewProps {
 
 interface PaymentRecord {
   id: string;
+  type: 'PURCHASE' | 'BOOKING';
   date: string;
-  class_name: string;
+  title: string;
   academy_name: string;
-  instructor_name: string;
   amount: number;
   status: string;
   payment_method?: string;
 }
 
 export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
+  const { user } = useAuth();
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'ALL' | 'CONFIRMED' | 'PENDING' | 'CANCELLED'>('ALL');
+  const [filter, setFilter] = useState<'ALL' | 'PURCHASE' | 'BOOKING'>('ALL');
 
   useEffect(() => {
     async function loadPayments() {
-      try {
-        const supabase = getSupabaseClient();
-        if (!supabase) {
-          setLoading(false);
-          return;
-        }
-
-        // 인증 기능 제거로 인해 빈 배열로 설정
+      if (!user) {
         setPayments([]);
         setLoading(false);
         return;
+      }
+      try {
+        const res = await fetchWithAuth('/api/payment-history');
+        const json = await res.json();
+        if (!res.ok) {
+          setPayments([]);
+          setLoading(false);
+          return;
+        }
+        setPayments(json.data || []);
       } catch (error) {
         console.error('Error loading payments:', error);
+        setPayments([]);
       } finally {
         setLoading(false);
       }
     }
     loadPayments();
-  }, []);
+  }, [user]);
 
   const filteredPayments = payments.filter(payment => {
     if (filter === 'ALL') return true;
-    if (filter === 'CONFIRMED') return payment.status === 'CONFIRMED' || payment.status === 'COMPLETED';
-    if (filter === 'PENDING') return payment.status === 'PENDING';
-    if (filter === 'CANCELLED') return payment.status === 'CANCELLED';
-    return true;
+    return payment.type === filter;
   });
 
   const formatDate = (dateString: string) => {
@@ -122,43 +125,39 @@ export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
           전체
         </button>
         <button
-          onClick={() => setFilter('CONFIRMED')}
+          onClick={() => setFilter('PURCHASE')}
           className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
-            filter === 'CONFIRMED'
+            filter === 'PURCHASE'
               ? 'bg-primary dark:bg-[#CCFF00] text-black'
               : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400'
           }`}
         >
-          완료
+          결제
         </button>
         <button
-          onClick={() => setFilter('PENDING')}
+          onClick={() => setFilter('BOOKING')}
           className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
-            filter === 'PENDING'
+            filter === 'BOOKING'
               ? 'bg-primary dark:bg-[#CCFF00] text-black'
               : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400'
           }`}
         >
-          대기중
-        </button>
-        <button
-          onClick={() => setFilter('CANCELLED')}
-          className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
-            filter === 'CANCELLED'
-              ? 'bg-primary dark:bg-[#CCFF00] text-black'
-              : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400'
-          }`}
-        >
-          취소
+          출석
         </button>
       </div>
 
       {/* 결제 내역 목록 */}
-      {filteredPayments.length === 0 ? (
+      {!user ? (
+        <div className="text-center py-20">
+          <CreditCard className="mx-auto mb-4 text-neutral-400 dark:text-neutral-600" size={48} />
+          <p className="text-neutral-500 dark:text-neutral-400 mb-2">로그인이 필요합니다</p>
+          <p className="text-xs text-neutral-400 dark:text-neutral-500">결제 내역을 보려면 로그인해 주세요</p>
+        </div>
+      ) : filteredPayments.length === 0 ? (
         <div className="text-center py-20">
           <CreditCard className="mx-auto mb-4 text-neutral-400 dark:text-neutral-600" size={48} />
           <p className="text-neutral-500 dark:text-neutral-400 mb-2">결제 내역이 없습니다</p>
-          <p className="text-xs text-neutral-400 dark:text-neutral-500">클래스를 예약하여 결제 내역을 확인해보세요</p>
+          <p className="text-xs text-neutral-400 dark:text-neutral-500">수강권 구매 또는 클래스 예약 시 여기에 표시됩니다</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -172,11 +171,16 @@ export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
                   <div className="flex items-center gap-2 mb-1">
                     {getStatusIcon(payment.status)}
                     <h3 className="text-base font-bold text-black dark:text-white">
-                      {payment.class_name}
+                      {payment.title}
                     </h3>
+                    {payment.type === 'BOOKING' && (
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-primary/10 dark:bg-[#CCFF00]/20 text-primary dark:text-[#CCFF00] font-bold">
+                        출석
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
-                    {payment.academy_name} • {payment.instructor_name}
+                    {payment.academy_name}
                   </p>
                   <div className="flex items-center gap-1 text-xs text-neutral-400 dark:text-neutral-500">
                     <Calendar size={12} />

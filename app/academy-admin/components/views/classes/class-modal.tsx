@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, Ticket, CheckSquare, Square, ChevronLeft, ChevronRight, CheckCircle2, Info, Plus } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { TicketModal } from '../products/ticket-modal';
+import { ImageUpload } from '@/components/common/image-upload';
+import { uploadFile, deleteFile, extractFilePathFromUrl } from '@/lib/utils/storage';
 // import { InstructorSelector } from './instructor-selector';
 import { convertUTCToKSTForInput, convertKSTInputToUTC, dateToKSTInput } from '@/lib/utils/kst-time';
 import { formatNumberInput, parseNumberFromString, formatNumberWithCommas } from '@/lib/utils/number-format';
@@ -16,7 +18,7 @@ interface ClassModalProps {
   onClose: () => void;
 }
 
-const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)'];
+const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)', 'heels', 'kpop', 'house', '기타'];
 const DIFFICULTY_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
 const CLASS_TYPES = [
   { value: 'regular', label: 'Regular (정규)' },
@@ -52,6 +54,8 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [currentStep, setCurrentStep] = useState<number>(1); // Step by Step: 1, 2, 3
   const [allowCoupon, setAllowCoupon] = useState<boolean>(false); // 쿠폰 허용 여부
+  const [posterFile, setPosterFile] = useState<File | null>(null);
+  const [posterUrl, setPosterUrl] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -86,7 +90,7 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
       setFormData({
         title: classData.title || '',
         song: classData.song || '',
-        genre: classData.genre || '',
+        genre: classData.genre?.split(',')[0]?.trim() || classData.genre || '',
         difficulty_level: classData.difficulty_level || '',
         instructor_name: '', // 나중에 로드
         class_type: (classData.class_type && ['regular', 'popup', 'workshop'].includes(classData.class_type)) 
@@ -103,6 +107,9 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
         base_student_count: classData.base_student_count ? String(classData.base_student_count) : '',
         additional_salary_per_student: formatNumberWithCommas(classData.additional_salary_per_student || 0),
       });
+      if (classData.poster_url) {
+        setPosterUrl(classData.poster_url);
+      }
     } else if (defaultDate) {
       // 새 클래스 추가 시 기본 날짜와 시간 설정 (KST 기준)
       const kstDate = new Date(defaultDate);
@@ -196,6 +203,22 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
       setLoadingTickets(false);
     }
   }, [academyId]);
+
+  // 포스터 업로드/삭제 처리
+  const uploadPoster = async (classId: string): Promise<string | null> => {
+    if (!posterFile) return posterUrl;
+    try {
+      if (posterUrl) {
+        const oldPath = extractFilePathFromUrl(posterUrl);
+        if (oldPath) await deleteFile('class-posters', oldPath).catch(() => {});
+      }
+      const url = await uploadFile('class-posters', posterFile, `${academyId}/${classId}`);
+      return url;
+    } catch (e) {
+      console.error('Poster upload failed:', e);
+      return posterUrl;
+    }
+  };
 
   const loadLinkedTickets = useCallback(async (classId: string) => {
     const supabase = getSupabaseClient();
@@ -394,6 +417,10 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
       let classId: string;
 
       if (classData) {
+        // 포스터 업로드
+        const finalPosterUrl = await uploadPoster(classData.id);
+        classDataToSave.poster_url = finalPosterUrl ?? null;
+
         // 수정 모드: classes 테이블만 업데이트 (select 없이)
         const { error: updateError } = await supabase
           .from('classes')
@@ -416,6 +443,12 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
 
         if (insertError) throw insertError;
         classId = newClass.id;
+
+        // 포스터 업로드 (신규 등록 시)
+        const finalPosterUrl = await uploadPoster(classId);
+        if (finalPosterUrl) {
+          await supabase.from('classes').update({ poster_url: finalPosterUrl }).eq('id', classId);
+        }
       }
 
       // ticket_classes 테이블 처리
@@ -487,6 +520,11 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
 
   const handleUpdateClass = async () => {
     // 수정 모드용 별도 함수 (기존 로직)
+    if (!formData.genre) {
+      alert('장르를 선택해주세요.');
+      return;
+    }
+
     setLoading(true);
 
     const supabase = getSupabaseClient();
@@ -535,6 +573,10 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
           allowPopup: allowCoupon, // 쿠폰제(횟수제) 수강권 허용 여부
         },
       };
+
+      // 포스터 업로드
+      const finalPosterUrl = await uploadPoster(classData.id);
+      classDataToSave.poster_url = finalPosterUrl ?? null;
 
       // start_time, end_time도 classes 테이블에 저장
       if (formData.start_time && formData.end_time) {
@@ -854,17 +896,26 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            설명
-          </label>
-          <textarea
-            className="w-full border dark:border-neutral-700 rounded-lg px-4 py-3 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-            rows={4}
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="클래스에 대한 설명을 입력하세요"
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              설명
+            </label>
+            <textarea
+              className="w-full border dark:border-neutral-700 rounded-lg px-4 py-3 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+              rows={4}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="클래스에 대한 설명을 입력하세요"
+            />
+          </div>
+
+          {/* 포스터 업로드 */}
+          <ImageUpload
+            currentImageUrl={posterUrl}
+            onImageChange={(file) => setPosterFile(file)}
+            onImageUrlChange={(url) => { setPosterUrl(url); setPosterFile(null); }}
+            label="수업 포스터 (선택)"
+            maxSizeMB={5}
           />
-        </div>
       </div>
     </div>
   );
@@ -1128,9 +1179,10 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              장르
+              장르 *
             </label>
             <select
+              required
               className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
               value={formData.genre}
               onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
@@ -1280,6 +1332,15 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
+
+          {/* 포스터 업로드 */}
+          <ImageUpload
+            currentImageUrl={posterUrl}
+            onImageChange={(file) => setPosterFile(file)}
+            onImageUrlChange={(url) => { setPosterUrl(url); setPosterFile(null); }}
+            label="수업 포스터 (선택)"
+            maxSizeMB={5}
+          />
 
           {/* 수강권 설정 섹션 - 수강권 모달의 클래스 선택 UI와 완전히 동일 */}
           <div className="border-t dark:border-neutral-800 pt-4 mt-4">

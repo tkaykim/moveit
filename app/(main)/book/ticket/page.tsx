@@ -1,6 +1,7 @@
 "use client";
 
 import { useSearchParams } from 'next/navigation';
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Loader2 } from 'lucide-react';
@@ -97,7 +98,7 @@ export default function TicketPurchaseLinkPage() {
     try {
       const body: any = { ticketId: ticket.id, paymentMethod: 'CARD' };
       if (ticket.ticket_type === 'PERIOD') body.startDate = selectedStartDate;
-      const res = await fetch('/api/tickets/purchase', {
+      const res = await fetchWithAuth('/api/tickets/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

@@ -1,24 +1,20 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getSchedulesForPeriodTicket } from '@/lib/db/period-ticket-bookings';
+import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 
 /**
- * POST: 관리자 직접 연장/일시정지 생성 및 즉시 승인
+ * POST: 관리자 직접 연장/일시정지 생성 및 즉시 승인 - 쿠키 또는 Authorization Bearer
  * Body: { academyId, user_ticket_id, request_type: 'EXTENSION'|'PAUSE', absent_start_date, absent_end_date }
  */
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient() as any;
-    const { data: { session } } = await supabase.auth.getSession();
-    let adminUser = session?.user ?? null;
-    if (!adminUser) {
-      const { data: { user } } = await supabase.auth.getUser();
-      adminUser = user;
-    }
+    const adminUser = await getAuthenticatedUser(request);
     if (!adminUser) {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }
+
+    const supabase = await getAuthenticatedSupabase(request) as any;
 
     const body = await request.json();
     const { academyId, user_ticket_id, request_type, extension_days, absent_start_date, absent_end_date, reason } = body;

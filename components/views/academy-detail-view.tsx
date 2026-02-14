@@ -1,5 +1,6 @@
 "use client";
 
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import Image from 'next/image';
 import { ChevronLeft, Heart, X, MessageSquare, ExternalLink } from 'lucide-react';
 import { ClassPreviewModal } from '@/components/modals/class-preview-modal';
@@ -249,7 +250,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
 
       try {
         const academyId = (academy as any).academyId || academy.id;
-        const response = await fetch('/api/favorites?type=academy');
+        const response = await fetchWithAuth('/api/favorites?type=academy');
         if (response.ok) {
           const data = await response.json();
           const isFavorite = (data.data || []).some((item: any) => 
@@ -272,7 +273,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
     try {
       setFavoriteLoading(true);
       const academyId = (academy as any).academyId || academy.id;
-      const response = await fetch('/api/favorites', {
+      const response = await fetchWithAuth('/api/favorites', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

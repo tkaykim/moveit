@@ -1,40 +1,24 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { getTicketById } from '@/lib/db/tickets';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
+import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { Database } from '@/types/database';
 
-// 수강권 구매
+// 수강권 구매 (쿠키 또는 Authorization Bearer 토큰)
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
+    const user = await getAuthenticatedUser(request);
 
-    // 현재 사용자 확인 (데모 버전: 인증 우회)
-    let user: any = null;
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !authUser) {
-      // 데모 버전: 인증 없이도 진행 (임시 사용자 ID 사용)
-      // 실제 프로덕션에서는 이 부분을 제거해야 함
-      // 조회 API와 동일한 순서로 사용자 선택 (created_at ASC)
-      const result = await supabase
-        .from('users')
-        .select('id')
-        .order('created_at', { ascending: true })
-        .limit(1);
-      const demoUsersList = result.data as Array<{ id: string }> | null;
-      
-      if (demoUsersList && demoUsersList.length > 0) {
-        user = { id: demoUsersList[0].id };
-      } else {
-        // 사용자가 없으면 임시 UUID 사용 (데모용)
-        user = { id: '7db26cd6-ae42-42ee-8a56-8c3fec8be7a3' };
-      }
-    } else {
-      user = authUser;
+    if (!user) {
+      return NextResponse.json(
+        { error: '로그인이 필요합니다.' },
+        { status: 401 }
+      );
     }
 
-    const { ticketId, startDate: requestedStartDate, discountId, paymentMethod } = await request.json();
+    const supabase = await getAuthenticatedSupabase(request);
+
+    const { ticketId, startDate: requestedStartDate, discountId, paymentMethod, countOptionIndex } = await request.json();
 
     if (!ticketId) {
       return NextResponse.json(
@@ -69,12 +53,30 @@ export async function POST(request: Request) {
       );
     }
 
-    // 할인정책 적용 처리
+    // 쿠폰제 count_options: 옵션별 count, price, valid_days (할인/최종가 계산 전에 먼저 결정)
+    const countOpts = (ticket.count_options as { count?: number; price?: number; valid_days?: number | null }[] | null) || [];
+    const hasCountOptions = countOpts.length > 0 && (ticket.ticket_category === 'popup' || ticket.access_group === 'popup');
+    
+    // countOptionIndex 범위 검증
+    if (hasCountOptions && typeof countOptionIndex === 'number') {
+      if (countOptionIndex < 0 || countOptionIndex >= countOpts.length) {
+        return NextResponse.json(
+          { error: '유효하지 않은 수강권 옵션입니다.' },
+          { status: 400 }
+        );
+      }
+    }
+    
+    const optIndex = typeof countOptionIndex === 'number' ? countOptionIndex : 0;
+    const selectedOption = hasCountOptions && countOpts[optIndex] ? countOpts[optIndex] : null;
+    const optionCount = selectedOption ? (selectedOption.count ?? 1) : (ticket.total_count ?? 1);
+    const optionPrice = selectedOption ? (selectedOption.price ?? ticket.price ?? 0) : (ticket.price ?? 0);
+    const optionValidDays = selectedOption?.valid_days ?? ticket.valid_days ?? null;
+
     let discountAmount = 0;
     let appliedDiscount = null;
 
     if (discountId) {
-      // 할인정책 유효성 검증
       const { data: discountData, error: discountError } = await (supabase as any)
         .from('discounts')
         .select('*')
@@ -89,7 +91,6 @@ export async function POST(request: Request) {
         );
       }
 
-      // 할인 유효기간 체크
       const now = new Date().toISOString().split('T')[0];
       if (discountData.valid_from && discountData.valid_from > now) {
         return NextResponse.json(
@@ -103,8 +104,6 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-
-      // 학원 할인인 경우 학원 ID 체크
       if (discountData.academy_id && discountData.academy_id !== ticket.academy_id) {
         return NextResponse.json(
           { error: '해당 학원에서 사용할 수 없는 할인정책입니다.' },
@@ -112,44 +111,43 @@ export async function POST(request: Request) {
         );
       }
 
-      // 할인 금액 계산
       if (discountData.discount_type === 'PERCENT') {
-        discountAmount = Math.floor(ticket.price * discountData.discount_value / 100);
+        discountAmount = Math.floor(optionPrice * discountData.discount_value / 100);
       } else {
         discountAmount = discountData.discount_value;
       }
-
-      // 할인 금액이 원가를 초과할 수 없음
-      discountAmount = Math.min(discountAmount, ticket.price);
+      discountAmount = Math.min(discountAmount, optionPrice);
       appliedDiscount = discountData;
     }
+    const originalPrice = optionPrice;
+    const finalPrice = Math.max(0, originalPrice - discountAmount);
 
-    const originalPrice = ticket.price;
-    const finalPrice = originalPrice - discountAmount;
+    const isPeriodTicket = ticket.ticket_type === 'PERIOD';
+    const remainingCount = isPeriodTicket ? null : optionCount;
 
     // 유효기간 계산 - 사용자가 시작일을 지정한 경우 해당 날짜 사용
     const startDate = requestedStartDate ? new Date(requestedStartDate) : new Date();
-    const expiryDate = new Date(startDate);
-    
-    if (ticket.valid_days) {
-      expiryDate.setDate(expiryDate.getDate() + ticket.valid_days);
+    let expiryDateStr: string | null;
+    if (optionValidDays != null && optionValidDays > 0) {
+      const exp = new Date(startDate);
+      exp.setDate(exp.getDate() + optionValidDays);
+      expiryDateStr = exp.toISOString().split('T')[0];
+    } else if (optionValidDays === null) {
+      // 횟수권 무제한(valid_days: null)
+      expiryDateStr = null;
     } else {
-      // valid_days가 없으면 기본값으로 1년 설정
-      expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+      // 기간권 또는 valid_days 미설정: 기본 1년
+      const exp = new Date(startDate);
+      exp.setFullYear(exp.getFullYear() + 1);
+      expiryDateStr = exp.toISOString().split('T')[0];
     }
 
-    // user_tickets에 레코드 생성
-    // 기간권(PERIOD): remaining_count = null (횟수 무제한, 기간으로만 관리)
-    // 횟수권(COUNT): remaining_count = total_count (횟수 차감)
-    const isPeriodTicket = ticket.ticket_type === 'PERIOD';
-    const remainingCount = isPeriodTicket ? null : (ticket.total_count || 1);
-    
     const userTicketData: Database['public']['Tables']['user_tickets']['Insert'] = {
       user_id: user.id,
       ticket_id: ticketId,
       remaining_count: remainingCount,
-      start_date: startDate.toISOString().split('T')[0], // YYYY-MM-DD 형식
-      expiry_date: expiryDate.toISOString().split('T')[0], // YYYY-MM-DD 형식
+      start_date: startDate.toISOString().split('T')[0],
+      expiry_date: expiryDateStr,
       status: 'ACTIVE',
     };
 
@@ -171,7 +169,24 @@ export async function POST(request: Request) {
     if (ticket.academy_id) {
       // 카드결제인 경우 데모 결제로 처리
       const finalPaymentMethod = paymentMethod === 'card' ? 'CARD_DEMO' : (paymentMethod || 'TEST');
+
+      // 신규/재등록 판별: 해당 학원에서 이전 결제 기록이 있으면 재등록
+      const { data: prevTx } = await (supabase as any)
+        .from('revenue_transactions')
+        .select('id')
+        .eq('academy_id', ticket.academy_id)
+        .eq('user_id', user.id)
+        .eq('payment_status', 'COMPLETED')
+        .limit(1);
+
+      const registrationType = (prevTx && prevTx.length > 0) ? 'RE_REGISTRATION' : 'NEW';
+      const purchaseQuantity = isPeriodTicket ? 1 : optionCount;
       
+      // 구매 시점 상품명 스냅샷 생성
+      const ticketDisplayName = selectedOption
+        ? `${ticket.name} ${optionCount}회권`
+        : ticket.name;
+
       await (supabase as any)
         .from('revenue_transactions')
         .insert({
@@ -183,8 +198,13 @@ export async function POST(request: Request) {
           original_price: originalPrice,
           discount_amount: discountAmount,
           final_price: finalPrice,
-          payment_method: finalPaymentMethod, // 데모 결제 방법
-          payment_status: 'COMPLETED', // 데모 결제는 즉시 완료 처리
+          payment_method: finalPaymentMethod,
+          payment_status: 'COMPLETED',
+          registration_type: registrationType,
+          quantity: purchaseQuantity,
+          valid_days: optionValidDays,
+          ticket_name: ticketDisplayName,
+          ticket_type_snapshot: ticket.ticket_type,
         });
 
       // 학원 학생으로 자동 등록 (중복 방지: 이미 등록된 경우 무시)
@@ -248,7 +268,7 @@ export async function POST(request: Request) {
         skipped: autoBookingResult.skipped,
       } : undefined,
       message,
-      demo: !authUser, // 데모 모드인지 표시
+      demo: false,
     });
   } catch (error: any) {
     console.error('Error in ticket purchase API:', error);

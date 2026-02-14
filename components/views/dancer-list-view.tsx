@@ -1,5 +1,6 @@
 "use client";
 
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import Image from 'next/image';
 import { Star, Heart, Filter, Tag } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -269,7 +270,7 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
       }
 
       try {
-        const response = await fetch('/api/favorites?type=instructor');
+        const response = await fetchWithAuth('/api/favorites?type=instructor');
         if (response.ok) {
           const data = await response.json();
           const favoriteIds = new Set<string>((data.data || []).map((item: any) => item.instructors?.id).filter((id: any): id is string => Boolean(id)));
@@ -289,7 +290,7 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
     if (!user) return;
 
     try {
-      const response = await fetch('/api/favorites', {
+      const response = await fetchWithAuth('/api/favorites', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import { X, Ticket, Calendar, Hash, Check, Tag, Gift } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -132,7 +133,7 @@ export const TicketPurchaseModal = ({
     try {
       setPurchasing(true);
       
-      const response = await fetch('/api/tickets/purchase', {
+      const response = await fetchWithAuth('/api/tickets/purchase', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

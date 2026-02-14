@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronLeft, Wallet, CheckCircle, CreditCard, Building2 } from 'lucide-react';
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import { Academy, ClassInfo } from '@/types';
 import { LanguageToggle } from '@/components/common/language-toggle';
 import { useState, useEffect } from 'react';
@@ -40,7 +41,7 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
       }
 
       try {
-        const response = await fetch(`/api/user-tickets?academyId=${academy.id}`);
+        const response = await fetchWithAuth(`/api/user-tickets?academyId=${academy.id}`);
         if (response.ok) {
           const result = await response.json();
           const tickets = result.data || [];

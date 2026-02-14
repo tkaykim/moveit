@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
+
 import Image from "next/image";
 import {
   MapPin,
@@ -221,7 +223,7 @@ export function AcademyMapView({ onAcademyClick }: AcademyMapViewProps) {
       setFavoritedAcademies(new Set());
       return;
     }
-    fetch("/api/favorites?type=academy")
+    fetchWithAuth("/api/favorites?type=academy")
       .then((r) => (r.ok ? r.json() : { data: [] }))
       .then((data) => {
         const ids = new Set<string>(
@@ -238,7 +240,7 @@ export function AcademyMapView({ onAcademyClick }: AcademyMapViewProps) {
     e.stopPropagation();
     if (!user) return;
     try {
-      const res = await fetch("/api/favorites", {
+      const res = await fetchWithAuth("/api/favorites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "academy", id: academyId }),

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { 
   User, ChevronRight, Ticket, Calendar, 
   CreditCard, HelpCircle, Bell, Settings,
-  Clock, MapPin, Play
+  Clock, MapPin, Play, QrCode
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/common/theme-toggle';
 import { LanguageToggle } from '@/components/common/language-toggle';
@@ -13,6 +13,8 @@ import { MyTab } from '@/components/auth/MyTab';
 import { UserMenu } from '@/components/auth/UserMenu';
 import { useRouter } from 'next/navigation';
 import { useLocale } from '@/contexts/LocaleContext';
+import { QrModal } from '@/components/modals/qr-modal';
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 
 interface TicketSummary {
   regular: number;
@@ -50,6 +52,13 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
   const [weekSchedule, setWeekSchedule] = useState<WeekSchedule[]>([]);
   const [totalUpcoming, setTotalUpcoming] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [qrBookingId, setQrBookingId] = useState<string | null>(null);
+  const [qrBookingInfo, setQrBookingInfo] = useState<{
+    className?: string;
+    academyName?: string;
+    startTime?: string;
+  } | undefined>(undefined);
 
   const displayName = profile?.nickname || profile?.name || user?.email?.split('@')[0] || (language === 'en' ? 'User' : '사용자');
   const profileImage = profile?.profile_image || null;
@@ -69,33 +78,36 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
       setLoading(true);
       try {
         // 수강권 정보 로드
-        const ticketRes = await fetch('/api/user-tickets');
+        const ticketRes = await fetchWithAuth('/api/user-tickets');
         if (ticketRes.ok) {
           const result = await ticketRes.json();
           const tickets = result.data || [];
           
-          // 수강권 유형별 집계
+          // 수강권 유형별 집계 (my-tickets-section과 동일한 로직)
           let regular = 0, popup = 0, workshop = 0;
           tickets.forEach((t: any) => {
             if (t.status !== 'ACTIVE') return;
             
-            const accessGroup = t.tickets?.access_group || 'general';
+            const ticketCategory = t.tickets?.ticket_category;
+            const accessGroup = t.tickets?.access_group;
             const isCoupon = t.tickets?.is_coupon;
             
-            if (accessGroup === 'popup' || (isCoupon && accessGroup !== 'workshop')) {
-              popup++;
-            } else if (accessGroup === 'workshop') {
-              workshop++;
-            } else {
-              regular++;
-            }
+            // ticket_category 우선 확인
+            if (ticketCategory === 'popup') { popup++; }
+            else if (ticketCategory === 'workshop') { workshop++; }
+            else if (ticketCategory === 'regular') { regular++; }
+            // access_group 폴백
+            else if (accessGroup === 'popup') { popup++; }
+            else if (accessGroup === 'workshop') { workshop++; }
+            else if (isCoupon && accessGroup !== 'regular') { popup++; }
+            else { regular++; }
           });
           
           setTicketSummary({ regular, popup, workshop, total: regular + popup + workshop });
         }
 
         // 예약 내역 로드
-        const bookingRes = await fetch('/api/bookings');
+        const bookingRes = await fetchWithAuth('/api/bookings');
         if (bookingRes.ok) {
           const result = await bookingRes.json();
           const bookings = result.data || [];
@@ -315,7 +327,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                   )}
                 </div>
                 <button
-                  onClick={() => router.push('/schedule')}
+                  onClick={() => router.push('/my/bookings')}
                   className="text-sm text-primary dark:text-[#CCFF00] font-medium flex items-center gap-1"
                 >
                   {t('common.viewAll')} <ChevronRight size={16} />
@@ -358,17 +370,34 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                     <div className="font-bold text-black dark:text-white text-lg mb-2">
                       {nextClass.className}
                     </div>
-                    <div className="flex flex-wrap gap-3 text-sm text-neutral-600 dark:text-neutral-400">
-                      <span className="flex items-center gap-1">
-                        <Clock size={14} />
-                        {formatDateTime(nextClass.startTime)}
-                      </span>
-                      {nextClass.academyName && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap gap-3 text-sm text-neutral-600 dark:text-neutral-400">
                         <span className="flex items-center gap-1">
-                          <MapPin size={14} />
-                          {nextClass.academyName}
+                          <Clock size={14} />
+                          {formatDateTime(nextClass.startTime)}
                         </span>
-                      )}
+                        {nextClass.academyName && (
+                          <span className="flex items-center gap-1">
+                            <MapPin size={14} />
+                            {nextClass.academyName}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => {
+                          setQrBookingId(nextClass.id);
+                          setQrBookingInfo({
+                            className: nextClass.className,
+                            academyName: nextClass.academyName,
+                            startTime: nextClass.startTime,
+                          });
+                          setIsQrModalOpen(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary dark:bg-[#CCFF00] text-white dark:text-black text-xs font-bold rounded-lg hover:opacity-90 transition-opacity flex-shrink-0"
+                      >
+                        <QrCode size={14} />
+                        QR 출석
+                      </button>
                     </div>
                   </div>
 
@@ -380,7 +409,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                         {weekSchedule.map((day, idx) => (
                           <button
                             key={idx}
-                            onClick={() => router.push('/schedule')}
+                            onClick={() => router.push('/my/bookings')}
                             className={`
                               flex flex-col items-center py-2 rounded-lg transition-colors
                               ${day.isToday 
@@ -471,6 +500,20 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
       </div>
 
       <MyTab isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+
+      {/* QR 출석 모달 */}
+      {qrBookingId && (
+        <QrModal
+          isOpen={isQrModalOpen}
+          onClose={() => {
+            setIsQrModalOpen(false);
+            setQrBookingId(null);
+            setQrBookingInfo(undefined);
+          }}
+          bookingId={qrBookingId}
+          bookingInfo={qrBookingInfo}
+        />
+      )}
     </>
   );
 };

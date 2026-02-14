@@ -1,5 +1,6 @@
 "use client";
 
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import Image from 'next/image';
 import { Star, MapPin, Search, X, Heart, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
@@ -266,7 +267,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
       }
 
       try {
-        const response = await fetch('/api/favorites?type=academy');
+        const response = await fetchWithAuth('/api/favorites?type=academy');
         if (response.ok) {
           const data = await response.json();
           const favoriteIds = new Set<string>((data.data || []).map((item: any) => item.academies?.id).filter((id: any): id is string => Boolean(id)));
@@ -285,7 +286,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
     if (!user) return;
 
     try {
-      const response = await fetch('/api/favorites', {
+      const response = await fetchWithAuth('/api/favorites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'academy', id: academyId }),
