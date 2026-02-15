@@ -33,17 +33,25 @@ export function MyTab({ isOpen, onClose }: MyTabProps) {
       return;
     }
 
-    const { error } = await signIn(email, password);
+    try {
+      // 30초 타임아웃
+      const timeoutPromise = new Promise<{ error: { message: string } }>((resolve) =>
+        setTimeout(() => resolve({ error: { message: '로그인 요청 시간이 초과되었습니다. 다시 시도해주세요.' } }), 30000)
+      );
+      const result = await Promise.race([signIn(email, password), timeoutPromise]);
 
-    if (error) {
-      setError(error.message || '로그인에 실패했습니다.');
-    } else {
-      onClose();
-      setEmail('');
-      setPassword('');
+      if (result.error) {
+        setError(result.error.message || '로그인에 실패했습니다.');
+      } else {
+        onClose();
+        setEmail('');
+        setPassword('');
+      }
+    } catch (err: any) {
+      setError(err?.message || '로그인 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -63,22 +71,33 @@ export function MyTab({ isOpen, onClose }: MyTabProps) {
       return;
     }
 
-    const { error } = await signUp(email, password, name, nameEn || undefined, phone || undefined, nickname || undefined);
+    try {
+      // 30초 타임아웃
+      const timeoutPromise = new Promise<{ error: { message: string } }>((resolve) =>
+        setTimeout(() => resolve({ error: { message: '회원가입 요청 시간이 초과되었습니다. 다시 시도해주세요.' } }), 30000)
+      );
+      const result = await Promise.race([
+        signUp(email, password, name, nameEn || undefined, phone || undefined, nickname || undefined),
+        timeoutPromise,
+      ]);
 
-    if (error) {
-      setError(error.message || '회원가입에 실패했습니다.');
-    } else {
-      onClose();
-      setEmail('');
-      setPassword('');
-      setName('');
-      setNameEn('');
-      setPhone('');
-      setNickname('');
-      setIsLogin(true);
+      if (result.error) {
+        setError(result.error.message || '회원가입에 실패했습니다.');
+      } else {
+        onClose();
+        setEmail('');
+        setPassword('');
+        setName('');
+        setNameEn('');
+        setPhone('');
+        setNickname('');
+        setIsLogin(true);
+      }
+    } catch (err: any) {
+      setError(err?.message || '회원가입 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   if (!isOpen) return null;
