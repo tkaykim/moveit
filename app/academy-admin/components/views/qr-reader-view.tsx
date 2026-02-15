@@ -3,7 +3,7 @@
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { QrCode, CheckCircle2, XCircle, Clock, Maximize, Minimize, RotateCcw } from 'lucide-react';
+import { QrCode, CheckCircle2, XCircle, Clock, Maximize, Minimize, RotateCcw, SwitchCamera } from 'lucide-react';
 
 interface CheckInLog {
   id: string;
@@ -38,6 +38,8 @@ export function QrReaderView({ academyId }: QrReaderViewProps) {
   const [logs, setLogs] = useState<CheckInLog[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [tooBright, setTooBright] = useState(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const facingModeRef = useRef<'user' | 'environment'>('user');
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -120,10 +122,10 @@ export function QrReaderView({ academyId }: QrReaderViewProps) {
 
   const startScanner = useCallback(async () => {
     try {
-      // 카메라 스트림 획득
+      // 카메라 스트림 획득 (facingModeRef에 따라 전면/후면 카메라 선택)
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: 'environment',
+          facingMode: facingModeRef.current,
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
@@ -312,6 +314,17 @@ export function QrReaderView({ academyId }: QrReaderViewProps) {
     };
   }, []);
 
+  const switchCamera = useCallback(() => {
+    const newMode = facingModeRef.current === 'user' ? 'environment' : 'user';
+    facingModeRef.current = newMode;
+    setFacingMode(newMode);
+    if (scanning) {
+      stopScanner();
+      // 약간의 딜레이 후 새 카메라로 재시작
+      setTimeout(() => startScanner(), 300);
+    }
+  }, [scanning, stopScanner, startScanner]);
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
@@ -340,13 +353,22 @@ export function QrReaderView({ academyId }: QrReaderViewProps) {
               <p className="text-sm text-neutral-500">학생의 QR 코드를 스캔하여 출석을 처리합니다</p>
             </div>
           </div>
-          <button
-            onClick={toggleFullscreen}
-            className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 transition-colors"
-            title={isFullscreen ? '전체 화면 해제' : '전체 화면'}
-          >
-            {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={switchCamera}
+              className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 transition-colors"
+              title={facingMode === 'user' ? '후면 카메라로 전환' : '전면 카메라로 전환'}
+            >
+              <SwitchCamera size={20} />
+            </button>
+            <button
+              onClick={toggleFullscreen}
+              className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 transition-colors"
+              title={isFullscreen ? '전체 화면 해제' : '전체 화면'}
+            >
+              {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -357,6 +379,7 @@ export function QrReaderView({ academyId }: QrReaderViewProps) {
               <video
                 ref={videoRef}
                 className="w-full max-h-[480px] object-cover bg-black"
+                style={facingMode === 'user' ? { transform: 'scaleX(-1)' } : undefined}
                 playsInline
                 muted
               />
@@ -432,6 +455,13 @@ export function QrReaderView({ academyId }: QrReaderViewProps) {
                 )}
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={switchCamera}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                  title={facingMode === 'user' ? '후면 카메라로 전환' : '전면 카메라로 전환'}
+                >
+                  <SwitchCamera size={14} /> {facingMode === 'user' ? '전면' : '후면'}
+                </button>
                 <button
                   onClick={() => { stopScanner(); setTimeout(() => startScanner(), 300); }}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
