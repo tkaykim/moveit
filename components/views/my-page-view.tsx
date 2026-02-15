@@ -214,16 +214,17 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
     };
   }, [user, loadData]);
 
-  // authLoading이 너무 오래 지속되는 것을 방지 (UI 안전장치)
+  // authLoading이 너무 오래 지속되는 것을 방지 (UI 레벨 안전장치)
+  // AuthContext의 3초 안전 타임아웃 외에 추가 방어층
+  const [authTimedOut, setAuthTimedOut] = useState(false);
   useEffect(() => {
-    if (!authLoading) return;
+    if (!authLoading) {
+      setAuthTimedOut(false);
+      return;
+    }
     const timer = setTimeout(() => {
-      // authLoading이 10초 이상 지속되면 강제로 non-loading UI 표시
-      // (AuthContext에도 안전 타임아웃이 있지만 UI 레벨 방어)
-      if (mountedRef.current) {
-        setLoading(false);
-      }
-    }, 10000);
+      setAuthTimedOut(true);
+    }, 4000);
     return () => clearTimeout(timer);
   }, [authLoading]);
 
@@ -257,7 +258,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
           </div>
 
           {/* 프로필 */}
-          {authLoading ? (
+          {authLoading && !authTimedOut ? (
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-neutral-200 dark:bg-neutral-800 animate-pulse" />
               <div className="flex-1">

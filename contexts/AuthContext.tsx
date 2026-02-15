@@ -39,14 +39,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// 타임아웃 래퍼: Promise에 최대 시간 제한 설정
-function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
-  ]);
-}
-
 // 기본 프로필 생성 헬퍼
 function createFallbackProfile(authUser: SupabaseUser): UserProfile {
   return {
@@ -68,13 +60,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  
-  // 중복 실행 방지용 ref
-  const initializedRef = useRef(false);
-  const fetchProfileAbortRef = useRef<AbortController | null>(null);
-  const profileFetchInFlightRef = useRef<string | null>(null);
 
-  // 클라이언트에서만 Supabase 클라이언트 생성 (lazy initialization)
+  // 프로필 중복 fetch 방지
+  const profileFetchIdRef = useRef<string | null>(null);
+
+  // 클라이언트에서만 Supabase 클라이언트 생성 (싱글톤)
   const [supabase] = useState(() => {
     if (typeof window !== 'undefined') {
       return createClient();
@@ -83,21 +73,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   // 프로필 정보 가져오기 (비동기, 실패해도 앱은 정상 작동)
-  // 중복 호출 방지 및 타임아웃 포함
   const fetchProfile = useCallback(async (userId: string, authUser?: SupabaseUser) => {
     if (!supabase) return;
 
-    // 이미 같은 userId에 대해 요청 중이면 스킵
-    if (profileFetchInFlightRef.current === userId) return;
-    profileFetchInFlightRef.current = userId;
-
-    // 이전 요청 취소
-    if (fetchProfileAbortRef.current) {
-      fetchProfileAbortRef.current.abort();
-    }
-    fetchProfileAbortRef.current = new AbortController();
+    // 같은 userId에 대해 이미 fetch 중이면 스킵
+    if (profileFetchIdRef.current === userId) return;
+    profileFetchIdRef.current = userId;
 
     try {
+      // 타임아웃 포함 프로필 조회
       const fetchPromise = Promise.resolve(
         supabase
           .from('users')
@@ -106,14 +90,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .single()
       );
 
-      // 10초 타임아웃
-      const result = await withTimeout(
-        fetchPromise,
-        10000,
-        { data: null, error: { message: 'Profile fetch timeout' } } as any
+      const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+        setTimeout(() => resolve({ data: null, error: { message: 'Profile fetch timeout (8s)' } }), 8000)
       );
 
-      const { data, error } = result;
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (error || !data) {
         console.warn('Profile not found or error (non-critical):', error);
@@ -133,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
       }
     } finally {
-      profileFetchInFlightRef.current = null;
+      profileFetchIdRef.current = null;
     }
   }, [supabase]);
 
@@ -155,13 +136,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
       });
 
-      if (authError) {
-        return { error: authError };
-      }
-
-      if (!authData.user) {
-        return { error: { message: '회원가입에 실패했습니다.' } };
-      }
+      if (authError) return { error: authError };
+      if (!authData.user) return { error: { message: '회원가입에 실패했습니다.' } };
 
       const userData: Database['public']['Tables']['users']['Insert'] = {
         id: authData.user.id,
@@ -181,9 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: profileError };
       }
 
-      // 프로필 정보 가져오기 (비동기, 실패해도 계속 진행)
       fetchProfile(authData.user.id, authData.user).catch(() => {});
-
       return { error: null };
     } catch (error: any) {
       return { error };
@@ -201,11 +175,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
       });
 
-      if (error) {
-        return { error };
-      }
+      if (error) return { error };
 
-      // signInWithPassword 직접 반환된 user 사용 (추가 getSession 불필요)
+      // signInWithPassword가 직접 반환한 user 사용
       if (data?.user) {
         setUser(data.user);
         fetchProfile(data.user.id, data.user).catch(() => {});
@@ -221,14 +193,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     if (!supabase) return;
     try {
-      // 먼저 상태 초기화 (UI 즉시 반영)
       setUser(null);
       setProfile(null);
       await supabase.auth.signOut();
       router.push('/');
     } catch (error) {
       console.error('Error signing out:', error);
-      // 에러가 발생해도 상태는 이미 초기화됨
     }
   }, [supabase, router]);
 
@@ -239,88 +209,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, fetchProfile]);
 
+  // =====================================================
+  // 핵심 초기화 로직
+  // React StrictMode에서도 안전하게 동작하도록 설계:
+  // - initializedRef 같은 중복 방지 ref를 사용하지 않음
+  // - cleanup 후 재마운트 시에도 정상적으로 리스너가 등록됨
+  // - getSession()으로 즉시 초기 상태를 설정하고,
+  //   onAuthStateChange로 이후 변경을 추적
+  // =====================================================
   useEffect(() => {
     if (!supabase) {
       setLoading(false);
       return;
     }
 
-    // 중복 초기화 방지
-    if (initializedRef.current) return;
-    initializedRef.current = true;
+    let cancelled = false;
 
-    // 최대 8초 안전 타임아웃: 어떤 이유로든 loading이 풀리지 않는 것을 방지
+    // 1) 안전 타임아웃: 어떤 이유로든 3초 안에 loading이 안 풀리면 강제 해제
     const safetyTimer = setTimeout(() => {
-      setLoading((prev) => {
-        if (prev) {
-          console.warn('[AuthContext] Safety timeout: forcing loading=false after 8s');
-          return false;
-        }
-        return prev;
-      });
-    }, 8000);
+      if (!cancelled) {
+        setLoading(false);
+      }
+    }, 3000);
 
-    // onAuthStateChange 리스너만 사용하여 초기 세션 + 변경 감지를 통합
-    // Supabase v2+에서 onAuthStateChange는 INITIAL_SESSION 이벤트로 
-    // 초기 세션도 전달하므로, 별도 checkSession() 호출이 불필요
-    let isFirstEvent = true;
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // 2) getSession()으로 즉시 초기 상태 확인 (로컬 스토리지에서 읽음 → 빠름)
+    //    이것만으로도 loading을 해제하기에 충분
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled) return;
       if (session?.user) {
         setUser(session.user);
-        // INITIAL_SESSION이거나 SIGNED_IN일 때 프로필 로드
         fetchProfile(session.user.id, session.user).catch(() => {});
       } else {
         setUser(null);
         setProfile(null);
       }
-
-      // 첫 번째 이벤트(INITIAL_SESSION) 또는 auth 이벤트 시 로딩 해제
-      if (isFirstEvent) {
-        isFirstEvent = false;
+      setLoading(false);
+      clearTimeout(safetyTimer);
+    }).catch((err) => {
+      console.warn('[AuthContext] getSession failed:', err);
+      if (!cancelled) {
         setLoading(false);
         clearTimeout(safetyTimer);
       }
-      
-      // TOKEN_REFRESHED, SIGNED_IN, SIGNED_OUT 등의 이벤트에서도 로딩 해제
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-        setLoading(false);
-      }
     });
 
-    // INITIAL_SESSION 이벤트가 발행되지 않는 경우를 대비한 폴백
-    // (Supabase 버전에 따라 INITIAL_SESSION 미지원 가능)
-    const fallbackTimer = setTimeout(async () => {
-      if (isFirstEvent) {
-        isFirstEvent = false;
-        try {
-          // getUser()로 서버 검증 (getSession()보다 안전)
-          const { data: { user: verifiedUser } } = await withTimeout(
-            supabase.auth.getUser(),
-            5000,
-            { data: { user: null }, error: null } as any
-          );
-          if (verifiedUser) {
-            setUser(verifiedUser);
-            fetchProfile(verifiedUser.id, verifiedUser).catch(() => {});
-          }
-        } catch (e) {
-          console.warn('[AuthContext] Fallback session check failed:', e);
-        } finally {
-          setLoading(false);
-          clearTimeout(safetyTimer);
-        }
+    // 3) onAuthStateChange로 이후 세션 변경 감지
+    //    (로그인, 로그아웃, 토큰 갱신, 초기 세션 등)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (cancelled) return;
+
+      if (session?.user) {
+        setUser(session.user);
+        fetchProfile(session.user.id, session.user).catch(() => {});
+      } else {
+        setUser(null);
+        setProfile(null);
       }
-    }, 3000);
+      // 모든 auth 이벤트에서 loading 해제 보장
+      setLoading(false);
+    });
 
     return () => {
-      subscription.unsubscribe();
+      cancelled = true;
       clearTimeout(safetyTimer);
-      clearTimeout(fallbackTimer);
-      if (fetchProfileAbortRef.current) {
-        fetchProfileAbortRef.current.abort();
-      }
+      subscription.unsubscribe();
     };
   }, [supabase, fetchProfile]);
 
@@ -344,4 +298,3 @@ export function useAuth() {
   }
   return context;
 }
-
