@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   User, ChevronRight, Ticket, Calendar, 
   CreditCard, HelpCircle, Bell, Settings,
-  Clock, MapPin, Play, QrCode
+  Clock, MapPin, Play, QrCode, RefreshCw
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/common/theme-toggle';
 import { LanguageToggle } from '@/components/common/language-toggle';
@@ -52,6 +52,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
   const [weekSchedule, setWeekSchedule] = useState<WeekSchedule[]>([]);
   const [totalUpcoming, setTotalUpcoming] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [dataError, setDataError] = useState(false);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [qrBookingId, setQrBookingId] = useState<string | null>(null);
   const [qrBookingInfo, setQrBookingInfo] = useState<{
@@ -60,127 +61,171 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
     startTime?: string;
   } | undefined>(undefined);
 
+  // 데이터 로드 중복 방지
+  const loadingRef = useRef(false);
+  const mountedRef = useRef(true);
+
   const displayName = profile?.nickname || profile?.name || user?.email?.split('@')[0] || (language === 'en' ? 'User' : '사용자');
   const profileImage = profile?.profile_image || null;
 
-  // 데이터 로드
+  // 데이터 로드 함수를 분리하여 재시도에 활용
+  const loadData = useCallback(async () => {
+    if (!user || loadingRef.current) return;
+    loadingRef.current = true;
+    setLoading(true);
+    setDataError(false);
+    
+    try {
+      // 수강권 + 예약을 병렬로 로드 (하나가 실패해도 다른 하나는 성공)
+      const [ticketResult, bookingResult] = await Promise.allSettled([
+        fetchWithAuth('/api/user-tickets'),
+        fetchWithAuth('/api/bookings'),
+      ]);
+
+      if (!mountedRef.current) return;
+
+      // 수강권 처리
+      if (ticketResult.status === 'fulfilled' && ticketResult.value.ok) {
+        const result = await ticketResult.value.json();
+        const tickets = result.data || [];
+        
+        let regular = 0, popup = 0, workshop = 0;
+        tickets.forEach((t: any) => {
+          if (t.status !== 'ACTIVE') return;
+          
+          const ticketCategory = t.tickets?.ticket_category;
+          const accessGroup = t.tickets?.access_group;
+          const isCoupon = t.tickets?.is_coupon;
+          
+          if (ticketCategory === 'popup') { popup++; }
+          else if (ticketCategory === 'workshop') { workshop++; }
+          else if (ticketCategory === 'regular') { regular++; }
+          else if (accessGroup === 'popup') { popup++; }
+          else if (accessGroup === 'workshop') { workshop++; }
+          else if (isCoupon && accessGroup !== 'regular') { popup++; }
+          else { regular++; }
+        });
+        
+        setTicketSummary({ regular, popup, workshop, total: regular + popup + workshop });
+      } else {
+        console.warn('Ticket load failed:', ticketResult.status === 'rejected' ? ticketResult.reason : 'not ok');
+      }
+
+      // 예약 내역 처리
+      if (bookingResult.status === 'fulfilled' && bookingResult.value.ok) {
+        const result = await bookingResult.value.json();
+        const bookings = result.data || [];
+        const now = new Date();
+        
+        const upcomingBookings = bookings
+          .filter((b: any) => {
+            if (b.status !== 'CONFIRMED') return false;
+            const startTime = b.schedules?.start_time || b.classes?.start_time;
+            if (!startTime) return false;
+            return new Date(startTime) > now;
+          })
+          .sort((a: any, b: any) => {
+            const aTime = a.schedules?.start_time || a.classes?.start_time;
+            const bTime = b.schedules?.start_time || b.classes?.start_time;
+            return new Date(aTime).getTime() - new Date(bTime).getTime();
+          });
+
+        setTotalUpcoming(upcomingBookings.length);
+
+        if (upcomingBookings.length > 0) {
+          const first = upcomingBookings[0];
+          setNextClass({
+            id: first.id,
+            className: first.classes?.title || '클래스',
+            academyName: first.classes?.academies?.name_kr || first.classes?.academies?.name_en || '',
+            startTime: first.schedules?.start_time || first.classes?.start_time,
+            hallName: first.halls?.name,
+          });
+        } else {
+          setNextClass(null);
+        }
+
+        const weekDays: WeekSchedule[] = [];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        for (let i = 0; i < 7; i++) {
+          const date = new Date(today);
+          date.setDate(date.getDate() + i);
+          const nextDay = new Date(date);
+          nextDay.setDate(nextDay.getDate() + 1);
+          
+          const count = upcomingBookings.filter((b: any) => {
+            const startTime = new Date(b.schedules?.start_time || b.classes?.start_time);
+            return startTime >= date && startTime < nextDay;
+          }).length;
+
+          const dayLabelsKo = ['일', '월', '화', '수', '목', '금', '토'];
+          const dayLabelsEn = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+          const dayLabels = language === 'en' ? dayLabelsEn : dayLabelsKo;
+          weekDays.push({
+            date,
+            dayLabel: dayLabels[date.getDay()],
+            count,
+            isToday: i === 0,
+          });
+        }
+        
+        setWeekSchedule(weekDays);
+      } else {
+        console.warn('Booking load failed:', bookingResult.status === 'rejected' ? bookingResult.reason : 'not ok');
+      }
+
+      // 둘 다 실패한 경우에만 에러 표시
+      if (ticketResult.status === 'rejected' && bookingResult.status === 'rejected') {
+        setDataError(true);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+      if (mountedRef.current) {
+        setDataError(true);
+      }
+    } finally {
+      if (mountedRef.current) {
+        setLoading(false);
+      }
+      loadingRef.current = false;
+    }
+  }, [user, language]);
+
+  // 데이터 로드 effect
   useEffect(() => {
+    mountedRef.current = true;
+
     if (!user) {
       setTicketSummary({ regular: 0, popup: 0, workshop: 0, total: 0 });
       setNextClass(null);
       setWeekSchedule([]);
       setTotalUpcoming(0);
       setLoading(false);
+      setDataError(false);
       return;
     }
 
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        // 수강권 정보 로드
-        const ticketRes = await fetchWithAuth('/api/user-tickets');
-        if (ticketRes.ok) {
-          const result = await ticketRes.json();
-          const tickets = result.data || [];
-          
-          // 수강권 유형별 집계 (my-tickets-section과 동일한 로직)
-          let regular = 0, popup = 0, workshop = 0;
-          tickets.forEach((t: any) => {
-            if (t.status !== 'ACTIVE') return;
-            
-            const ticketCategory = t.tickets?.ticket_category;
-            const accessGroup = t.tickets?.access_group;
-            const isCoupon = t.tickets?.is_coupon;
-            
-            // ticket_category 우선 확인
-            if (ticketCategory === 'popup') { popup++; }
-            else if (ticketCategory === 'workshop') { workshop++; }
-            else if (ticketCategory === 'regular') { regular++; }
-            // access_group 폴백
-            else if (accessGroup === 'popup') { popup++; }
-            else if (accessGroup === 'workshop') { workshop++; }
-            else if (isCoupon && accessGroup !== 'regular') { popup++; }
-            else { regular++; }
-          });
-          
-          setTicketSummary({ regular, popup, workshop, total: regular + popup + workshop });
-        }
+    loadData();
 
-        // 예약 내역 로드
-        const bookingRes = await fetchWithAuth('/api/bookings');
-        if (bookingRes.ok) {
-          const result = await bookingRes.json();
-          const bookings = result.data || [];
-          const now = new Date();
-          
-          // 미래 예약만 필터링
-          const upcomingBookings = bookings
-            .filter((b: any) => {
-              if (b.status !== 'CONFIRMED') return false;
-              const startTime = b.schedules?.start_time || b.classes?.start_time;
-              if (!startTime) return false;
-              return new Date(startTime) > now;
-            })
-            .sort((a: any, b: any) => {
-              const aTime = a.schedules?.start_time || a.classes?.start_time;
-              const bTime = b.schedules?.start_time || b.classes?.start_time;
-              return new Date(aTime).getTime() - new Date(bTime).getTime();
-            });
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [user, loadData]);
 
-          setTotalUpcoming(upcomingBookings.length);
-
-          // 가장 가까운 수업 1개
-          if (upcomingBookings.length > 0) {
-            const first = upcomingBookings[0];
-            setNextClass({
-              id: first.id,
-              className: first.classes?.title || '클래스',
-              academyName: first.classes?.academies?.name_kr || first.classes?.academies?.name_en || '',
-              startTime: first.schedules?.start_time || first.classes?.start_time,
-              hallName: first.halls?.name,
-            });
-          } else {
-            setNextClass(null);
-          }
-
-          // 이번 주 일정 요약 (7일간)
-          const weekDays: WeekSchedule[] = [];
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          
-          for (let i = 0; i < 7; i++) {
-            const date = new Date(today);
-            date.setDate(date.getDate() + i);
-            const nextDay = new Date(date);
-            nextDay.setDate(nextDay.getDate() + 1);
-            
-            const count = upcomingBookings.filter((b: any) => {
-              const startTime = new Date(b.schedules?.start_time || b.classes?.start_time);
-              return startTime >= date && startTime < nextDay;
-            }).length;
-
-            const dayLabelsKo = ['일', '월', '화', '수', '목', '금', '토'];
-            const dayLabelsEn = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-            const dayLabels = language === 'en' ? dayLabelsEn : dayLabelsKo;
-            weekDays.push({
-              date,
-              dayLabel: dayLabels[date.getDay()],
-              count,
-              isToday: i === 0,
-            });
-          }
-          
-          setWeekSchedule(weekDays);
-        }
-      } catch (error) {
-        console.error('Error loading data:', error);
-      } finally {
+  // authLoading이 너무 오래 지속되는 것을 방지 (UI 안전장치)
+  useEffect(() => {
+    if (!authLoading) return;
+    const timer = setTimeout(() => {
+      // authLoading이 10초 이상 지속되면 강제로 non-loading UI 표시
+      // (AuthContext에도 안전 타임아웃이 있지만 UI 레벨 방어)
+      if (mountedRef.current) {
         setLoading(false);
       }
-    };
-
-    loadData();
-  }, [user]);
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, [authLoading]);
 
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -279,6 +324,19 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                   </div>
                 ))}
               </div>
+            ) : dataError && user ? (
+              <div className="text-center py-6">
+                <p className="text-neutral-500 text-sm mb-3">
+                  {language === 'en' ? 'Failed to load data' : '데이터를 불러오지 못했습니다'}
+                </p>
+                <button
+                  onClick={() => loadData()}
+                  className="inline-flex items-center gap-1.5 text-sm text-primary dark:text-[#CCFF00] font-medium"
+                >
+                  <RefreshCw size={14} />
+                  {language === 'en' ? 'Retry' : '다시 시도'}
+                </button>
+              </div>
             ) : !user ? (
                 <div className="text-center py-6 text-neutral-500 text-sm">
                 {t('my.loginToView')}
@@ -345,6 +403,19 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                       <div key={i} className="flex-1 h-14 bg-neutral-100 dark:bg-neutral-800 rounded-lg animate-pulse" />
                     ))}
                   </div>
+                </div>
+              ) : dataError ? (
+                <div className="text-center py-6">
+                  <p className="text-neutral-500 text-sm mb-3">
+                    {language === 'en' ? 'Failed to load bookings' : '예약 정보를 불러오지 못했습니다'}
+                  </p>
+                  <button
+                    onClick={() => loadData()}
+                    className="inline-flex items-center gap-1.5 text-sm text-primary dark:text-[#CCFF00] font-medium"
+                  >
+                    <RefreshCw size={14} />
+                    {language === 'en' ? 'Retry' : '다시 시도'}
+                  </button>
                 </div>
               ) : !nextClass ? (
                 <div className="text-center py-6">
