@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { MoreVertical, CheckCircle2, Clock, XCircle, UserCheck, Trash2 } from 'lucide-react';
 
 interface EnrollmentActionMenuProps {
@@ -21,23 +22,55 @@ export function EnrollmentActionMenu({
 }: EnrollmentActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const updateMenuPosition = useCallback(() => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const menuWidth = 192; // w-48 = 12rem = 192px
+    const menuEstimatedHeight = 200;
+    const viewportHeight = window.innerHeight;
+
+    // 메뉴가 화면 아래로 넘어가면 위로 표시
+    const spaceBelow = viewportHeight - rect.bottom;
+    const showAbove = spaceBelow < menuEstimatedHeight && rect.top > menuEstimatedHeight;
+
+    setMenuPosition({
+      top: showAbove ? rect.top + window.scrollY - menuEstimatedHeight : rect.bottom + window.scrollY + 4,
+      left: rect.right + window.scrollX - menuWidth,
+    });
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      if (
+        menuRef.current && !menuRef.current.contains(event.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
+      }
+    };
+
+    const handleScrollOrResize = () => {
+      if (isOpen) {
+        updateMenuPosition();
       }
     };
 
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      window.addEventListener('scroll', handleScrollOrResize, true);
+      window.addEventListener('resize', handleScrollOrResize);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
     };
-  }, [isOpen]);
+  }, [isOpen, updateMenuPosition]);
 
   const handleStatusChange = async (newStatus: string, options?: { restoreTicket?: boolean }) => {
     if (isLoading) return;
@@ -161,18 +194,34 @@ export function EnrollmentActionMenu({
 
   const availableActions = getAvailableActions();
 
+  const handleToggle = () => {
+    if (!isOpen) {
+      updateMenuPosition();
+    }
+    setIsOpen(!isOpen);
+  };
+
   return (
-    <div className="relative" ref={menuRef}>
+    <div className="relative">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        ref={buttonRef}
+        onClick={handleToggle}
         disabled={isLoading}
         className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800"
       >
         <MoreVertical size={18} />
       </button>
 
-      {isOpen && (
-        <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 z-50 py-1">
+      {isOpen && menuPosition && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed w-48 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 z-[9999] py-1"
+          style={{
+            top: `${menuPosition.top}px`,
+            left: `${menuPosition.left}px`,
+            position: 'absolute',
+          }}
+        >
           {availableActions.length > 0 ? (
             availableActions.map((action, index) => {
               const Icon = action.icon;
@@ -209,7 +258,8 @@ export function EnrollmentActionMenu({
               </button>
             </>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
