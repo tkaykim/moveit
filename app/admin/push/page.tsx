@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { authFetch } from '@/lib/supabase/auth-fetch';
 import { PushDashboard } from './components/push-dashboard';
+import { PushScenarioTest } from './components/push-scenario-test';
 import { PushSendForm } from './components/push-send-form';
 import { PushHistory } from './components/push-history';
 
@@ -55,6 +56,10 @@ export default function AdminPushPage() {
       )}
 
       <PushDashboard status={status} loading={loading} />
+      <PushScenarioTest
+        usersWithTokens={status?.users_with_tokens || []}
+        onSent={fetchStatus}
+      />
       <PushSendForm
         usersWithTokens={status?.users_with_tokens || []}
         totalTokens={status?.summary?.total_active_tokens || 0}
