@@ -11,9 +11,20 @@
     "build:clean": "node scripts/clear-cache.js && node --max-old-space-size=4096 node_modules/next/dist/bin/next build",
     "start": "next start",
     "lint": "next lint",
-    "clear-cache": "node scripts/clear-cache.js"
+    "clear-cache": "node scripts/clear-cache.js",
+    "cap:sync": "npx cap sync",
+    "cap:android": "npx cap open android",
+    "cap:ios": "npx cap open ios",
+    "cap:add:android": "npx cap add android",
+    "cap:add:ios": "npx cap add ios"
   },
   "dependencies": {
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/app": "^8.0.1",
+    "@capacitor/core": "^8.1.0",
+    "@capacitor/push-notifications": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.1",
     "@react-google-maps/api": "^2.20.8",
     "@supabase/ssr": "^0.1.0",
     "@supabase/supabase-js": "^2.39.3",
@@ -43,6 +54,7 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.1.0",
     "@playwright/test": "^1.57.0",
     "@types/node": "^20.11.30",
     "@types/react": "^18.3.1",
