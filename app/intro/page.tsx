@@ -5,7 +5,6 @@ import {
   Calendar, 
   Users, 
   CreditCard, 
-  Check,
   Menu,
   X,
   Settings,
@@ -17,12 +16,13 @@ import {
   BookOpen,
   UserCog
 } from 'lucide-react';
-import { ComparisonVisual } from './components/comparison-visual';
+import { ComparisonTable } from './components/comparison-table';
 import { FeatureAttendance } from './components/feature-attendance';
 import { FeatureTicket } from './components/feature-ticket';
 import { FeatureCalendar } from './components/feature-calendar';
 import { FeatureQr } from './components/feature-qr';
 import { FeaturePush } from './components/feature-push';
+import { PricingCards } from './components/pricing-cards';
 
 export default function IntroPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -91,13 +91,18 @@ export default function IntroPage() {
         </div>
       </section>
 
-      {/* ═══════ 왜 댄스학원 전용? + 비교 (동시 노출) ═══════ */}
-      <section id="comparison" className="py-10 md:py-14 bg-neutral-900 dark:bg-neutral-950 text-white">
+      {/* ═══════ 왜 댄스 학원은 전용 플랫폼을 써야 할까요? (비교 테이블) ═══════ */}
+      <section id="comparison" className="py-10 md:py-14 bg-white dark:bg-neutral-950">
         <div className="max-w-5xl mx-auto px-4">
-          <h2 className="text-center text-xl sm:text-2xl md:text-3xl font-bold mb-10">
-            왜 댄스학원 전용이어야 할까요?
-          </h2>
-          <ComparisonVisual />
+          <div className="text-center mb-10">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 text-neutral-900 dark:text-white">
+              왜 댄스 학원은 전용 플랫폼을 써야 할까요?
+            </h2>
+            <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400">
+              헬스장, 필라테스용 프로그램으로는 해결할 수 없는 댄스 학원만의 니즈를 담았습니다.
+            </p>
+          </div>
+          <ComparisonTable />
         </div>
       </section>
 
@@ -307,56 +312,9 @@ export default function IntroPage() {
         </div>
       </section>
 
-      {/* ═══════ 요금제 ═══════ */}
+      {/* ═══════ 학원 규모에 맞는 합리적인 요금제 (1행 3열) ═══════ */}
       <section id="pricing" className="py-10 md:py-14 bg-neutral-50 dark:bg-neutral-900/30">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-8">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">합리적인 요금제</h2>
-            <p className="text-sm sm:text-base text-neutral-500">인건비 절감을 생각하면 커피 몇 잔 값입니다.</p>
-          </div>
-          
-          {/* Best */}
-          <div className="p-5 rounded-2xl border-2 border-neutral-900 dark:border-[#CCFF00] bg-white dark:bg-neutral-900/50 relative mb-4 max-w-lg mx-auto">
-            <span className="absolute -top-2.5 right-4 text-[10px] font-bold bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black px-2.5 py-0.5 rounded">Best</span>
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-bold text-sm text-neutral-900 dark:text-[#CCFF00]">프로페셔널</h3>
-                <p className="text-xs text-neutral-500 mt-0.5">일반 댄스 학원</p>
-              </div>
-              <p className="text-xl font-bold">₩79,000<span className="text-xs font-normal text-neutral-500">/월</span></p>
-            </div>
-            <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-              <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-neutral-900 dark:text-[#CCFF00] flex-shrink-0" />수강생 200명</li>
-              <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-neutral-900 dark:text-[#CCFF00] flex-shrink-0" />영상 공유·알림</li>
-              <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-neutral-900 dark:text-[#CCFF00] flex-shrink-0" />일시정지·양도</li>
-              <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-neutral-900 dark:text-[#CCFF00] flex-shrink-0" />매출 대시보드</li>
-            </ul>
-            <a href="#contact" className="mt-4 block w-full py-2.5 text-center text-sm font-bold rounded-xl bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black">시작하기</a>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 max-w-lg mx-auto">
-            <div className="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900/50">
-              <h3 className="font-bold text-sm">스타터</h3>
-              <p className="text-lg font-bold mt-1">₩39,000<span className="text-[10px] font-normal text-neutral-500">/월</span></p>
-              <p className="text-[11px] text-neutral-500 mt-0.5">소규모 스튜디오</p>
-              <ul className="mt-2 space-y-1 text-[11px]">
-                <li className="flex items-center gap-1"><Check className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />50명 이하</li>
-                <li className="flex items-center gap-1"><Check className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />일정·출석</li>
-              </ul>
-              <a href="#contact" className="mt-3 block w-full py-1.5 text-center text-xs font-semibold rounded-lg bg-neutral-100 dark:bg-neutral-800">문의</a>
-            </div>
-            <div className="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900/50">
-              <h3 className="font-bold text-sm">엔터프라이즈</h3>
-              <p className="text-lg font-bold mt-1">별도문의</p>
-              <p className="text-[11px] text-neutral-500 mt-0.5">다지점·대형</p>
-              <ul className="mt-2 space-y-1 text-[11px]">
-                <li className="flex items-center gap-1"><Check className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />무제한</li>
-                <li className="flex items-center gap-1"><Check className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />전담 매니저</li>
-              </ul>
-              <a href="#contact" className="mt-3 block w-full py-1.5 text-center text-xs font-semibold rounded-lg bg-neutral-100 dark:bg-neutral-800">상담</a>
-            </div>
-          </div>
-        </div>
+        <PricingCards />
       </section>
 
       {/* ═══════ 문의 폼 ═══════ */}
