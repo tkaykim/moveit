@@ -5,9 +5,10 @@ import {
   Bell, Users, Send, Loader2, CheckCircle, XCircle,
   FlaskConical, ChevronDown, ChevronUp, Calendar, UserCheck2,
   Ticket, Video, MessageSquare, Megaphone, Clock, AlertTriangle,
-  User, BookOpen, Image as ImageIcon,
+  User, BookOpen, Image as ImageIcon, Settings,
 } from 'lucide-react';
 import { authFetch } from '@/lib/supabase/auth-fetch';
+import { AcademyNotificationSettingsView } from './academy-notification-settings-view';
 
 /* ───── 시나리오 정의 ───── */
 interface ScenarioContext {
@@ -171,7 +172,7 @@ interface PushNotificationViewProps {
 }
 
 export function PushNotificationView({ academyId }: PushNotificationViewProps) {
-  const [activeTab, setActiveTab] = useState<'scenario' | 'custom'>('scenario');
+  const [activeTab, setActiveTab] = useState<'scenario' | 'custom' | 'settings'>('scenario');
   const [summary, setSummary] = useState<{ total_students: number; active_tokens: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -249,6 +250,16 @@ export function PushNotificationView({ academyId }: PushNotificationViewProps) {
         >
           <Send size={14} className="inline mr-1.5" />직접 작성
         </button>
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-all ${
+            activeTab === 'settings'
+              ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm'
+              : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+          }`}
+        >
+          <Settings size={14} className="inline mr-1.5" />알림 설정
+        </button>
       </div>
 
       {activeTab === 'scenario' && (
@@ -256,6 +267,9 @@ export function PushNotificationView({ academyId }: PushNotificationViewProps) {
       )}
       {activeTab === 'custom' && (
         <CustomSendSection academyId={academyId} onSent={fetchSummary} />
+      )}
+      {activeTab === 'settings' && (
+        <AcademyNotificationSettingsView academyId={academyId} />
       )}
     </div>
   );

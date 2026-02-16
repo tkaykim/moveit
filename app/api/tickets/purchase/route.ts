@@ -272,6 +272,7 @@ export async function POST(request: Request) {
       title: `${productType} 구매 완료`,
       body: purchaseBody,
       data: { ticket_id: ticketId, user_ticket_id: userTicket?.id, url: '/my/tickets' },
+      academy_id: ticket.academy_id,
     }).catch((err) => console.error('[purchase-notification]', err));
 
     return NextResponse.json({

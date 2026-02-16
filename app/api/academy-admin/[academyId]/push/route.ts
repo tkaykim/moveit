@@ -161,6 +161,7 @@ export async function POST(
       body: messageBody,
       data: enrichedData,
       channel: 'push',
+      academy_id: academyId,
     });
 
     // notification-worker Edge Function 트리거

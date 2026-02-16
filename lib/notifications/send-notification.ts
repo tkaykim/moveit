@@ -21,6 +21,25 @@ export async function sendNotification(req: SendNotificationRequest) {
     .eq('user_id', req.user_id)
     .single();
 
+  // 1.5. 학원별 알림 설정 확인 (academy_id가 있는 경우)
+  if (req.academy_id) {
+    const { data: academySettings } = await (supabase as any)
+      .from('academy_notification_settings')
+      .select('*')
+      .eq('academy_id', req.academy_id)
+      .single();
+
+    if (academySettings) {
+      // 해당 알림 타입에 대한 설정이 false이면 발송 중단
+      // req.type이 academySettings의 키와 일치한다고 가정
+      const settingKey = req.type;
+      // academySettings에 해당 키가 존재하고, 값이 false인 경우
+      if (settingKey in academySettings && academySettings[settingKey] === false) {
+        return null;
+      }
+    }
+  }
+
   // 알림 설정에 따라 발송 여부 결정
   if (prefs) {
     if (channel === 'push' && !prefs.push_enabled) return null;

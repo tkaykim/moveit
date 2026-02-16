@@ -166,4 +166,24 @@ export interface SendNotificationRequest {
   data?: Record<string, any>;
   channel?: NotificationChannel;
   scheduled_at?: string;
+  academy_id?: string; // 학원별 알림 설정을 확인하기 위해 추가
+}
+
+// 학원별 알림 설정 (DB 테이블 매핑)
+export interface AcademyNotificationSettings {
+  id: string;
+  academy_id: string;
+  booking_confirmed: boolean;
+  booking_cancelled: boolean;
+  class_reminder: boolean;
+  class_cancelled: boolean;
+  attendance_checked: boolean;
+  attendance_absent: boolean;
+  ticket_purchased: boolean;
+  ticket_expiry: boolean;
+  video_uploaded: boolean;
+  consultation_reply: boolean;
+  marketing: boolean;
+  created_at: string;
+  updated_at: string;
 }

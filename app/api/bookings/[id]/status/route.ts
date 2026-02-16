@@ -128,7 +128,7 @@ export async function PATCH(
         .from('bookings')
         .select(`
           id,
-          classes!inner(title, academies!inner(name_kr)),
+          classes!inner(title, academy_id, academies!inner(name_kr)),
           schedules(start_time, end_time)
         `)
         .eq('id', id)
@@ -152,6 +152,7 @@ export async function PATCH(
             title: '예약 취소',
             body: `${academyName} ${classTitle} 예약이 취소되었습니다.${timeStr}`,
             data: { booking_id: id, url: '/my/bookings' },
+            academy_id: bookingDetail.classes?.academy_id,
           });
         })
         .catch((err: any) => console.error('[cancel-notification]', err));
@@ -164,7 +165,7 @@ export async function PATCH(
         .from('bookings')
         .select(`
           id,
-          classes!inner(title, academies!inner(name_kr)),
+          classes!inner(title, academy_id, academies!inner(name_kr)),
           schedules(start_time, end_time)
         `)
         .eq('id', id)
@@ -188,6 +189,7 @@ export async function PATCH(
             title: '출석 체크 완료',
             body: `${academyName} ${classTitle} 출석이 확인되었습니다.${timeStr}`,
             data: { booking_id: id, url: '/my/bookings' },
+            academy_id: bookingDetail.classes?.academy_id,
           });
         })
         .catch((err: any) => console.error('[attendance-notification]', err));
