@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
-import { sendNotification } from '@/lib/notifications';
+import { sendBulkNotification } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase/server';
+import type { NotificationType } from '@/types/notifications';
 
 /**
  * GET /api/academy-admin/[academyId]/push
@@ -150,18 +151,32 @@ export async function POST(
       );
     }
 
-    // 각 사용자에게 알림 발송
-    const promises = targetUserIds.map((userId) =>
-      sendNotification({
-        user_id: userId,
-        type: 'marketing',
-        title,
-        body: messageBody,
-        data: data || {},
-      }).catch((err) => console.error(`[academy-push-${userId}]`, err))
-    );
+    const enrichedData = { ...(data || {}) };
+    if (image_url) enrichedData.image_url = image_url;
 
-    await Promise.all(promises);
+    // 인앱 알림 + notification_queue 기록
+    const bulkResult = await sendBulkNotification(targetUserIds, {
+      type: (data?.type || 'marketing') as NotificationType,
+      title,
+      body: messageBody,
+      data: enrichedData,
+      channel: 'push',
+    });
+
+    // notification-worker Edge Function 트리거
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (supabaseUrl && serviceKey) {
+        await fetch(`${supabaseUrl}/functions/v1/notification-worker`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}` },
+          body: JSON.stringify({}),
+        });
+      }
+    } catch (workerErr) {
+      console.error('[academy-push-worker]', workerErr);
+    }
 
     return NextResponse.json({
       success: true,
