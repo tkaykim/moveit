@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { sendNotification } from '@/lib/notifications';
 
 /**
  * PATCH /api/bookings/[id]/status
@@ -118,6 +119,17 @@ export async function PATCH(
           // 예약은 업데이트되었으므로 에러를 무시하고 진행
         }
       }
+    }
+
+    // 취소 알림 발송 (비동기)
+    if (status === 'CANCELLED' && updatedBooking?.user_id) {
+      sendNotification({
+        user_id: updatedBooking.user_id,
+        type: 'booking_cancelled',
+        title: '예약 취소',
+        body: '수업 예약이 취소되었습니다.',
+        data: { booking_id: id, url: '/schedule' },
+      }).catch((err) => console.error('[cancel-notification]', err));
     }
 
     return NextResponse.json({

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getSchedulesForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
+import { sendNotification } from '@/lib/notifications';
 
 /**
  * PATCH: 연장/일시정지 신청 승인 또는 거절 (관리자) - 쿠키 또는 Authorization Bearer
@@ -114,6 +115,23 @@ export async function PATCH(
       .select('*')
       .eq('id', id)
       .single();
+
+    // 연장/일시정지 승인/거절 알림 발송
+    const targetUserId = reqRow.user_tickets?.user_id;
+    if (targetUserId) {
+      const requestTypeLabel = reqRow.request_type === 'EXTENSION' ? '연장' : '일시정지';
+      const statusLabel = status === 'APPROVED' ? '승인' : '거절';
+      sendNotification({
+        user_id: targetUserId,
+        type: status === 'APPROVED' ? 'extension_approved' : 'extension_rejected',
+        title: `수강권 ${requestTypeLabel} ${statusLabel}`,
+        body: status === 'APPROVED'
+          ? `수강권 ${requestTypeLabel} 요청이 승인되었습니다.`
+          : `수강권 ${requestTypeLabel} 요청이 거절되었습니다.${reject_reason ? ` 사유: ${reject_reason}` : ''}`,
+        data: { extension_request_id: id, url: '/tickets' },
+      }).catch((err) => console.error('[extension-notification]', err));
+    }
+
     return NextResponse.json({ data: updated });
   } catch (e: any) {
     console.error(e);

@@ -35,6 +35,16 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Capacitor - Native build artifacts
+android/app/build/
+android/.gradle/
+android/build/
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
+
+# Playwright MCP logs
+.playwright-mcp/
+
 
 
 

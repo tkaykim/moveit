@@ -52,8 +52,8 @@ export async function POST(request: NextRequest) {
       upsertData.user_id = userId;
     }
 
-    const { data, error } = await (supabase
-      .from('device_tokens') as any)
+    const { data, error } = await (supabase as any)
+      .from('device_tokens')
       .upsert(upsertData, { onConflict: 'token' })
       .select()
       .single();
@@ -95,8 +95,8 @@ export async function DELETE(request: NextRequest) {
     const supabase = createServiceClient();
 
     // 토큰 비활성화 (사용자 인증 없이도 가능 - 로그아웃 후 호출될 수 있음)
-    const { error } = await (supabase
-      .from('device_tokens') as any)
+    const { error } = await (supabase as any)
+      .from('device_tokens')
       .update({ is_active: false, updated_at: new Date().toISOString() })
       .eq('token', token);
 

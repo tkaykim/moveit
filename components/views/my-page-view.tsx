@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import { useLocale } from '@/contexts/LocaleContext';
 import { QrModal } from '@/components/modals/qr-modal';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
+import { NotificationBadge } from '@/components/notifications/notification-badge';
 
 interface TicketSummary {
   regular: number;
@@ -250,6 +251,15 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-xl font-bold text-black dark:text-white">{t('my.title')}</h1>
             <div className="flex gap-3 items-center">
+              {user && (
+                <button
+                  onClick={() => router.push('/notifications')}
+                  className="relative p-1 text-neutral-600 dark:text-neutral-400 active:opacity-70"
+                >
+                  <Bell size={20} />
+                  <NotificationBadge />
+                </button>
+              )}
               <LanguageToggle />
               <ThemeToggle />
               {user && <UserMenu />}

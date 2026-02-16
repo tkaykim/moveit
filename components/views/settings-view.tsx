@@ -113,7 +113,10 @@ export const SettingsView = ({ onBack }: SettingsViewProps) => {
       {/* 알림 설정 */}
       <div className="space-y-1 mb-6">
         <h3 className="text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-2 px-1">{t('settings.notification')}</h3>
-        <button className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-left flex items-center justify-between active:scale-[0.98] transition-transform">
+        <button
+          onClick={() => window.location.href = '/notifications'}
+          className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 text-left flex items-center justify-between active:scale-[0.98] transition-transform"
+        >
           <div className="flex items-center gap-3">
             <Bell className="text-neutral-600 dark:text-neutral-400" size={20} />
             <span className="text-sm font-bold text-black dark:text-white">{t('settings.notificationSettings')}</span>

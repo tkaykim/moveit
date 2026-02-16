@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { consumeUserTicket, getAvailableUserTickets, updateUserTicket } from '@/lib/db/user-tickets';
 import { Database } from '@/types/database';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
+import { sendNotification } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -361,6 +362,17 @@ export async function POST(request: Request) {
         .from('schedules')
         .update({ current_students: actualCount })
         .eq('id', scheduleId);
+    }
+
+    // 푸시 알림 발송 (비동기, 실패해도 예약은 성공)
+    if (user?.id) {
+      sendNotification({
+        user_id: user.id,
+        type: 'booking_confirmed',
+        title: '예약 완료',
+        body: '수업 예약이 완료되었습니다.',
+        data: { booking_id: booking?.id, url: '/schedule' },
+      }).catch((err) => console.error('[booking-notification]', err));
     }
 
     return NextResponse.json({

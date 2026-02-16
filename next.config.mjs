@@ -86,6 +86,8 @@ const nextConfig = {
           '**/*.log',
           '**/dist/**',
           '**/build/**',
+          '**/android/**',
+          '**/ios/**',
         ],
       };
       

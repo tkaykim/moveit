@@ -3,6 +3,7 @@ import { getTicketById } from '@/lib/db/tickets';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { Database } from '@/types/database';
+import { sendNotification } from '@/lib/notifications';
 
 // 수강권 구매 (쿠키 또는 Authorization Bearer 토큰)
 export async function POST(request: Request) {
@@ -253,6 +254,15 @@ export async function POST(request: Request) {
     const message = isPeriodTicket && autoBookingResult.created > 0
       ? `${productType} 구매가 완료되었습니다. ${autoBookingResult.created}개의 수업이 자동 예약되었습니다.`
       : `${productType} 구매가 완료되었습니다.`;
+
+    // 푸시 알림 발송 (비동기, 실패해도 구매는 성공)
+    sendNotification({
+      user_id: user.id,
+      type: 'ticket_purchased',
+      title: `${productType} 구매 완료`,
+      body: `${ticket.name} ${productType}이(가) 구매되었습니다.`,
+      data: { ticket_id: ticketId, user_ticket_id: userTicket?.id, url: '/tickets' },
+    }).catch((err) => console.error('[purchase-notification]', err));
 
     return NextResponse.json({
       success: true,

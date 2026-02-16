@@ -11,6 +11,7 @@ import { LanguageToggle } from '@/components/common/language-toggle';
 import { BannerCarousel } from '@/components/banner/banner-carousel';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { NotificationBadge } from '@/components/notifications/notification-badge';
 
 interface HomeViewProps {
   onNavigate: (view: ViewState, query?: string) => void;
@@ -424,9 +425,12 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           <div className="flex gap-3 items-center">
             <LanguageToggle />
             <ThemeToggle />
-            <button className="relative">
+            <button
+              className="relative"
+              onClick={() => window.location.href = '/notifications'}
+            >
               <Bell className="text-neutral-600 dark:text-neutral-400" size={22} />
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></span>
+              <NotificationBadge />
             </button>
           </div>
         </div>

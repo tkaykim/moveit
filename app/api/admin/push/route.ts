@@ -22,8 +22,8 @@ export async function GET() {
     const supabase = createServiceClient();
 
     // 활성 디바이스 토큰 목록 (유저 정보 포함)
-    const { data: tokens, error: tokensError } = await (supabase
-      .from('device_tokens') as any)
+    const { data: tokens, error: tokensError } = await (supabase as any)
+      .from('device_tokens')
       .select('id, user_id, platform, is_active, created_at, updated_at')
       .eq('is_active', true)
       .order('created_at', { ascending: false });
@@ -37,21 +37,21 @@ export async function GET() {
     let usersWithTokens: any[] = [];
 
     if (userIds.length > 0) {
-      const { data: users } = await (supabase
-        .from('users') as any)
+      const { data: users } = await (supabase as any)
+        .from('users')
         .select('id, display_name, email, role')
         .in('id', userIds);
       usersWithTokens = users || [];
     }
 
     // 전체 유저 수
-    const { count: totalUsers } = await (supabase
-      .from('users') as any)
+    const { count: totalUsers } = await (supabase as any)
+      .from('users')
       .select('*', { count: 'exact', head: true });
 
     // 최근 발송 이력
-    const { data: recentQueue } = await (supabase
-      .from('notification_queue') as any)
+    const { data: recentQueue } = await (supabase as any)
+      .from('notification_queue')
       .select('id, user_id, title, body, status, created_at, processed_at, error_message')
       .order('created_at', { ascending: false })
       .limit(20);
@@ -102,7 +102,8 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceClient();
 
     // 모든 활성 디바이스 토큰 조회 (user_id 유무와 무관)
-    let tokenQuery = (supabase.from('device_tokens') as any)
+    let tokenQuery = (supabase as any)
+      .from('device_tokens')
       .select('id, token, platform, user_id')
       .eq('is_active', true);
 

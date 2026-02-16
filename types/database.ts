@@ -138,145 +138,83 @@ export interface FreeAccessConfig {
 }
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.1"
-  }
   public: {
     Tables: {
       academies: {
         Row: {
           address: string | null
+          consultation_availability: Json | null
           contact_number: string | null
           created_at: string | null
           description: string | null
           id: string
           images: Json | null
           instagram_handle: string | null
+          introduction_html: string | null
           is_active: boolean | null
+          kakao_channel_url: string | null
+          location: Json | null
           logo_url: string | null
+          max_extension_days: number | null
           name_en: string | null
           name_kr: string | null
-          other_url: string | null
-          kakao_channel_url: string | null
           naver_map_url: string | null
+          other_url: string | null
+          section_config: Json | null
           tags: string | null
           tiktok_handle: string | null
           website_url: string | null
           youtube_url: string | null
-          max_extension_days: number | null
-          consultation_availability: Json | null
-          section_config: Json | null
         }
         Insert: {
           address?: string | null
+          consultation_availability?: Json | null
           contact_number?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           images?: Json | null
           instagram_handle?: string | null
+          introduction_html?: string | null
           is_active?: boolean | null
+          kakao_channel_url?: string | null
+          location?: Json | null
           logo_url?: string | null
+          max_extension_days?: number | null
           name_en?: string | null
           name_kr?: string | null
-          other_url?: string | null
-          kakao_channel_url?: string | null
           naver_map_url?: string | null
+          other_url?: string | null
+          section_config?: Json | null
           tags?: string | null
           tiktok_handle?: string | null
           website_url?: string | null
           youtube_url?: string | null
-          max_extension_days?: number | null
-          consultation_availability?: Json | null
-          section_config?: Json | null
         }
         Update: {
           address?: string | null
+          consultation_availability?: Json | null
           contact_number?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           images?: Json | null
           instagram_handle?: string | null
+          introduction_html?: string | null
           is_active?: boolean | null
+          kakao_channel_url?: string | null
+          location?: Json | null
           logo_url?: string | null
+          max_extension_days?: number | null
           name_en?: string | null
           name_kr?: string | null
-          other_url?: string | null
-          kakao_channel_url?: string | null
           naver_map_url?: string | null
+          other_url?: string | null
+          section_config?: Json | null
           tags?: string | null
           tiktok_handle?: string | null
           website_url?: string | null
           youtube_url?: string | null
-          max_extension_days?: number | null
-          consultation_availability?: Json | null
-          section_config?: Json | null
-        }
-        Relationships: []
-      }
-      banners: {
-        Row: {
-          id: string
-          title: string
-          image_url: string
-          link_url: string | null
-          display_order: number
-          is_active: boolean
-          starts_at: string | null
-          ends_at: string | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          title: string
-          image_url: string
-          link_url?: string | null
-          display_order?: number
-          is_active?: boolean
-          starts_at?: string | null
-          ends_at?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          title?: string
-          image_url?: string
-          link_url?: string | null
-          display_order?: number
-          is_active?: boolean
-          starts_at?: string | null
-          ends_at?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      banner_settings: {
-        Row: {
-          id: string
-          auto_slide_interval: number
-          is_auto_slide_enabled: boolean
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          auto_slide_interval?: number
-          is_auto_slide_enabled?: boolean
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          auto_slide_interval?: number
-          is_auto_slide_enabled?: boolean
-          created_at?: string | null
-          updated_at?: string | null
         }
         Relationships: []
       }
@@ -445,51 +383,114 @@ export type Database = {
           },
         ]
       }
+      banner_settings: {
+        Row: {
+          auto_slide_interval: number | null
+          created_at: string | null
+          id: string
+          is_auto_slide_enabled: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          auto_slide_interval?: number | null
+          created_at?: string | null
+          id?: string
+          is_auto_slide_enabled?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          auto_slide_interval?: number | null
+          created_at?: string | null
+          id?: string
+          is_auto_slide_enabled?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      banners: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          ends_at: string | null
+          id: string
+          image_url: string
+          is_active: boolean | null
+          link_url: string | null
+          starts_at: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          ends_at?: string | null
+          id?: string
+          image_url: string
+          is_active?: boolean | null
+          link_url?: string | null
+          starts_at?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          ends_at?: string | null
+          id?: string
+          image_url?: string
+          is_active?: boolean | null
+          link_url?: string | null
+          starts_at?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
+          admin_note: string | null
           class_id: string | null
           created_at: string | null
+          guest_name: string | null
+          guest_phone: string | null
           hall_id: string | null
           id: string
+          is_admin_added: boolean
+          payment_status: string | null
           schedule_id: string | null
           status: string | null
           user_id: string | null
           user_ticket_id: string | null
-          guest_name: string | null
-          guest_phone: string | null
-          payment_status: string | null
-          is_admin_added: boolean | null
-          admin_note: string | null
         }
         Insert: {
+          admin_note?: string | null
           class_id?: string | null
           created_at?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
           hall_id?: string | null
           id?: string
+          is_admin_added?: boolean
+          payment_status?: string | null
           schedule_id?: string | null
           status?: string | null
           user_id?: string | null
           user_ticket_id?: string | null
-          guest_name?: string | null
-          guest_phone?: string | null
-          payment_status?: string | null
-          is_admin_added?: boolean | null
-          admin_note?: string | null
         }
         Update: {
+          admin_note?: string | null
           class_id?: string | null
           created_at?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
           hall_id?: string | null
           id?: string
+          is_admin_added?: boolean
+          payment_status?: string | null
           schedule_id?: string | null
           status?: string | null
           user_id?: string | null
           user_ticket_id?: string | null
-          guest_name?: string | null
-          guest_phone?: string | null
-          payment_status?: string | null
-          is_admin_added?: boolean | null
-          admin_note?: string | null
         }
         Relationships: [
           {
@@ -504,6 +505,13 @@ export type Database = {
             columns: ["hall_id"]
             isOneToOne: false
             referencedRelation: "halls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
             referencedColumns: ["id"]
           },
           {
@@ -525,7 +533,7 @@ export type Database = {
       classes: {
         Row: {
           academy_id: string
-          access_config: AccessConfig | null
+          access_config: Json | null
           additional_salary_per_student: number | null
           base_salary: number
           base_student_count: number | null
@@ -534,7 +542,9 @@ export type Database = {
           current_students: number | null
           description: string | null
           difficulty_level: string | null
+          discount_config: Json | null
           end_time: string | null
+          free_access_config: Json | null
           genre: string | null
           hall_id: string | null
           id: string
@@ -542,11 +552,9 @@ export type Database = {
           is_active: boolean | null
           is_canceled: boolean | null
           max_students: number | null
+          poster_url: string | null
           present_students: number | null
           price: number | null
-          discount_config: DiscountConfig | null
-          free_access_config: FreeAccessConfig | null
-          poster_url: string | null
           song: string | null
           start_time: string | null
           status: string | null
@@ -556,9 +564,7 @@ export type Database = {
         }
         Insert: {
           academy_id: string
-          access_config?: AccessConfig | null
-          discount_config?: DiscountConfig | null
-          free_access_config?: FreeAccessConfig | null
+          access_config?: Json | null
           additional_salary_per_student?: number | null
           base_salary?: number
           base_student_count?: number | null
@@ -567,7 +573,9 @@ export type Database = {
           current_students?: number | null
           description?: string | null
           difficulty_level?: string | null
+          discount_config?: Json | null
           end_time?: string | null
+          free_access_config?: Json | null
           genre?: string | null
           hall_id?: string | null
           id?: string
@@ -587,9 +595,7 @@ export type Database = {
         }
         Update: {
           academy_id?: string
-          access_config?: AccessConfig | null
-          discount_config?: DiscountConfig | null
-          free_access_config?: FreeAccessConfig | null
+          access_config?: Json | null
           additional_salary_per_student?: number | null
           base_salary?: number
           base_student_count?: number | null
@@ -598,7 +604,9 @@ export type Database = {
           current_students?: number | null
           description?: string | null
           difficulty_level?: string | null
+          discount_config?: Json | null
           end_time?: string | null
+          free_access_config?: Json | null
           genre?: string | null
           hall_id?: string | null
           id?: string
@@ -642,36 +650,46 @@ export type Database = {
       }
       consultation_categories: {
         Row: {
-          id: string
           academy_id: string
-          name: string
-          duration_minutes: number
-          display_order: number | null
           created_at: string | null
+          display_order: number | null
+          duration_minutes: number
+          id: string
+          name: string
         }
         Insert: {
-          id?: string
           academy_id: string
-          name: string
-          duration_minutes?: number
-          display_order?: number | null
           created_at?: string | null
+          display_order?: number | null
+          duration_minutes?: number
+          id?: string
+          name: string
         }
         Update: {
-          id?: string
           academy_id?: string
-          name?: string
-          duration_minutes?: number
-          display_order?: number | null
           created_at?: string | null
+          display_order?: number | null
+          duration_minutes?: number
+          id?: string
+          name?: string
         }
-        Relationships: [{ foreignKeyName: "consultation_categories_academy_id_fkey"; columns: ["academy_id"]; isOneToOne: false; referencedRelation: "academies"; referencedColumns: ["id"] }]
+        Relationships: [
+          {
+            foreignKeyName: "consultation_categories_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       consultations: {
         Row: {
           academy_id: string
           assigned_to: string | null
+          category_id: string | null
           created_at: string | null
+          detail: string | null
           id: string
           name: string
           notes: string | null
@@ -681,14 +699,14 @@ export type Database = {
           topic: string
           updated_at: string | null
           user_id: string | null
-          category_id: string | null
-          detail: string | null
           visit_datetime: string | null
         }
         Insert: {
           academy_id: string
           assigned_to?: string | null
+          category_id?: string | null
           created_at?: string | null
+          detail?: string | null
           id?: string
           name: string
           notes?: string | null
@@ -698,14 +716,14 @@ export type Database = {
           topic: string
           updated_at?: string | null
           user_id?: string | null
-          category_id?: string | null
-          detail?: string | null
           visit_datetime?: string | null
         }
         Update: {
           academy_id?: string
           assigned_to?: string | null
+          category_id?: string | null
           created_at?: string | null
+          detail?: string | null
           id?: string
           name?: string
           notes?: string | null
@@ -715,8 +733,6 @@ export type Database = {
           topic?: string
           updated_at?: string | null
           user_id?: string | null
-          category_id?: string | null
-          detail?: string | null
           visit_datetime?: string | null
         }
         Relationships: [
@@ -732,6 +748,13 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultations_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "consultation_categories"
             referencedColumns: ["id"]
           },
           {
@@ -806,6 +829,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      dance_categories: {
+        Row: {
+          name_en: string | null
+          name_kr: string | null
+          tag: string
+        }
+        Insert: {
+          name_en?: string | null
+          name_kr?: string | null
+          tag: string
+        }
+        Update: {
+          name_en?: string | null
+          name_kr?: string | null
+          tag?: string
+        }
+        Relationships: []
+      }
+      device_tokens: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          platform: string
+          token: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          platform: string
+          token: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          platform?: string
+          token?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       discounts: {
         Row: {
@@ -1025,6 +1096,144 @@ export type Database = {
           name_kr?: string | null
           profile_image_url?: string | null
           specialties?: string | null
+        }
+        Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          booking_updates: boolean | null
+          class_reminder: boolean | null
+          created_at: string | null
+          id: string
+          kakao_enabled: boolean | null
+          marketing: boolean | null
+          push_enabled: boolean | null
+          reminder_minutes_before: number | null
+          ticket_updates: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          booking_updates?: boolean | null
+          class_reminder?: boolean | null
+          created_at?: string | null
+          id?: string
+          kakao_enabled?: boolean | null
+          marketing?: boolean | null
+          push_enabled?: boolean | null
+          reminder_minutes_before?: number | null
+          ticket_updates?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          booking_updates?: boolean | null
+          class_reminder?: boolean | null
+          created_at?: string | null
+          id?: string
+          kakao_enabled?: boolean | null
+          marketing?: boolean | null
+          push_enabled?: boolean | null
+          reminder_minutes_before?: number | null
+          ticket_updates?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_queue: {
+        Row: {
+          body: string
+          channel: string
+          created_at: string | null
+          data: Json | null
+          error_message: string | null
+          id: string
+          max_retries: number | null
+          notification_type: string
+          processed_at: string | null
+          retry_count: number | null
+          scheduled_at: string | null
+          status: string | null
+          template_code: string | null
+          template_data: Json | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          channel?: string
+          created_at?: string | null
+          data?: Json | null
+          error_message?: string | null
+          id?: string
+          max_retries?: number | null
+          notification_type: string
+          processed_at?: string | null
+          retry_count?: number | null
+          scheduled_at?: string | null
+          status?: string | null
+          template_code?: string | null
+          template_data?: Json | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          channel?: string
+          created_at?: string | null
+          data?: Json | null
+          error_message?: string | null
+          id?: string
+          max_retries?: number | null
+          notification_type?: string
+          processed_at?: string | null
+          retry_count?: number | null
+          scheduled_at?: string | null
+          status?: string | null
+          template_code?: string | null
+          template_data?: Json | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string
+          channel: string
+          created_at: string | null
+          data: Json | null
+          id: string
+          is_read: boolean | null
+          status: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          channel?: string
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          status?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          channel?: string
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          status?: string | null
+          title?: string
+          type?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1331,46 +1540,46 @@ export type Database = {
       }
       support_requests: {
         Row: {
+          academy_id: string
+          admin_note: string | null
+          bug_situation: string | null
+          created_at: string
+          current_state: string
           id: string
+          improvement_request: string
           request_type: string
           status: string
           title: string
-          bug_situation: string | null
-          current_state: string
-          improvement_request: string
-          user_id: string
-          academy_id: string
-          admin_note: string | null
-          created_at: string
           updated_at: string
+          user_id: string
         }
         Insert: {
+          academy_id: string
+          admin_note?: string | null
+          bug_situation?: string | null
+          created_at?: string
+          current_state: string
           id?: string
+          improvement_request: string
           request_type: string
           status?: string
           title: string
-          bug_situation?: string | null
-          current_state: string
-          improvement_request: string
-          user_id: string
-          academy_id: string
-          admin_note?: string | null
-          created_at?: string
           updated_at?: string
+          user_id: string
         }
         Update: {
+          academy_id?: string
+          admin_note?: string | null
+          bug_situation?: string | null
+          created_at?: string
+          current_state?: string
           id?: string
+          improvement_request?: string
           request_type?: string
           status?: string
           title?: string
-          bug_situation?: string | null
-          current_state?: string
-          improvement_request?: string
-          user_id?: string
-          academy_id?: string
-          admin_note?: string | null
-          created_at?: string
           updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -1389,24 +1598,121 @@ export type Database = {
           },
         ]
       }
+      ticket_classes: {
+        Row: {
+          class_id: string
+          created_at: string | null
+          id: string
+          ticket_id: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string | null
+          id?: string
+          ticket_id: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string | null
+          id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_classes_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_classes_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_extension_requests: {
+        Row: {
+          absent_end_date: string | null
+          absent_start_date: string | null
+          created_at: string | null
+          extension_days: number | null
+          id: string
+          processed_at: string | null
+          processed_by: string | null
+          reason: string | null
+          reject_reason: string | null
+          request_type: string
+          status: string
+          updated_at: string | null
+          user_ticket_id: string
+        }
+        Insert: {
+          absent_end_date?: string | null
+          absent_start_date?: string | null
+          created_at?: string | null
+          extension_days?: number | null
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string | null
+          reject_reason?: string | null
+          request_type: string
+          status?: string
+          updated_at?: string | null
+          user_ticket_id: string
+        }
+        Update: {
+          absent_end_date?: string | null
+          absent_start_date?: string | null
+          created_at?: string | null
+          extension_days?: number | null
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string | null
+          reject_reason?: string | null
+          request_type?: string
+          status?: string
+          updated_at?: string | null
+          user_ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_extension_requests_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_extension_requests_user_ticket_id_fkey"
+            columns: ["user_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "user_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tickets: {
         Row: {
           academy_id: string | null
           access_group: string | null
           class_id: string | null
-          /** 팝업 수량별 가격: [{ count, price, valid_days? }] */
           count_options: Json | null
           created_at: string | null
           id: string
-          is_coupon: boolean
+          is_coupon: boolean | null
           is_general: boolean
           is_on_sale: boolean | null
-          /** true=공개(유저 구매 가능), false=비공개(Admin만 판매/지급) */
           is_public: boolean | null
           name: string
           price: number | null
+          ticket_category: string | null
           ticket_type: string
-          ticket_category: 'regular' | 'popup' | 'workshop'
           total_count: number | null
           valid_days: number | null
         }
@@ -1417,14 +1723,14 @@ export type Database = {
           count_options?: Json | null
           created_at?: string | null
           id?: string
-          is_coupon?: boolean
+          is_coupon?: boolean | null
           is_general?: boolean
           is_on_sale?: boolean | null
           is_public?: boolean | null
           name: string
           price?: number | null
+          ticket_category?: string | null
           ticket_type: string
-          ticket_category?: 'regular' | 'popup' | 'workshop'
           total_count?: number | null
           valid_days?: number | null
         }
@@ -1435,14 +1741,14 @@ export type Database = {
           count_options?: Json | null
           created_at?: string | null
           id?: string
-          is_coupon?: boolean
+          is_coupon?: boolean | null
           is_general?: boolean
           is_on_sale?: boolean | null
           is_public?: boolean | null
           name?: string
           price?: number | null
+          ticket_category?: string | null
           ticket_type?: string
-          ticket_category?: 'regular' | 'popup' | 'workshop'
           total_count?: number | null
           valid_days?: number | null
         }
@@ -1463,91 +1769,122 @@ export type Database = {
           },
         ]
       }
-      ticket_classes: {
+      translation_cache: {
         Row: {
-          id: string
-          ticket_id: string
-          class_id: string
           created_at: string | null
+          id: string
+          source_lang: string | null
+          source_text: string
+          target_lang: string
+          translated_text: string
+          updated_at: string | null
         }
         Insert: {
-          id?: string
-          ticket_id: string
-          class_id: string
           created_at?: string | null
+          id?: string
+          source_lang?: string | null
+          source_text: string
+          target_lang: string
+          translated_text: string
+          updated_at?: string | null
         }
         Update: {
-          id?: string
-          ticket_id?: string
-          class_id?: string
           created_at?: string | null
+          id?: string
+          source_lang?: string | null
+          source_text?: string
+          target_lang?: string
+          translated_text?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_bookings: {
+        Row: {
+          created_at: string
+          id: number
+          schedule_id: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          schedule_id?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          schedule_id?: string | null
+          status?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "ticket_classes_ticket_id_fkey"
+            foreignKeyName: "user_bookings_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_bookings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_payments: {
+        Row: {
+          academy_id: string | null
+          created_at: string
+          id: number
+          payment_id: string | null
+          ticket_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          academy_id?: string | null
+          created_at?: string
+          id?: number
+          payment_id?: string | null
+          ticket_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          academy_id?: string | null
+          created_at?: string
+          id?: number
+          payment_id?: string | null
+          ticket_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_payments_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_payments_ticket_id_fkey"
             columns: ["ticket_id"]
             isOneToOne: false
             referencedRelation: "tickets"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "ticket_classes_class_id_fkey"
-            columns: ["class_id"]
+            foreignKeyName: "user_payments_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "classes"
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      ticket_extension_requests: {
-        Row: {
-          id: string
-          user_ticket_id: string
-          request_type: string
-          absent_start_date: string | null
-          absent_end_date: string | null
-          extension_days: number | null
-          reason: string | null
-          status: string
-          reject_reason: string | null
-          processed_at: string | null
-          processed_by: string | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          user_ticket_id: string
-          request_type: string
-          absent_start_date?: string | null
-          absent_end_date?: string | null
-          extension_days?: number | null
-          reason?: string | null
-          status?: string
-          reject_reason?: string | null
-          processed_at?: string | null
-          processed_by?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          user_ticket_id?: string
-          request_type?: string
-          extension_days?: number | null
-          reason?: string | null
-          absent_start_date?: string
-          absent_end_date?: string
-          status?: string
-          reject_reason?: string | null
-          processed_at?: string | null
-          processed_by?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          { foreignKeyName: "ticket_extension_requests_user_ticket_id_fkey"; columns: ["user_ticket_id"]; isOneToOne: false; referencedRelation: "user_tickets"; referencedColumns: ["id"] },
-          { foreignKeyName: "ticket_extension_requests_processed_by_fkey"; columns: ["processed_by"]; isOneToOne: false; referencedRelation: "users"; referencedColumns: ["id"] },
         ]
       }
       user_tickets: {
@@ -1604,6 +1941,7 @@ export type Database = {
           birth_date: string | null
           created_at: string | null
           email: string | null
+          fcm_token: string | null
           gender: string | null
           id: string
           name: string | null
@@ -1620,6 +1958,7 @@ export type Database = {
           birth_date?: string | null
           created_at?: string | null
           email?: string | null
+          fcm_token?: string | null
           gender?: string | null
           id?: string
           name?: string | null
@@ -1636,6 +1975,7 @@ export type Database = {
           birth_date?: string | null
           created_at?: string | null
           email?: string | null
+          fcm_token?: string | null
           gender?: string | null
           id?: string
           name?: string | null
@@ -1654,7 +1994,42 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_student_user: {
+        Args: {
+          p_address?: string
+          p_birth_date?: string
+          p_email?: string
+          p_gender?: string
+          p_name: string
+          p_name_en?: string
+          p_nationality?: string
+          p_nickname?: string
+          p_phone?: string
+        }
+        Returns: {
+          address: string | null
+          birth_date: string | null
+          created_at: string | null
+          email: string | null
+          fcm_token: string | null
+          gender: string | null
+          id: string
+          name: string | null
+          name_en: string | null
+          nationality: string | null
+          nickname: string | null
+          phone: string | null
+          profile_image: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "users"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
     }
     Enums: {
       user_role:
@@ -1670,25 +2045,23 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof Database
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -1706,16 +2079,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof Database
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -1731,16 +2104,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof Database
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -1756,16 +2129,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof Database
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -1773,16 +2146,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof Database
 }
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
