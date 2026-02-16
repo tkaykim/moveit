@@ -64,33 +64,60 @@ export default function RootLayout({
                   }
                   return false;
                 }
-                
-                // 즉시 확인
-                if (checkCSSLoaded()) {
-                  return;
+                if (checkCSSLoaded()) {} else {
+                  if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', function() {
+                      setTimeout(function() { if (!checkCSSLoaded()) document.documentElement.classList.add('css-loaded'); }, 100);
+                    });
+                  } else {
+                    setTimeout(function() { if (!checkCSSLoaded()) document.documentElement.classList.add('css-loaded'); }, 100);
+                  }
+                }
+                setTimeout(function() { document.documentElement.classList.add('css-loaded'); }, 3000);
+
+                // Capacitor 브릿지 조기 감지 및 푸시 알림 초기화
+                window.__PUSH_DEBUG = [];
+                function pushLog(msg) {
+                  window.__PUSH_DEBUG.push(new Date().toLocaleTimeString() + ': ' + msg);
+                  console.log('[EarlyPush] ' + msg);
                 }
                 
-                // DOMContentLoaded 후 확인
-                if (document.readyState === 'loading') {
-                  document.addEventListener('DOMContentLoaded', function() {
-                    setTimeout(function() {
-                      if (!checkCSSLoaded()) {
-                        document.documentElement.classList.add('css-loaded');
-                      }
-                    }, 100);
-                  });
-                } else {
-                  setTimeout(function() {
-                    if (!checkCSSLoaded()) {
-                      document.documentElement.classList.add('css-loaded');
+                function tryEarlyPush() {
+                  var cap = window.Capacitor;
+                  pushLog('cap=' + (cap ? 'Y' : 'N'));
+                  if (!cap) return false;
+                  
+                  pushLog('platform=' + (cap.getPlatform ? cap.getPlatform() : 'unknown'));
+                  pushLog('isNative=' + (cap.isNativePlatform ? cap.isNativePlatform() : 'unknown'));
+                  pushLog('bridge=' + (!!window.androidBridge));
+                  
+                  var isNative = false;
+                  try {
+                    isNative = typeof cap.isNativePlatform === 'function' ? cap.isNativePlatform() : cap.isNativePlatform === true;
+                  } catch(e) { pushLog('detect err: ' + e.message); }
+                  
+                  if (!isNative) {
+                    pushLog('not native');
+                    return false;
+                  }
+                  
+                  pushLog('NATIVE OK - plugin avail=' + (cap.isPluginAvailable ? cap.isPluginAvailable('PushNotifications') : '?'));
+                  window.__CAPACITOR_IS_NATIVE = true;
+                  return true;
+                }
+                
+                // 즉시 시도
+                if (!tryEarlyPush()) {
+                  // 200ms 간격으로 재시도 (최대 3초)
+                  var attempts = 0;
+                  var timer = setInterval(function() {
+                    attempts++;
+                    if (tryEarlyPush() || attempts >= 15) {
+                      clearInterval(timer);
+                      if (attempts >= 15) pushLog('timeout - cap not found');
                     }
-                  }, 100);
+                  }, 200);
                 }
-                
-                // 최대 3초 후 강제로 표시
-                setTimeout(function() {
-                  document.documentElement.classList.add('css-loaded');
-                }, 3000);
               })();
             `
           }}

@@ -9,8 +9,9 @@ interface PushNotificationContextType {
   permissionGranted: boolean;
   unreadCount: number;
   refreshUnreadCount: () => Promise<void>;
-  /** 푸시 알림 권한 요청 (설정 페이지에서 호출) */
   requestPermission: () => Promise<boolean>;
+  /** 디버그 정보 (임시) */
+  debugInfo: string;
 }
 
 const PushNotificationContext = createContext<PushNotificationContextType>({
@@ -20,24 +21,11 @@ const PushNotificationContext = createContext<PushNotificationContextType>({
   unreadCount: 0,
   refreshUnreadCount: async () => {},
   requestPermission: async () => false,
+  debugInfo: '',
 });
 
 export function usePushNotification() {
   return useContext(PushNotificationContext);
-}
-
-/** Capacitor 네이티브 앱인지 직접 감지 (window.Capacitor 확인) */
-function detectNativePlatform(): { isNative: boolean; platform: string } {
-  if (typeof window === 'undefined') return { isNative: false, platform: 'web' };
-
-  const cap = (window as any).Capacitor;
-  if (cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform()) {
-    return { isNative: true, platform: cap.getPlatform?.() || 'native' };
-  }
-  if (cap && cap.isNativePlatform === true) {
-    return { isNative: true, platform: cap.getPlatform?.() || 'native' };
-  }
-  return { isNative: false, platform: 'web' };
 }
 
 export function PushNotificationProvider({ children }: { children: ReactNode }) {
@@ -46,13 +34,20 @@ export function PushNotificationProvider({ children }: { children: ReactNode }) 
   const [isSupported, setIsSupported] = useState(false);
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const initAttemptedRef = useRef(false);
-  const tokenSyncedRef = useRef<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState('init');
+  const initRef = useRef(false);
+  const tokenSyncRef = useRef<string | null>(null);
+
+  const log = useCallback((msg: string) => {
+    console.log('[Push]', msg);
+    setDebugInfo(prev => prev + '\n' + msg);
+  }, []);
 
   // 서버에 토큰 등록
   const saveTokenToServer = useCallback(async (token: string) => {
     try {
-      const { platform } = detectNativePlatform();
+      const cap = (window as any).Capacitor;
+      const platform = cap?.getPlatform?.() || 'unknown';
       const res = await fetch('/api/notifications/device-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -60,117 +55,211 @@ export function PushNotificationProvider({ children }: { children: ReactNode }) 
       });
       if (res.ok) {
         console.log('[Push] 토큰 서버 등록 완료');
-      } else {
-        console.error('[Push] 토큰 서버 등록 실패:', await res.text());
       }
     } catch (error) {
       console.error('[Push] 토큰 서버 등록 오류:', error);
     }
   }, []);
 
-  // 푸시 알림 권한 요청 + 토큰 등록
-  const requestPermission = useCallback(async (): Promise<boolean> => {
-    const { isNative } = detectNativePlatform();
-    console.log('[Push] requestPermission called, isNative:', isNative);
-
-    if (!isNative) {
-      console.log('[Push] 네이티브 환경이 아님 - 건너뜀');
-      return false;
-    }
-
+  // 방법1: @capacitor/push-notifications npm 패키지 사용
+  const tryNpmPackage = useCallback(async (): Promise<boolean> => {
+    log('npm 패키지 시도...');
     try {
-      const { PushNotifications } = await import('@capacitor/push-notifications');
+      const mod = await import('@capacitor/push-notifications');
+      const PN = mod.PushNotifications;
+      log('PushNotifications import 성공');
 
-      // 권한 확인
-      let permStatus = await PushNotifications.checkPermissions();
-      console.log('[Push] 현재 권한 상태:', permStatus.receive);
+      let permStatus = await PN.checkPermissions();
+      log('권한 상태: ' + permStatus.receive);
 
       if (permStatus.receive === 'prompt' || permStatus.receive === 'prompt-with-rationale') {
-        permStatus = await PushNotifications.requestPermissions();
-        console.log('[Push] 권한 요청 결과:', permStatus.receive);
+        permStatus = await PN.requestPermissions();
+        log('권한 요청 결과: ' + permStatus.receive);
       }
 
       if (permStatus.receive !== 'granted') {
-        console.log('[Push] 권한 거부됨');
-        setPermissionGranted(false);
+        log('권한 거부됨');
         return false;
       }
 
       setPermissionGranted(true);
 
-      // 리스너 등록 + FCM 등록
-      await PushNotifications.removeAllListeners();
-
-      PushNotifications.addListener('registration', (token) => {
-        console.log('[Push] FCM 토큰 획득:', token.value.substring(0, 20) + '...');
+      await PN.removeAllListeners();
+      PN.addListener('registration', (token) => {
+        log('FCM 토큰 획득: ' + token.value.substring(0, 20) + '...');
         setDeviceToken(token.value);
         saveTokenToServer(token.value);
       });
-
-      PushNotifications.addListener('registrationError', (error) => {
-        console.error('[Push] FCM 등록 실패:', error);
+      PN.addListener('registrationError', (err) => {
+        log('FCM 등록 오류: ' + JSON.stringify(err));
       });
-
-      PushNotifications.addListener('pushNotificationReceived', (notification) => {
-        console.log('[Push] 포그라운드 알림 수신:', notification);
-        setUnreadCount((prev) => prev + 1);
+      PN.addListener('pushNotificationReceived', (notif) => {
+        log('포그라운드 알림: ' + JSON.stringify(notif.title));
+        setUnreadCount(prev => prev + 1);
       });
-
-      PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-        console.log('[Push] 알림 탭:', action);
+      PN.addListener('pushNotificationActionPerformed', (action) => {
         const data = action.notification.data;
         if (data?.url && typeof window !== 'undefined') {
           window.location.href = data.url;
         }
       });
 
-      await PushNotifications.register();
-      console.log('[Push] FCM register() 호출 완료');
+      await PN.register();
+      log('FCM register() 호출 완료');
       return true;
-    } catch (error) {
-      console.error('[Push] 권한 요청 오류:', error);
+    } catch (error: any) {
+      log('npm 패키지 실패: ' + (error?.message || String(error)));
       return false;
     }
-  }, [saveTokenToServer]);
+  }, [log, saveTokenToServer]);
+
+  // 방법2: window.Capacitor 브릿지 직접 호출
+  const tryDirectBridge = useCallback(async (): Promise<boolean> => {
+    log('직접 브릿지 시도...');
+    try {
+      const cap = (window as any).Capacitor;
+      if (!cap) {
+        log('window.Capacitor 없음');
+        return false;
+      }
+
+      // Capacitor 브릿지의 nativeCallback 또는 Plugins 접근
+      let PN: any = null;
+
+      // 방법 2a: Capacitor.Plugins 접근
+      if (cap.Plugins?.PushNotifications) {
+        PN = cap.Plugins.PushNotifications;
+        log('Plugins.PushNotifications 발견');
+      }
+
+      // 방법 2b: registerPlugin 직접 호출
+      if (!PN && cap.registerPlugin) {
+        log('registerPlugin으로 직접 등록...');
+        PN = cap.registerPlugin('PushNotifications');
+      }
+
+      if (!PN) {
+        log('PushNotifications 플러그인 찾을 수 없음');
+        log('Capacitor keys: ' + Object.keys(cap).join(', '));
+        if (cap.Plugins) {
+          log('Plugins keys: ' + Object.keys(cap.Plugins).join(', '));
+        }
+        return false;
+      }
+
+      const permStatus = await PN.requestPermissions();
+      log('직접 브릿지 권한 결과: ' + JSON.stringify(permStatus));
+
+      if (permStatus.receive === 'granted') {
+        setPermissionGranted(true);
+
+        // 리스너 설정
+        if (typeof PN.addListener === 'function') {
+          PN.addListener('registration', (token: any) => {
+            const val = token?.value || token;
+            log('직접 브릿지 토큰: ' + String(val).substring(0, 20) + '...');
+            setDeviceToken(String(val));
+            saveTokenToServer(String(val));
+          });
+        }
+
+        await PN.register();
+        log('직접 브릿지 register() 완료');
+        return true;
+      }
+
+      return false;
+    } catch (error: any) {
+      log('직접 브릿지 실패: ' + (error?.message || String(error)));
+      return false;
+    }
+  }, [log, saveTokenToServer]);
+
+  // 통합 권한 요청
+  const requestPermission = useCallback(async (): Promise<boolean> => {
+    const cap = (window as any).Capacitor;
+    const isNative = cap && (
+      (typeof cap.isNativePlatform === 'function' && cap.isNativePlatform()) ||
+      cap.isNativePlatform === true ||
+      (cap.getPlatform?.() === 'android' || cap.getPlatform?.() === 'ios')
+    );
+
+    log('requestPermission - isNative: ' + isNative);
+    log('platform: ' + cap?.getPlatform?.());
+
+    if (!isNative) return false;
+
+    // 방법1 시도
+    const npm = await tryNpmPackage();
+    if (npm) return true;
+
+    // 방법2 시도
+    const direct = await tryDirectBridge();
+    if (direct) return true;
+
+    log('모든 방법 실패');
+    return false;
+  }, [log, tryNpmPackage, tryDirectBridge]);
 
   // 앱 시작 시 자동 초기화
   useEffect(() => {
-    if (initAttemptedRef.current) return;
-    initAttemptedRef.current = true;
+    if (initRef.current) return;
+    initRef.current = true;
 
-    // Capacitor 브릿지 로딩 대기 후 초기화
-    const tryInit = () => {
-      const { isNative, platform } = detectNativePlatform();
-      console.log('[Push] 플랫폼 감지:', { isNative, platform });
+    const attemptInit = async () => {
+      const cap = (window as any).Capacitor;
+      log('초기화 시작');
+      log('window.Capacitor: ' + (cap ? 'exists' : 'null'));
+      log('androidBridge: ' + !!(window as any).androidBridge);
 
-      if (isNative) {
-        setIsSupported(true);
-        requestPermission();
+      if (cap) {
+        log('isNativePlatform: ' + cap.isNativePlatform?.());
+        log('getPlatform: ' + cap.getPlatform?.());
+        log('isPluginAvailable: ' + cap.isPluginAvailable?.('PushNotifications'));
+        log('Capacitor keys: ' + Object.keys(cap).join(','));
+      }
+
+      const isNative = cap && (
+        (typeof cap.isNativePlatform === 'function' && cap.isNativePlatform()) ||
+        cap.isNativePlatform === true ||
+        (cap.getPlatform?.() === 'android' || cap.getPlatform?.() === 'ios')
+      );
+
+      if (!isNative) {
+        log('네이티브 아님 - 종료');
+        setIsSupported(false);
+        return;
+      }
+
+      setIsSupported(true);
+      await requestPermission();
+    };
+
+    // Capacitor 브릿지가 아직 없을 수 있으므로 폴링
+    const poll = (attempt: number) => {
+      if ((window as any).Capacitor) {
+        attemptInit();
+      } else if (attempt < 20) {
+        // 최대 4초까지 200ms 간격으로 폴링
+        setTimeout(() => poll(attempt + 1), 200);
       } else {
+        log('Capacitor 브릿지 감지 실패 (4초 타임아웃)');
         setIsSupported(false);
       }
     };
 
-    // Capacitor 브릿지가 아직 로드되지 않았을 수 있으므로 약간 대기
-    if ((window as any).Capacitor) {
-      tryInit();
-    } else {
-      // 500ms 후 재시도
-      const timer = setTimeout(tryInit, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [requestPermission]);
+    poll(0);
+  }, [requestPermission, log]);
 
-  // 로그인 시 토큰에 user_id 연결
+  // 로그인 시 토큰 연결
   useEffect(() => {
     if (!deviceToken || !user) return;
-    if (tokenSyncedRef.current === user.id) return;
-
-    tokenSyncedRef.current = user.id;
+    if (tokenSyncRef.current === user.id) return;
+    tokenSyncRef.current = user.id;
     saveTokenToServer(deviceToken);
   }, [user, deviceToken, saveTokenToServer]);
 
-  // 읽지 않은 알림 수 조회
+  // 읽지 않은 알림 수
   const refreshUnreadCount = useCallback(async () => {
     if (!user) { setUnreadCount(0); return; }
     try {
@@ -179,9 +268,7 @@ export function PushNotificationProvider({ children }: { children: ReactNode }) 
         const data = await res.json();
         setUnreadCount(data.unread_count || 0);
       }
-    } catch (error) {
-      console.error('[Push] 알림 수 조회 실패:', error);
-    }
+    } catch {}
   }, [user]);
 
   useEffect(() => {
@@ -191,14 +278,7 @@ export function PushNotificationProvider({ children }: { children: ReactNode }) 
 
   return (
     <PushNotificationContext.Provider
-      value={{
-        deviceToken,
-        isSupported,
-        permissionGranted,
-        unreadCount,
-        refreshUnreadCount,
-        requestPermission,
-      }}
+      value={{ deviceToken, isSupported, permissionGranted, unreadCount, refreshUnreadCount, requestPermission, debugInfo }}
     >
       {children}
     </PushNotificationContext.Provider>

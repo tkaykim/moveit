@@ -38,6 +38,7 @@ export function NotificationSettings({ onBack }: NotificationSettingsProps) {
     permissionGranted,
     deviceToken,
     requestPermission,
+    debugInfo,
   } = usePushNotification();
 
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
@@ -249,6 +250,45 @@ export function NotificationSettings({ onBack }: NotificationSettingsProps) {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* 디버그 정보 (임시) */}
+      <div className="mb-4 p-3 bg-neutral-100 dark:bg-neutral-800 rounded-xl">
+        <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400 mb-1">Push Debug Info:</p>
+        <p className="text-[10px] font-mono text-neutral-600 dark:text-neutral-300 whitespace-pre-wrap break-all max-h-32 overflow-y-auto">
+          {debugInfo || 'no info'}
+          {typeof window !== 'undefined' && (window as any).__PUSH_DEBUG ? 
+            '\n\nEarly: ' + ((window as any).__PUSH_DEBUG || []).join('\n') : ''}
+        </p>
+        <div className="mt-2 flex gap-2">
+          <button
+            onClick={async () => {
+              const result = await requestPermission();
+              alert('권한 요청 결과: ' + result);
+            }}
+            className="px-3 py-1 bg-blue-500 text-white text-xs rounded-lg"
+          >
+            수동 권한 요청
+          </button>
+          <button
+            onClick={() => {
+              const cap = (window as any).Capacitor;
+              const info = {
+                cap: !!cap,
+                platform: cap?.getPlatform?.(),
+                isNative: cap?.isNativePlatform?.(),
+                bridge: !!(window as any).androidBridge,
+                plugins: cap?.Plugins ? Object.keys(cap.Plugins) : 'none',
+                pluginAvail: cap?.isPluginAvailable?.('PushNotifications'),
+                earlyDebug: (window as any).__PUSH_DEBUG,
+              };
+              alert(JSON.stringify(info, null, 2));
+            }}
+            className="px-3 py-1 bg-gray-500 text-white text-xs rounded-lg"
+          >
+            브릿지 상태
+          </button>
         </div>
       </div>
 
