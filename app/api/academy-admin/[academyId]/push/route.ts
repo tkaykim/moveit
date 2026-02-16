@@ -23,20 +23,33 @@ export async function GET(
       );
     }
 
-    // 학원 관리자 권한 확인
+    // 학원 관리자 권한 확인 (SUPER_ADMIN도 허용)
     const serviceSupabase = createServiceClient();
-    const { data: roleData, error: roleError } = await serviceSupabase
-      .from('academy_user_roles')
+    
+    // 1. SUPER_ADMIN 여부 확인
+    const { data: userData } = await serviceSupabase
+      .from('users')
       .select('role')
-      .eq('academy_id', academyId)
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
+      
+    const isSuperAdmin = userData?.role === 'SUPER_ADMIN';
 
-    if (roleError || !roleData || !['ACADEMY_OWNER', 'ACADEMY_MANAGER'].includes(roleData.role)) {
-      return NextResponse.json(
-        { error: '학원 관리자 권한이 필요합니다.' },
-        { status: 403 }
-      );
+    if (!isSuperAdmin) {
+      // 2. 학원 관리자 권한 확인
+      const { data: roleData, error: roleError } = await serviceSupabase
+        .from('academy_user_roles')
+        .select('role')
+        .eq('academy_id', academyId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (roleError || !roleData || !['ACADEMY_OWNER', 'ACADEMY_MANAGER'].includes(roleData.role)) {
+        return NextResponse.json(
+          { error: '학원 관리자 권한이 필요합니다.' },
+          { status: 403 }
+        );
+      }
     }
 
     // 해당 학원에 등록된 수강생 목록 조회
@@ -97,20 +110,33 @@ export async function POST(
       );
     }
 
-    // 학원 관리자 권한 확인
+    // 학원 관리자 권한 확인 (SUPER_ADMIN도 허용)
     const serviceSupabase = createServiceClient();
-    const { data: roleData, error: roleError } = await serviceSupabase
-      .from('academy_user_roles')
+    
+    // 1. SUPER_ADMIN 여부 확인
+    const { data: userData } = await serviceSupabase
+      .from('users')
       .select('role')
-      .eq('academy_id', academyId)
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
+      
+    const isSuperAdmin = userData?.role === 'SUPER_ADMIN';
 
-    if (roleError || !roleData || !['ACADEMY_OWNER', 'ACADEMY_MANAGER'].includes(roleData.role)) {
-      return NextResponse.json(
-        { error: '학원 관리자 권한이 필요합니다.' },
-        { status: 403 }
-      );
+    if (!isSuperAdmin) {
+      // 2. 학원 관리자 권한 확인
+      const { data: roleData, error: roleError } = await serviceSupabase
+        .from('academy_user_roles')
+        .select('role')
+        .eq('academy_id', academyId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (roleError || !roleData || !['ACADEMY_OWNER', 'ACADEMY_MANAGER'].includes(roleData.role)) {
+        return NextResponse.json(
+          { error: '학원 관리자 권한이 필요합니다.' },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await request.json();
