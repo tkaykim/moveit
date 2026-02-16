@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSuperAdmin } from '@/lib/supabase/admin-auth';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { sendNotification, sendBulkNotification } from '@/lib/notifications/send-notification';
 import type { NotificationType } from '@/types/notifications';
 
@@ -19,7 +19,8 @@ export async function GET() {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
-    const supabase = createServiceClient();
+    // 인증된 사용자의 클라이언트 사용 (SUPER_ADMIN RLS 정책 적용)
+    const supabase = await createClient();
 
     // 활성 디바이스 토큰 목록 (유저 정보 포함)
     const { data: tokens, error: tokensError } = await (supabase as any)
@@ -99,7 +100,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'title과 message는 필수입니다.' }, { status: 400 });
     }
 
-    const supabase = createServiceClient();
+    // 인증된 사용자의 클라이언트 사용 (SUPER_ADMIN RLS 정책으로 전체 조회 가능)
+    const supabase = await createClient();
 
     // 모든 활성 디바이스 토큰 조회 (user_id 유무와 무관)
     let tokenQuery = (supabase as any)
