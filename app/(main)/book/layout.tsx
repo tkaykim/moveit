@@ -51,7 +51,7 @@ export default function BookLayout({
       <CSSLoader />
       <div className="flex justify-center bg-neutral-50 dark:bg-black min-h-screen font-sans selection:bg-primary dark:selection:bg-[#CCFF00] selection:text-black">
         <div className="w-full max-w-[420px] bg-white dark:bg-neutral-950 min-h-screen relative shadow-2xl overflow-hidden flex flex-col border-x border-neutral-200 dark:border-neutral-900">
-          <main className="flex-1 overflow-y-auto scrollbar-hide" style={{ paddingBottom: 'calc(72px + max(0px, env(safe-area-inset-bottom, 0px)))' }}>
+          <main className="flex-1 overflow-y-auto scrollbar-hide" style={{ paddingBottom: '64px' }}>
             <PullToRefresh>
               {children}
             </PullToRefresh>
