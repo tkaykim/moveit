@@ -24,10 +24,14 @@ export async function GET(request: NextRequest) {
     const userId = url.searchParams.get('user_id');
 
     // 1. 유저 목록 (토큰 보유 여부 포함)
-    const { data: users } = await (supabase as any)
+    const { data: users, error: usersError } = await (supabase as any)
       .from('users')
-      .select('id, display_name, email, phone, role')
-      .order('display_name');
+      .select('id, name, email, phone, role')
+      .order('name');
+    
+    if (usersError) {
+      console.error('Users query error:', usersError);
+    }
 
     const { data: tokenUsers } = await (supabase as any)
       .from('device_tokens')

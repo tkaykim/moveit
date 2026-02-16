@@ -122,7 +122,7 @@ const SCENARIOS: Scenario[] = [
     generateMessage: (ctx) => {
       const academy = ctx.schedule?.academy_name || ctx.classItem?.academy_name || '학원';
       const cls = ctx.schedule?.class_title || ctx.classItem?.title || '수업';
-      const userName = ctx.user?.display_name || '수강생';
+      const userName = ctx.user?.name || ctx.user?.display_name || '수강생';
       return {
         title: '결석 알림',
         body: `${userName}님이 ${academy} ${cls} 수업에 결석하였습니다. 확인해주세요.`,
@@ -400,6 +400,7 @@ export function PushScenarioTest({ usersWithTokens, onSent }: PushScenarioTestPr
     if (!userSearch.trim()) return allUsers.slice(0, 50);
     const q = userSearch.toLowerCase();
     return allUsers.filter((u: any) =>
+      (u.name || '').toLowerCase().includes(q) ||
       (u.display_name || '').toLowerCase().includes(q) ||
       (u.email || '').toLowerCase().includes(q) ||
       (u.phone || '').toLowerCase().includes(q)
@@ -498,7 +499,7 @@ export function PushScenarioTest({ usersWithTokens, onSent }: PushScenarioTestPr
       if (res.ok) {
         setResult({
           success: true,
-          message: `${selectedUser?.display_name || '유저'}에게 "${scenario?.label || ''}" 시나리오 알림 발송 완료!`,
+          message: `${selectedUser?.name || selectedUser?.display_name || '유저'}에게 "${scenario?.label || ''}" 시나리오 알림 발송 완료!`,
         });
         onSent();
       } else {
@@ -615,7 +616,7 @@ export function PushScenarioTest({ usersWithTokens, onSent }: PushScenarioTestPr
                   <div className="mt-2 flex items-center gap-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
                     <User size={14} className="text-purple-600 dark:text-purple-400" />
                     <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                      {selectedUser.display_name || selectedUser.email}
+                      {selectedUser.name || selectedUser.display_name || selectedUser.email}
                     </span>
                     <span className="text-xs text-purple-500">{selectedUser.email}</span>
                     {selectedUser.has_token && (
@@ -646,7 +647,7 @@ export function PushScenarioTest({ usersWithTokens, onSent }: PushScenarioTestPr
                           type="button"
                           onClick={() => {
                             setSelectedUserId(u.id);
-                            setUserSearch(u.display_name || u.email);
+                            setUserSearch(u.name || u.display_name || u.email);
                             setShowUserDropdown(false);
                             // 데이터 초기화
                             setSelectedBookingId('');
@@ -659,7 +660,7 @@ export function PushScenarioTest({ usersWithTokens, onSent }: PushScenarioTestPr
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-sm font-medium text-neutral-900 dark:text-white">
-                                {u.display_name || '이름 없음'}
+                                {u.name || u.display_name || '이름 없음'}
                               </p>
                               <p className="text-xs text-neutral-500">{u.email}</p>
                             </div>
