@@ -151,7 +151,7 @@ export async function PATCH(
             type: 'booking_cancelled',
             title: '예약 취소',
             body: `${academyName} ${classTitle} 예약이 취소되었습니다.${timeStr}`,
-            data: { booking_id: id, url: '/my/bookings' },
+            data: { booking_id: id, url: '/my/bookings', academy_name: academyName },
             academy_id: bookingDetail.classes?.academy_id,
           });
         })
@@ -188,7 +188,7 @@ export async function PATCH(
             type: 'attendance_checked',
             title: '출석 체크 완료',
             body: `${academyName} ${classTitle} 출석이 확인되었습니다.${timeStr}`,
-            data: { booking_id: id, url: '/my/bookings' },
+            data: { booking_id: id, url: '/my/bookings', academy_name: academyName },
             academy_id: bookingDetail.classes?.academy_id,
           });
         })

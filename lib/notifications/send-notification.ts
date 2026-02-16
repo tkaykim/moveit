@@ -73,15 +73,22 @@ export async function sendNotification(req: SendNotificationRequest) {
   }
 
   // 3. 푸시 채널인 경우 큐에 삽입 (Edge Function이 처리)
+  // 표시 규칙: 큰 제목 = MOVE.IT, 작은 제목 = 학원명(특정 학원 발송 시), 나머지 = 내용
   if (channel === 'push') {
+    const academyName = req.data?.academy_name as string | undefined;
+    const displayTitle = 'MOVE.IT';
+    const displayBody = academyName
+      ? `${academyName}\n\n${req.title}\n${req.body}`
+      : `${req.title}\n${req.body}`;
+
     const { error: queueError } = await (supabase as any)
       .from('notification_queue')
       .insert({
         user_id: req.user_id,
         notification_type: req.type,
         channel: 'push',
-        title: req.title,
-        body: req.body,
+        title: displayTitle,
+        body: displayBody,
         data: req.data || {},
         scheduled_at: req.scheduled_at || new Date().toISOString(),
       });

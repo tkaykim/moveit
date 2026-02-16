@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useState, useEffect, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import { AcademyAdminSidebar } from './academy-admin-sidebar';
 import { AcademyAdminHeader } from './academy-admin-header';
 import { OnboardingProvider } from '../contexts/onboarding-context';
@@ -17,10 +18,12 @@ interface AcademyAdminLayoutWrapperProps {
 type AuthState = 'loading' | 'authorized' | 'unauthorized' | 'unauthenticated';
 
 export function AcademyAdminLayoutWrapper({ children, academyId }: AcademyAdminLayoutWrapperProps) {
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [authState, setAuthState] = useState<AuthState>('loading');
   const { user, profile, loading } = useAuth();
+  const isQrReaderPage = pathname?.includes('/qr-reader') ?? false;
 
   const checkAccess = useCallback(async () => {
     if (loading) return;
@@ -116,6 +119,17 @@ export function AcademyAdminLayoutWrapper({ children, academyId }: AcademyAdminL
         onLoginSuccess={handleLoginSuccess}
         message="이 학원의 관리 페이지에 접근할 권한이 없습니다. 최고관리자에게 권한을 요청하세요."
       />
+    );
+  }
+
+  // QR 출석 리더 페이지: 전체화면(사이드바/헤더 없음), 다른 메뉴 이동 시 비밀번호 재확인은 뷰 내부에서 처리
+  if (isQrReaderPage) {
+    return (
+      <OnboardingProvider>
+        <div className="fixed inset-0 flex flex-col bg-neutral-50 dark:bg-neutral-950 overflow-hidden z-0">
+          {children}
+        </div>
+      </OnboardingProvider>
     );
   }
 

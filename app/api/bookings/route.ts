@@ -394,7 +394,7 @@ export async function POST(request: Request) {
             type: 'booking_confirmed',
             title: '예약 완료',
             body: `${academyName} ${classTitle} 수업이 예약되었습니다.${timeStr}`,
-            data: { booking_id: booking.id, url: '/my/bookings' },
+            data: { booking_id: booking.id, url: '/my/bookings', academy_name: academyName },
             academy_id: bookingDetail.classes?.academy_id,
           });
         })

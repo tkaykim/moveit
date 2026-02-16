@@ -1,9 +1,11 @@
 "use client";
 
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
+import { useAuth } from '@/contexts/AuthContext';
+import { ExitQrPasswordModal } from '../exit-qr-password-modal';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { QrCode, CheckCircle2, XCircle, Clock, Maximize, Minimize, RotateCcw, SwitchCamera } from 'lucide-react';
+import { QrCode, CheckCircle2, XCircle, Clock, Maximize, Minimize, RotateCcw, SwitchCamera, LayoutDashboard } from 'lucide-react';
 
 interface CheckInLog {
   id: string;
@@ -27,6 +29,8 @@ declare class BarcodeDetector {
 }
 
 export function QrReaderView({ academyId }: QrReaderViewProps) {
+  const { user } = useAuth();
+  const [showExitModal, setShowExitModal] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanMethod, setScanMethod] = useState<string>('');
   const [result, setResult] = useState<{
@@ -341,8 +345,8 @@ export function QrReaderView({ academyId }: QrReaderViewProps) {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
-      <div className="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 px-6 py-4">
+    <div className="h-full min-h-screen flex flex-col bg-neutral-50 dark:bg-neutral-950">
+      <div className="flex-shrink-0 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-[#CCFF00]/20 flex items-center justify-center">
@@ -354,6 +358,14 @@ export function QrReaderView({ academyId }: QrReaderViewProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowExitModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 font-medium text-sm transition-colors"
+              title="다른 관리자 메뉴로 이동 (비밀번호 입력 필요)"
+            >
+              <LayoutDashboard size={18} />
+              관리자 메뉴로
+            </button>
             <button
               onClick={switchCamera}
               className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 transition-colors"
@@ -372,7 +384,7 @@ export function QrReaderView({ academyId }: QrReaderViewProps) {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
+      <div className="flex-1 min-h-0 overflow-y-auto max-w-4xl mx-auto w-full p-6 space-y-6">
         <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
           <div className="relative">
             <div className={scanning ? 'block' : 'hidden'}>
@@ -519,6 +531,13 @@ export function QrReaderView({ academyId }: QrReaderViewProps) {
           )}
         </div>
       </div>
+
+      <ExitQrPasswordModal
+        isOpen={showExitModal}
+        onClose={() => setShowExitModal(false)}
+        email={user?.email ?? ''}
+        academyId={academyId}
+      />
     </div>
   );
 }

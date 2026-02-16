@@ -88,7 +88,16 @@ export function NotificationItem({ notification, onRead }: NotificationItemProps
             <span className="w-1.5 h-1.5 rounded-full bg-primary dark:bg-[#CCFF00] ml-auto flex-shrink-0" />
           )}
         </div>
-        <p className="text-sm font-bold text-black dark:text-white truncate">
+        {/* 표시 규칙: 큰 제목 MOVE.IT, 작은 제목 학원명(특정 학원 발송 시), 나머지 내용 */}
+        <p className="text-[10px] font-bold text-primary dark:text-[#CCFF00] uppercase tracking-wide">
+          MOVE.IT
+        </p>
+        {notification.data?.academy_name && (
+          <p className="text-xs font-medium text-neutral-600 dark:text-neutral-300 mt-0.5">
+            {notification.data.academy_name}
+          </p>
+        )}
+        <p className="text-sm font-bold text-black dark:text-white truncate mt-0.5">
           {notification.title}
         </p>
         <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 mt-0.5">

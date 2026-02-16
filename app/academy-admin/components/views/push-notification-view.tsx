@@ -529,14 +529,18 @@ function ScenarioSection({ academyId, onSent }: { academyId: string; onSent: () 
         <div className="space-y-3">
           <StepLabel step={4} label="메시지 미리보기 (수정 가능)" />
           <div className="bg-neutral-100 dark:bg-neutral-900 rounded-xl p-4">
-            <p className="text-[10px] font-medium text-neutral-400 uppercase mb-2">푸시 알림 미리보기</p>
+            <p className="text-[10px] font-medium text-neutral-400 uppercase mb-2">푸시 알림 미리보기 (큰 제목: MOVE.IT, 작은 제목: 학원명, 나머지: 내용)</p>
             <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm overflow-hidden max-w-sm">
               <div className="flex items-center gap-2 px-3 pt-3 pb-1">
-                <div className="w-4 h-4 rounded bg-blue-500" /><span className="text-[10px] text-neutral-500 font-medium">MOVE.IT</span>
+                <div className="w-4 h-4 rounded bg-blue-500" />
+                <span className="text-xs font-bold text-neutral-900 dark:text-white">MOVE.IT</span>
                 <span className="text-[10px] text-neutral-400 ml-auto">지금</span>
               </div>
               <div className="px-3 pb-3">
-                <p className="text-sm font-semibold text-neutral-900 dark:text-white">{generatedTitle}</p>
+                {scenarioData?.academy?.name_kr && (
+                  <p className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">{scenarioData.academy.name_kr}</p>
+                )}
+                <p className="text-sm font-semibold text-neutral-900 dark:text-white mt-0.5">{generatedTitle}</p>
                 <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5 whitespace-pre-wrap">{generatedBody}</p>
               </div>
             </div>

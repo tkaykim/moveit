@@ -177,8 +177,17 @@ export async function POST(
       );
     }
 
+    // 학원명 조회 (푸시 표시: 큰 제목 MOVE.IT, 작은 제목 학원명)
+    const { data: academyRow } = await serviceSupabase
+      .from('academies')
+      .select('name_kr')
+      .eq('id', academyId)
+      .single();
+    const academyName = academyRow?.name_kr || undefined;
+
     const enrichedData = { ...(data || {}) };
     if (image_url) enrichedData.image_url = image_url;
+    if (academyName) enrichedData.academy_name = academyName;
 
     // 인앱 알림 + notification_queue 기록
     const bulkResult = await sendBulkNotification(targetUserIds, {

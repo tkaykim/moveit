@@ -134,7 +134,7 @@ export async function PATCH(
         body: status === 'APPROVED'
           ? `${ticketName} ${requestTypeLabel} 요청이 승인되었습니다.`
           : `${ticketName} ${requestTypeLabel} 요청이 거절되었습니다.${reject_reason ? ` 사유: ${reject_reason}` : ''}`,
-        data: { extension_request_id: id, url: '/my/tickets' },
+        data: { extension_request_id: id, url: '/my/tickets', academy_name: academyName },
         academy_id: reqRow.user_tickets?.tickets?.academy_id,
       }).catch((err) => console.error('[extension-notification]', err));
     }
