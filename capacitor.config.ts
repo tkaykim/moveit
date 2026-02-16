@@ -34,7 +34,7 @@ const config: CapacitorConfig = {
   // Android 설정
   android: {
     allowMixedContent: true,
-    webContentsDebuggingEnabled: false,
+    webContentsDebuggingEnabled: true,
   },
 
   // iOS 설정
