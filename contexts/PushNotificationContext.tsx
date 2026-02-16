@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from './AuthContext';
 import { authFetch } from '@/lib/supabase/auth-fetch';
 
@@ -30,6 +31,10 @@ export function usePushNotification() {
 }
 
 export function PushNotificationProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const routerRef = useRef(router);
+  routerRef.current = router;
+
   const { user } = useAuth();
   const [deviceToken, setDeviceToken] = useState<string | null>(null);
   const [isSupported, setIsSupported] = useState(false);
@@ -38,6 +43,20 @@ export function PushNotificationProvider({ children }: { children: ReactNode }) 
   const [debugInfo, setDebugInfo] = useState('init');
   const initRef = useRef(false);
   const tokenSyncRef = useRef<string | null>(null);
+
+  /** 알림 탭 시 path(앱 내 경로) 또는 url(외부 링크)로 이동 */
+  const handleNotificationAction = useCallback((data: Record<string, any>) => {
+    if (!data || typeof data !== 'object') return;
+    const path = data.path;
+    const url = data.url;
+    if (path && typeof path === 'string') {
+      const route = path.startsWith('/') ? path : `/${path}`;
+      routerRef.current?.push(route);
+    } else if (url && typeof url === 'string') {
+      if (url.startsWith('http')) window.open(url, '_blank');
+      else routerRef.current?.push(url.startsWith('/') ? url : `/${url}`);
+    }
+  }, []);
 
   const log = useCallback((msg: string) => {
     console.log('[Push]', msg);
@@ -98,11 +117,9 @@ export function PushNotificationProvider({ children }: { children: ReactNode }) 
         log('포그라운드 알림: ' + JSON.stringify(notif.title));
         setUnreadCount(prev => prev + 1);
       });
-      PN.addListener('pushNotificationActionPerformed', (action) => {
-        const data = action.notification.data;
-        if (data?.url && typeof window !== 'undefined') {
-          window.location.href = data.url;
-        }
+      PN.addListener('pushNotificationActionPerformed', (action: any) => {
+        const data = action?.notification?.data ?? {};
+        handleNotificationAction(data);
       });
 
       await PN.register();
@@ -112,7 +129,7 @@ export function PushNotificationProvider({ children }: { children: ReactNode }) 
       log('npm 패키지 실패: ' + (error?.message || String(error)));
       return false;
     }
-  }, [log, saveTokenToServer]);
+  }, [log, saveTokenToServer, handleNotificationAction]);
 
   // 방법2: window.Capacitor 브릿지 직접 호출
   const tryDirectBridge = useCallback(async (): Promise<boolean> => {
@@ -162,6 +179,10 @@ export function PushNotificationProvider({ children }: { children: ReactNode }) 
             setDeviceToken(String(val));
             saveTokenToServer(String(val));
           });
+          PN.addListener('pushNotificationActionPerformed', (action: any) => {
+            const data = action?.notification?.data ?? {};
+            handleNotificationAction(data);
+          });
         }
 
         await PN.register();
@@ -174,7 +195,7 @@ export function PushNotificationProvider({ children }: { children: ReactNode }) 
       log('직접 브릿지 실패: ' + (error?.message || String(error)));
       return false;
     }
-  }, [log, saveTokenToServer]);
+  }, [log, saveTokenToServer, handleNotificationAction]);
 
   // 통합 권한 요청
   const requestPermission = useCallback(async (): Promise<boolean> => {
