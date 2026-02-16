@@ -14,7 +14,9 @@ import {
   Bell,
   CalendarDays,
   BookOpen,
-  UserCog
+  UserCog,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { ComparisonTable } from './components/comparison-table';
 import { FeatureAttendance } from './components/feature-attendance';
@@ -24,13 +26,24 @@ import { FeatureQr } from './components/feature-qr';
 import { FeaturePush } from './components/feature-push';
 import { PricingCards } from './components/pricing-cards';
 
+const INTRO_THEME_KEY = 'intro-theme';
+
 export default function IntroPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [year, setYear] = useState('');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'dark';
+    const saved = localStorage.getItem(INTRO_THEME_KEY);
+    return saved === 'light' || saved === 'dark' ? saved : 'dark';
+  });
 
   useEffect(() => {
     setYear(String(new Date().getFullYear()));
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(INTRO_THEME_KEY, theme);
+  }, [theme]);
 
   useEffect(() => {
     if (isMobileMenuOpen) {
@@ -42,9 +55,10 @@ export default function IntroPage() {
   }, [isMobileMenuOpen]);
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
+  const isLight = theme === 'light';
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-sans">
+    <div className={`min-h-screen font-sans ${isLight ? 'bg-white text-neutral-900' : 'dark bg-neutral-950 text-neutral-100'}`}>
       {/* Nav */}
       <nav className="sticky top-0 z-50 bg-white/95 dark:bg-neutral-950/95 backdrop-blur border-b border-neutral-200 dark:border-neutral-800">
         <div className="max-w-5xl mx-auto px-4 h-14 flex justify-between items-center">
@@ -52,15 +66,33 @@ export default function IntroPage() {
             <span className="text-xl font-bold text-neutral-900 dark:text-[#CCFF00]">MoveIt</span>
             <span className="ml-2 text-xs text-neutral-500 hidden sm:inline">댄스학원 운영 관리</span>
           </div>
-          <div className="hidden sm:flex items-center gap-6">
+          <div className="hidden sm:flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}
+              className="p-2 rounded-lg text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-[#CCFF00] transition-colors"
+              aria-label={isLight ? '다크 모드로 전환' : '라이트 모드로 전환'}
+            >
+              {isLight ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+            </button>
             <a href="#comparison" className="text-sm text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-[#CCFF00]">비교</a>
             <a href="#admin" className="text-sm text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-[#CCFF00]">관리자</a>
             <a href="#pricing" className="text-sm text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-[#CCFF00]">요금제</a>
             <a href="#contact" className="text-sm font-semibold text-white bg-neutral-900 dark:bg-[#CCFF00] dark:text-black px-3 py-1.5 rounded-lg">도입 문의</a>
           </div>
-          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="sm:hidden p-2 rounded-lg text-neutral-600 dark:text-neutral-400" aria-expanded={isMobileMenuOpen}>
+          <div className="flex sm:hidden items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}
+              className="p-2 rounded-lg text-neutral-500"
+              aria-label={isLight ? '다크 모드' : '라이트 모드'}
+            >
+              {isLight ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+            </button>
+            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 rounded-lg text-neutral-600 dark:text-neutral-400" aria-expanded={isMobileMenuOpen}>
             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+            </button>
+          </div>
         </div>
         {isMobileMenuOpen && (
           <div className="sm:hidden fixed inset-0 top-14 z-40 bg-white dark:bg-neutral-950 border-t border-neutral-200 dark:border-neutral-800 px-4 py-4 space-y-2">
@@ -312,8 +344,8 @@ export default function IntroPage() {
         </div>
       </section>
 
-      {/* ═══════ 학원 규모에 맞는 합리적인 요금제 (1행 3열) ═══════ */}
-      <section id="pricing" className="py-10 md:py-14 bg-neutral-50 dark:bg-neutral-900/30">
+      {/* ═══════ 학원 규모에 맞는 합리적인 요금제 (이미지와 동일 라이트 디자인) ═══════ */}
+      <section id="pricing" className="py-10 md:py-14 bg-slate-50">
         <PricingCards />
       </section>
 
