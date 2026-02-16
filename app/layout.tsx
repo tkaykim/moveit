@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { PushNotificationProvider } from "@/contexts/PushNotificationContext";
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -38,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="ko" suppressHydrationWarning>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="format-detection" content="telephone=no" />
         <style dangerouslySetInnerHTML={{
@@ -103,7 +104,9 @@ export default function RootLayout({
           disableTransitionOnChange={false}
         >
           <AuthProvider>
-            {children}
+            <PushNotificationProvider>
+              {children}
+            </PushNotificationProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

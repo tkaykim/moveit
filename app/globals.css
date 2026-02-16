@@ -21,10 +21,20 @@
     margin: 0;
     padding: 0;
     min-height: 100vh;
+    /* Capacitor 앱: 시스템 UI 영역 안전 패딩 */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
 @layer utilities {
+  /* Safe area insets for Capacitor/native apps */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
