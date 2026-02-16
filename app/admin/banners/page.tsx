@@ -13,6 +13,7 @@ import {
   Settings,
   X,
 } from "lucide-react";
+import { authFetch } from "@/lib/supabase/auth-fetch";
 
 interface Banner {
   id: string;
@@ -58,7 +59,7 @@ export default function BannersPage() {
 
   const fetchBanners = async () => {
     try {
-      const response = await fetch("/api/admin/banners");
+      const response = await authFetch("/api/admin/banners");
       if (response.ok) {
         const data = await response.json();
         setBanners(data.banners || []);
@@ -77,7 +78,7 @@ export default function BannersPage() {
     try {
       if (editingBanner) {
         // 수정
-        const response = await fetch(`/api/admin/banners/${editingBanner.id}`, {
+        const response = await authFetch(`/api/admin/banners/${editingBanner.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -94,7 +95,7 @@ export default function BannersPage() {
         }
       } else {
         // 생성
-        const response = await fetch("/api/admin/banners", {
+        const response = await authFetch("/api/admin/banners", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -119,7 +120,7 @@ export default function BannersPage() {
     if (!confirm("정말 이 배너를 삭제하시겠습니까?")) return;
 
     try {
-      const response = await fetch(`/api/admin/banners/${id}`, {
+      const response = await authFetch(`/api/admin/banners/${id}`, {
         method: "DELETE",
       });
 
@@ -133,7 +134,7 @@ export default function BannersPage() {
 
   const handleToggleActive = async (banner: Banner) => {
     try {
-      const response = await fetch(`/api/admin/banners/${banner.id}`, {
+      const response = await authFetch(`/api/admin/banners/${banner.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_active: !banner.is_active }),
@@ -149,7 +150,7 @@ export default function BannersPage() {
 
   const handleSaveSettings = async () => {
     try {
-      const response = await fetch("/api/admin/banners", {
+      const response = await authFetch("/api/admin/banners", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
