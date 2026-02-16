@@ -123,13 +123,74 @@ export async function PATCH(
 
     // 취소 알림 발송 (비동기)
     if (status === 'CANCELLED' && updatedBooking?.user_id) {
-      sendNotification({
-        user_id: updatedBooking.user_id,
-        type: 'booking_cancelled',
-        title: '예약 취소',
-        body: '수업 예약이 취소되었습니다.',
-        data: { booking_id: id, url: '/schedule' },
-      }).catch((err) => console.error('[cancel-notification]', err));
+      // 예약 상세 정보 조회 (학원명, 수업명, 시간 포함)
+      (supabase as any)
+        .from('bookings')
+        .select(`
+          id,
+          classes!inner(title, academies!inner(name_kr)),
+          schedules(start_time, end_time)
+        `)
+        .eq('id', id)
+        .single()
+        .then(({ data: bookingDetail }: any) => {
+          if (!bookingDetail) return;
+          
+          const academyName = bookingDetail.classes?.academies?.name_kr || '학원';
+          const classTitle = bookingDetail.classes?.title || '수업';
+          const startTime = bookingDetail.schedules?.start_time;
+          
+          let timeStr = '';
+          if (startTime) {
+            const d = new Date(startTime);
+            timeStr = ` (${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')})`;
+          }
+          
+          return sendNotification({
+            user_id: updatedBooking.user_id,
+            type: 'booking_cancelled',
+            title: '예약 취소',
+            body: `${academyName} ${classTitle} 예약이 취소되었습니다.${timeStr}`,
+            data: { booking_id: id, url: '/my/bookings' },
+          });
+        })
+        .catch((err: any) => console.error('[cancel-notification]', err));
+    }
+
+    // 출석 완료 알림 발송 (비동기)
+    if (status === 'COMPLETED' && oldStatus === 'CONFIRMED' && updatedBooking?.user_id) {
+      // 예약 상세 정보 조회 (학원명, 수업명, 시간 포함)
+      (supabase as any)
+        .from('bookings')
+        .select(`
+          id,
+          classes!inner(title, academies!inner(name_kr)),
+          schedules(start_time, end_time)
+        `)
+        .eq('id', id)
+        .single()
+        .then(({ data: bookingDetail }: any) => {
+          if (!bookingDetail) return;
+          
+          const academyName = bookingDetail.classes?.academies?.name_kr || '학원';
+          const classTitle = bookingDetail.classes?.title || '수업';
+          const startTime = bookingDetail.schedules?.start_time;
+          
+          let timeStr = '';
+          if (startTime) {
+            const d = new Date(startTime);
+            timeStr = ` ${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+          }
+          
+          return sendNotification({
+            user_id: updatedBooking.user_id,
+            type: 'attendance_checked',
+            title: '출석 체크 완료',
+            body: `${academyName} ${classTitle} 출석이 확인되었습니다.${timeStr}`,
+            data: { booking_id: id, url: '/my/bookings' },
+          });
+        })
+        .catch((err: any) => console.error('[attendance-notification]', err));
     }
 
     return NextResponse.json({

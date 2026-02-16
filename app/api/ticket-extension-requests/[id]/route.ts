@@ -37,7 +37,7 @@ export async function PATCH(
 
     const { data: reqRow, error: fetchErr } = await supabase
       .from('ticket_extension_requests')
-      .select('*, user_tickets(id, user_id, expiry_date, ticket_id, tickets(ticket_type))')
+      .select('*, user_tickets(id, user_id, expiry_date, ticket_id, tickets(ticket_type, name, academies(name_kr, name_en)))')
       .eq('id', id)
       .single();
     if (fetchErr || !reqRow) {
@@ -121,14 +121,20 @@ export async function PATCH(
     if (targetUserId) {
       const requestTypeLabel = reqRow.request_type === 'EXTENSION' ? '연장' : '일시정지';
       const statusLabel = status === 'APPROVED' ? '승인' : '거절';
+      
+      const ticketName = reqRow.user_tickets?.tickets?.name || '수강권';
+      const academyName = reqRow.user_tickets?.tickets?.academies?.name_kr || 
+                          reqRow.user_tickets?.tickets?.academies?.name_en || 
+                          '학원';
+      
       sendNotification({
         user_id: targetUserId,
         type: status === 'APPROVED' ? 'extension_approved' : 'extension_rejected',
-        title: `수강권 ${requestTypeLabel} ${statusLabel}`,
+        title: `${academyName} 수강권 ${requestTypeLabel} ${statusLabel}`,
         body: status === 'APPROVED'
-          ? `수강권 ${requestTypeLabel} 요청이 승인되었습니다.`
-          : `수강권 ${requestTypeLabel} 요청이 거절되었습니다.${reject_reason ? ` 사유: ${reject_reason}` : ''}`,
-        data: { extension_request_id: id, url: '/tickets' },
+          ? `${ticketName} ${requestTypeLabel} 요청이 승인되었습니다.`
+          : `${ticketName} ${requestTypeLabel} 요청이 거절되었습니다.${reject_reason ? ` 사유: ${reject_reason}` : ''}`,
+        data: { extension_request_id: id, url: '/my/tickets' },
       }).catch((err) => console.error('[extension-notification]', err));
     }
 

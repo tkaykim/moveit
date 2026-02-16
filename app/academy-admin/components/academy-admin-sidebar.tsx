@@ -20,6 +20,7 @@ import {
   Pause,
   AlertTriangle,
   QrCode,
+  Bell,
   type LucideIcon,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -83,6 +84,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
     { icon: ClipboardList, label: '업무/수업 일지', href: `/academy-admin/${academyId}/logs` },
     { icon: UserCheck, label: '강사 관리', href: `/academy-admin/${academyId}/instructors` },
     { icon: MessageSquare, label: '상담 관리', href: `/academy-admin/${academyId}/consultations` },
+    { icon: Bell, label: '알림 발송', href: `/academy-admin/${academyId}/push` },
     { icon: CreditCard, label: '매출/정산', href: `/academy-admin/${academyId}/revenue` },
   ];
 

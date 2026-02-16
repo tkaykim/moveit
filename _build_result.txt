@@ -1,0 +1,327 @@
+  ▲ Next.js 14.2.35
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+
+./app/(main)/book/session/[sessionId]/page.tsx
+133:6  Warning: React Hook useEffect has a missing dependency: 'loadSessionData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+215:6  Warning: React Hook useEffect has a missing dependency: 'session'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+233:6  Warning: React Hook useEffect has missing dependencies: 'loadPurchasableTickets', 'loadUserTickets', and 'paymentMethod'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/academy-admin-header.tsx
+250:21  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./app/academy-admin/components/modals/admin-extension-create-modal.tsx
+115:6  Warning: React Hook useEffect has a missing dependency: 'loadStudents'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/class-masters/class-master-modal.tsx
+141:6  Warning: React Hook useEffect has missing dependencies: 'loadHalls' and 'loadTickets'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/class-masters-view.tsx
+42:6  Warning: React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/classes/class-modal.tsx
+148:6  Warning: React Hook useEffect has missing dependencies: 'loadData', 'loadLinkedTickets', and 'loadTickets'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/classes/instructor-selector.tsx
+32:6  Warning: React Hook useEffect has a missing dependency: 'loadSelectedInstructor'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+85:6  Warning: React Hook useEffect has a missing dependency: 'loadInstructors'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+95:6  Warning: React Hook useEffect has missing dependencies: 'loadInstructors' and 'showSearch'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/classes-view.tsx
+80:6  Warning: React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/consultation-view.tsx
+51:6  Warning: React Hook useEffect has a missing dependency: 'loadConsultations'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+90:9  Warning: The 'today' object construction makes the dependencies of useMemo Hook (at line 103) change on every render. To fix this, wrap the initialization of 'today' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+92:9  Warning: The 'tomorrow' object construction makes the dependencies of useMemo Hook (at line 103) change on every render. To fix this, wrap the initialization of 'tomorrow' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+92:9  Warning: The 'tomorrow' object construction makes the dependencies of useMemo Hook (at line 111) change on every render. To fix this, wrap the initialization of 'tomorrow' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+94:9  Warning: The 'dayAfterTomorrow' object construction makes the dependencies of useMemo Hook (at line 111) change on every render. To fix this, wrap the initialization of 'dayAfterTomorrow' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/daily-log-view.tsx
+35:6  Warning: React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/enrollments/admin-add-enrollment-modal.tsx
+48:6  Warning: React Hook useEffect has a missing dependency: 'loadStudents'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/extension-requests-view.tsx
+67:6  Warning: React Hook useEffect has a missing dependency: 'loadRequests'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/instructor-view.tsx
+23:6  Warning: React Hook useEffect has a missing dependency: 'loadInstructors'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/instructors/instructor-search-modal.tsx
+29:6  Warning: React Hook useEffect has a missing dependency: 'loadInstructors'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+62:6  Warning: React Hook useEffect has a missing dependency: 'loadInstructors'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/introduction-editor.tsx
+75:9  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./app/academy-admin/components/views/product-view.tsx
+37:6  Warning: React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/products/ticket-modal.tsx
+114:6  Warning: React Hook useEffect has a missing dependency: 'loadClasses'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+120:6  Warning: React Hook useEffect has missing dependencies: 'countOptions.length' and 'ticket'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/revenue-view.tsx
+25:6  Warning: React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/sales/payment-logs.tsx
+19:6  Warning: React Hook useEffect has a missing dependency: 'loadLogs'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/sales/sales-form.tsx
+37:6  Warning: React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/schedule/daily-schedule-modal.tsx
+46:6  Warning: React Hook useEffect has a missing dependency: 'loadSessions'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/schedule/recurring-schedule-modal.tsx
+92:6  Warning: React Hook useEffect has a missing dependency: 'loadInstructors'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+99:6  Warning: React Hook useEffect has a missing dependency: 'loadTickets'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/schedule-view.tsx
+71:6  Warning: React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/settings-view.tsx
+566:6  Warning: React Hook useEffect has a missing dependency: 'loadAcademy'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/academy-admin/components/views/student-view.tsx
+58:6  Warning: React Hook useEffect has a missing dependency: 'loadStudents'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+345:33  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./app/academy-admin/components/views/students/student-detail-modal.tsx
+175:21  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./app/academy-admin/contexts/onboarding-context.tsx
+155:5  Warning: React Hook useMemo has a missing dependency: 'state'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/admin/banners/page.tsx
+266:19  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+372:21  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./app/admin/layout.tsx
+106:21  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./app/admin/push/components/push-history.tsx
+171:29  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./app/admin/push/components/push-send-form.tsx
+424:17  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+692:15  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./components/auth/UserMenu.tsx
+53:15  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./components/common/profile-image-upload.tsx
+154:15  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./components/common/schedule-selector.tsx
+50:6  Warning: React Hook useEffect has a missing dependency: 'loadSchedules'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/modals/add-class-modal.tsx
+80:6  Warning: React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/modals/booking-confirm-modal.tsx
+57:6  Warning: React Hook useEffect has a missing dependency: 'loadUserTickets'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/modals/ticket-purchase-modal.tsx
+65:6  Warning: React Hook useEffect has missing dependencies: 'loadDiscounts' and 'loadTickets'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/views/academy-list-view.tsx
+259:6  Warning: React Hook useEffect has a missing dependency: 'academies'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/views/academy-map-block.tsx
+43:5  Warning: React Hook useMemo has a missing dependency: 'center'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/views/academy-map-view.tsx
+377:6  Warning: React Hook useEffect has a missing dependency: 'selectedAcademy'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/views/dancer-list-view.tsx
+262:6  Warning: React Hook useEffect has a missing dependency: 'dancers'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/views/home-view.tsx
+117:6  Warning: React Hook useEffect has missing dependencies: 'hotInstructors.length', 'isEnglish', 'nearbyAcademies.length', 'recentAcademies.length', and 'translateContent'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/views/my-page-view.tsx
+286:21  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./components/views/my-tickets-section.tsx
+54:6  Warning: React Hook useEffect has a missing dependency: 'loadTickets'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/views/tickets-view.tsx
+110:6  Warning: React Hook useEffect has a missing dependency: 'loadTickets'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/63) ...
+Error fetching dashboard stats: B [Error]: Dynamic server usage: Route /api/admin/stats couldn't be rendered statically because it used `request.headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at V (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:21778)
+    at Object.get (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:29465)
+    at o (C:\Users\그리고\Desktop\MOVEIT\.next\server\app\api\admin\stats\route.js:1:2475)
+    at d (C:\Users\그리고\Desktop\MOVEIT\.next\server\app\api\admin\stats\route.js:1:1634)
+    at C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:38417
+    at C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\server\lib\trace\tracer.js:140:36
+    at NoopContextManager.with (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
+    at ContextAPI.with (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
+    at NoopTracer.startActiveSpan (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
+    at ProxyTracer.startActiveSpan (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854) {
+  description: "Route /api/admin/stats couldn't be rendered statically because it used `request.headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+Error in academy search API: n [Error]: Dynamic server usage: Route /api/academies/search couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at l (C:\Users\그리고\Desktop\MOVEIT\.next\server\chunks\9276.js:1:37220)
+    at d (C:\Users\그리고\Desktop\MOVEIT\.next\server\chunks\9706.js:1:1733)
+    at i (C:\Users\그리고\Desktop\MOVEIT\.next\server\app\api\admin\banners\route.js:1:7116)
+    at u (C:\Users\그리고\Desktop\MOVEIT\.next\server\app\api\academies\search\route.js:1:837)
+    at C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:38417
+    at C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\server\lib\trace\tracer.js:140:36
+    at NoopContextManager.with (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
+    at ContextAPI.with (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
+    at NoopTracer.startActiveSpan (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
+    at ProxyTracer.startActiveSpan (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854) {
+  description: "Route /api/academies/search couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+   Generating static pages (15/63) 
+[notifications] 서버 오류: B [Error]: Dynamic server usage: Route /api/notifications couldn't be rendered statically because it used `request.headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at V (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:21778)
+    at Object.get (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:29465)
+    at n (C:\Users\그리고\Desktop\MOVEIT\.next\server\app\api\attendance\qr-checkin\route.js:6:3486)
+    at l (C:\Users\그리고\Desktop\MOVEIT\.next\server\app\api\notifications\route.js:1:848)
+    at C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:38417
+    at C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\server\lib\trace\tracer.js:140:36
+    at NoopContextManager.with (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
+    at ContextAPI.with (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
+    at NoopTracer.startActiveSpan (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
+    at ProxyTracer.startActiveSpan (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854) {
+  description: "Route /api/notifications couldn't be rendered statically because it used `request.headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+Error in tickets API: n [Error]: Dynamic server usage: Route /api/tickets couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at l (C:\Users\그리고\Desktop\MOVEIT\.next\server\chunks\9276.js:1:37220)
+    at d (C:\Users\그리고\Desktop\MOVEIT\.next\server\chunks\9706.js:1:1733)
+    at n (C:\Users\그리고\Desktop\MOVEIT\.next\server\app\api\admin\push\route.js:1:8410)
+    at u (C:\Users\그리고\Desktop\MOVEIT\.next\server\app\api\tickets\route.js:1:837)
+    at C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:38417
+    at C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\server\lib\trace\tracer.js:140:36
+    at NoopContextManager.with (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
+    at ContextAPI.with (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
+    at NoopTracer.startActiveSpan (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
+    at ProxyTracer.startActiveSpan (C:\Users\그리고\Desktop\MOVEIT\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854) {
+  description: "Route /api/tickets couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+   Generating static pages (31/63) 
+   Generating static pages (47/63) 
+ ✓ Generating static pages (63/63)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                        Size     First Load JS
+┌ ○ /                                              136 B           394 kB
+├ ○ /_not-found                                    136 B           394 kB
+├ ○ /academy                                       5.78 kB         442 kB
+├ ƒ /academy-admin/[academyId]                     3.64 kB         440 kB
+├ ƒ /academy-admin/[academyId]/class-masters       3.63 kB         440 kB
+├ ƒ /academy-admin/[academyId]/classes             10.8 kB         447 kB
+├ ƒ /academy-admin/[academyId]/consultations       6.27 kB         442 kB
+├ ƒ /academy-admin/[academyId]/enrollments         10.1 kB         446 kB
+├ ƒ /academy-admin/[academyId]/extension-requests  6.38 kB         443 kB
+├ ƒ /academy-admin/[academyId]/instructors         4.32 kB         441 kB
+├ ƒ /academy-admin/[academyId]/logs                4.28 kB         440 kB
+├ ƒ /academy-admin/[academyId]/products            5.79 kB         442 kB
+├ ƒ /academy-admin/[academyId]/qr-reader           4.16 kB         440 kB
+├ ƒ /academy-admin/[academyId]/revenue             9.14 kB         445 kB
+├ ƒ /academy-admin/[academyId]/schedule            15.5 kB         452 kB
+├ ƒ /academy-admin/[academyId]/settings            9.71 kB         446 kB
+├ ƒ /academy-admin/[academyId]/students            4.99 kB         441 kB
+├ ƒ /academy-admin/[academyId]/support             4.05 kB         440 kB
+├ ƒ /academy/[id]                                  11.6 kB         448 kB
+├ ○ /admin                                         1.22 kB         437 kB
+├ ○ /admin/academies                               7.09 kB         443 kB
+├ ○ /admin/banners                                 3.18 kB         350 kB
+├ ○ /admin/bookings                                1.68 kB         438 kB
+├ ○ /admin/branches                                2.44 kB         439 kB
+├ ○ /admin/classes                                 5.58 kB         442 kB
+├ ƒ /admin/classes/[id]                            2.54 kB         439 kB
+├ ○ /admin/halls                                   2.1 kB          438 kB
+├ ○ /admin/instructors                             3.68 kB         440 kB
+├ ○ /admin/push                                    7.89 kB         444 kB
+├ ○ /admin/schedules                               3.41 kB         440 kB
+├ ○ /admin/support-requests                        3.62 kB         440 kB
+├ ○ /admin/tickets                                 2.54 kB         439 kB
+├ ○ /admin/users                                   5.98 kB         442 kB
+├ ƒ /api/academies/[id]/consultation-availability  0 B                0 B
+├ ƒ /api/academies/[id]/consultation-form-data     0 B                0 B
+├ ƒ /api/academies/search                          0 B                0 B
+├ ƒ /api/admin/banners                             0 B                0 B
+├ ƒ /api/admin/banners/[id]                        0 B                0 B
+├ ƒ /api/admin/push                                0 B                0 B
+├ ƒ /api/admin/stats                               0 B                0 B
+├ ƒ /api/admin/users/academy-roles                 0 B                0 B
+├ ƒ /api/admin/users/role                          0 B                0 B
+├ ƒ /api/attendance/qr-checkin                     0 B                0 B
+├ ƒ /api/attendance/qr-generate                    0 B                0 B
+├ ○ /api/banners                                   0 B                0 B
+├ ƒ /api/bookings                                  0 B                0 B
+├ ƒ /api/bookings/[id]/status                      0 B                0 B
+├ ƒ /api/bookings/admin-add                        0 B                0 B
+├ ƒ /api/bookings/admin-add-guest                  0 B                0 B
+├ ƒ /api/bookings/guest                            0 B                0 B
+├ ƒ /api/consultation-categories                   0 B                0 B
+├ ƒ /api/consultation-categories/[id]              0 B                0 B
+├ ƒ /api/consultation-categories/preset            0 B                0 B
+├ ƒ /api/consultations                             0 B                0 B
+├ ƒ /api/favorites                                 0 B                0 B
+├ ƒ /api/notifications                             0 B                0 B
+├ ƒ /api/notifications/[id]                        0 B                0 B
+├ ƒ /api/notifications/device-token                0 B                0 B
+├ ƒ /api/notifications/preferences                 0 B                0 B
+├ ƒ /api/payment-history                           0 B                0 B
+├ ƒ /api/ticket-extension-requests                 0 B                0 B
+├ ƒ /api/ticket-extension-requests/[id]            0 B                0 B
+├ ƒ /api/ticket-extension-requests/admin           0 B                0 B
+├ ƒ /api/tickets                                   0 B                0 B
+├ ƒ /api/tickets/[id]                              0 B                0 B
+├ ƒ /api/tickets/[id]/available-start-dates        0 B                0 B
+├ ƒ /api/tickets/purchase                          0 B                0 B
+├ ƒ /api/tickets/purchase-guest                    0 B                0 B
+├ ƒ /api/translate                                 0 B                0 B
+├ ƒ /api/upload/image                              0 B                0 B
+├ ƒ /api/upload/profile-image                      0 B                0 B
+├ ƒ /api/user-tickets                              0 B                0 B
+├ ƒ /api/user-tickets/[id]/extend                  0 B                0 B
+├ ƒ /api/webhooks/notification-trigger             0 B                0 B
+├ ƒ /book/session/[sessionId]                      7.02 kB         443 kB
+├ ƒ /book/session/[sessionId]/success              1.37 kB         348 kB
+├ ƒ /book/ticket                                   2.59 kB         439 kB
+├ ○ /faq                                           1.98 kB         396 kB
+├ ○ /home                                          5.85 kB         442 kB
+├ ○ /instructor                                    3.48 kB         440 kB
+├ ƒ /instructor/[id]                               3.04 kB         439 kB
+├ ○ /intro                                         4.57 kB         351 kB
+├ ○ /intro/demo                                    1.05 kB         348 kB
+├ ○ /my                                            4.82 kB         441 kB
+├ ○ /my/bookings                                   2.54 kB         439 kB
+├ ○ /notices                                       1.95 kB         396 kB
+├ ○ /notifications                                 5.25 kB         441 kB
+├ ○ /payment                                       3.04 kB         439 kB
+├ ○ /payment-history                               1.81 kB         438 kB
+├ ○ /payment/success                               1.24 kB         437 kB
+├ ○ /schedule                                      3.3 kB          440 kB
+├ ○ /search                                        2.72 kB         439 kB
+├ ○ /settings                                      1.6 kB          438 kB
+└ ○ /tickets                                       4.73 kB         441 kB
++ First Load JS shared by all                      347 kB
+  ├ chunks/vendor-1c20bd27584379fd.js              345 kB
+  └ other shared chunks (total)                    1.97 kB
+
+
+ƒ Middleware                                       70.1 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

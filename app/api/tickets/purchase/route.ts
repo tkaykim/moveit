@@ -256,12 +256,22 @@ export async function POST(request: Request) {
       : `${productType} 구매가 완료되었습니다.`;
 
     // 푸시 알림 발송 (비동기, 실패해도 구매는 성공)
+    const academyName = ticket.academies?.name_kr || ticket.academies?.name_en || '학원';
+    const ticketDisplayName = ticket.name || productType;
+    
+    let purchaseBody = `${academyName} ${ticketDisplayName}을(를) 구매하셨습니다.`;
+    if (isPeriodTicket && autoBookingResult.created > 0) {
+      purchaseBody += ` ${autoBookingResult.created}개 수업이 자동 예약되었습니다.`;
+    } else if (!isPeriodTicket && remainingCount) {
+      purchaseBody += ` 잔여 횟수: ${remainingCount}회`;
+    }
+    
     sendNotification({
       user_id: user.id,
       type: 'ticket_purchased',
       title: `${productType} 구매 완료`,
-      body: `${ticket.name} ${productType}이(가) 구매되었습니다.`,
-      data: { ticket_id: ticketId, user_ticket_id: userTicket?.id, url: '/tickets' },
+      body: purchaseBody,
+      data: { ticket_id: ticketId, user_ticket_id: userTicket?.id, url: '/my/tickets' },
     }).catch((err) => console.error('[purchase-notification]', err));
 
     return NextResponse.json({

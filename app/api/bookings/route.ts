@@ -365,14 +365,39 @@ export async function POST(request: Request) {
     }
 
     // 푸시 알림 발송 (비동기, 실패해도 예약은 성공)
-    if (user?.id) {
-      sendNotification({
-        user_id: user.id,
-        type: 'booking_confirmed',
-        title: '예약 완료',
-        body: '수업 예약이 완료되었습니다.',
-        data: { booking_id: booking?.id, url: '/schedule' },
-      }).catch((err) => console.error('[booking-notification]', err));
+    if (user?.id && booking?.id) {
+      // 예약 정보 다시 조회 (학원명, 수업명, 시간 포함)
+      (supabase as any)
+        .from('bookings')
+        .select(`
+          id,
+          classes!inner(title, academy_id, academies!inner(name_kr)),
+          schedules(start_time, end_time)
+        `)
+        .eq('id', booking.id)
+        .single()
+        .then(({ data: bookingDetail }: any) => {
+          if (!bookingDetail) return;
+          
+          const academyName = bookingDetail.classes?.academies?.name_kr || '학원';
+          const classTitle = bookingDetail.classes?.title || '수업';
+          const startTime = bookingDetail.schedules?.start_time;
+          
+          let timeStr = '';
+          if (startTime) {
+            const d = new Date(startTime);
+            timeStr = ` ${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+          }
+          
+          return sendNotification({
+            user_id: user.id,
+            type: 'booking_confirmed',
+            title: '예약 완료',
+            body: `${academyName} ${classTitle} 수업이 예약되었습니다.${timeStr}`,
+            data: { booking_id: booking.id, url: '/my/bookings' },
+          });
+        })
+        .catch((err: any) => console.error('[booking-notification]', err));
     }
 
     return NextResponse.json({
