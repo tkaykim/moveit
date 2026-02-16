@@ -5,6 +5,12 @@
 @layer base {
   :root {
     --primary: #CCFF00;
+    --app-safe-bottom: 0px;
+  }
+
+  /* Capacitor Android: 시스템 네비게이션 바 높이만큼 안전 영역 확보 */
+  html.capacitor-android {
+    --app-safe-bottom: 24px;
   }
   
   /* 기본 레이아웃 보호 */

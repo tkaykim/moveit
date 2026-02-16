@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PushNotificationProvider } from "@/contexts/PushNotificationContext";
+import { CapacitorSafeArea } from "@/components/common/capacitor-safe-area";
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -105,6 +106,7 @@ export default function RootLayout({
         >
           <AuthProvider>
             <PushNotificationProvider>
+              <CapacitorSafeArea />
               {children}
             </PushNotificationProvider>
           </AuthProvider>
