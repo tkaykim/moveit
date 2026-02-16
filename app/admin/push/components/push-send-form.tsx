@@ -1,33 +1,88 @@
 "use client";
 
 import { useState } from 'react';
-import { Send, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import {
+  Send, Loader2, CheckCircle, XCircle, ChevronDown, ChevronUp,
+  Users, UserCheck, Building2, Image as ImageIcon, Link, Smartphone,
+  Eye, Type, AlignLeft, FileText,
+} from 'lucide-react';
 import { authFetch } from '@/lib/supabase/auth-fetch';
+
+/* ───── types ───── */
+export type TargetType = 'all' | 'all_with_token' | 'specific' | 'role' | 'academy';
+export type DisplayStyle = 'default' | 'big_text' | 'big_picture';
+export type ClickAction = 'none' | 'path' | 'url';
 
 interface PushSendFormProps {
   usersWithTokens: any[];
   totalTokens: number;
+  allUsers?: any[];
   onSent: () => void;
 }
 
+/* ───── 역할 목록 ───── */
+const ROLES = [
+  { value: 'USER', label: '일반 유저' },
+  { value: 'SUPER_ADMIN', label: '최고관리자' },
+  { value: 'ACADEMY_OWNER', label: '학원 대표' },
+  { value: 'ACADEMY_MANAGER', label: '학원 매니저' },
+  { value: 'INSTRUCTOR', label: '강사' },
+];
+
+/* ───── 앱 내 경로 프리셋 ───── */
+const PATH_PRESETS = [
+  { value: '/', label: '홈' },
+  { value: '/book', label: '예약 (수업 탐색)' },
+  { value: '/notifications', label: '알림함' },
+  { value: '/my', label: '마이페이지' },
+  { value: '/my/tickets', label: '내 수강권' },
+  { value: '/my/bookings', label: '내 예약' },
+];
+
+/* ───── component ───── */
 export function PushSendForm({ usersWithTokens, totalTokens, onSent }: PushSendFormProps) {
+  // 콘텐츠
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
-  const [target, setTarget] = useState<'all' | 'specific'>('all');
+  const [imageUrl, setImageUrl] = useState('');
+
+  // 표시 방식
+  const [displayStyle, setDisplayStyle] = useState<DisplayStyle>('default');
+
+  // 발송 대상
+  const [targetType, setTargetType] = useState<TargetType>('all_with_token');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [userSearch, setUserSearch] = useState('');
+
+  // 클릭 액션
+  const [clickAction, setClickAction] = useState<ClickAction>('none');
+  const [clickPath, setClickPath] = useState('');
+  const [clickUrl, setClickUrl] = useState('');
+
+  // UI 상태
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
+  /* ───── 발송 ───── */
   const handleSend = async () => {
-    if (!title.trim() || !message.trim()) {
-      setResult({ success: false, message: '제목과 내용을 입력하세요.' });
-      return;
-    }
+    if (!title.trim()) return setResult({ success: false, message: '제목을 입력하세요.' });
+    if (!message.trim()) return setResult({ success: false, message: '내용을 입력하세요.' });
+    if (targetType === 'specific' && selectedUsers.length === 0)
+      return setResult({ success: false, message: '발송 대상 유저를 선택하세요.' });
+    if (targetType === 'role' && selectedRoles.length === 0)
+      return setResult({ success: false, message: '역할을 하나 이상 선택하세요.' });
+    if (clickAction === 'path' && !clickPath.trim())
+      return setResult({ success: false, message: '앱 내 경로를 입력하세요.' });
+    if (clickAction === 'url' && !clickUrl.trim())
+      return setResult({ success: false, message: 'URL을 입력하세요.' });
 
-    if (target === 'specific' && selectedUsers.length === 0) {
-      setResult({ success: false, message: '발송 대상을 선택하세요.' });
-      return;
-    }
+    const data: Record<string, string> = { display_style: displayStyle };
+    if (clickAction === 'path') data.path = clickPath.trim().replace(/^\/*/, '/');
+    if (clickAction === 'url') data.url = clickUrl.trim();
+    if (imageUrl.trim()) data.image_url = imageUrl.trim();
 
     setSending(true);
     setResult(null);
@@ -39,22 +94,24 @@ export function PushSendForm({ usersWithTokens, totalTokens, onSent }: PushSendF
         body: JSON.stringify({
           title: title.trim(),
           message: message.trim(),
-          target,
-          user_ids: target === 'specific' ? selectedUsers : [],
+          image_url: imageUrl.trim() || undefined,
+          target: targetType === 'specific' ? 'specific' : targetType === 'role' ? 'role' : 'all',
+          user_ids: targetType === 'specific' ? selectedUsers : [],
+          roles: targetType === 'role' ? selectedRoles : [],
+          data,
           trigger_worker: true,
         }),
       });
 
-      const data = await res.json();
-
+      const resData = await res.json();
       if (res.ok) {
         setResult({
           success: true,
-          message: `발송 완료! 토큰 ${data.summary?.total_tokens || 0}개, 유저 ${data.summary?.logged_in_users || 0}명`,
+          message: `발송 완료! 토큰 ${resData.summary?.total_tokens || 0}개, 유저 ${resData.summary?.logged_in_users || 0}명`,
         });
         onSent();
       } else {
-        setResult({ success: false, message: data.error || '발송 실패' });
+        setResult({ success: false, message: resData.error || '발송 실패' });
       }
     } catch (err: any) {
       setResult({ success: false, message: err.message });
@@ -63,97 +120,300 @@ export function PushSendForm({ usersWithTokens, totalTokens, onSent }: PushSendF
     }
   };
 
-  const toggleUser = (userId: string) => {
-    setSelectedUsers(prev =>
-      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
-    );
+  const toggleUser = (userId: string) =>
+    setSelectedUsers(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
+
+  const toggleRole = (role: string) =>
+    setSelectedRoles(prev => prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]);
+
+  const filteredUsers = usersWithTokens.filter((u: any) => {
+    if (!userSearch.trim()) return true;
+    const q = userSearch.toLowerCase();
+    return (u.display_name || '').toLowerCase().includes(q) ||
+           (u.email || '').toLowerCase().includes(q);
+  });
+
+  const targetLabel = () => {
+    switch (targetType) {
+      case 'all': return `전체 유저`;
+      case 'all_with_token': return `토큰 등록 기기 전체 (${totalTokens}대)`;
+      case 'specific': return `선택한 유저 (${selectedUsers.length}명)`;
+      case 'role': return `역할별 (${selectedRoles.map(r => ROLES.find(x => x.value === r)?.label).join(', ') || '미선택'})`;
+      default: return '';
+    }
   };
 
+  /* ───── btn 스타일 ───── */
+  const tabCls = (active: boolean) =>
+    `px-3 py-2 rounded-lg text-xs sm:text-sm font-medium border transition-all whitespace-nowrap ${
+      active
+        ? 'bg-primary dark:bg-[#CCFF00] text-black border-primary dark:border-[#CCFF00]'
+        : 'bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700 hover:border-neutral-400'
+    }`;
+
+  /* ───── render ───── */
   return (
-    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6">
-      <h2 className="text-lg font-bold text-neutral-900 dark:text-white mb-4">푸시 알림 발송</h2>
+    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden">
+      {/* 헤더 */}
+      <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800">
+        <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+          <Send size={18} /> 푸시 알림 발송
+        </h2>
+        <p className="text-xs text-neutral-500 mt-0.5">제목, 내용, 대상, 표시 형식, 클릭 액션을 설정하세요</p>
+      </div>
 
-      <div className="space-y-4">
-        {/* 제목 */}
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">제목</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="알림 제목"
-            className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00] outline-none"
-          />
-        </div>
+      <div className="p-6 space-y-5">
+        {/* ── 1. 콘텐츠 섹션 ── */}
+        <div className="space-y-3">
+          <SectionLabel icon={<Type size={14} />} label="콘텐츠" />
 
-        {/* 내용 */}
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">내용</label>
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="알림 내용을 입력하세요"
-            rows={3}
-            className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00] outline-none resize-none"
-          />
-        </div>
-
-        {/* 발송 대상 */}
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">발송 대상</label>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setTarget('all')}
-              className={`flex-1 py-2.5 rounded-lg text-sm font-medium border transition-all ${
-                target === 'all'
-                  ? 'bg-primary dark:bg-[#CCFF00] text-black border-primary dark:border-[#CCFF00]'
-                  : 'bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700'
-              }`}
-            >
-              전체 발송 ({totalTokens}대)
-            </button>
-            <button
-              onClick={() => setTarget('specific')}
-              className={`flex-1 py-2.5 rounded-lg text-sm font-medium border transition-all ${
-                target === 'specific'
-                  ? 'bg-primary dark:bg-[#CCFF00] text-black border-primary dark:border-[#CCFF00]'
-                  : 'bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700'
-              }`}
-            >
-              특정 유저
-            </button>
+          {/* 제목 */}
+          <div>
+            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">제목 *</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="알림 제목 (필수)"
+              maxLength={100}
+              className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00] outline-none"
+            />
+            <span className="text-xs text-neutral-400 float-right mt-0.5">{title.length}/100</span>
           </div>
-        </div>
 
-        {/* 유저 선택 (특정 유저일 때) */}
-        {target === 'specific' && (
-          <div className="max-h-48 overflow-y-auto border border-neutral-200 dark:border-neutral-700 rounded-lg">
-            {usersWithTokens.length === 0 ? (
-              <div className="p-4 text-sm text-neutral-500 text-center">토큰이 등록된 유저가 없습니다</div>
-            ) : (
-              usersWithTokens.map((user: any) => (
-                <label
-                  key={user.id}
-                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer border-b border-neutral-100 dark:border-neutral-800 last:border-0"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedUsers.includes(user.id)}
-                    onChange={() => toggleUser(user.id)}
-                    className="w-4 h-4 rounded border-neutral-300 text-primary focus:ring-primary"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
-                      {user.display_name || user.email || user.id.slice(0, 8)}
-                    </p>
-                    <p className="text-xs text-neutral-500 truncate">{user.email}</p>
-                  </div>
-                  <span className="text-xs text-neutral-400">{user.tokens?.length || 0}대</span>
-                </label>
-              ))
+          {/* 내용 */}
+          <div>
+            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">내용 *</label>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="알림 내용을 입력하세요 (필수)"
+              rows={4}
+              maxLength={500}
+              className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00] outline-none resize-none"
+            />
+            <span className="text-xs text-neutral-400 float-right mt-0.5">{message.length}/500</span>
+          </div>
+
+          {/* 이미지 URL */}
+          <div>
+            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+              이미지 URL <span className="text-neutral-400">(선택)</span>
+            </label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <ImageIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                <input
+                  type="url"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://example.com/image.jpg"
+                  className="w-full pl-9 pr-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none"
+                />
+              </div>
+            </div>
+            {imageUrl && (
+              <div className="mt-2 relative w-full max-w-xs h-24 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                <img src={imageUrl} alt="미리보기" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
+              </div>
             )}
           </div>
+        </div>
+
+        {/* ── 2. 표시 방식 ── */}
+        <div className="space-y-2">
+          <SectionLabel icon={<AlignLeft size={14} />} label="표시 방식" />
+          <div className="flex flex-wrap gap-2">
+            {([
+              { value: 'default' as const, label: '기본', desc: '한 줄 요약' },
+              { value: 'big_text' as const, label: '긴 글', desc: '펼치면 전체 표시' },
+              { value: 'big_picture' as const, label: '이미지', desc: '큰 이미지 포함' },
+            ] as const).map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  setDisplayStyle(opt.value);
+                  if (opt.value === 'big_picture' && !imageUrl) {
+                    // 이미지 스타일 선택 시 이미지 URL 필요 안내
+                  }
+                }}
+                className={tabCls(displayStyle === opt.value)}
+              >
+                {opt.label} <span className="hidden sm:inline text-[10px] opacity-60">({opt.desc})</span>
+              </button>
+            ))}
+          </div>
+          {displayStyle === 'big_picture' && !imageUrl && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">이미지 스타일을 사용하려면 위에 이미지 URL을 입력하세요.</p>
+          )}
+        </div>
+
+        {/* ── 3. 발송 대상 ── */}
+        <div className="space-y-2">
+          <SectionLabel icon={<Users size={14} />} label="발송 대상" />
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setTargetType('all_with_token')} className={tabCls(targetType === 'all_with_token')}>
+              <Smartphone size={14} className="inline mr-1" /> 토큰 전체 ({totalTokens})
+            </button>
+            <button type="button" onClick={() => setTargetType('specific')} className={tabCls(targetType === 'specific')}>
+              <UserCheck size={14} className="inline mr-1" /> 특정 유저
+            </button>
+            <button type="button" onClick={() => setTargetType('role')} className={tabCls(targetType === 'role')}>
+              <Building2 size={14} className="inline mr-1" /> 역할별
+            </button>
+          </div>
+
+          {/* 역할 선택 */}
+          {targetType === 'role' && (
+            <div className="flex flex-wrap gap-2 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
+              {ROLES.map(role => (
+                <button
+                  key={role.value}
+                  type="button"
+                  onClick={() => toggleRole(role.value)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                    selectedRoles.includes(role.value)
+                      ? 'bg-primary dark:bg-[#CCFF00] text-black border-transparent'
+                      : 'bg-white dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-neutral-600'
+                  }`}
+                >
+                  {role.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* 유저 선택 */}
+          {targetType === 'specific' && (
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+                placeholder="이름 또는 이메일로 검색..."
+                className="w-full px-4 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm outline-none"
+              />
+              <div className="max-h-48 overflow-y-auto border border-neutral-200 dark:border-neutral-700 rounded-lg">
+                {filteredUsers.length === 0 ? (
+                  <div className="p-4 text-sm text-neutral-500 text-center">토큰이 등록된 유저가 없습니다</div>
+                ) : (
+                  filteredUsers.map((user: any) => (
+                    <label
+                      key={user.id}
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer border-b border-neutral-100 dark:border-neutral-800 last:border-0"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedUsers.includes(user.id)}
+                        onChange={() => toggleUser(user.id)}
+                        className="w-4 h-4 rounded border-neutral-300 text-primary focus:ring-primary"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
+                          {user.display_name || user.email || user.id.slice(0, 8)}
+                        </p>
+                        <p className="text-xs text-neutral-500 truncate">{user.email}</p>
+                      </div>
+                      <span className="text-xs text-neutral-400">{user.tokens?.length || 0}대</span>
+                    </label>
+                  ))
+                )}
+              </div>
+              {selectedUsers.length > 0 && (
+                <p className="text-xs text-primary dark:text-[#CCFF00]">{selectedUsers.length}명 선택됨</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── 4. 클릭 시 이동 ── */}
+        <div className="space-y-2">
+          <SectionLabel icon={<Link size={14} />} label="클릭 시 이동" />
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setClickAction('none')} className={tabCls(clickAction === 'none')}>
+              이동 없음
+            </button>
+            <button type="button" onClick={() => setClickAction('path')} className={tabCls(clickAction === 'path')}>
+              앱 내 경로
+            </button>
+            <button type="button" onClick={() => setClickAction('url')} className={tabCls(clickAction === 'url')}>
+              외부 URL
+            </button>
+          </div>
+
+          {clickAction === 'path' && (
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1.5">
+                {PATH_PRESETS.map(p => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => setClickPath(p.value)}
+                    className={`px-2.5 py-1 rounded-full text-xs border transition-all ${
+                      clickPath === p.value
+                        ? 'bg-neutral-900 dark:bg-white text-white dark:text-black border-transparent'
+                        : 'bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-600'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={clickPath}
+                onChange={e => setClickPath(e.target.value)}
+                placeholder="/book, /notifications 등"
+                className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm outline-none"
+              />
+            </div>
+          )}
+          {clickAction === 'url' && (
+            <input
+              type="url"
+              value={clickUrl}
+              onChange={e => setClickUrl(e.target.value)}
+              placeholder="https://..."
+              className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm outline-none"
+            />
+          )}
+        </div>
+
+        {/* ── 미리보기 토글 ── */}
+        <button
+          type="button"
+          onClick={() => setShowPreview(!showPreview)}
+          className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+        >
+          <Eye size={14} />
+          미리보기
+          {showPreview ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+
+        {showPreview && (
+          <NotificationPreview
+            title={title || '알림 제목'}
+            body={message || '알림 내용이 여기에 표시됩니다.'}
+            imageUrl={displayStyle === 'big_picture' ? imageUrl : ''}
+            displayStyle={displayStyle}
+          />
         )}
+
+        {/* ── 요약 + 발송 버튼 ── */}
+        <div className="bg-neutral-50 dark:bg-neutral-800/50 rounded-xl p-4 space-y-2">
+          <p className="text-xs text-neutral-500">발송 요약</p>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div><span className="text-neutral-400">대상:</span> <span className="text-neutral-900 dark:text-white font-medium">{targetLabel()}</span></div>
+            <div><span className="text-neutral-400">표시:</span> <span className="text-neutral-900 dark:text-white font-medium">
+              {displayStyle === 'default' ? '기본' : displayStyle === 'big_text' ? '긴 글 확장' : '이미지 포함'}
+            </span></div>
+            <div><span className="text-neutral-400">클릭:</span> <span className="text-neutral-900 dark:text-white font-medium">
+              {clickAction === 'none' ? '이동 없음' : clickAction === 'path' ? clickPath || '미입력' : clickUrl || '미입력'}
+            </span></div>
+            {imageUrl && <div><span className="text-neutral-400">이미지:</span> <span className="text-neutral-900 dark:text-white font-medium">첨부됨</span></div>}
+          </div>
+        </div>
 
         {/* 결과 메시지 */}
         {result && (
@@ -171,20 +431,68 @@ export function PushSendForm({ usersWithTokens, totalTokens, onSent }: PushSendF
         <button
           onClick={handleSend}
           disabled={sending || !title.trim() || !message.trim()}
-          className="w-full py-3 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+          className="w-full py-3.5 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity text-sm"
         >
           {sending ? (
-            <>
-              <Loader2 size={18} className="animate-spin" />
-              발송 중...
-            </>
+            <><Loader2 size={18} className="animate-spin" /> 발송 중...</>
           ) : (
-            <>
-              <Send size={18} />
-              푸시 알림 발송
-            </>
+            <><Send size={18} /> 푸시 알림 발송</>
           )}
         </button>
+      </div>
+    </div>
+  );
+}
+
+/* ───── 섹션 라벨 ───── */
+function SectionLabel({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+      {icon} {label}
+    </div>
+  );
+}
+
+/* ───── 미리보기 ───── */
+function NotificationPreview({
+  title, body, imageUrl, displayStyle,
+}: { title: string; body: string; imageUrl: string; displayStyle: DisplayStyle }) {
+  return (
+    <div className="bg-neutral-100 dark:bg-neutral-800 rounded-xl p-4 space-y-3">
+      <p className="text-[10px] font-medium text-neutral-400 uppercase">Android 알림 미리보기</p>
+      <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm overflow-hidden max-w-sm">
+        {/* 상단 앱 이름 */}
+        <div className="flex items-center gap-2 px-3 pt-3 pb-1">
+          <div className="w-4 h-4 rounded bg-primary dark:bg-[#CCFF00]" />
+          <span className="text-[10px] text-neutral-500 font-medium">MOVE.IT</span>
+          <span className="text-[10px] text-neutral-400 ml-auto">지금</span>
+        </div>
+
+        {/* 제목 + 내용 */}
+        <div className="px-3 pb-2">
+          <p className="text-sm font-semibold text-neutral-900 dark:text-white truncate">{title}</p>
+          <p className={`text-xs text-neutral-600 dark:text-neutral-400 mt-0.5 ${
+            displayStyle === 'big_text' ? 'whitespace-pre-wrap' : 'truncate'
+          }`}>
+            {body}
+          </p>
+        </div>
+
+        {/* 이미지 */}
+        {displayStyle === 'big_picture' && imageUrl && (
+          <div className="px-3 pb-3">
+            <div className="w-full h-36 bg-neutral-200 dark:bg-neutral-700 rounded-lg overflow-hidden">
+              <img
+                src={imageUrl}
+                alt="알림 이미지"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.parentElement!.innerHTML = '<div class="flex items-center justify-center h-full text-xs text-neutral-400">이미지 로드 실패</div>';
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

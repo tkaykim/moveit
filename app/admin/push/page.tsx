@@ -11,6 +11,7 @@ interface PushStatus {
     total_users: number;
     users_with_tokens: number;
     total_active_tokens: number;
+    anonymous_tokens: number;
     android_tokens: number;
     ios_tokens: number;
   };

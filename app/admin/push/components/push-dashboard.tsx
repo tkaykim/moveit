@@ -1,6 +1,6 @@
 "use client";
 
-import { Smartphone, Users, MonitorSmartphone } from 'lucide-react';
+import { Smartphone, Users, MonitorSmartphone, UserX } from 'lucide-react';
 
 interface PushDashboardProps {
   status: {
@@ -8,6 +8,7 @@ interface PushDashboardProps {
       total_users: number;
       users_with_tokens: number;
       total_active_tokens: number;
+      anonymous_tokens: number;
       android_tokens: number;
       ios_tokens: number;
     };
@@ -28,6 +29,7 @@ export function PushDashboard({ status, loading }: PushDashboardProps) {
     {
       label: '토큰 등록 유저',
       value: s?.users_with_tokens ?? '-',
+      sub: s?.anonymous_tokens ? `비로그인 ${s.anonymous_tokens}대` : undefined,
       icon: Smartphone,
       color: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400',
     },
@@ -58,6 +60,9 @@ export function PushDashboard({ status, loading }: PushDashboardProps) {
               {loading ? <div className="w-12 h-7 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" /> : card.value}
             </div>
             <div className="text-xs text-neutral-500 mt-1">{card.label}</div>
+            {'sub' in card && card.sub && (
+              <div className="text-[10px] text-neutral-400 mt-0.5">{card.sub}</div>
+            )}
           </div>
         );
       })}

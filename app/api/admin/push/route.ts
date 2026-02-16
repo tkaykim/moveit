@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
     }
 
     // 토큰이 있는 유저들의 프로필 조회
-    const userIds = [...new Set((tokens || []).map((t: any) => t.user_id))];
+    const userIds = [...new Set((tokens || []).filter((t: any) => t.user_id).map((t: any) => t.user_id))];
+    const anonymousTokenCount = (tokens || []).filter((t: any) => !t.user_id).length;
     let usersWithTokens: any[] = [];
 
     if (userIds.length > 0) {
@@ -50,18 +51,19 @@ export async function GET(request: NextRequest) {
       .from('users')
       .select('*', { count: 'exact', head: true });
 
-    // 최근 발송 이력
+    // 최근 발송 이력 (data 필드도 포함)
     const { data: recentQueue } = await (supabase as any)
       .from('notification_queue')
-      .select('id, user_id, title, body, status, created_at, processed_at, error_message')
+      .select('id, user_id, title, body, data, status, created_at, processed_at, error_message')
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(30);
 
     return NextResponse.json({
       summary: {
         total_users: totalUsers || 0,
         users_with_tokens: userIds.length,
         total_active_tokens: (tokens || []).length,
+        anonymous_tokens: anonymousTokenCount,
         android_tokens: (tokens || []).filter((t: any) => t.platform === 'android').length,
         ios_tokens: (tokens || []).filter((t: any) => t.platform === 'ios').length,
       },
@@ -89,9 +91,11 @@ export async function POST(request: NextRequest) {
     const {
       title,
       message,
+      image_url,
       type = 'system' as NotificationType,
-      target = 'all', // 'all' | 'specific'
+      target = 'all', // 'all' | 'specific' | 'role'
       user_ids = [] as string[],
+      roles = [] as string[],
       data = {},
       trigger_worker = true,
     } = body;
@@ -100,10 +104,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'title과 message는 필수입니다.' }, { status: 400 });
     }
 
-    // 서비스 클라이언트 사용 (RLS 우회 - SUPER_ADMIN 확인 완료)
     const supabase = createServiceClient();
 
-    // 모든 활성 디바이스 토큰 조회 (user_id 유무와 무관)
+    // 역할별 필터: 해당 역할의 유저 ID 조회
+    let roleUserIds: string[] = [];
+    if (target === 'role' && roles.length > 0) {
+      const { data: roleUsers } = await (supabase as any)
+        .from('users')
+        .select('id')
+        .in('role', roles);
+      roleUserIds = (roleUsers || []).map((u: any) => u.id);
+      if (roleUserIds.length === 0) {
+        return NextResponse.json({ error: '해당 역할의 유저가 없습니다.' }, { status: 400 });
+      }
+    }
+
+    // 활성 디바이스 토큰 조회
     let tokenQuery = (supabase as any)
       .from('device_tokens')
       .select('id, token, platform, user_id')
@@ -111,6 +127,8 @@ export async function POST(request: NextRequest) {
 
     if (target === 'specific' && user_ids.length > 0) {
       tokenQuery = tokenQuery.in('user_id', user_ids);
+    } else if (target === 'role' && roleUserIds.length > 0) {
+      tokenQuery = tokenQuery.in('user_id', roleUserIds);
     }
 
     const { data: activeTokens, error: tokenError } = await tokenQuery;
@@ -126,6 +144,10 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // image_url을 data에 포함
+    const enrichedData = { ...data };
+    if (image_url) enrichedData.image_url = image_url;
+
     // 로그인된 유저들에게는 인앱 알림도 기록
     const loggedInUserIds = [...new Set(
       activeTokens.filter((t: any) => t.user_id).map((t: any) => t.user_id)
@@ -134,7 +156,7 @@ export async function POST(request: NextRequest) {
     let bulkResult = null;
     if (loggedInUserIds.length > 0) {
       bulkResult = await sendBulkNotification(loggedInUserIds, {
-        type, title, body: message, data, channel: 'push',
+        type, title, body: message, data: enrichedData, channel: 'push',
       });
     }
 
@@ -148,7 +170,7 @@ export async function POST(request: NextRequest) {
     const anonymousTokens = activeTokens.filter((t: any) => !t.user_id);
     let directFcmResult = null;
     if (anonymousTokens.length > 0 || loggedInUserIds.length === 0) {
-      directFcmResult = await triggerDirectPush(supabase, activeTokens, title, message, data);
+      directFcmResult = await triggerDirectPush(supabase, activeTokens, title, message, enrichedData, image_url);
     }
 
     return NextResponse.json({
@@ -157,6 +179,8 @@ export async function POST(request: NextRequest) {
         total_tokens: activeTokens.length,
         logged_in_users: loggedInUserIds.length,
         anonymous_tokens: anonymousTokens.length,
+        target_type: target,
+        target_roles: roles,
       },
       bulk_result: bulkResult,
       worker: workerResult,
@@ -202,6 +226,7 @@ async function triggerDirectPush(
   title: string,
   message: string,
   data: Record<string, any>,
+  imageUrl?: string,
 ) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -212,8 +237,6 @@ async function triggerDirectPush(
       return { success: false, error: 'Supabase URL/Key 미설정' };
     }
 
-    // 각 토큰에 대해 큐 아이템을 임시 생성하여 notification-worker가 처리하도록
-    // 비로그인 토큰은 큐를 거치지 않으므로, 직접 Edge Function에 토큰 목록을 전달
     const res = await fetch(`${supabaseUrl}/functions/v1/notification-worker`, {
       method: 'POST',
       headers: {
@@ -225,6 +248,7 @@ async function triggerDirectPush(
         title,
         body: message,
         data: data || {},
+        image_url: imageUrl || undefined,
       }),
     });
 
