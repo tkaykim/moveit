@@ -82,6 +82,22 @@
   .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: rgb(71 85 105);
   }
+
+  /* 인트로 QR 스캔 라인 애니메이션 (쥥쥥) */
+  @keyframes intro-scanline {
+    0% { top: 0; }
+    50% { top: 100%; }
+    100% { top: 0; }
+  }
+  .animate-intro-scanline {
+    animation: intro-scanline 1.2s ease-in-out infinite;
+  }
+}
+
+/* 인트로 CTA 박스 펄스 (키프레임은 레이어 밖에) */
+@keyframes intro-cta-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(204, 255, 0, 0.35); transform: scale(1); }
+  50% { box-shadow: 0 0 20px 4px rgba(204, 255, 0, 0.2); transform: scale(1.02); }
 }
 
 /* TipTap 에디터 스타일 */

@@ -103,9 +103,9 @@ export default function IntroPage() {
         </div>
         {isMobileMenuOpen && (
           <div className="sm:hidden fixed inset-0 top-14 z-40 bg-white dark:bg-neutral-950 border-t border-neutral-200 dark:border-neutral-800 px-4 py-4 space-y-2">
-            <a href="#comparison" onClick={closeMobileMenu} className="block py-2.5 font-medium">비교</a>
-            <a href="#admin" onClick={closeMobileMenu} className="block py-2.5 font-medium">관리자</a>
-            <a href="#pricing" onClick={closeMobileMenu} className="block py-2.5 font-medium">요금제</a>
+            <a href="#comparison" onClick={closeMobileMenu} className="block py-2.5 font-medium text-neutral-900 dark:text-white">비교</a>
+            <a href="#admin" onClick={closeMobileMenu} className="block py-2.5 font-medium text-neutral-900 dark:text-white">관리자</a>
+            <a href="#pricing" onClick={closeMobileMenu} className="block py-2.5 font-medium text-neutral-900 dark:text-white">요금제</a>
             <a href="#contact" onClick={closeMobileMenu} className="block py-3 mt-4 text-center font-bold bg-neutral-900 dark:bg-[#CCFF00] dark:text-black text-white rounded-lg">도입 문의</a>
           </div>
         )}
@@ -137,7 +137,7 @@ export default function IntroPage() {
             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 text-neutral-900 dark:text-white">
               왜 댄스 학원은 전용 플랫폼을 써야 할까요?
             </h2>
-            <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400 break-words max-w-2xl mx-auto">
+            <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-300 break-words max-w-2xl mx-auto">
               헬스장, 필라테스용 프로그램으로는 해결할 수 없는 댄스 학원만의 니즈를 담았습니다.
             </p>
           </div>
@@ -149,7 +149,7 @@ export default function IntroPage() {
       <section className="py-10 md:py-14 bg-neutral-50 dark:bg-neutral-900/30">
         <div className="max-w-5xl mx-auto px-4">
           <h2 className="text-center text-xl sm:text-2xl md:text-3xl font-bold mb-2 text-neutral-900 dark:text-white">어떠한 댄스학원이든 지원</h2>
-          <p className="text-center text-sm sm:text-base text-neutral-500 dark:text-neutral-400 mb-8">복잡한 운영 방식도 무빗 하나로 처리합니다.</p>
+          <p className="text-center text-sm sm:text-base text-neutral-600 dark:text-neutral-300 mb-8">복잡한 운영 방식도 무빗 하나로 처리합니다.</p>
           <div className="grid grid-cols-3 gap-3 sm:gap-4">
             {[
               { icon: Calendar, line1: '기간제 학원', line2: '(정규 클래스)', color: 'text-neutral-900 dark:text-[#CCFF00]' },
@@ -173,7 +173,7 @@ export default function IntroPage() {
       {/* ═══════ 관리자 대시보드 소개 ═══════ */}
       <section className="py-10 md:py-14 max-w-5xl mx-auto px-4 bg-white dark:bg-transparent">
         <h2 className="text-center text-xl sm:text-2xl md:text-3xl font-bold mb-2 text-neutral-900 dark:text-white">관리자 대시보드</h2>
-        <p className="text-center text-sm sm:text-base text-neutral-500 dark:text-neutral-400 mb-8 max-w-2xl mx-auto">
+        <p className="text-center text-sm sm:text-base text-neutral-600 dark:text-neutral-300 mb-8 max-w-2xl mx-auto">
           오늘의 수업 관리, 수업별 신청 인원(관리자에게만 보입니다), 클래스·스케줄·출석·수강권 기능을 한 화면에서.
         </p>
         <div className="relative rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-xl overflow-hidden">
@@ -252,12 +252,16 @@ export default function IntroPage() {
         </div>
       </section>
 
-      {/* ═══════ 직접 눌러보세요 (Interactive) ═══════ */}
+      {/* ═══════ 직접 클릭해보세요! (Interactive) ═══════ */}
       <section id="admin" className="py-10 md:py-14 bg-white dark:bg-transparent">
         <div className="max-w-5xl mx-auto px-4">
-          <h2 className="text-center text-xl sm:text-2xl md:text-3xl font-bold mb-10 md:mb-12 text-neutral-900 dark:text-white">
-            직접 눌러보세요
-          </h2>
+          <div className="flex justify-center mb-10 md:mb-12 px-2">
+            <div className="inline-flex items-center justify-center gap-2 px-5 py-3.5 sm:px-6 sm:py-4 rounded-2xl bg-[#CCFF00]/15 dark:bg-[#CCFF00]/20 border-2 border-[#CCFF00]/50 dark:border-[#CCFF00]/60 shadow-lg shadow-[#CCFF00]/10 animate-[intro-cta-pulse_2.5s_ease-in-out_infinite] text-center">
+              <span className="text-base sm:text-lg md:text-2xl font-black text-neutral-900 dark:text-[#CCFF00] tracking-tight">
+                직접 클릭해보세요!
+              </span>
+            </div>
+          </div>
 
           {/* Feature 1: 캘린더 */}
           <div id="features" className="grid md:grid-cols-2 gap-6 md:gap-10 items-center mb-14 md:mb-16">
@@ -312,7 +316,7 @@ export default function IntroPage() {
             <div className="text-center">
               <span className="inline-block px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs font-bold mb-3">스마트 알림</span>
               <h3 className="text-lg md:text-xl font-bold mb-2 text-neutral-900 dark:text-white">수강권 만료 알림, 출석 알림, 수업영상 등록 알림 발송</h3>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-3">만료 임박·출석 확인·영상 업로드 시 수강생에게 푸시로 바로 알림 보낼 수 있습니다.</p>
+              <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-3">만료 임박·출석 확인·영상 업로드 시 수강생에게 푸시로 바로 알림 보낼 수 있습니다.</p>
               <div className="flex flex-wrap justify-center gap-1.5">
                 {['수강권 만료 알림', '출석 알림', '수업영상 등록 알림'].map((tag) => (
                   <span key={tag} className="text-[10px] px-2 py-1 rounded-full bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 font-medium">{tag}</span>
@@ -331,7 +335,7 @@ export default function IntroPage() {
       <section className="py-10 md:py-14 max-w-5xl mx-auto px-4 bg-white dark:bg-transparent">
         <div className="text-center mb-8">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 text-neutral-900 dark:text-white">도입부터 운영까지, 함께합니다</h2>
-          <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400">처음 도입하실 때 필요한 세팅은 모두 직접 도와드립니다.</p>
+          <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-300">처음 도입하실 때 필요한 세팅은 모두 직접 도와드립니다.</p>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
@@ -361,7 +365,7 @@ export default function IntroPage() {
         <div className="max-w-xl mx-auto px-4">
           <div className="text-center mb-8">
             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 text-neutral-900 dark:text-white">도입 문의</h2>
-            <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400">무료 상담으로 우리 학원에 맞는 세팅을 알아보세요.</p>
+            <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-300">무료 상담으로 우리 학원에 맞는 세팅을 알아보세요.</p>
           </div>
           <div className="p-5 rounded-2xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 space-y-3 shadow-sm">
             <div className="grid grid-cols-2 gap-3">
@@ -399,10 +403,10 @@ export default function IntroPage() {
 
       {/* ═══════ Footer ═══════ */}
       <footer className="py-6 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-transparent">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-3 text-sm text-neutral-500 dark:text-neutral-400">
+        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-3 text-sm text-neutral-600 dark:text-neutral-300">
           <div className="flex items-center gap-2">
             <span className="font-bold text-neutral-900 dark:text-white">MoveIt</span>
-            <span className="text-xs text-neutral-500 dark:text-neutral-400">댄스학원 운영의 새로운 기준</span>
+            <span className="text-xs text-neutral-600 dark:text-neutral-300">댄스학원 운영의 새로운 기준</span>
           </div>
           <div className="flex gap-4 text-xs">
             <a href="#" className="hover:text-neutral-900 dark:hover:text-white">이용약관</a>

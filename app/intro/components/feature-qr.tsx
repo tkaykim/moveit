@@ -38,17 +38,17 @@ export function FeatureQr() {
       <div className="relative aspect-square max-h-[200px] bg-neutral-950 overflow-hidden flex items-center justify-center p-4">
         <div className="absolute inset-0 flex items-center justify-center p-4">
           {/* Scan Lines (중앙 정렬, 컨테이너 안에 완전히 수용) */}
-          <div className="relative w-[min(140px,65%)] aspect-square max-w-full border-2 border-[#CCFF00]/40 rounded-xl flex items-center justify-center shrink-0">
-            <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-[#CCFF00] rounded-tl-lg" />
-            <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-[#CCFF00] rounded-tr-lg" />
-            <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-[#CCFF00] rounded-bl-lg" />
-            <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-[#CCFF00] rounded-br-lg" />
+          <div className="relative w-[min(140px,65%)] aspect-square max-w-full border-2 border-[#CCFF00]/40 rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
+            <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-[#CCFF00] rounded-tl-lg z-10" />
+            <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-[#CCFF00] rounded-tr-lg z-10" />
+            <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-[#CCFF00] rounded-bl-lg z-10" />
+            <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-[#CCFF00] rounded-br-lg z-10" />
+            <QrCode className="text-[#CCFF00]/30 relative z-0 w-12 h-12 shrink-0" size={48} />
             {scanning && (
-              <div className="absolute inset-0 overflow-hidden rounded-xl">
-                <div className="absolute inset-x-0 h-0.5 bg-[#CCFF00] animate-[scanline_1.2s_ease-in-out_infinite" />
+              <div className="absolute inset-0 rounded-xl z-20 pointer-events-none flex items-start justify-center">
+                <div className="absolute left-0 right-0 h-1 bg-[#CCFF00] shadow-[0_0_8px_#CCFF00] animate-intro-scanline" style={{ top: 0 }} />
               </div>
             )}
-            <QrCode className="text-[#CCFF00]/30 relative z-10 w-12 h-12 shrink-0" size={48} />
           </div>
         </div>
 
@@ -101,13 +101,6 @@ export function FeatureQr() {
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes scanline {
-          0% { top: 0; }
-          50% { top: 100%; }
-          100% { top: 0; }
-        }
-      `}</style>
     </div>
   );
 }
