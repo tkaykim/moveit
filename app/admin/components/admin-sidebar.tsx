@@ -13,6 +13,7 @@ import {
   Image as ImageIcon,
   UserCheck,
   AlertTriangle,
+  Bell,
   type LucideIcon,
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
@@ -59,6 +60,11 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       title: '배너 관리',
       icon: ImageIcon,
       href: '/admin/banners',
+    },
+    {
+      title: '푸시 알림',
+      icon: Bell,
+      href: '/admin/push',
     },
     {
       title: '고장신고/개발요청',
