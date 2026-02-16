@@ -1,40 +1,62 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import type { NextRequest } from 'next/server';
 
 /**
  * 관리자(SUPER_ADMIN) 인증을 확인하는 공통 헬퍼
  *
- * 1차: getUser()로 JWT 토큰 검증 시도
- * 2차: 실패 시 세션 복구/리프레시 후 재시도
- * 3차: 서비스 클라이언트로 역할 확인 (RLS 우회)
+ * 1차: Authorization Bearer 토큰으로 인증 (가장 안정적)
+ * 2차: 쿠키 기반 getUser()로 인증
+ * 3차: 세션 복구/리프레시 후 재시도
  *
+ * @param request - NextRequest 객체 (Authorization 헤더 읽기용)
  * @returns 인증된 사용자 정보 또는 에러
  */
-export async function requireSuperAdmin(): Promise<{
+export async function requireSuperAdmin(request?: NextRequest | Request): Promise<{
   user: { id: string; email?: string } | null;
   error: string | null;
   status: number;
 }> {
-  const supabase = await createClient();
-
-  // 1차: getUser()로 인증 확인
   let user: { id: string; email?: string } | null = null;
-  const { data: userData, error: authError } = await supabase.auth.getUser();
 
-  if (!authError && userData?.user) {
-    user = userData.user;
-  } else {
-    // 2차: 세션에서 복구 시도 (토큰 만료 시 자동 갱신)
+  // 1차: Authorization Bearer 토큰으로 인증
+  const authHeader = request?.headers?.get?.('Authorization');
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+  if (bearerToken) {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData?.session) {
-        // 세션이 있으면 리프레시 시도
-        const { data: refreshData } = await supabase.auth.refreshSession();
-        if (refreshData?.user) {
-          user = refreshData.user;
+      const supabase = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      const { data, error } = await supabase.auth.getUser(bearerToken);
+      if (!error && data?.user) {
+        user = data.user;
+      }
+    } catch (e) {
+      console.warn('[admin-auth] Bearer token verification failed:', e);
+    }
+  }
+
+  // 2차: 쿠키 기반 인증 (Bearer 토큰이 없거나 실패한 경우)
+  if (!user) {
+    try {
+      const supabase = await createClient();
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      if (!authError && userData?.user) {
+        user = userData.user;
+      } else {
+        // 3차: 세션 복구 시도
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session) {
+          const { data: refreshData } = await supabase.auth.refreshSession();
+          if (refreshData?.user) {
+            user = refreshData.user;
+          }
         }
       }
-    } catch (refreshError) {
-      console.error('Session refresh failed:', refreshError);
+    } catch (e) {
+      console.warn('[admin-auth] Cookie-based auth failed:', e);
     }
   }
 

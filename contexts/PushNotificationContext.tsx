@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import { authFetch } from '@/lib/supabase/auth-fetch';
 
 interface PushNotificationContextType {
   deviceToken: string | null;
@@ -48,7 +49,7 @@ export function PushNotificationProvider({ children }: { children: ReactNode }) 
     try {
       const cap = (window as any).Capacitor;
       const platform = cap?.getPlatform?.() || 'unknown';
-      const res = await fetch('/api/notifications/device-token', {
+      const res = await authFetch('/api/notifications/device-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, platform }),
@@ -263,7 +264,7 @@ export function PushNotificationProvider({ children }: { children: ReactNode }) 
   const refreshUnreadCount = useCallback(async () => {
     if (!user) { setUnreadCount(0); return; }
     try {
-      const res = await fetch('/api/notifications?unread_count=true');
+      const res = await authFetch('/api/notifications?unread_count=true');
       if (res.ok) {
         const data = await res.json();
         setUnreadCount(data.unread_count || 0);

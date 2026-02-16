@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, Bell, Calendar, Ticket, ShoppingCart, Megaphone, Clock, Smartphone, AlertTriangle } from 'lucide-react';
 import { usePushNotification } from '@/contexts/PushNotificationContext';
+import { authFetch } from '@/lib/supabase/auth-fetch';
 import type { NotificationPreferences } from '@/types/notifications';
 
 interface NotificationSettingsProps {
@@ -52,7 +53,7 @@ export function NotificationSettings({ onBack }: NotificationSettingsProps) {
 
   const fetchPreferences = async () => {
     try {
-      const res = await fetch('/api/notifications/preferences');
+      const res = await authFetch('/api/notifications/preferences');
       if (res.ok) {
         const data = await res.json();
         setPrefs(data);
@@ -71,7 +72,7 @@ export function NotificationSettings({ onBack }: NotificationSettingsProps) {
 
     setSaving(true);
     try {
-      await fetch('/api/notifications/preferences', {
+      await authFetch('/api/notifications/preferences', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [field]: value }),

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSuperAdmin as requireSuperAdminAuth } from '@/lib/supabase/admin-auth';
 import { getBannerById, updateBanner, deleteBanner } from '@/lib/db/banners';
 
-async function requireSuperAdmin() {
-  const auth = await requireSuperAdminAuth();
+async function requireSuperAdmin(request?: NextRequest | Request) {
+  const auth = await requireSuperAdminAuth(request);
   if (auth.error) {
     return { error: NextResponse.json({ error: auth.error }, { status: auth.status }) };
   }
@@ -16,7 +16,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireSuperAdmin();
+    const auth = await requireSuperAdmin(request);
     if (auth.error) return auth.error;
 
     const { id } = await params;
@@ -45,7 +45,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireSuperAdmin();
+    const auth = await requireSuperAdmin(request);
     if (auth.error) return auth.error;
 
     const { id } = await params;
@@ -86,7 +86,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireSuperAdmin();
+    const auth = await requireSuperAdmin(request);
     if (auth.error) return auth.error;
 
     const { id } = await params;

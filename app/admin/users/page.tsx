@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Search, Plus, Building2, Users } from 'lucide-react';
+import { authFetch } from '@/lib/supabase/auth-fetch';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import {
   User,
@@ -82,7 +83,7 @@ export default function UsersPage() {
 
   const loadAcademyUserRoles = useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/users/academy-roles');
+      const response = await authFetch('/api/admin/users/academy-roles');
       const result = await response.json();
       if (response.ok) setAcademyUserRoles(result.data || []);
     } catch (error) {
@@ -102,7 +103,7 @@ export default function UsersPage() {
   // ---- 핸들러 ----
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     try {
-      const response = await fetch('/api/admin/users/role', {
+      const response = await authFetch('/api/admin/users/role', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, role: newRole }),
@@ -127,7 +128,7 @@ export default function UsersPage() {
     setAssignLoading(true);
     try {
       for (const sel of assignAcademySelections) {
-        const response = await fetch('/api/admin/users/academy-roles', {
+        const response = await authFetch('/api/admin/users/academy-roles', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: assignUserId, academyId: sel.academy_id, role: sel.role }),
@@ -170,7 +171,7 @@ export default function UsersPage() {
       );
 
       for (const del of toDelete) {
-        const res = await fetch('/api/admin/users/academy-roles', {
+        const res = await authFetch('/api/admin/users/academy-roles', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: del.id, userId: editUser.id }),
@@ -178,14 +179,14 @@ export default function UsersPage() {
         if (!res.ok) throw new Error((await res.json()).error || '학원 역할 해제에 실패했습니다.');
       }
       for (const add of toAdd) {
-        await fetch('/api/admin/users/academy-roles', {
+        await authFetch('/api/admin/users/academy-roles', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: editUser.id, academyId: add.academy_id, role: add.role }),
         });
       }
       if (editUserRole !== editUser.role) {
-        const res = await fetch('/api/admin/users/role', {
+        const res = await authFetch('/api/admin/users/role', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: editUser.id, role: editUserRole }),

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import { authFetch } from '@/lib/supabase/auth-fetch';
 import { PushDashboard } from './components/push-dashboard';
 import { PushSendForm } from './components/push-send-form';
 import { PushHistory } from './components/push-history';
@@ -25,7 +26,7 @@ export default function AdminPushPage() {
   const fetchStatus = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/push');
+      const res = await authFetch('/api/admin/push');
       if (!res.ok) throw new Error((await res.json()).error || '조회 실패');
       const data = await res.json();
       setStatus(data);

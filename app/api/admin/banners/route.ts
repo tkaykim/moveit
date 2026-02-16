@@ -7,8 +7,8 @@ import {
   updateBannerSettings,
 } from '@/lib/db/banners';
 
-async function requireSuperAdmin() {
-  const auth = await requireSuperAdminAuth();
+async function requireSuperAdmin(request?: NextRequest | Request) {
+  const auth = await requireSuperAdminAuth(request);
   if (auth.error) {
     return { error: NextResponse.json({ error: auth.error }, { status: auth.status }) };
   }
@@ -18,7 +18,7 @@ async function requireSuperAdmin() {
 // 관리자용: 모든 배너 목록 조회
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireSuperAdmin();
+    const auth = await requireSuperAdmin(request);
     if (auth.error) return auth.error;
 
     let banners: any[] = [];
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
 // 배너 생성
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireSuperAdmin();
+    const auth = await requireSuperAdmin(request);
     if (auth.error) return auth.error;
 
     const body = await request.json();
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
 // 배너 설정 수정
 export async function PATCH(request: NextRequest) {
   try {
-    const auth = await requireSuperAdmin();
+    const auth = await requireSuperAdmin(request);
     if (auth.error) return auth.error;
 
     const body = await request.json();

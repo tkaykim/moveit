@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 // GET: 학원-유저 역할 매핑 목록 조회
 export async function GET(request: Request) {
   try {
-    const auth = await requireSuperAdmin();
+    const auth = await requireSuperAdmin(request);
     if (auth.error) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
 // POST: 학원-유저 역할 매핑 추가
 export async function POST(request: Request) {
   try {
-    const auth = await requireSuperAdmin();
+    const auth = await requireSuperAdmin(request);
     if (auth.error) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
 // DELETE: 학원-유저 역할 매핑 삭제
 export async function DELETE(request: Request) {
   try {
-    const auth = await requireSuperAdmin();
+    const auth = await requireSuperAdmin(request);
     if (auth.error) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Send, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { authFetch } from '@/lib/supabase/auth-fetch';
 
 interface PushSendFormProps {
   usersWithTokens: any[];
@@ -32,7 +33,7 @@ export function PushSendForm({ usersWithTokens, totalTokens, onSent }: PushSendF
     setResult(null);
 
     try {
-      const res = await fetch('/api/admin/push', {
+      const res = await authFetch('/api/admin/push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

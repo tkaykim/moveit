@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Bell, CheckCheck } from 'lucide-react';
 import { NotificationItem } from './notification-item';
+import { authFetch } from '@/lib/supabase/auth-fetch';
 import { usePushNotification } from '@/contexts/PushNotificationContext';
 import type { Notification } from '@/types/notifications';
 
@@ -17,7 +18,7 @@ export function NotificationList() {
 
   const fetchNotifications = useCallback(async (pageNum: number, append = false) => {
     try {
-      const res = await fetch(`/api/notifications?page=${pageNum}&limit=${limit}`);
+      const res = await authFetch(`/api/notifications?page=${pageNum}&limit=${limit}`);
       if (!res.ok) return;
       const data = await res.json();
 
@@ -41,7 +42,7 @@ export function NotificationList() {
 
   const handleRead = async (id: string) => {
     try {
-      await fetch(`/api/notifications/${id}`, { method: 'PATCH' });
+      await authFetch(`/api/notifications/${id}`, { method: 'PATCH' });
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, is_read: true, status: 'read' as const } : n))
       );
@@ -53,7 +54,7 @@ export function NotificationList() {
 
   const handleReadAll = async () => {
     try {
-      await fetch('/api/notifications/read-all', { method: 'PATCH' });
+      await authFetch('/api/notifications/read-all', { method: 'PATCH' });
       setNotifications((prev) =>
         prev.map((n) => ({ ...n, is_read: true, status: 'read' as const }))
       );

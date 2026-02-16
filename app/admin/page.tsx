@@ -2,6 +2,7 @@
 
 import { Building2, Users, Calendar, BookOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { authFetch } from '@/lib/supabase/auth-fetch';
 
 interface DashboardStats {
   academyCount: number;
@@ -22,7 +23,7 @@ export default function AdminPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/admin/stats');
+        const response = await authFetch('/api/admin/stats');
         if (response.ok) {
           const data = await response.json();
           setStats(data);
