@@ -27,7 +27,10 @@ export async function sendNotification(req: SendNotificationRequest) {
     if (channel === 'kakao' && !prefs.kakao_enabled) return null;
     if (isReminderType(req.type) && !prefs.class_reminder) return null;
     if (isBookingType(req.type) && !prefs.booking_updates) return null;
+    if (isAttendanceType(req.type) && !prefs.attendance_updates) return null;
     if (isTicketType(req.type) && !prefs.ticket_updates) return null;
+    if (isContentType(req.type) && !prefs.content_updates) return null;
+    if (isConsultationType(req.type) && !prefs.consultation_updates) return null;
     if (req.type === 'marketing' && !prefs.marketing) return null;
   }
 
@@ -93,13 +96,25 @@ export async function sendBulkNotification(
 
 // 알림 유형별 카테고리 판별 헬퍼
 function isReminderType(type: NotificationType): boolean {
-  return type === 'class_reminder';
+  return ['class_reminder', 'class_cancelled'].includes(type);
 }
 
 function isBookingType(type: NotificationType): boolean {
-  return ['booking_confirmed', 'booking_cancelled', 'class_cancelled'].includes(type);
+  return ['booking_confirmed', 'booking_cancelled'].includes(type);
+}
+
+function isAttendanceType(type: NotificationType): boolean {
+  return ['attendance_checked', 'attendance_absent'].includes(type);
 }
 
 function isTicketType(type: NotificationType): boolean {
   return ['ticket_purchased', 'ticket_expiry', 'extension_approved', 'extension_rejected'].includes(type);
+}
+
+function isContentType(type: NotificationType): boolean {
+  return type === 'video_uploaded';
+}
+
+function isConsultationType(type: NotificationType): boolean {
+  return ['consultation_new', 'consultation_reply'].includes(type);
 }

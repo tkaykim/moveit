@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CalendarCheck, Ticket, MessageSquare, AlertCircle, ShoppingCart, X } from 'lucide-react';
+import { Bell, CalendarCheck, Ticket, MessageSquare, AlertCircle, ShoppingCart, X, UserCheck, Video, Megaphone } from 'lucide-react';
 import type { Notification, NotificationType } from '@/types/notifications';
 
 interface NotificationItemProps {
@@ -15,12 +15,15 @@ const typeConfig: Record<NotificationType, { icon: typeof Bell; color: string; l
   ticket_expiry: { icon: Ticket, color: 'text-orange-500', label: '수강권' },
   class_reminder: { icon: Bell, color: 'text-purple-500', label: '수업 알림' },
   class_cancelled: { icon: AlertCircle, color: 'text-red-500', label: '수업 취소' },
+  attendance_checked: { icon: UserCheck, color: 'text-green-500', label: '출석' },
+  attendance_absent: { icon: UserCheck, color: 'text-red-500', label: '결석' },
+  video_uploaded: { icon: Video, color: 'text-purple-500', label: '영상' },
   consultation_new: { icon: MessageSquare, color: 'text-blue-500', label: '상담' },
   consultation_reply: { icon: MessageSquare, color: 'text-green-500', label: '상담 답변' },
   extension_approved: { icon: Ticket, color: 'text-green-500', label: '연장 승인' },
   extension_rejected: { icon: Ticket, color: 'text-red-500', label: '연장 거절' },
   system: { icon: Bell, color: 'text-neutral-500', label: '시스템' },
-  marketing: { icon: Bell, color: 'text-yellow-500', label: '프로모션' },
+  marketing: { icon: Megaphone, color: 'text-yellow-500', label: '프로모션' },
 };
 
 function getRelativeTime(dateStr: string): string {

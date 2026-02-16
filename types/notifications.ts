@@ -14,14 +14,56 @@ export type NotificationType =
   | 'booking_cancelled'    // 예약 취소
   | 'ticket_purchased'     // 수강권 구매 완료
   | 'ticket_expiry'        // 수강권 만료 임박
-  | 'class_reminder'       // 수업 알림
+  | 'class_reminder'       // 수업 당일 알림
   | 'class_cancelled'      // 수업 취소
+  | 'attendance_checked'   // 출석 확인 (본인/학부모)
+  | 'attendance_absent'    // 결석 알림 (학부모)
+  | 'video_uploaded'       // 수업 영상 등록
   | 'consultation_new'     // 새 상담 접수 (관리자)
   | 'consultation_reply'   // 상담 답변
   | 'extension_approved'   // 연장 승인
   | 'extension_rejected'   // 연장 거절
   | 'system'               // 시스템 알림
   | 'marketing';           // 마케팅 알림
+
+// 알림 유형별 카테고리 매핑
+export const NOTIFICATION_CATEGORIES = {
+  class_updates: {
+    label: '수업 알림',
+    description: '수업 당일 알림, 수업 취소 알림',
+    types: ['class_reminder', 'class_cancelled'] as NotificationType[],
+  },
+  booking_updates: {
+    label: '예약 알림',
+    description: '예약 확인, 취소 알림',
+    types: ['booking_confirmed', 'booking_cancelled'] as NotificationType[],
+  },
+  attendance_updates: {
+    label: '출석 알림',
+    description: '출석 확인, 결석 알림 (본인/학부모)',
+    types: ['attendance_checked', 'attendance_absent'] as NotificationType[],
+  },
+  ticket_updates: {
+    label: '수강권 알림',
+    description: '수강권 구매, 만료 임박, 연장 알림',
+    types: ['ticket_purchased', 'ticket_expiry', 'extension_approved', 'extension_rejected'] as NotificationType[],
+  },
+  content_updates: {
+    label: '콘텐츠 알림',
+    description: '수업 영상 등록 알림',
+    types: ['video_uploaded'] as NotificationType[],
+  },
+  consultation_updates: {
+    label: '상담 알림',
+    description: '상담 답변 알림',
+    types: ['consultation_reply'] as NotificationType[],
+  },
+  marketing: {
+    label: '마케팅/이벤트',
+    description: '프로모션, 이벤트, 할인 알림',
+    types: ['marketing'] as NotificationType[],
+  },
+} as const;
 
 // 플랫폼 타입
 export type DevicePlatform = 'android' | 'ios' | 'web';
@@ -59,7 +101,10 @@ export interface NotificationPreferences {
   kakao_enabled: boolean;
   class_reminder: boolean;
   booking_updates: boolean;
+  attendance_updates: boolean;
   ticket_updates: boolean;
+  content_updates: boolean;
+  consultation_updates: boolean;
   marketing: boolean;
   reminder_minutes_before: number;
   created_at: string;
@@ -98,7 +143,10 @@ export interface UpdatePreferencesRequest {
   kakao_enabled?: boolean;
   class_reminder?: boolean;
   booking_updates?: boolean;
+  attendance_updates?: boolean;
   ticket_updates?: boolean;
+  content_updates?: boolean;
+  consultation_updates?: boolean;
   marketing?: boolean;
   reminder_minutes_before?: number;
 }

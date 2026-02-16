@@ -4,7 +4,8 @@ import { useState } from 'react';
 import {
   Send, Loader2, CheckCircle, XCircle, ChevronDown, ChevronUp,
   Users, UserCheck, Building2, Image as ImageIcon, Link, Smartphone,
-  Eye, Type, AlignLeft, FileText,
+  Eye, Type, AlignLeft, FileText, Zap, Calendar, UserCheck2, Ticket,
+  Video, Bell, Megaphone, MessageSquare, Clock,
 } from 'lucide-react';
 import { authFetch } from '@/lib/supabase/auth-fetch';
 
@@ -39,6 +40,155 @@ const PATH_PRESETS = [
   { value: '/my/bookings', label: '내 예약' },
 ];
 
+/* ───── 알림 유형별 테스트 프리셋 ───── */
+interface NotificationPreset {
+  id: string;
+  icon: any;
+  label: string;
+  category: string;
+  color: string;
+  title: string;
+  message: string;
+  clickAction: ClickAction;
+  clickPath: string;
+  displayStyle: DisplayStyle;
+}
+
+const NOTIFICATION_PRESETS: NotificationPreset[] = [
+  {
+    id: 'class_reminder',
+    icon: Calendar,
+    label: '수업 당일 알림',
+    category: '수업',
+    color: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400',
+    title: '오늘 수업이 있어요!',
+    message: '오후 3:00 GB 댄스 아카데미 - K-POP 기초반 수업이 오늘 예정되어 있습니다. 준비물을 확인해주세요!',
+    clickAction: 'path',
+    clickPath: '/my/bookings',
+    displayStyle: 'big_text',
+  },
+  {
+    id: 'attendance_checked',
+    icon: UserCheck2,
+    label: '출석 확인',
+    category: '출석',
+    color: 'text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400',
+    title: '출석이 확인되었습니다',
+    message: 'GB 댄스 아카데미 K-POP 기초반 수업에 정상 출석 처리되었습니다. 남은 수강권: 7회',
+    clickAction: 'path',
+    clickPath: '/my/tickets',
+    displayStyle: 'default',
+  },
+  {
+    id: 'attendance_absent',
+    icon: UserCheck2,
+    label: '결석 알림 (학부모)',
+    category: '출석',
+    color: 'text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400',
+    title: '자녀 결석 알림',
+    message: '자녀(홍길동)가 오늘 GB 댄스 아카데미 K-POP 기초반 수업에 결석하였습니다. 확인해주세요.',
+    clickAction: 'path',
+    clickPath: '/my/bookings',
+    displayStyle: 'big_text',
+  },
+  {
+    id: 'ticket_expiry_7d',
+    icon: Ticket,
+    label: '수강권 만료 D-7',
+    category: '수강권',
+    color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400',
+    title: '수강권 만료 임박 (D-7)',
+    message: 'GB 댄스 아카데미 K-POP 기초반 수강권이 7일 후 만료됩니다. 남은 횟수 3회를 사용하시거나, 연장 신청을 해주세요.',
+    clickAction: 'path',
+    clickPath: '/my/tickets',
+    displayStyle: 'big_text',
+  },
+  {
+    id: 'ticket_expiry_1d',
+    icon: Ticket,
+    label: '수강권 만료 D-1',
+    category: '수강권',
+    color: 'text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400',
+    title: '수강권 내일 만료!',
+    message: 'GB 댄스 아카데미 K-POP 기초반 수강권이 내일 만료됩니다! 남은 횟수: 2회. 지금 연장 신청하세요.',
+    clickAction: 'path',
+    clickPath: '/my/tickets',
+    displayStyle: 'big_text',
+  },
+  {
+    id: 'video_uploaded',
+    icon: Video,
+    label: '수업 영상 등록',
+    category: '콘텐츠',
+    color: 'text-purple-600 bg-purple-50 dark:bg-purple-900/20 dark:text-purple-400',
+    title: '수업 영상이 등록되었습니다',
+    message: '2/15(토) K-POP 기초반 수업 영상이 업로드되었습니다. 지금 확인해보세요!',
+    clickAction: 'path',
+    clickPath: '/my/bookings',
+    displayStyle: 'default',
+  },
+  {
+    id: 'booking_confirmed',
+    icon: Calendar,
+    label: '예약 확인',
+    category: '예약',
+    color: 'text-teal-600 bg-teal-50 dark:bg-teal-900/20 dark:text-teal-400',
+    title: '예약이 확인되었습니다',
+    message: '2/20(목) 오후 3:00 GB 댄스 아카데미 K-POP 기초반 수업 예약이 확정되었습니다.',
+    clickAction: 'path',
+    clickPath: '/my/bookings',
+    displayStyle: 'default',
+  },
+  {
+    id: 'booking_cancelled',
+    icon: Calendar,
+    label: '예약 취소',
+    category: '예약',
+    color: 'text-neutral-600 bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-400',
+    title: '예약이 취소되었습니다',
+    message: '2/20(목) 오후 3:00 GB 댄스 아카데미 K-POP 기초반 수업 예약이 취소되었습니다.',
+    clickAction: 'path',
+    clickPath: '/my/bookings',
+    displayStyle: 'default',
+  },
+  {
+    id: 'consultation_reply',
+    icon: MessageSquare,
+    label: '상담 답변',
+    category: '상담',
+    color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 dark:text-indigo-400',
+    title: '상담 답변이 도착했습니다',
+    message: 'GB 댄스 아카데미에서 문의하신 "수업 시간 변경 관련" 상담에 답변이 등록되었습니다.',
+    clickAction: 'path',
+    clickPath: '/notifications',
+    displayStyle: 'big_text',
+  },
+  {
+    id: 'marketing',
+    icon: Megaphone,
+    label: '마케팅/이벤트',
+    category: '마케팅',
+    color: 'text-pink-600 bg-pink-50 dark:bg-pink-900/20 dark:text-pink-400',
+    title: '신규 회원 할인 이벤트!',
+    message: '지금 가입하면 첫 달 수강료 30% 할인! 기간: 2/16 ~ 2/28. 놓치지 마세요!',
+    clickAction: 'path',
+    clickPath: '/',
+    displayStyle: 'big_text',
+  },
+  {
+    id: 'system',
+    icon: Bell,
+    label: '시스템 공지',
+    category: '시스템',
+    color: 'text-neutral-600 bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-400',
+    title: '시스템 점검 안내',
+    message: '2/20(목) 오전 2:00 ~ 5:00 서버 점검이 예정되어 있습니다. 이 시간 동안 서비스 이용이 제한될 수 있습니다.',
+    clickAction: 'none',
+    clickPath: '',
+    displayStyle: 'big_text',
+  },
+];
+
 /* ───── component ───── */
 export function PushSendForm({ usersWithTokens, totalTokens, onSent }: PushSendFormProps) {
   // 콘텐츠
@@ -60,11 +210,28 @@ export function PushSendForm({ usersWithTokens, totalTokens, onSent }: PushSendF
   const [clickPath, setClickPath] = useState('');
   const [clickUrl, setClickUrl] = useState('');
 
+  // 프리셋
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+  const [showPresets, setShowPresets] = useState(true);
+
   // UI 상태
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  /* ───── 프리셋 적용 ───── */
+  const applyPreset = (preset: NotificationPreset) => {
+    setTitle(preset.title);
+    setMessage(preset.message);
+    setDisplayStyle(preset.displayStyle);
+    setClickAction(preset.clickAction);
+    setClickPath(preset.clickPath);
+    setClickUrl('');
+    setImageUrl('');
+    setActivePreset(preset.id);
+    setResult(null);
+  };
 
   /* ───── 발송 ───── */
   const handleSend = async () => {
@@ -163,6 +330,46 @@ export function PushSendForm({ usersWithTokens, totalTokens, onSent }: PushSendF
       </div>
 
       <div className="p-6 space-y-5">
+        {/* ── 0. 알림 유형별 테스트 프리셋 ── */}
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => setShowPresets(!showPresets)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider hover:text-neutral-700 dark:hover:text-neutral-200"
+          >
+            <Zap size={14} /> 빠른 테스트 프리셋
+            {showPresets ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          </button>
+          {showPresets && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              {NOTIFICATION_PRESETS.map(preset => {
+                const Icon = preset.icon;
+                const isActive = activePreset === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyPreset(preset)}
+                    className={`text-left p-2.5 rounded-xl border transition-all ${
+                      isActive
+                        ? 'border-primary dark:border-[#CCFF00] bg-primary/5 dark:bg-[#CCFF00]/10 ring-1 ring-primary dark:ring-[#CCFF00]'
+                        : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <div className={`w-5 h-5 rounded flex items-center justify-center ${preset.color}`}>
+                        <Icon size={11} />
+                      </div>
+                      <span className="text-[10px] text-neutral-400 font-medium">{preset.category}</span>
+                    </div>
+                    <p className="text-xs font-medium text-neutral-800 dark:text-neutral-200 leading-tight">{preset.label}</p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {/* ── 1. 콘텐츠 섹션 ── */}
         <div className="space-y-3">
           <SectionLabel icon={<Type size={14} />} label="콘텐츠" />

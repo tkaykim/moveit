@@ -39,7 +39,10 @@ export async function GET(request: NextRequest) {
           kakao_enabled: true,
           class_reminder: true,
           booking_updates: true,
+          attendance_updates: true,
           ticket_updates: true,
+          content_updates: true,
+          consultation_updates: true,
           marketing: false,
           reminder_minutes_before: 60,
         });
@@ -74,7 +77,8 @@ export async function PATCH(request: NextRequest) {
     // 허용된 필드만 업데이트
     const allowedFields = [
       'push_enabled', 'kakao_enabled', 'class_reminder',
-      'booking_updates', 'ticket_updates', 'marketing',
+      'booking_updates', 'attendance_updates', 'ticket_updates',
+      'content_updates', 'consultation_updates', 'marketing',
       'reminder_minutes_before',
     ] as const;
 
