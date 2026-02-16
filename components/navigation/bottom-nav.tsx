@@ -36,7 +36,7 @@ export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
   if (hiddenTabs.includes(activeTab)) return null;
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] bg-white/90 dark:bg-neutral-950/90 backdrop-blur-xl border-t border-neutral-200 dark:border-neutral-800 pt-2 px-6 flex justify-between items-center z-40" style={{ paddingBottom: 'calc(12px + max(env(safe-area-inset-bottom, 0px), var(--app-safe-bottom, 0px)))', minHeight: '64px' }}>
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] bg-white/90 dark:bg-neutral-950/90 backdrop-blur-xl border-t border-neutral-200 dark:border-neutral-800 pt-2 pb-3 px-6 flex justify-between items-center z-40" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}>
       {tabConfig.map((tab) => {
         const Icon = tab.icon;
         const active = isActive(tab.id, tab.href);

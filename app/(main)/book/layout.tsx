@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { CSSLoader } from '@/components/common/css-loader';
 import { BottomNav } from '@/components/navigation/bottom-nav';
+import { PullToRefresh } from '@/components/common/pull-to-refresh';
 import { ViewState } from '@/types';
 
 export default function BookLayout({
@@ -50,8 +51,10 @@ export default function BookLayout({
       <CSSLoader />
       <div className="flex justify-center bg-neutral-50 dark:bg-black min-h-screen font-sans selection:bg-primary dark:selection:bg-[#CCFF00] selection:text-black">
         <div className="w-full max-w-[420px] bg-white dark:bg-neutral-950 min-h-screen relative shadow-2xl overflow-hidden flex flex-col border-x border-neutral-200 dark:border-neutral-900">
-          <main className="flex-1 overflow-y-auto scrollbar-hide" style={{ paddingBottom: 'calc(80px + max(env(safe-area-inset-bottom, 0px), var(--app-safe-bottom, 0px)))' }}>
-            {children}
+          <main className="flex-1 overflow-y-auto scrollbar-hide" style={{ paddingBottom: 'calc(72px + max(0px, env(safe-area-inset-bottom, 0px)))' }}>
+            <PullToRefresh>
+              {children}
+            </PullToRefresh>
           </main>
           <BottomNav activeTab={getActiveTab()} onTabChange={handleTabChange} />
         </div>

@@ -8,9 +8,9 @@
     --app-safe-bottom: 0px;
   }
 
-  /* Capacitor Android: 시스템 네비게이션 바 높이만큼 안전 영역 확보 */
+  /* Capacitor Android: 네이티브에서 시스템 바 패딩 처리하므로 CSS 추가 패딩 불필요 */
   html.capacitor-android {
-    --app-safe-bottom: 24px;
+    --app-safe-bottom: 0px;
   }
   
   /* 기본 레이아웃 보호 */
