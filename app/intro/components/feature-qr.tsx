@@ -34,11 +34,11 @@ export function FeatureQr() {
 
   return (
     <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-sm">
-      {/* QR Scanner Area — 아이콘·프레임 모두 가운데 */}
-      <div className="relative aspect-square max-h-[200px] bg-neutral-950 overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center">
-          {/* Scan Lines (중앙 정렬된 프레임) */}
-          <div className="relative w-[min(160px,70%)] aspect-square border-2 border-[#CCFF00]/40 rounded-xl flex items-center justify-center">
+      {/* QR Scanner Area — 아이콘·프레임 모두 가운데, 잘림 방지 */}
+      <div className="relative aspect-square max-h-[200px] bg-neutral-950 overflow-hidden flex items-center justify-center p-4">
+        <div className="absolute inset-0 flex items-center justify-center p-4">
+          {/* Scan Lines (중앙 정렬, 컨테이너 안에 완전히 수용) */}
+          <div className="relative w-[min(140px,65%)] aspect-square max-w-full border-2 border-[#CCFF00]/40 rounded-xl flex items-center justify-center shrink-0">
             <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-[#CCFF00] rounded-tl-lg" />
             <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-[#CCFF00] rounded-tr-lg" />
             <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-[#CCFF00] rounded-bl-lg" />
@@ -48,7 +48,7 @@ export function FeatureQr() {
                 <div className="absolute inset-x-0 h-0.5 bg-[#CCFF00] animate-[scanline_1.2s_ease-in-out_infinite" />
               </div>
             )}
-            <QrCode className="text-[#CCFF00]/30 relative z-10" size={64} />
+            <QrCode className="text-[#CCFF00]/30 relative z-10 w-12 h-12 shrink-0" size={48} />
           </div>
         </div>
 

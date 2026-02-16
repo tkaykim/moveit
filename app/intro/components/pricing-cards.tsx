@@ -92,7 +92,7 @@ export function PricingCards() {
       </div>
 
       {/* 넓을 땐 3열, 좁을 땐 가로 스크롤 — 카드 최소 너비 유지, 잘림 방지 */}
-      <div className="overflow-x-auto overflow-y-visible pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:pb-0 scroll-smooth">
+      <div className="overflow-x-auto overflow-y-visible pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:pb-0 scroll-smooth pt-6">
         <div className="flex gap-4 md:grid md:grid-cols-3 items-stretch w-max md:w-full min-w-0">
           {PLANS.map((plan) => {
             const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
@@ -101,12 +101,12 @@ export function PricingCards() {
                 key={plan.id}
                 className={`relative rounded-2xl p-5 sm:p-6 flex-shrink-0 min-w-[240px] md:min-w-0 flex flex-col overflow-visible ${
                   plan.isPopular
-                    ? 'bg-slate-800 text-white shadow-xl z-10'
+                    ? 'bg-slate-800 text-white shadow-xl z-10 pt-7'
                     : 'bg-white text-slate-900 border border-slate-200 shadow-sm'
                 }`}
               >
                 {plan.isPopular && (
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-violet-600 text-white text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap z-20">
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-violet-600 text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap z-20 shadow-md ring-2 ring-white dark:ring-slate-800">
                     MOST POPULAR
                   </div>
                 )}

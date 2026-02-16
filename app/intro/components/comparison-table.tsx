@@ -15,9 +15,9 @@ const ROWS: { feature: string; competitor: string; us: string; highlight?: boole
 export function ComparisonTable() {
   return (
     <div className="overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-sm">
-      {/* 구분 열은 좁게, 나머지 두 열은 동일 비율로 넓게 */}
-      <div className="grid border-b border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50" style={{ gridTemplateColumns: 'minmax(0, 88px) 1fr 1fr' }}>
-        <div className="py-3 px-2 sm:px-3 text-center font-bold text-neutral-600 dark:text-neutral-400 text-xs sm:text-sm">구분</div>
+      {/* 구분 열: 한 단어가 잘리지 않도록 최소 너비 확보, 나머지 두 열은 동일 비율 */}
+      <div className="grid border-b border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50" style={{ gridTemplateColumns: 'minmax(100px, auto) 1fr 1fr' }}>
+        <div className="py-3 px-2 sm:px-3 text-center font-bold text-neutral-600 dark:text-neutral-400 text-xs sm:text-sm whitespace-nowrap">구분</div>
         <div className="py-3 px-3 sm:px-5 text-center font-bold text-neutral-600 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-700 text-xs sm:text-sm">기존 피트니스 플랫폼</div>
         <div className="py-3 px-3 sm:px-5 text-center font-bold text-blue-800 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/20 border-l border-neutral-200 dark:border-neutral-700 text-xs sm:text-sm">무빗</div>
       </div>
@@ -25,9 +25,9 @@ export function ComparisonTable() {
         <div
           key={idx}
           className="grid border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors"
-          style={{ gridTemplateColumns: 'minmax(0, 88px) 1fr 1fr' }}
+          style={{ gridTemplateColumns: 'minmax(100px, auto) 1fr 1fr' }}
         >
-          <div className="py-3 px-2 sm:px-3 flex items-center justify-center font-semibold text-neutral-700 dark:text-neutral-300 bg-neutral-50/50 dark:bg-neutral-800/30 text-center text-xs sm:text-sm leading-tight">
+          <div className="py-3 px-2 sm:px-3 flex items-center justify-center font-semibold text-neutral-700 dark:text-neutral-300 bg-neutral-50/50 dark:bg-neutral-800/30 text-center text-xs sm:text-sm leading-tight whitespace-nowrap">
             {row.feature}
           </div>
           <div className="py-3 px-3 sm:px-5 flex items-center min-w-0 text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-700 text-xs sm:text-sm leading-snug">

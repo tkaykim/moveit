@@ -131,13 +131,13 @@ export default function IntroPage() {
       </section>
 
       {/* ═══════ 왜 댄스 학원은 전용 플랫폼을 써야 할까요? (비교 테이블) ═══════ */}
-      <section id="comparison" className="py-10 md:py-14 bg-white dark:bg-neutral-950">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-10">
+      <section id="comparison" className="py-10 md:py-14 bg-white dark:bg-neutral-950 overflow-x-hidden">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-10 px-1">
             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 text-neutral-900 dark:text-white">
               왜 댄스 학원은 전용 플랫폼을 써야 할까요?
             </h2>
-            <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400">
+            <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400 break-words max-w-2xl mx-auto">
               헬스장, 필라테스용 프로그램으로는 해결할 수 없는 댄스 학원만의 니즈를 담았습니다.
             </p>
           </div>
@@ -352,7 +352,7 @@ export default function IntroPage() {
       </section>
 
       {/* ═══════ 학원 규모에 맞는 합리적인 요금제 ═══════ */}
-      <section id="pricing" className="py-10 md:py-14 bg-slate-50 dark:bg-neutral-900/40">
+      <section id="pricing" className="py-10 md:py-14 bg-slate-50 dark:bg-neutral-900/40 overflow-y-visible pt-14 md:pt-16">
         <PricingCards />
       </section>
 
