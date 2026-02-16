@@ -97,7 +97,7 @@ export function FeaturePush() {
             자동 발송
           </span>
         </div>
-        <p className="text-[11px] text-neutral-500 leading-relaxed">
+        <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
           만료 알림, 출석 확인, 영상 등록, 수업 리마인드까지<br/>
           모두 자동으로 푸시 알림이 발송됩니다.
         </p>
@@ -108,7 +108,7 @@ export function FeaturePush() {
         {visibleCount === 0 && !isPlaying && (
           <div className="text-center py-8">
             <Bell className="w-8 h-8 text-neutral-300 dark:text-neutral-700 mx-auto mb-2" />
-            <p className="text-xs text-neutral-400">아래 버튼을 눌러 알림을 체험해보세요</p>
+            <p className="text-xs text-neutral-400 dark:text-neutral-500">아래 버튼을 눌러 알림을 체험해보세요</p>
           </div>
         )}
         {NOTIFICATIONS.slice(0, visibleCount).map((noti, idx) => {
@@ -130,7 +130,7 @@ export function FeaturePush() {
                   </span>
                 </div>
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-snug line-clamp-2">{noti.body}</p>
-                <p className="text-[10px] text-neutral-400 mt-1">{noti.time}</p>
+                <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1">{noti.time}</p>
               </div>
             </div>
           );

@@ -60,90 +60,93 @@ export function PricingCards() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
   return (
-    <div className="max-w-5xl mx-auto px-4">
+    <div className="max-w-3xl mx-auto px-4">
       <div className="text-center mb-10">
         <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
           학원 규모에 맞는 합리적인 요금제
         </h2>
-        <p className="text-slate-600 mb-8">
+        <p className="text-slate-600 text-sm sm:text-base mb-8">
           숨겨진 비용 없이, 필요한 기능만큼만 결제하세요.
         </p>
-        <div className="flex items-center justify-center gap-4">
+        <div className="flex items-center justify-center gap-4 flex-wrap">
           <span className={`text-sm font-medium ${billingCycle === 'monthly' ? 'text-slate-900' : 'text-slate-400'}`}>
             월간 결제
           </span>
           <button
             type="button"
             onClick={() => setBillingCycle((c) => (c === 'monthly' ? 'yearly' : 'monthly'))}
-            className="relative w-16 h-8 bg-slate-200 rounded-full p-1 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+            className="relative w-14 h-7 bg-slate-200 rounded-full p-1 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2"
             aria-pressed={billingCycle === 'yearly'}
           >
             <span
-              className={`block w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${billingCycle === 'yearly' ? 'translate-x-8' : 'translate-x-0'}`}
+              className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${billingCycle === 'yearly' ? 'translate-x-8 left-1' : 'left-1 translate-x-0'}`}
             />
           </button>
           <span className={`text-sm font-medium flex items-center gap-2 ${billingCycle === 'yearly' ? 'text-slate-900' : 'text-slate-400'}`}>
             연간 결제
-            <span className="bg-violet-600 text-white text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap">
+            <span className="bg-violet-500 text-white text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
               20% 할인
             </span>
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 sm:gap-6 md:gap-8 items-stretch min-w-0">
-        {PLANS.map((plan) => {
-          const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
-          return (
-            <div
-              key={plan.id}
-              className={`relative rounded-2xl p-6 sm:p-8 transition-all min-w-0 ${
-                plan.isPopular
-                  ? 'bg-slate-900 text-white shadow-2xl scale-[1.02] z-10'
-                  : 'bg-white text-slate-900 border border-slate-200 shadow-sm hover:shadow-md'
-              }`}
-            >
-              {plan.isPopular && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold px-4 py-1.5 rounded-full whitespace-nowrap shadow-lg">
-                  MOST POPULAR
-                </div>
-              )}
-              <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-              <p className={`text-sm mb-6 min-h-[40px] leading-snug ${plan.isPopular ? 'text-slate-300' : 'text-slate-500'}`}>
-                {plan.description}
-              </p>
-              <div className="mb-8">
-                <span className="text-4xl font-bold">{price.toLocaleString()}</span>
-                <span className={`text-sm ml-1 ${plan.isPopular ? 'text-slate-400' : 'text-slate-500'}`}>
-                  원 / 월
-                </span>
-                {billingCycle === 'yearly' && (
-                  <p className="text-sm mt-1 text-slate-500">
-                    연간 {plan.yearlyTotal.toLocaleString()}원 청구
-                  </p>
-                )}
-              </div>
-              <ul className="space-y-4 mb-8">
-                {plan.features.map((feature, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-sm">
-                    <Check size={18} className={`flex-shrink-0 mt-0.5 ${plan.isPopular ? 'text-indigo-400' : 'text-indigo-600'}`} />
-                    <span className={plan.isPopular ? 'text-slate-200' : 'text-slate-600'}>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-              <a
-                href="#contact"
-                className={`block w-full py-4 rounded-xl font-bold text-center text-sm transition-all ${
+      {/* 넓을 땐 3열, 좁을 땐 가로 스크롤 — 카드 최소 너비 유지, 잘림 방지 */}
+      <div className="overflow-x-auto overflow-y-visible pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:pb-0 scroll-smooth">
+        <div className="flex gap-4 md:grid md:grid-cols-3 items-stretch w-max md:w-full min-w-0">
+          {PLANS.map((plan) => {
+            const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
+            return (
+              <div
+                key={plan.id}
+                className={`relative rounded-2xl p-5 sm:p-6 flex-shrink-0 min-w-[240px] md:min-w-0 flex flex-col overflow-visible ${
                   plan.isPopular
-                    ? 'bg-violet-600 hover:bg-violet-500 text-white shadow-lg'
-                    : 'bg-white hover:bg-slate-50 text-slate-900 border border-slate-200'
+                    ? 'bg-slate-800 text-white shadow-xl z-10'
+                    : 'bg-white text-slate-900 border border-slate-200 shadow-sm'
                 }`}
               >
-                {plan.name} 시작하기
-              </a>
-            </div>
-          );
-        })}
+                {plan.isPopular && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-violet-600 text-white text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap z-20">
+                    MOST POPULAR
+                  </div>
+                )}
+                <h3 className="text-lg font-bold mb-2">{plan.name}</h3>
+                <p className={`text-sm mb-4 leading-snug min-w-0 break-words ${plan.isPopular ? 'text-slate-300' : 'text-slate-600'}`}>
+                  {plan.description}
+                </p>
+                <div className="mb-4">
+                  <span className="text-2xl sm:text-3xl font-bold">{price.toLocaleString()}</span>
+                  <span className={`text-sm ml-1 ${plan.isPopular ? 'text-slate-400' : 'text-slate-500'}`}>
+                    원 / 월
+                  </span>
+                  {billingCycle === 'yearly' && (
+                    <p className="text-xs sm:text-sm mt-1 text-slate-500">
+                      연간 {plan.yearlyTotal.toLocaleString()}원 청구
+                    </p>
+                  )}
+                </div>
+                <ul className="space-y-2 mb-6 flex-1 min-w-0">
+                  {plan.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-xs sm:text-sm min-w-0">
+                      <Check size={16} className={`flex-shrink-0 mt-0.5 ${plan.isPopular ? 'text-violet-400' : 'text-violet-600'}`} />
+                      <span className={`min-w-0 break-words ${plan.isPopular ? 'text-slate-200' : 'text-slate-600'}`}>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <a
+                  href="#contact"
+                  className={`block w-full py-3.5 rounded-xl font-bold text-center text-sm transition-colors mt-auto ${
+                    plan.isPopular
+                      ? 'bg-violet-600 hover:bg-violet-500 text-white'
+                      : 'bg-white hover:bg-slate-50 text-slate-900 border border-slate-200'
+                  }`}
+                >
+                  {plan.name} 시작하기
+                </a>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

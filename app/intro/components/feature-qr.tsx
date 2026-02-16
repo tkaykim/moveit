@@ -83,17 +83,17 @@ export function FeatureQr() {
 
       {/* Check-in Log — 가운데 정렬 */}
       <div className="border-t border-neutral-100 dark:border-neutral-800 p-3 text-center">
-        <p className="text-[10px] text-neutral-500 mb-2">출석 로그</p>
+        <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mb-2">출석 로그</p>
         <div className="space-y-1.5">
           {checkedIn.length === 0 ? (
-            <p className="text-xs text-neutral-400 text-center py-2">QR 스캔 버튼을 눌러 체험해보세요</p>
+            <p className="text-xs text-neutral-400 dark:text-neutral-500 text-center py-2">QR 스캔 버튼을 눌러 체험해보세요</p>
           ) : (
             checkedIn.map((idx) => (
               <div key={idx} className="flex items-center gap-2 p-2 rounded-lg bg-green-50 dark:bg-green-900/20 animate-in slide-in-from-left duration-300">
                 <CheckCircle2 size={14} className="text-green-500 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <span className="text-xs font-bold text-neutral-900 dark:text-white">{DEMO_STUDENTS[idx].name}</span>
-                  <span className="text-[10px] text-neutral-500 ml-2">{DEMO_STUDENTS[idx].class} {DEMO_STUDENTS[idx].time}</span>
+                  <span className="text-[10px] text-neutral-500 dark:text-neutral-400 ml-2">{DEMO_STUDENTS[idx].class} {DEMO_STUDENTS[idx].time}</span>
                 </div>
               </div>
             ))

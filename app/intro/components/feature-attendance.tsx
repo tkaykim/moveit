@@ -26,11 +26,11 @@ export function FeatureAttendance() {
         <div className="flex justify-between items-end mb-2">
           <div>
             <h3 className="text-sm font-bold text-neutral-900 dark:text-white">출석 관리</h3>
-            <p className="text-[11px] text-neutral-500">K-POP 정규반 (월/수)</p>
+            <p className="text-[11px] text-neutral-500 dark:text-neutral-400">K-POP 정규반 (월/수)</p>
           </div>
           <div className="text-right">
             <span className="text-xl font-bold text-[#CCFF00] text-shadow-sm">{presentCount}</span>
-            <span className="text-xs text-neutral-400">/{totalCount}명</span>
+            <span className="text-xs text-neutral-400 dark:text-neutral-500">/{totalCount}명</span>
           </div>
         </div>
         {/* Progress Bar */}
@@ -46,7 +46,7 @@ export function FeatureAttendance() {
         {students.map((student) => (
           <div key={student.id} className="flex items-center justify-between p-2 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
             <div className="flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-full ${student.img} flex items-center justify-center text-xs font-bold text-neutral-700`}>
+              <div className={`w-8 h-8 rounded-full ${student.img} flex items-center justify-center text-xs font-bold text-neutral-700 dark:text-neutral-300`}>
                 {student.name[0]}
               </div>
               <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{student.name}</span>
@@ -56,13 +56,13 @@ export function FeatureAttendance() {
                 <>
                   <button 
                     onClick={() => handleCheck(student.id, 'absent')}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 dark:text-neutral-500 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-colors"
                   >
                     <X size={16} />
                   </button>
                   <button 
                     onClick={() => handleCheck(student.id, 'present')}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:bg-[#CCFF00]/20 hover:text-[#CCFF00] transition-colors"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 dark:text-neutral-500 hover:bg-[#CCFF00]/20 hover:text-[#CCFF00] transition-colors"
                   >
                     <Check size={16} />
                   </button>

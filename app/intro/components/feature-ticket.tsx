@@ -40,11 +40,11 @@ export function FeatureTicket() {
       <div className="p-4">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
-            <Calendar className="w-5 h-5 text-neutral-500" />
+            <Calendar className="w-5 h-5 text-neutral-500 dark:text-neutral-400" />
           </div>
           <div>
             <p className="text-sm font-bold text-neutral-900 dark:text-white">오늘 수업 예약</p>
-            <p className="text-xs text-neutral-500">19:00 • 걸스힙합</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">19:00 • 걸스힙합</p>
           </div>
         </div>
 
@@ -66,7 +66,7 @@ export function FeatureTicket() {
         <div className="absolute inset-0 bg-white/90 dark:bg-neutral-900/90 flex flex-col items-center justify-center animate-in fade-in duration-200">
           <CheckCircle2 className="w-10 h-10 text-green-500 mb-2 animate-in zoom-in duration-300" />
           <p className="text-sm font-bold text-neutral-900 dark:text-white">예약 완료!</p>
-          <p className="text-xs text-neutral-500">잔여 횟수가 차감되었습니다.</p>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">잔여 횟수가 차감되었습니다.</p>
         </div>
       )}
     </div>

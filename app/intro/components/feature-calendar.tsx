@@ -85,16 +85,16 @@ export function FeatureCalendar() {
           <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
             {year}년 {month + 1}월
           </h3>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400">
             스케줄 관리
           </span>
         </div>
         <div className="flex items-center gap-1">
           <button type="button" className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">
-            <ChevronLeft size={14} className="text-neutral-400" />
+            <ChevronLeft size={14} className="text-neutral-400 dark:text-neutral-500" />
           </button>
           <button type="button" className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">
-            <ChevronRight size={14} className="text-neutral-400" />
+            <ChevronRight size={14} className="text-neutral-400 dark:text-neutral-500" />
           </button>
         </div>
       </div>
@@ -103,7 +103,7 @@ export function FeatureCalendar() {
         <div className="grid grid-cols-7 mb-1">
           {DAYS.map((d, i) => (
             <div key={d} className={`text-center text-[10px] font-medium py-1 ${
-              i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-neutral-400'
+              i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-neutral-400 dark:text-neutral-500'
             }`}>
               {d}
             </div>
@@ -219,13 +219,13 @@ export function FeatureCalendar() {
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-neutral-900 dark:text-white">수업 정보</span>
                 <button type="button" onClick={() => setSelectedClass(null)} className="p-1 rounded hover:bg-black/5">
-                  <X size={14} className="text-neutral-500" />
+                  <X size={14} className="text-neutral-500 dark:text-neutral-400" />
                 </button>
               </div>
               <div className="space-y-1.5 text-sm">
                 <div className="flex items-center gap-2">
-                  <Calendar size={14} className="text-neutral-500" />
-                  <span className="font-bold">{selectedClass.title}</span>
+                  <Calendar size={14} className="text-neutral-500 dark:text-neutral-400" />
+                  <span className="font-bold text-neutral-900 dark:text-white">{selectedClass.title}</span>
                 </div>
                 <div className="flex items-center gap-2 text-neutral-600 dark:text-neutral-400">
                   <User size={14} />
@@ -269,7 +269,7 @@ export function FeatureCalendar() {
                   <div className={`w-1 h-8 rounded-full flex-shrink-0 ${cls.color}`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-neutral-900 dark:text-white truncate">{cls.title}</p>
-                    <p className="text-[10px] text-neutral-500">{cls.teacher} · {cls.time}</p>
+                    <p className="text-[10px] text-neutral-500 dark:text-neutral-400">{cls.teacher} · {cls.time}</p>
                   </div>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400 flex-shrink-0">
                     {cls.enrolled ?? 0}/{cls.maxStudents ?? 20}명
@@ -278,14 +278,14 @@ export function FeatureCalendar() {
               ))}
             </div>
           ) : !showAddForm && !selectedClass && !booked && dayClasses.length === 0 ? (
-            <p className="text-xs text-neutral-400 text-center py-3">이 날은 수업이 없습니다. 수업 추가로 만들어보세요.</p>
+            <p className="text-xs text-neutral-400 dark:text-neutral-500 text-center py-3">이 날은 수업이 없습니다. 수업 추가로 만들어보세요.</p>
           ) : null}
         </div>
       )}
 
       {!selectedDay && (
         <div className="border-t border-neutral-100 dark:border-neutral-800 p-3 text-center">
-          <p className="text-[11px] text-neutral-400">날짜 클릭 → 수업 선택 → 예약하기까지 체험해보세요</p>
+          <p className="text-[11px] text-neutral-400 dark:text-neutral-500">날짜 클릭 → 수업 선택 → 예약하기까지 체험해보세요</p>
         </div>
       )}
     </div>

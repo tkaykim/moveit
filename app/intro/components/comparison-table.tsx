@@ -19,7 +19,7 @@ export function ComparisonTable() {
       <div className="grid border-b border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50" style={{ gridTemplateColumns: 'minmax(0, 88px) 1fr 1fr' }}>
         <div className="py-3 px-2 sm:px-3 text-center font-bold text-neutral-600 dark:text-neutral-400 text-xs sm:text-sm">구분</div>
         <div className="py-3 px-3 sm:px-5 text-center font-bold text-neutral-600 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-700 text-xs sm:text-sm">기존 피트니스 플랫폼</div>
-        <div className="py-3 px-3 sm:px-5 text-center font-bold text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 border-l border-neutral-200 dark:border-neutral-700 text-xs sm:text-sm">무빗</div>
+        <div className="py-3 px-3 sm:px-5 text-center font-bold text-blue-800 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/20 border-l border-neutral-200 dark:border-neutral-700 text-xs sm:text-sm">무빗</div>
       </div>
       {ROWS.map((row, idx) => (
         <div
@@ -33,10 +33,10 @@ export function ComparisonTable() {
           <div className="py-3 px-3 sm:px-5 flex items-center min-w-0 text-neutral-500 dark:text-neutral-400 border-l border-neutral-200 dark:border-neutral-700 text-xs sm:text-sm leading-snug">
             {row.competitor}
           </div>
-          <div className={`py-3 px-3 sm:px-5 flex items-center min-w-0 border-l border-neutral-200 dark:border-neutral-700 text-xs sm:text-sm font-medium leading-snug ${row.highlight ? 'text-blue-600 dark:text-blue-400 bg-blue-50/10 dark:bg-blue-900/10' : 'text-neutral-700 dark:text-neutral-300'}`}>
+          <div className={`py-3 px-3 sm:px-5 flex items-center min-w-0 border-l border-neutral-200 dark:border-neutral-700 text-xs sm:text-sm font-medium leading-snug ${row.highlight ? 'text-blue-800 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/10' : 'text-neutral-700 dark:text-neutral-300'}`}>
             {row.withZap ? (
               <span className="inline-flex items-center gap-1.5 flex-wrap">
-                <Zap size={14} className="flex-shrink-0 text-blue-600 dark:text-blue-400" />
+                <Zap size={14} className="flex-shrink-0 text-blue-800 dark:text-blue-400" />
                 <span>{row.us}</span>
               </span>
             ) : (

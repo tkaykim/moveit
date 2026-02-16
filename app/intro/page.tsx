@@ -45,6 +45,13 @@ export default function IntroPage() {
     localStorage.setItem(INTRO_THEME_KEY, theme);
   }, [theme]);
 
+  // intro 테마에 맞춰 document에 dark 클래스 동기화 — 라이트일 때 dark: 스타일이 적용되지 않도록
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') root.classList.add('dark');
+    else root.classList.remove('dark');
+  }, [theme]);
+
   useEffect(() => {
     if (isMobileMenuOpen) {
       document.body.style.overflow = 'hidden';
@@ -105,20 +112,20 @@ export default function IntroPage() {
       </nav>
 
       {/* ═══════ Hero (포인트만, 가운데 정렬) ═══════ */}
-      <section className="py-8 sm:py-12 md:py-16 max-w-5xl mx-auto px-4 text-center">
+      <section className="py-8 sm:py-12 md:py-16 max-w-5xl mx-auto px-4 text-center bg-white dark:bg-transparent">
         <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-[#CCFF00]/15 text-neutral-700 dark:text-[#CCFF00] text-xs font-medium mb-4">
           현직 댄스학원 운영진이 직접 개발
         </div>
-        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight leading-[1.15] mb-8">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight leading-[1.15] mb-8 text-neutral-900 dark:text-white">
           댄스학원 운영,<br className="sm:hidden" />
-          <span className="text-[#CCFF00] dark:text-[#CCFF00]">이제 무빗으로</span> 확실하게
+          <span className="text-emerald-700 dark:text-[#CCFF00]">이제 무빗으로</span> 확실하게
         </h1>
         <div className="flex flex-col gap-4 max-w-2xl mx-auto">
           <p className="text-base sm:text-xl md:text-2xl font-bold text-neutral-800 dark:text-neutral-200 leading-snug px-1">
-            회원·수강권을 일일이 <span className="text-amber-600 dark:text-amber-400">수기</span>로 관리 중이신가요?
+            회원·수강권을 일일이 <span className="text-amber-700 dark:text-amber-400">수기</span>로 관리 중이신가요?
           </p>
           <p className="text-base sm:text-xl md:text-2xl font-bold text-neutral-800 dark:text-neutral-200 leading-snug px-1">
-            <span className="text-amber-600 dark:text-amber-400">헬스장 프로그램에 끼워</span> 맞춰 쓰고 계신가요?
+            <span className="text-amber-700 dark:text-amber-400">헬스장 프로그램에 끼워</span> 맞춰 쓰고 계신가요?
           </p>
         </div>
       </section>
@@ -141,7 +148,7 @@ export default function IntroPage() {
       {/* ═══════ 어떠한 댄스학원이든 지원 (1행 3열 카드) ═══════ */}
       <section className="py-10 md:py-14 bg-neutral-50 dark:bg-neutral-900/30">
         <div className="max-w-5xl mx-auto px-4">
-          <h2 className="text-center text-xl sm:text-2xl md:text-3xl font-bold mb-2">어떠한 댄스학원이든 지원</h2>
+          <h2 className="text-center text-xl sm:text-2xl md:text-3xl font-bold mb-2 text-neutral-900 dark:text-white">어떠한 댄스학원이든 지원</h2>
           <p className="text-center text-sm sm:text-base text-neutral-500 dark:text-neutral-400 mb-8">복잡한 운영 방식도 무빗 하나로 처리합니다.</p>
           <div className="grid grid-cols-3 gap-3 sm:gap-4">
             {[
@@ -164,8 +171,8 @@ export default function IntroPage() {
       </section>
 
       {/* ═══════ 관리자 대시보드 소개 ═══════ */}
-      <section className="py-10 md:py-14 max-w-5xl mx-auto px-4">
-        <h2 className="text-center text-xl sm:text-2xl md:text-3xl font-bold mb-2">관리자 대시보드</h2>
+      <section className="py-10 md:py-14 max-w-5xl mx-auto px-4 bg-white dark:bg-transparent">
+        <h2 className="text-center text-xl sm:text-2xl md:text-3xl font-bold mb-2 text-neutral-900 dark:text-white">관리자 대시보드</h2>
         <p className="text-center text-sm sm:text-base text-neutral-500 dark:text-neutral-400 mb-8 max-w-2xl mx-auto">
           오늘의 수업 관리, 수업별 신청 인원(관리자에게만 보입니다), 클래스·스케줄·출석·수강권 기능을 한 화면에서.
         </p>
@@ -190,8 +197,8 @@ export default function IntroPage() {
                     <div className={`p-2.5 rounded-lg ${btn.color} w-fit mb-3`}>
                       <Icon className={`w-5 h-5 ${btn.iconColor}`} />
                     </div>
-                    <h4 className="text-sm font-bold">{btn.label}</h4>
-                    <p className="text-[11px] text-neutral-500">{btn.desc}</p>
+                    <h4 className="text-sm font-bold text-neutral-900 dark:text-white">{btn.label}</h4>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">{btn.desc}</p>
                   </div>
                 );
               })}
@@ -205,8 +212,8 @@ export default function IntroPage() {
                     { label: '출석률', value: '94%', change: '+2.5%' },
                   ].map((stat, i) => (
                     <div key={i} className="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50">
-                      <p className="text-[10px] text-neutral-500 mb-0.5">{stat.label}</p>
-                      <p className="text-base font-bold">{stat.value}</p>
+                      <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mb-0.5">{stat.label}</p>
+                      <p className="text-base font-bold text-neutral-900 dark:text-white">{stat.value}</p>
                       <p className="text-[10px] text-green-500 font-medium">{stat.change}</p>
                     </div>
                   ))}
@@ -220,7 +227,7 @@ export default function IntroPage() {
                 </div>
               </div>
               <div>
-                <h4 className="text-xs font-bold mb-3">오늘의 수업 · 신청 인원</h4>
+                <h4 className="text-xs font-bold mb-3 text-neutral-900 dark:text-white">오늘의 수업 · 신청 인원</h4>
                 <div className="space-y-2">
                   {[
                     { time: '18:00', title: 'K-POP 입문', teacher: 'J-HO', status: '수업중', students: '18/20' },
@@ -228,13 +235,13 @@ export default function IntroPage() {
                     { time: '21:00', title: '코레오그래피', teacher: 'WOO', status: '대기', students: '8/20' },
                   ].map((cls, i) => (
                     <div key={i} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-neutral-100 dark:border-neutral-800">
-                      <div className="text-[10px] font-bold text-neutral-500 w-9">{cls.time}</div>
+                      <div className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 w-9">{cls.time}</div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold truncate">{cls.title}</p>
-                        <p className="text-[10px] text-neutral-500">{cls.teacher} · {cls.students}</p>
+                        <p className="text-xs font-bold truncate text-neutral-900 dark:text-white">{cls.title}</p>
+                        <p className="text-[10px] text-neutral-500 dark:text-neutral-400">{cls.teacher} · {cls.students}</p>
                       </div>
                       <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
-                        cls.status === '수업중' ? 'bg-[#CCFF00]/20 text-[#aacc00]' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500'
+                        cls.status === '수업중' ? 'bg-[#CCFF00]/20 text-[#aacc00] dark:text-[#CCFF00]' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400'
                       }`}>{cls.status}</span>
                     </div>
                   ))}
@@ -246,9 +253,9 @@ export default function IntroPage() {
       </section>
 
       {/* ═══════ 직접 눌러보세요 (Interactive) ═══════ */}
-      <section id="admin" className="py-10 md:py-14">
+      <section id="admin" className="py-10 md:py-14 bg-white dark:bg-transparent">
         <div className="max-w-5xl mx-auto px-4">
-          <h2 className="text-center text-xl sm:text-2xl md:text-3xl font-bold mb-10 md:mb-12">
+          <h2 className="text-center text-xl sm:text-2xl md:text-3xl font-bold mb-10 md:mb-12 text-neutral-900 dark:text-white">
             직접 눌러보세요
           </h2>
 
@@ -256,7 +263,7 @@ export default function IntroPage() {
           <div id="features" className="grid md:grid-cols-2 gap-6 md:gap-10 items-center mb-14 md:mb-16">
             <div className="text-center">
               <span className="inline-block px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-bold mb-3">수업 캘린더</span>
-              <h3 className="text-lg md:text-xl font-bold">날짜 클릭 → 그날 수업 한눈에</h3>
+              <h3 className="text-lg md:text-xl font-bold text-neutral-900 dark:text-white">날짜 클릭 → 그날 수업 한눈에</h3>
             </div>
             <div className="relative">
               <div className="absolute -inset-3 bg-gradient-to-tr from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-3xl blur-2xl opacity-50" />
@@ -268,7 +275,7 @@ export default function IntroPage() {
           <div className="grid md:grid-cols-2 gap-6 md:gap-10 items-center mb-14 md:mb-16">
             <div className="text-center md:order-last">
               <span className="inline-block px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold mb-3">3초 출석체크</span>
-              <h3 className="text-lg md:text-xl font-bold">명단 자동 · 터치 한 번 출석</h3>
+              <h3 className="text-lg md:text-xl font-bold text-neutral-900 dark:text-white">명단 자동 · 터치 한 번 출석</h3>
             </div>
             <div className="relative md:order-first">
               <div className="absolute -inset-3 bg-gradient-to-tr from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-3xl blur-2xl opacity-50" />
@@ -280,7 +287,7 @@ export default function IntroPage() {
           <div className="grid md:grid-cols-2 gap-6 md:gap-10 items-center mb-14 md:mb-16">
             <div className="text-center">
               <span className="inline-block px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold mb-3">QR 출석</span>
-              <h3 className="text-lg md:text-xl font-bold">스캔 한 번 → 출석 자동 처리</h3>
+              <h3 className="text-lg md:text-xl font-bold text-neutral-900 dark:text-white">스캔 한 번 → 출석 자동 처리</h3>
             </div>
             <div className="relative flex justify-center">
               <div className="absolute -inset-3 bg-gradient-to-tr from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-3xl blur-2xl opacity-50" />
@@ -292,7 +299,7 @@ export default function IntroPage() {
           <div className="grid md:grid-cols-2 gap-6 md:gap-10 items-center mb-14 md:mb-16">
             <div className="text-center md:order-last">
               <span className="inline-block px-3 py-1 rounded-full bg-[#CCFF00]/20 text-[#aacc00] dark:text-[#CCFF00] text-xs font-bold mb-3">수강권</span>
-              <h3 className="text-lg md:text-xl font-bold">예약 시 자동 차감 · 실수 없음</h3>
+              <h3 className="text-lg md:text-xl font-bold text-neutral-900 dark:text-white">예약 시 자동 차감 · 실수 없음</h3>
             </div>
             <div className="relative md:order-first">
               <div className="absolute -inset-3 bg-gradient-to-tr from-[#CCFF00]/20 to-green-50 dark:from-[#CCFF00]/10 dark:to-green-900/20 rounded-3xl blur-2xl opacity-50" />
@@ -304,7 +311,7 @@ export default function IntroPage() {
           <div className="grid md:grid-cols-2 gap-6 md:gap-10 items-center">
             <div className="text-center">
               <span className="inline-block px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs font-bold mb-3">스마트 알림</span>
-              <h3 className="text-lg md:text-xl font-bold mb-2">수강권 만료 알림, 출석 알림, 수업영상 등록 알림 발송</h3>
+              <h3 className="text-lg md:text-xl font-bold mb-2 text-neutral-900 dark:text-white">수강권 만료 알림, 출석 알림, 수업영상 등록 알림 발송</h3>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-3">만료 임박·출석 확인·영상 업로드 시 수강생에게 푸시로 바로 알림 보낼 수 있습니다.</p>
               <div className="flex flex-wrap justify-center gap-1.5">
                 {['수강권 만료 알림', '출석 알림', '수업영상 등록 알림'].map((tag) => (
@@ -321,9 +328,9 @@ export default function IntroPage() {
       </section>
 
       {/* ═══════ 도입 시 초기 지원 ═══════ */}
-      <section className="py-10 md:py-14 max-w-5xl mx-auto px-4">
+      <section className="py-10 md:py-14 max-w-5xl mx-auto px-4 bg-white dark:bg-transparent">
         <div className="text-center mb-8">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">도입부터 운영까지, 함께합니다</h2>
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 text-neutral-900 dark:text-white">도입부터 운영까지, 함께합니다</h2>
           <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400">처음 도입하실 때 필요한 세팅은 모두 직접 도와드립니다.</p>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -344,36 +351,36 @@ export default function IntroPage() {
         </div>
       </section>
 
-      {/* ═══════ 학원 규모에 맞는 합리적인 요금제 (이미지와 동일 라이트 디자인) ═══════ */}
-      <section id="pricing" className="py-10 md:py-14 bg-slate-50">
+      {/* ═══════ 학원 규모에 맞는 합리적인 요금제 ═══════ */}
+      <section id="pricing" className="py-10 md:py-14 bg-slate-50 dark:bg-neutral-900/40">
         <PricingCards />
       </section>
 
       {/* ═══════ 문의 폼 ═══════ */}
-      <section id="contact" className="py-10 md:py-14">
+      <section id="contact" className="py-10 md:py-14 bg-neutral-50 dark:bg-transparent">
         <div className="max-w-xl mx-auto px-4">
           <div className="text-center mb-8">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">도입 문의</h2>
-            <p className="text-sm sm:text-base text-neutral-500">무료 상담으로 우리 학원에 맞는 세팅을 알아보세요.</p>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 text-neutral-900 dark:text-white">도입 문의</h2>
+            <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400">무료 상담으로 우리 학원에 맞는 세팅을 알아보세요.</p>
           </div>
           <div className="p-5 rounded-2xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 space-y-3 shadow-sm">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-medium text-neutral-500 dark:text-neutral-400 mb-1">담당자</label>
-                <input type="text" placeholder="홍길동" className="w-full px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-sm outline-none focus:border-neutral-500 dark:focus:border-[#CCFF00]/50" />
+                <input type="text" placeholder="홍길동" className="w-full px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-sm outline-none focus:border-neutral-500 dark:focus:border-[#CCFF00]/50" />
               </div>
               <div>
                 <label className="block text-[11px] font-medium text-neutral-500 dark:text-neutral-400 mb-1">연락처</label>
-                <input type="tel" placeholder="010-1234-5678" className="w-full px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-sm outline-none focus:border-neutral-500 dark:focus:border-[#CCFF00]/50" />
+                <input type="tel" placeholder="010-1234-5678" className="w-full px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-sm outline-none focus:border-neutral-500 dark:focus:border-[#CCFF00]/50" />
               </div>
             </div>
             <div>
               <label className="block text-[11px] font-medium text-neutral-500 dark:text-neutral-400 mb-1">학원명</label>
-              <input type="text" placeholder="학원명" className="w-full px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-sm outline-none focus:border-neutral-500 dark:focus:border-[#CCFF00]/50" />
+              <input type="text" placeholder="학원명" className="w-full px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-sm outline-none focus:border-neutral-500 dark:focus:border-[#CCFF00]/50" />
             </div>
             <div>
               <label className="block text-[11px] font-medium text-neutral-500 dark:text-neutral-400 mb-1">운영 형태</label>
-              <select className="w-full px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-sm outline-none focus:border-neutral-500 dark:focus:border-[#CCFF00]/50">
+              <select className="w-full px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-sm outline-none focus:border-neutral-500 dark:focus:border-[#CCFF00]/50">
                 <option value="">선택</option>
                 <option value="term">기간제</option>
                 <option value="coupon">쿠폰제</option>
@@ -383,7 +390,7 @@ export default function IntroPage() {
             </div>
             <div>
               <label className="block text-[11px] font-medium text-neutral-500 dark:text-neutral-400 mb-1">문의 내용</label>
-              <textarea rows={3} placeholder="궁금한 점을 적어주세요." className="w-full px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-sm resize-none outline-none focus:border-neutral-500 dark:focus:border-[#CCFF00]/50" />
+              <textarea rows={3} placeholder="궁금한 점을 적어주세요." className="w-full px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-sm resize-none outline-none focus:border-neutral-500 dark:focus:border-[#CCFF00]/50" />
             </div>
             <button type="submit" className="w-full py-2.5 rounded-xl font-bold bg-neutral-900 dark:bg-[#CCFF00] dark:text-black text-white text-sm">상담 신청하기</button>
           </div>
@@ -391,18 +398,18 @@ export default function IntroPage() {
       </section>
 
       {/* ═══════ Footer ═══════ */}
-      <footer className="py-6 border-t border-neutral-200 dark:border-neutral-800">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-3 text-sm text-neutral-500">
+      <footer className="py-6 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-transparent">
+        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-3 text-sm text-neutral-500 dark:text-neutral-400">
           <div className="flex items-center gap-2">
             <span className="font-bold text-neutral-900 dark:text-white">MoveIt</span>
-            <span className="text-xs">댄스학원 운영의 새로운 기준</span>
+            <span className="text-xs text-neutral-500 dark:text-neutral-400">댄스학원 운영의 새로운 기준</span>
           </div>
           <div className="flex gap-4 text-xs">
             <a href="#" className="hover:text-neutral-900 dark:hover:text-white">이용약관</a>
             <a href="#" className="hover:text-neutral-900 dark:hover:text-white">개인정보처리방침</a>
           </div>
         </div>
-        {year && <p className="text-center text-[11px] text-neutral-400 mt-3">&copy; {year} MoveIt</p>}
+        {year && <p className="text-center text-[11px] text-neutral-400 dark:text-neutral-500 mt-3">&copy; {year} MoveIt</p>}
       </footer>
     </div>
   );
