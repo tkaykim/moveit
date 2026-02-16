@@ -100,53 +100,64 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createServiceClient();
-    let targetUserIds: string[] = [];
 
-    if (target === 'all') {
-      // 활성 토큰이 있는 모든 유저
-      const { data: tokens } = await (supabase
-        .from('device_tokens') as any)
-        .select('user_id')
-        .eq('is_active', true);
+    // 모든 활성 디바이스 토큰 조회 (user_id 유무와 무관)
+    let tokenQuery = (supabase.from('device_tokens') as any)
+      .select('id, token, platform, user_id')
+      .eq('is_active', true);
 
-      targetUserIds = [...new Set((tokens || []).map((t: any) => t.user_id))] as string[];
-    } else if (target === 'specific' && user_ids.length > 0) {
-      targetUserIds = user_ids;
-    } else {
+    if (target === 'specific' && user_ids.length > 0) {
+      tokenQuery = tokenQuery.in('user_id', user_ids);
+    }
+
+    const { data: activeTokens, error: tokenError } = await tokenQuery;
+
+    if (tokenError) {
+      return NextResponse.json({ error: '토큰 조회 실패', detail: tokenError.message }, { status: 500 });
+    }
+
+    if (!activeTokens || activeTokens.length === 0) {
       return NextResponse.json({
-        error: 'target이 "specific"인 경우 user_ids가 필요합니다.',
+        error: '발송 대상이 없습니다. 디바이스 토큰이 등록된 기기가 없습니다.',
+        hint: '앱을 설치하고 알림을 허용해야 디바이스 토큰이 등록됩니다.',
       }, { status: 400 });
     }
 
-    if (targetUserIds.length === 0) {
-      return NextResponse.json({
-        error: '발송 대상이 없습니다. 디바이스 토큰이 등록된 유저가 없습니다.',
-        hint: '앱에서 로그인하여 푸시 알림을 허용해야 디바이스 토큰이 등록됩니다.',
-      }, { status: 400 });
+    // 로그인된 유저들에게는 인앱 알림도 기록
+    const loggedInUserIds = [...new Set(
+      activeTokens.filter((t: any) => t.user_id).map((t: any) => t.user_id)
+    )] as string[];
+
+    let bulkResult = null;
+    if (loggedInUserIds.length > 0) {
+      bulkResult = await sendBulkNotification(loggedInUserIds, {
+        type, title, body: message, data, channel: 'push',
+      });
     }
 
-    // 벌크 알림 발송 (notification 테이블 + queue 삽입)
-    const result = await sendBulkNotification(targetUserIds, {
-      type,
-      title,
-      body: message,
-      data,
-      channel: 'push',
-    });
-
-    // notification-worker Edge Function 트리거
+    // notification-worker Edge Function 트리거 (큐에 있는 알림 처리)
     let workerResult = null;
-    if (trigger_worker) {
+    if (trigger_worker && loggedInUserIds.length > 0) {
       workerResult = await triggerNotificationWorker(supabase);
+    }
+
+    // 비로그인 토큰에는 직접 FCM 발송 요청 (Edge Function 직접 호출)
+    const anonymousTokens = activeTokens.filter((t: any) => !t.user_id);
+    let directFcmResult = null;
+    if (anonymousTokens.length > 0 || loggedInUserIds.length === 0) {
+      directFcmResult = await triggerDirectPush(supabase, activeTokens, title, message, data);
     }
 
     return NextResponse.json({
       success: true,
-      result: {
-        ...result,
-        target_user_ids: targetUserIds,
+      summary: {
+        total_tokens: activeTokens.length,
+        logged_in_users: loggedInUserIds.length,
+        anonymous_tokens: anonymousTokens.length,
       },
+      bulk_result: bulkResult,
       worker: workerResult,
+      direct_fcm: directFcmResult,
     });
   } catch (error: any) {
     console.error('Admin push POST error:', error);
@@ -154,7 +165,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/** notification-worker Edge Function 호출 */
+/** notification-worker Edge Function 호출 (큐 기반) */
 async function triggerNotificationWorker(supabase: any) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -178,5 +189,45 @@ async function triggerNotificationWorker(supabase: any) {
     return { triggered: true, status: res.status, data };
   } catch (error: any) {
     return { triggered: false, error: error.message };
+  }
+}
+
+/** 모든 토큰에 직접 FCM 발송 (notification_queue를 거치지 않고 Edge Function 호출) */
+async function triggerDirectPush(
+  supabase: any,
+  tokens: any[],
+  title: string,
+  message: string,
+  data: Record<string, any>,
+) {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+      return { success: false, error: 'Supabase URL/Key 미설정' };
+    }
+
+    // 각 토큰에 대해 큐 아이템을 임시 생성하여 notification-worker가 처리하도록
+    // 비로그인 토큰은 큐를 거치지 않으므로, 직접 Edge Function에 토큰 목록을 전달
+    const res = await fetch(`${supabaseUrl}/functions/v1/notification-worker`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        direct_tokens: tokens.map((t: any) => t.token),
+        title,
+        body: message,
+        data: data || {},
+      }),
+    });
+
+    const result = await res.json();
+    return { success: res.ok, status: res.status, result };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 }
