@@ -62,27 +62,27 @@ export function PricingCards() {
   return (
     <div className="max-w-3xl mx-auto px-4">
       <div className="text-center mb-10">
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">
           학원 규모에 맞는 합리적인 요금제
         </h2>
-        <p className="text-slate-600 text-sm sm:text-base mb-8">
+        <p className="text-slate-600 dark:text-slate-200 text-sm sm:text-base mb-8">
           숨겨진 비용 없이, 필요한 기능만큼만 결제하세요.
         </p>
         <div className="flex items-center justify-center gap-4 flex-wrap">
-          <span className={`text-sm font-medium ${billingCycle === 'monthly' ? 'text-slate-900' : 'text-slate-400'}`}>
+          <span className={`text-sm font-medium ${billingCycle === 'monthly' ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-300'}`}>
             월간 결제
           </span>
           <button
             type="button"
             onClick={() => setBillingCycle((c) => (c === 'monthly' ? 'yearly' : 'monthly'))}
-            className="relative w-14 h-7 bg-slate-200 rounded-full p-1 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2"
+            className="relative w-14 h-7 bg-slate-200 dark:bg-slate-600 rounded-full p-1 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
             aria-pressed={billingCycle === 'yearly'}
           >
             <span
               className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${billingCycle === 'yearly' ? 'translate-x-8 left-1' : 'left-1 translate-x-0'}`}
             />
           </button>
-          <span className={`text-sm font-medium flex items-center gap-2 ${billingCycle === 'yearly' ? 'text-slate-900' : 'text-slate-400'}`}>
+          <span className={`text-sm font-medium flex items-center gap-2 ${billingCycle === 'yearly' ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-300'}`}>
             연간 결제
             <span className="bg-violet-500 text-white text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
               20% 할인
@@ -111,16 +111,16 @@ export function PricingCards() {
                   </div>
                 )}
                 <h3 className="text-lg font-bold mb-2">{plan.name}</h3>
-                <p className={`text-sm mb-4 leading-snug min-w-0 break-words ${plan.isPopular ? 'text-slate-300' : 'text-slate-600'}`}>
+                <p className={`text-sm mb-4 leading-snug min-w-0 break-words ${plan.isPopular ? 'text-slate-200' : 'text-slate-700'}`}>
                   {plan.description}
                 </p>
                 <div className="mb-4">
                   <span className="text-2xl sm:text-3xl font-bold">{price.toLocaleString()}</span>
-                  <span className={`text-sm ml-1 ${plan.isPopular ? 'text-slate-400' : 'text-slate-500'}`}>
+                  <span className={`text-sm ml-1 ${plan.isPopular ? 'text-slate-300' : 'text-slate-600'}`}>
                     원 / 월
                   </span>
                   {billingCycle === 'yearly' && (
-                    <p className="text-xs sm:text-sm mt-1 text-slate-500">
+                    <p className={`text-xs sm:text-sm mt-1 ${plan.isPopular ? 'text-slate-400' : 'text-slate-600'}`}>
                       연간 {plan.yearlyTotal.toLocaleString()}원 청구
                     </p>
                   )}
@@ -129,7 +129,7 @@ export function PricingCards() {
                   {plan.features.map((feature, idx) => (
                     <li key={idx} className="flex items-start gap-2 text-xs sm:text-sm min-w-0">
                       <Check size={16} className={`flex-shrink-0 mt-0.5 ${plan.isPopular ? 'text-violet-400' : 'text-violet-600'}`} />
-                      <span className={`min-w-0 break-words ${plan.isPopular ? 'text-slate-200' : 'text-slate-600'}`}>{feature}</span>
+                      <span className={`min-w-0 break-words ${plan.isPopular ? 'text-slate-100' : 'text-slate-700'}`}>{feature}</span>
                     </li>
                   ))}
                 </ul>

@@ -205,7 +205,7 @@ export default function IntroPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
-                <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="grid grid-cols-3 gap-3">
                   {[
                     { label: '오늘 매출', value: '₩1,250,000', change: '+12%' },
                     { label: '신규 등록', value: '8명', change: '+3명' },
@@ -215,13 +215,6 @@ export default function IntroPage() {
                       <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mb-0.5">{stat.label}</p>
                       <p className="text-base font-bold text-neutral-900 dark:text-white">{stat.value}</p>
                       <p className="text-[10px] text-green-500 font-medium">{stat.change}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="h-32 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 flex items-end justify-between p-3 px-6 gap-1.5">
-                  {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
-                    <div key={i} className="w-full bg-neutral-200 dark:bg-neutral-700 rounded-t-md relative">
-                      <div className="absolute bottom-0 inset-x-0 bg-neutral-900 dark:bg-[#CCFF00] rounded-t-md" style={{ height: `${h}%` }} />
                     </div>
                   ))}
                 </div>
@@ -315,8 +308,16 @@ export default function IntroPage() {
           <div className="grid md:grid-cols-2 gap-6 md:gap-10 items-center">
             <div className="text-center">
               <span className="inline-block px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs font-bold mb-3">스마트 알림</span>
-              <h3 className="text-lg md:text-xl font-bold mb-2 text-neutral-900 dark:text-white">수강권 만료 알림, 출석 알림, 수업영상 등록 알림 발송</h3>
-              <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-3">만료 임박·출석 확인·영상 업로드 시 수강생에게 푸시로 바로 알림 보낼 수 있습니다.</p>
+              <h3 className="text-lg md:text-xl font-bold mb-2 text-neutral-900 dark:text-white leading-snug">
+                수강권 만료 알림, 출석 알림,
+                <br />
+                수업영상 등록 알림 발송
+              </h3>
+              <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-3 leading-relaxed max-w-md mx-auto">
+                만료 임박·출석 확인·영상 업로드 시
+                <br />
+                수강생에게 푸시로 바로 알림 보낼 수 있습니다.
+              </p>
               <div className="flex flex-wrap justify-center gap-1.5">
                 {['수강권 만료 알림', '출석 알림', '수업영상 등록 알림'].map((tag) => (
                   <span key={tag} className="text-[10px] px-2 py-1 rounded-full bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 font-medium">{tag}</span>

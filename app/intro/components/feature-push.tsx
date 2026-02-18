@@ -98,7 +98,8 @@ export function FeaturePush() {
           </span>
         </div>
         <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
-          만료 알림, 출석 확인, 영상 등록, 수업 리마인드까지<br/>
+          만료 알림, 출석 확인, 영상 등록, 수업 리마인드까지
+          <br />
           모두 자동으로 푸시 알림이 발송됩니다.
         </p>
       </div>
