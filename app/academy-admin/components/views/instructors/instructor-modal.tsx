@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 
 interface InstructorModalProps {
+  academyId?: string;
   instructor?: any;
   onClose: () => void;
 }
 
-export function InstructorModal({ instructor, onClose }: InstructorModalProps) {
+export function InstructorModal({ academyId, instructor, onClose }: InstructorModalProps) {
   const [isEditing, setIsEditing] = useState(!instructor); // 신규 등록이면 바로 편집 모드
   const [formData, setFormData] = useState({
     name_kr: '',
@@ -19,6 +20,14 @@ export function InstructorModal({ instructor, onClose }: InstructorModalProps) {
     instagram_url: '',
   });
   const [loading, setLoading] = useState(false);
+
+  // 앱 계정 연결
+  const [linkedUser, setLinkedUser] = useState<{ id: string; email: string | null; name: string | null } | null>(null);
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<{ id: string; email: string | null; name: string | null }[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     if (instructor) {
@@ -40,6 +49,87 @@ export function InstructorModal({ instructor, onClose }: InstructorModalProps) {
       });
     }
   }, [instructor]);
+
+  const fetchLinkedUser = useCallback(async () => {
+    if (!academyId || !instructor?.id) return;
+    try {
+      const res = await fetch(`/api/academy-admin/${academyId}/instructors/${instructor.id}/linked-user`);
+      const data = await res.json();
+      setLinkedUser(data.user ?? null);
+    } catch {
+      setLinkedUser(null);
+    }
+  }, [academyId, instructor?.id]);
+
+  useEffect(() => {
+    if (academyId && instructor?.id) fetchLinkedUser();
+    else setLinkedUser(null);
+  }, [academyId, instructor?.id, fetchLinkedUser]);
+
+  useEffect(() => {
+    if (!searchQuery.trim() || searchQuery.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      if (!academyId) return;
+      setSearchLoading(true);
+      try {
+        const res = await fetch(
+          `/api/academy-admin/${academyId}/instructors/link-user/search?q=${encodeURIComponent(searchQuery)}`
+        );
+        const data = await res.json();
+        setSearchResults(data.users ?? []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchQuery, academyId]);
+
+  const handleLinkUser = async (userId: string) => {
+    if (!academyId || !instructor?.id) return;
+    setLinkLoading(true);
+    try {
+      const res = await fetch(`/api/academy-admin/${academyId}/instructors/${instructor.id}/link-user`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '연결에 실패했습니다.');
+      await fetchLinkedUser();
+      setSearchQuery('');
+      setSearchResults([]);
+      setSearchOpen(false);
+    } catch (e: any) {
+      alert(e.message || '연결에 실패했습니다.');
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  const handleUnlinkUser = async () => {
+    if (!academyId || !instructor?.id) return;
+    if (!confirm('연결을 해제하시겠습니까?')) return;
+    setLinkLoading(true);
+    try {
+      const res = await fetch(`/api/academy-admin/${academyId}/instructors/${instructor.id}/link-user`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: null }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '해제에 실패했습니다.');
+      await fetchLinkedUser();
+    } catch (e: any) {
+      alert(e.message || '해제에 실패했습니다.');
+    } finally {
+      setLinkLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -260,6 +350,73 @@ export function InstructorModal({ instructor, onClose }: InstructorModalProps) {
               />
             </div>
 
+            {academyId && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">앱 계정 연결</h4>
+                {linkedUser ? (
+                  <div className="flex items-center justify-between gap-2 p-3 rounded-lg bg-gray-50 dark:bg-neutral-800">
+                    <span className="text-gray-800 dark:text-white">
+                      {linkedUser.email ?? linkedUser.name ?? linkedUser.id}
+                      {linkedUser.name && linkedUser.email && ` (${linkedUser.name})`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleUnlinkUser}
+                      disabled={linkLoading}
+                      className="shrink-0 px-3 py-1.5 text-sm border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 disabled:opacity-50"
+                    >
+                      {linkLoading ? '처리 중...' : '연결 해제'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="이메일 또는 이름으로 검색 (2글자 이상)"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setSearchOpen(true);
+                      }}
+                      onFocus={() => setSearchOpen(true)}
+                      className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white text-sm"
+                    />
+                    {searchOpen && (searchQuery.length >= 2 || searchResults.length > 0) && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-0"
+                          aria-hidden
+                          onClick={() => setSearchOpen(false)}
+                        />
+                        <div className="absolute top-full left-0 right-0 mt-1 z-10 rounded-lg border dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-lg max-h-48 overflow-y-auto">
+                          {searchLoading ? (
+                            <div className="p-3 text-sm text-gray-500 dark:text-gray-400">검색 중...</div>
+                          ) : searchResults.length === 0 ? (
+                            <div className="p-3 text-sm text-gray-500 dark:text-gray-400">
+                              {searchQuery.length >= 2 ? '검색 결과가 없습니다.' : '2글자 이상 입력하세요.'}
+                            </div>
+                          ) : (
+                            searchResults.map((u) => (
+                              <button
+                                key={u.id}
+                                type="button"
+                                onClick={() => handleLinkUser(u.id)}
+                                disabled={linkLoading}
+                                className="w-full text-left px-3 py-2 text-sm text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-neutral-800 border-b dark:border-neutral-700 last:border-0 disabled:opacity-50"
+                              >
+                                {u.email ?? u.name ?? u.id}
+                                {u.name && u.email && ` (${u.name})`}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-3 pt-4">
               <button
                 type="button"
@@ -324,6 +481,73 @@ export function InstructorModal({ instructor, onClose }: InstructorModalProps) {
               <div>
                 <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">소개</h4>
                 <p className="text-gray-800 dark:text-white">{instructor.bio}</p>
+              </div>
+            )}
+
+            {academyId && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">앱 계정 연결</h4>
+                {linkedUser ? (
+                  <div className="flex items-center justify-between gap-2 p-3 rounded-lg bg-gray-50 dark:bg-neutral-800">
+                    <span className="text-gray-800 dark:text-white">
+                      {linkedUser.email ?? linkedUser.name ?? linkedUser.id}
+                      {linkedUser.name && linkedUser.email && ` (${linkedUser.name})`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleUnlinkUser}
+                      disabled={linkLoading}
+                      className="shrink-0 px-3 py-1.5 text-sm border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 disabled:opacity-50"
+                    >
+                      {linkLoading ? '처리 중...' : '연결 해제'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="이메일 또는 이름으로 검색 (2글자 이상)"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setSearchOpen(true);
+                      }}
+                      onFocus={() => setSearchOpen(true)}
+                      className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white text-sm"
+                    />
+                    {searchOpen && (searchQuery.length >= 2 || searchResults.length > 0) && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-0"
+                          aria-hidden
+                          onClick={() => setSearchOpen(false)}
+                        />
+                        <div className="absolute top-full left-0 right-0 mt-1 z-10 rounded-lg border dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-lg max-h-48 overflow-y-auto">
+                          {searchLoading ? (
+                            <div className="p-3 text-sm text-gray-500 dark:text-gray-400">검색 중...</div>
+                          ) : searchResults.length === 0 ? (
+                            <div className="p-3 text-sm text-gray-500 dark:text-gray-400">
+                              {searchQuery.length >= 2 ? '검색 결과가 없습니다.' : '2글자 이상 입력하세요.'}
+                            </div>
+                          ) : (
+                            searchResults.map((u) => (
+                              <button
+                                key={u.id}
+                                type="button"
+                                onClick={() => handleLinkUser(u.id)}
+                                disabled={linkLoading}
+                                className="w-full text-left px-3 py-2 text-sm text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-neutral-800 border-b dark:border-neutral-700 last:border-0 disabled:opacity-50"
+                              >
+                                {u.email ?? u.name ?? u.id}
+                                {u.name && u.email && ` (${u.name})`}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

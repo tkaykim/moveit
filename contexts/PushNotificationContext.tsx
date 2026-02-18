@@ -265,7 +265,10 @@ export function PushNotificationProvider({ children }: { children: ReactNode }) 
         // 최대 4초까지 200ms 간격으로 폴링
         setTimeout(() => poll(attempt + 1), 200);
       } else {
-        log('Capacitor 브릿지 감지 실패 (4초 타임아웃)');
+        // 브라우저 등 비-Capacitor 환경에서는 정상 동작. 콘솔 오류 대신 debug만 출력
+        if (typeof console !== 'undefined' && console.debug) {
+          console.debug('[Push] Capacitor 환경이 아님 (브라우저 또는 브릿지 미준비)');
+        }
         setIsSupported(false);
       }
     };

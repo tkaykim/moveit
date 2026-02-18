@@ -45,6 +45,22 @@ export async function getInstructorById(id: string) {
   return data;
 }
 
+/**
+ * 로그인 유저 id로 연결된 강사 프로필 1건 조회.
+ * "강사 유무" 판단 및 강사 전용 API에서 instructor_id 획득용.
+ */
+export async function getInstructorByUserId(userId: string) {
+  const supabase = await createClient() as any;
+  const { data, error } = await supabase
+    .from('instructors')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function createInstructor(instructor: Database['public']['Tables']['instructors']['Insert']) {
   const supabase = await createClient() as any;
   const { data, error } = await supabase

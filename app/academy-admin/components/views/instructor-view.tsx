@@ -197,6 +197,7 @@ export function InstructorView({ academyId }: InstructorViewProps) {
 
       {showModal && (
         <InstructorModal
+          academyId={academyId}
           instructor={selectedInstructor}
           onClose={() => {
             setShowModal(false);

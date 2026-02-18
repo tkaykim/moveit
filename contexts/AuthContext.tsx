@@ -18,11 +18,15 @@ export interface UserProfile {
   role: 'SUPER_ADMIN' | 'ACADEMY_OWNER' | 'ACADEMY_MANAGER' | 'INSTRUCTOR' | 'USER';
   created_at: string;
   updated_at: string;
+  /** 연결된 강사 프로필 id. 있으면 "내 수업 관리 (강사용)" 노출 및 대시보드 접근 가능 */
+  instructor_id: string | null;
 }
 
 interface AuthContextType {
   user: SupabaseUser | null;
   profile: UserProfile | null;
+  /** 프로필에 연결된 강사가 있으면 true. 마이페이지 카드·대시보드 접근에 사용 */
+  isInstructor: boolean;
   loading: boolean;
   signUp: (
     email: string,
@@ -60,6 +64,7 @@ function createFallbackProfile(authUser: SupabaseUser): UserProfile {
     role: 'USER',
     created_at: authUser.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    instructor_id: null,
   };
 }
 
@@ -82,18 +87,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   });
 
-  // 서버 API로 프로필 조회 (RLS 우회, role 등 정확한 값 보장)
+  // 서버 API로 프로필 조회 (RLS 우회, role·instructor_id 포함). Bearer 토큰 전달로 Capacitor/다른 포트에서도 인증.
   const fetchProfileFromApi = useCallback(async (): Promise<UserProfile | null> => {
     if (typeof window === 'undefined') return null;
     try {
-      const res = await fetch('/api/auth/profile', { credentials: 'include' });
+      const { fetchWithAuth } = await import('@/lib/api/auth-fetch');
+      const res = await fetchWithAuth('/api/auth/profile', { cache: 'no-store' });
       if (!res.ok) return null;
       const json = await res.json();
       const p = json?.profile;
-      if (p && typeof p.role === 'string') {
-        return p as UserProfile;
-      }
-      return null;
+      if (!p || typeof p.id !== 'string') return null;
+      return {
+        id: p.id,
+        nickname: p.nickname ?? null,
+        name: p.name ?? null,
+        name_en: p.name_en ?? null,
+        email: p.email ?? null,
+        phone: p.phone ?? null,
+        profile_image: p.profile_image ?? null,
+        role: (p.role && ['SUPER_ADMIN', 'ACADEMY_OWNER', 'ACADEMY_MANAGER', 'INSTRUCTOR', 'USER'].includes(p.role)) ? p.role : 'USER',
+        created_at: p.created_at ?? new Date().toISOString(),
+        updated_at: p.updated_at ?? new Date().toISOString(),
+        instructor_id: p.instructor_id ?? null,
+      } as UserProfile;
     } catch {
       return null;
     }
@@ -128,6 +144,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     try {
+      // API 우선: 세션 쿠키로 instructor_id·role 정확히 조회 (강사 카드 노출용)
+      const apiProfile = await fetchProfileFromApi();
+      if (apiProfile && apiProfile.id === userId) {
+        setProfile(apiProfile);
+        return;
+      }
+
       const fetchPromise = Promise.resolve(
         supabase
           .from('users')
@@ -136,7 +159,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .single()
       );
 
-      // 10초 타임아웃
       const result = await withTimeout(
         fetchPromise,
         10000,
@@ -151,16 +173,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       const row = data as UserProfile;
-      // RLS로 role 등이 빠진 경우 API로 정확한 프로필 조회
-      const role = (row as { role?: string }).role;
-      if (role == null || role === '') {
-        const apiProfile = await fetchProfileFromApi();
-        if (apiProfile) {
-          setProfile(apiProfile);
-          return;
+      // API에서 instructor_id 못 받았으면 클라이언트에서 instructors 조회 (RLS 없으면 조회 가능)
+      let instructorId: string | null = apiProfile?.instructor_id ?? (row as { instructor_id?: string }).instructor_id ?? null;
+      if (!instructorId && supabase) {
+        try {
+          const { data: inst } = await supabase.from('instructors').select('id').eq('user_id', userId).maybeSingle() as { data: { id: string } | null };
+          if (inst?.id) instructorId = inst.id;
+        } catch {
+          // ignore
         }
       }
-      setProfile(row);
+      setProfile({
+        ...row,
+        instructor_id: instructorId,
+      });
     } catch (error) {
       console.warn('Error fetching profile (non-critical):', error);
       await setFallbackOrApiProfile();
@@ -353,12 +379,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (fetchProfileAbortRef.current) {
         fetchProfileAbortRef.current.abort();
       }
+      // Strict Mode 재마운트 시 리스너가 다시 등록되도록
+      initializedRef.current = false;
     };
   }, [supabase, fetchProfile]);
 
   const value: AuthContextType = {
     user,
     profile,
+    isInstructor: !!profile?.instructor_id,
     loading,
     signUp,
     signIn,

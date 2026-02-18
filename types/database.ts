@@ -1066,7 +1066,9 @@ export type Database = {
       instructors: {
         Row: {
           bio: string | null
+          contact: string | null
           created_at: string | null
+          email: string | null
           id: string
           instagram_url: string | null
           like: number | null
@@ -1074,10 +1076,13 @@ export type Database = {
           name_kr: string | null
           profile_image_url: string | null
           specialties: string | null
+          user_id: string | null
         }
         Insert: {
           bio?: string | null
+          contact?: string | null
           created_at?: string | null
+          email?: string | null
           id?: string
           instagram_url?: string | null
           like?: number | null
@@ -1085,10 +1090,13 @@ export type Database = {
           name_kr?: string | null
           profile_image_url?: string | null
           specialties?: string | null
+          user_id?: string | null
         }
         Update: {
           bio?: string | null
+          contact?: string | null
           created_at?: string | null
+          email?: string | null
           id?: string
           instagram_url?: string | null
           like?: number | null
@@ -1096,6 +1104,7 @@ export type Database = {
           name_kr?: string | null
           profile_image_url?: string | null
           specialties?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

@@ -4,14 +4,14 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   User, ChevronRight, Ticket, Calendar, 
   CreditCard, HelpCircle, Bell, Settings,
-  Clock, MapPin, Play, QrCode, RefreshCw
+  Clock, MapPin, Play, QrCode, RefreshCw, BookOpen
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/common/theme-toggle';
 import { LanguageToggle } from '@/components/common/language-toggle';
 import { useAuth } from '@/contexts/AuthContext';
 import { MyTab } from '@/components/auth/MyTab';
 import { UserMenu } from '@/components/auth/UserMenu';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale } from '@/contexts/LocaleContext';
 import { QrModal } from '@/components/modals/qr-modal';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
@@ -45,9 +45,26 @@ interface MyPageViewProps {
 
 export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
   const router = useRouter();
-  const { user, profile, loading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
+  const { user, profile, isInstructor, loading: authLoading, refreshProfile } = useAuth();
+  const profileRefreshDoneRef = useRef(false);
   const { t, language } = useLocale();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  // 쿼리 ?auth=open 이면 로그인 모달 자동 오픈 (테스트/디버깅용)
+  useEffect(() => {
+    if (searchParams?.get('auth') === 'open' && !user) {
+      setIsAuthModalOpen(true);
+    }
+  }, [searchParams, user]);
+
+  // 로그인된 상태인데 instructor_id가 없으면 프로필 재조회 (강사 연결 반영)
+  useEffect(() => {
+    if (!user || authLoading || profileRefreshDoneRef.current) return;
+    if (profile && profile.instructor_id) return;
+    profileRefreshDoneRef.current = true;
+    refreshProfile();
+  }, [user, authLoading, profile?.instructor_id, refreshProfile]);
   const [ticketSummary, setTicketSummary] = useState<TicketSummary>({ regular: 0, popup: 0, workshop: 0, total: 0 });
   const [nextClass, setNextClass] = useState<UpcomingBooking | null>(null);
   const [weekSchedule, setWeekSchedule] = useState<WeekSchedule[]>([]);
@@ -311,6 +328,32 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
             </button>
           )}
         </div>
+
+        {/* 내 수업 관리 (강사용) - 강사 프로필 연결된 유저만 */}
+        {user && isInstructor && (
+          <div className="px-5 mt-4">
+            <button
+              type="button"
+              onClick={() => router.push('/instructor-dashboard')}
+              className="w-full bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-sm border border-neutral-200 dark:border-neutral-800 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-primary/20 dark:bg-[#CCFF00]/20 flex items-center justify-center">
+                  <BookOpen className="w-6 h-6 text-primary dark:text-[#CCFF00]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-base font-bold text-black dark:text-white">
+                    내 수업 관리 (강사용)
+                  </h2>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    제가 강사로 진행하는 수업 일정
+                  </p>
+                </div>
+                <ChevronRight className="text-neutral-400 shrink-0" size={20} />
+              </div>
+            </button>
+          </div>
+        )}
 
         {/* 보유 수강권 */}
         <div className="px-5 mt-4">
