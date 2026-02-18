@@ -1,11 +1,57 @@
 "use client";
 
-import { ReactNode, useState, useCallback } from 'react';
+import { ReactNode, useState, useCallback, useEffect, useRef } from 'react';
 import { AdminSidebar } from './components/admin-sidebar';
-import { Menu, LogIn, LogOut, User } from 'lucide-react';
+import { Menu, LogOut, User, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AdminLoginModal } from '@/components/auth/AdminLoginModal';
 import { AccessDenied } from '@/components/auth/AccessDenied';
+
+const LOADING_TIMEOUT_MS = 12_000;
+const PROFILE_TIMEOUT_MS = 10_000;
+
+function LoadingOrTimeout({
+  message,
+  timedOutMessage,
+  timedOut,
+  onRetry,
+  retryLabel = '새로고침',
+}: {
+  message: string;
+  timedOutMessage: string;
+  timedOut: boolean;
+  onRetry?: () => void;
+  retryLabel?: string;
+}) {
+  return (
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3 px-4">
+        {timedOut ? (
+          <>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 text-center">
+              {timedOutMessage}
+            </p>
+            {onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-black hover:opacity-90 transition-opacity text-sm font-medium"
+              >
+                <RefreshCw className="w-4 h-4" />
+                {retryLabel}
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="w-8 h-8 border-2 border-neutral-300 dark:border-neutral-600 border-t-primary dark:border-t-[#CCFF00] rounded-full animate-spin" />
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">{message}</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function AdminLayout({
   children,
@@ -14,23 +60,59 @@ export default function AdminLayout({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
-  const { user, profile, loading, signOut } = useAuth();
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+  const [profileTimedOut, setProfileTimedOut] = useState(false);
+  const profileTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { user, profile, loading, signOut, refreshProfile } = useAuth();
 
   const handleLoginSuccess = useCallback(() => {
-    // auth context가 업데이트되면 자동으로 재렌더링
+    setLoadingTimedOut(false);
+    setProfileTimedOut(false);
   }, []);
+
+  // 권한 확인 중(loading) 타임아웃: 오래 걸리면 새로고침 유도
+  useEffect(() => {
+    if (!loading) {
+      setLoadingTimedOut(false);
+      return;
+    }
+    const t = setTimeout(() => setLoadingTimedOut(true), LOADING_TIMEOUT_MS);
+    return () => clearTimeout(t);
+  }, [loading]);
+
+  // 프로필 로딩 타임아웃: user는 있는데 profile이 안 오면 재시도 유도
+  useEffect(() => {
+    if (profileTimeoutRef.current) {
+      clearTimeout(profileTimeoutRef.current);
+      profileTimeoutRef.current = null;
+    }
+    if (user && !profile && !loading) {
+      profileTimeoutRef.current = setTimeout(() => setProfileTimedOut(true), PROFILE_TIMEOUT_MS);
+    } else {
+      setProfileTimedOut(false);
+    }
+    return () => {
+      if (profileTimeoutRef.current) clearTimeout(profileTimeoutRef.current);
+    };
+  }, [user, profile, loading]);
+
+  const handleRetryProfile = useCallback(() => {
+    setProfileTimedOut(false);
+    refreshProfile();
+  }, [refreshProfile]);
 
   const displayName = profile?.nickname || profile?.name || user?.email?.split('@')[0] || '';
 
-  // 로딩 중
+  // 로딩 중 (타임아웃 시 새로고침 안내)
   if (loading) {
     return (
-      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-neutral-300 dark:border-neutral-600 border-t-primary dark:border-t-[#CCFF00] rounded-full animate-spin" />
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">권한 확인 중...</p>
-        </div>
-      </div>
+      <LoadingOrTimeout
+        message="권한 확인 중..."
+        timedOutMessage="연결이 지연되고 있습니다. 새로고침 후 다시 시도해 주세요."
+        timedOut={loadingTimedOut}
+        onRetry={loadingTimedOut ? () => window.location.reload() : undefined}
+        retryLabel="새로고침"
+      />
     );
   }
 
@@ -45,15 +127,16 @@ export default function AdminLayout({
     );
   }
 
-  // 프로필이 아직 로딩 중이면 대기
+  // 프로필 로딩 중 (타임아웃 시 재시도 안내)
   if (!profile) {
     return (
-      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-neutral-300 dark:border-neutral-600 border-t-primary dark:border-t-[#CCFF00] rounded-full animate-spin" />
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">프로필 로딩 중...</p>
-        </div>
-      </div>
+      <LoadingOrTimeout
+        message="프로필 로딩 중..."
+        timedOutMessage="프로필을 불러오지 못했습니다. 아래 버튼으로 다시 시도해 주세요."
+        timedOut={profileTimedOut}
+        onRetry={profileTimedOut ? handleRetryProfile : undefined}
+        retryLabel="다시 시도"
+      />
     );
   }
 

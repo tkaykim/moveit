@@ -82,7 +82,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   });
 
-  // 프로필 정보 가져오기 (비동기, 실패해도 앱은 정상 작동)
+  // 서버 API로 프로필 조회 (RLS 우회, role 등 정확한 값 보장)
+  const fetchProfileFromApi = useCallback(async (): Promise<UserProfile | null> => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const res = await fetch('/api/auth/profile', { credentials: 'include' });
+      if (!res.ok) return null;
+      const json = await res.json();
+      const p = json?.profile;
+      if (p && typeof p.role === 'string') {
+        return p as UserProfile;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // 프로필 정보 가져오기 (비동기, 실패 시 API 폴백으로 role 정확히 반영)
   // 중복 호출 방지 및 타임아웃 포함
   const fetchProfile = useCallback(async (userId: string, authUser?: SupabaseUser) => {
     if (!supabase) return;
@@ -96,6 +113,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       fetchProfileAbortRef.current.abort();
     }
     fetchProfileAbortRef.current = new AbortController();
+
+    const setFallbackOrApiProfile = async () => {
+      const apiProfile = await fetchProfileFromApi();
+      if (apiProfile) {
+        setProfile(apiProfile);
+        return;
+      }
+      if (authUser) {
+        setProfile(createFallbackProfile(authUser));
+      } else {
+        setProfile(null);
+      }
+    };
 
     try {
       const fetchPromise = Promise.resolve(
@@ -117,25 +147,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error || !data) {
         console.warn('Profile not found or error (non-critical):', error);
-        if (authUser) {
-          setProfile(createFallbackProfile(authUser));
-        } else {
-          setProfile(null);
-        }
+        await setFallbackOrApiProfile();
         return;
       }
-      setProfile(data as UserProfile);
+      const row = data as UserProfile;
+      // RLS로 role 등이 빠진 경우 API로 정확한 프로필 조회
+      const role = (row as { role?: string }).role;
+      if (role == null || role === '') {
+        const apiProfile = await fetchProfileFromApi();
+        if (apiProfile) {
+          setProfile(apiProfile);
+          return;
+        }
+      }
+      setProfile(row);
     } catch (error) {
       console.warn('Error fetching profile (non-critical):', error);
-      if (authUser) {
-        setProfile(createFallbackProfile(authUser));
-      } else {
-        setProfile(null);
-      }
+      await setFallbackOrApiProfile();
     } finally {
       profileFetchInFlightRef.current = null;
     }
-  }, [supabase]);
+  }, [supabase, fetchProfileFromApi]);
 
   // 회원가입
   const signUp = useCallback(async (
