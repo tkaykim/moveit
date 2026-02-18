@@ -18,6 +18,7 @@ import {
   BookOpen,
   UserCog,
   Pause,
+  Replace,
   AlertTriangle,
   QrCode,
   Bell,
@@ -80,6 +81,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
     { icon: UserCog, label: '출석/신청 관리', href: `/academy-admin/${academyId}/enrollments` },
     { icon: QrCode, label: 'QR 출석 리더', href: `/academy-admin/${academyId}/qr-reader` },
     { icon: Pause, label: '연장/일시정지 관리', href: `/academy-admin/${academyId}/extension-requests` },
+    { icon: Replace, label: '대강/취소 신청 관리', href: `/academy-admin/${academyId}/schedule-change-requests` },
     { icon: Ticket, label: '수강권/상품', href: `/academy-admin/${academyId}/products` },
     { icon: ClipboardList, label: '업무/수업 일지', href: `/academy-admin/${academyId}/logs` },
     { icon: UserCheck, label: '강사 관리', href: `/academy-admin/${academyId}/instructors` },
@@ -208,7 +210,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
           <div className="px-6 pt-3 lg:pt-6 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             운영 관리
           </div>
-          {menuItems.slice(6, 9).map((item, idx) => (
+          {menuItems.slice(6, 10).map((item, idx) => (
             <SidebarItem
               key={item.href}
               icon={item.icon}
@@ -222,7 +224,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
           <div className="px-6 pt-3 lg:pt-6 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             매출 및 설정
           </div>
-          {menuItems.slice(9).map((item, idx) => (
+          {menuItems.slice(10).map((item, idx) => (
             <SidebarItem
               key={item.href}
               icon={item.icon}

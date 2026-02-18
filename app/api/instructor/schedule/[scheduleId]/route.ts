@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { getInstructorByUserId } from '@/lib/db/instructors';
 import { getScheduleEnrollmentSummary } from '@/lib/db/bookings';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(
   request: NextRequest,
@@ -48,6 +49,15 @@ export async function GET(
       );
     }
 
+    const supabase = await createClient() as any;
+    const { data: pendingRequests } = await supabase
+      .from('schedule_change_requests')
+      .select('request_type')
+      .eq('schedule_id', scheduleId)
+      .eq('status', 'PENDING');
+    const pendingSubstitute = (pendingRequests || []).some((r: any) => r.request_type === 'SUBSTITUTE');
+    const pendingCancel = (pendingRequests || []).some((r: any) => r.request_type === 'CANCEL');
+
     return NextResponse.json({
       schedule: {
         id: schedule.id,
@@ -67,6 +77,10 @@ export async function GET(
         total: summary.total_enrollments,
         max_students: summary.max_students,
         remaining_spots: summary.remaining_spots,
+      },
+      pending_change_requests: {
+        substitute: pendingSubstitute,
+        cancel: pendingCancel,
       },
     });
   } catch (e) {

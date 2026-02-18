@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Calendar, Clock, MapPin, Users } from 'lucide-react';
+import { X, Calendar, Clock, MapPin, UserPlus, Ban } from 'lucide-react';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
+import { InstructorSubstituteRequestModal } from './instructor-substitute-request-modal';
+import { InstructorCancelRequestModal } from './instructor-cancel-request-modal';
 
 interface InstructorScheduleDetailModalProps {
   scheduleId: string;
@@ -30,6 +32,7 @@ function formatTime(iso: string) {
 export function InstructorScheduleDetailModal({
   scheduleId,
   onClose,
+  onRefresh,
 }: InstructorScheduleDetailModalProps) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<{
@@ -37,6 +40,7 @@ export function InstructorScheduleDetailModal({
       id: string;
       start_time: string;
       end_time: string;
+      is_canceled?: boolean;
       classes?: { title: string | null; genre: string | null; difficulty_level: string | null };
       academies?: { name_kr: string | null };
       halls?: { name: string };
@@ -50,8 +54,11 @@ export function InstructorScheduleDetailModal({
       max_students: number;
       remaining_spots: number;
     };
+    pending_change_requests?: { substitute: boolean; cancel: boolean };
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showSubstituteModal, setShowSubstituteModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -172,10 +179,70 @@ export function InstructorScheduleDetailModal({
                   </div>
                 )}
               </div>
+
+              {!schedule.is_canceled && (
+                <div className="pt-4 border-t border-neutral-200 dark:border-neutral-700 flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowSubstituteModal(true)}
+                    disabled={data.pending_change_requests?.substitute}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border border-neutral-300 dark:border-neutral-600 text-black dark:text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                  >
+                    <UserPlus size={18} />
+                    {data.pending_change_requests?.substitute ? '대강 신청 대기 중' : '대강 신청'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCancelModal(true)}
+                    disabled={data.pending_change_requests?.cancel}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-50 dark:hover:bg-red-900/20"
+                  >
+                    <Ban size={18} />
+                    {data.pending_change_requests?.cancel ? '취소 신청 대기 중' : '취소 신청'}
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
       </div>
+
+      {schedule && (
+        <>
+          <InstructorSubstituteRequestModal
+            isOpen={showSubstituteModal}
+            onClose={() => setShowSubstituteModal(false)}
+            schedule={{
+              id: schedule.id,
+              start_time: schedule.start_time,
+              end_time: schedule.end_time,
+              classes: schedule.classes,
+              academies: schedule.academies,
+            }}
+            onSuccess={() => {
+              onRefresh?.();
+              setShowSubstituteModal(false);
+              setData((prev) => prev ? { ...prev, pending_change_requests: { substitute: true, cancel: prev.pending_change_requests?.cancel ?? false } } : null);
+            }}
+          />
+          <InstructorCancelRequestModal
+            isOpen={showCancelModal}
+            onClose={() => setShowCancelModal(false)}
+            schedule={{
+              id: schedule.id,
+              start_time: schedule.start_time,
+              end_time: schedule.end_time,
+              classes: schedule.classes,
+              academies: schedule.academies,
+            }}
+            onSuccess={() => {
+              onRefresh?.();
+              setShowCancelModal(false);
+              setData((prev) => prev ? { ...prev, pending_change_requests: { substitute: prev.pending_change_requests?.substitute ?? false, cancel: true } } : null);
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }
