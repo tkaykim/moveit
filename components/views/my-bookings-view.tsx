@@ -142,7 +142,7 @@ export const MyBookingsView = ({ onBack }: MyBookingsViewProps) => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-white dark:bg-neutral-950 pt-12 px-5 pb-24">
+      <div className="min-h-screen bg-white dark:bg-neutral-950 pt-8 px-5 pb-24">
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={onBack}
@@ -177,7 +177,7 @@ export const MyBookingsView = ({ onBack }: MyBookingsViewProps) => {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-950 pt-12 px-5 pb-24">
+    <div className="min-h-screen bg-white dark:bg-neutral-950 pt-8 px-5 pb-24">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <button

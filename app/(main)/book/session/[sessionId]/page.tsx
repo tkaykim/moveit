@@ -615,7 +615,7 @@ export default function SessionBookingPage() {
   const selectedPurchaseTicket = purchasableTickets.find(t => (t.productKey ?? t.id) === selectedPurchaseTicketId);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-950 pt-12 px-5 pb-48 relative">
+    <div className="min-h-screen bg-white dark:bg-neutral-950 pt-8 px-5 pb-48 relative">
       {/* 예약/구매 처리 중 로딩 오버레이 */}
       {submitting && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/50 dark:bg-black/60 backdrop-blur-sm">

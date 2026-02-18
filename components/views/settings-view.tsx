@@ -38,7 +38,7 @@ export const SettingsView = ({ onBack }: SettingsViewProps) => {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-neutral-950 min-h-screen pt-12 px-5 animate-in slide-in-from-bottom duration-300">
+      <div className="bg-white dark:bg-neutral-950 min-h-screen pt-8 px-5 animate-in slide-in-from-bottom duration-300">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <button onClick={onBack} className="p-2 -ml-2 text-black dark:text-white">
@@ -54,7 +54,7 @@ export const SettingsView = ({ onBack }: SettingsViewProps) => {
   }
 
   return (
-    <div className="bg-white dark:bg-neutral-950 min-h-screen pt-12 px-5 pb-24 animate-in slide-in-from-bottom duration-300">
+    <div className="bg-white dark:bg-neutral-950 min-h-screen pt-8 px-5 pb-24 animate-in slide-in-from-bottom duration-300">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="p-2 -ml-2 text-black dark:text-white">

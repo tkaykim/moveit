@@ -18,7 +18,7 @@ export default function NotificationsPage() {
     <div className="bg-white dark:bg-neutral-950 min-h-screen">
       {/* 헤더 */}
       <div className="sticky top-0 z-10 bg-white/90 dark:bg-neutral-950/90 backdrop-blur-xl border-b border-neutral-100 dark:border-neutral-800">
-        <div className="flex items-center justify-between px-5 pt-12 pb-3">
+        <div className="flex items-center justify-between px-5 pt-8 pb-3">
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.back()}

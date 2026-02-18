@@ -57,7 +57,7 @@ export function TicketPurchaseContent({
   const { t, language } = useLocale();
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-950 pt-12 px-5 pb-24">
+    <div className="min-h-screen bg-white dark:bg-neutral-950 pt-8 px-5 pb-24">
       <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-6">
         <ChevronLeft size={20} />
         {t('ticketPurchase.back')}

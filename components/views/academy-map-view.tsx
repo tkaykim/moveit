@@ -416,7 +416,7 @@ export function AcademyMapView({ onAcademyClick }: AcademyMapViewProps) {
   return (
     <div className="flex flex-col min-h-[calc(100vh-5rem)] pb-0 animate-in fade-in duration-300">
       {/* 상단: 검색 + 내 주변 / 정렬·필터 */}
-      <div className="flex-shrink-0 sticky top-0 z-30 bg-white/90 dark:bg-neutral-950/90 backdrop-blur-md px-4 pt-14 pb-3 space-y-2">
+      <div className="flex-shrink-0 sticky top-0 z-30 bg-white/90 dark:bg-neutral-950/90 backdrop-blur-md px-4 pt-8 pb-3 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-lg font-bold text-black dark:text-white truncate">
             {language === "en" ? "Dance Academy" : "댄스학원"}

@@ -264,7 +264,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
     <>
       <div className="min-h-screen bg-neutral-50 dark:bg-black pb-24">
         {/* 헤더 */}
-        <div className="bg-white dark:bg-neutral-900 px-5 pt-12 pb-6">
+        <div className="bg-white dark:bg-neutral-900 px-5 pt-8 pb-6">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-xl font-bold text-black dark:text-white">{t('my.title')}</h1>
             <div className="flex gap-3 items-center">

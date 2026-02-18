@@ -90,7 +90,7 @@ export function InstructorDashboardView() {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-black pb-20">
-      <header className="sticky top-0 z-10 bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-800 px-4 py-3 flex items-center gap-3">
+      <header className="sticky top-0 z-10 bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-800 px-4 pt-8 pb-3 flex items-center gap-3">
         <button
           type="button"
           onClick={() => router.back()}

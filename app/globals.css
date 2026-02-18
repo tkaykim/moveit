@@ -6,6 +6,8 @@
   :root {
     --primary: #CCFF00;
     --app-safe-bottom: 0px;
+    /* 상단: 상태바(알림/시계/배터리) 영역만큼 헤더가 내려가도록. Capacitor 앱에서 JS로 Android 폴백 설정 */
+    --app-safe-top: env(safe-area-inset-top, 0px);
   }
 
   /* Capacitor Android: 네이티브에서 시스템 바 패딩 처리하므로 CSS 추가 패딩 불필요 */
@@ -38,7 +40,7 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .pt-safe {
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: var(--app-safe-top, env(safe-area-inset-top, 0px));
   }
 
   .scrollbar-hide {

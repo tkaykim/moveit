@@ -124,7 +124,7 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
     : null;
 
   return (
-    <div className="bg-white dark:bg-neutral-950 min-h-screen pt-12 px-5 animate-in slide-in-from-bottom duration-300">
+    <div className="bg-white dark:bg-neutral-950 min-h-screen pt-8 px-5 animate-in slide-in-from-bottom duration-300">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="p-2 -ml-2 text-black dark:text-white">

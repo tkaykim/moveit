@@ -400,7 +400,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
     <div className="pb-24 animate-in fade-in duration-300">
       {/* 헤더 */}
       <div className="sticky top-0 z-30">
-        <div className="px-5 pt-14 pb-4 bg-gradient-to-b from-white via-white to-white/95 dark:from-neutral-950 dark:via-neutral-950 dark:to-neutral-950/95 backdrop-blur-md">
+        <div className="px-5 pt-8 pb-4 bg-gradient-to-b from-white via-white to-white/95 dark:from-neutral-950 dark:via-neutral-950 dark:to-neutral-950/95 backdrop-blur-md">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-bold text-black dark:text-white">{language === 'en' ? 'Dance Academy' : '댄스학원'}</h1>
             <div className="flex items-center gap-2">

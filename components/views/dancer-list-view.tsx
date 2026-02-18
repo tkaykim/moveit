@@ -337,7 +337,7 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
 
   return (
     <div className="h-full flex flex-col pb-24 animate-in slide-in-from-right-10 duration-300">
-      <div className="px-5 pt-12 pb-4 bg-white dark:bg-neutral-950 sticky top-0 z-20 border-b border-neutral-200 dark:border-neutral-800">
+      <div className="px-5 pt-8 pb-4 bg-white dark:bg-neutral-950 sticky top-0 z-20 border-b border-neutral-200 dark:border-neutral-800">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-black dark:text-white">강사</h2>
           <div className="flex gap-2 items-center">

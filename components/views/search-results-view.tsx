@@ -39,14 +39,14 @@ export const SearchResultsView = ({ query, onBack, onAcademyClick, onDancerClick
 
   if (loading) {
     return (
-      <div className="pb-24 pt-12 animate-in fade-in">
+      <div className="pb-24 pt-8 animate-in fade-in">
         <div className="text-center py-12 text-neutral-500">검색 중...</div>
       </div>
     );
   }
 
   return (
-    <div className="pb-24 pt-12 animate-in fade-in">
+    <div className="pb-24 pt-8 animate-in fade-in">
       {/* 검색바 */}
       <div className="px-5 mb-4">
         <div className="flex items-center gap-2">

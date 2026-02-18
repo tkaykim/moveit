@@ -126,7 +126,7 @@ export default function TicketPurchaseLinkPage() {
   }
   if (error || !ticket) {
     return (
-      <div className="min-h-screen bg-white dark:bg-neutral-950 pt-12 px-5">
+      <div className="min-h-screen bg-white dark:bg-neutral-950 pt-8 px-5">
         <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-6">
           <ChevronLeft size={20} />
           뒤로
