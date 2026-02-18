@@ -66,7 +66,12 @@ export default function MainLayout({
                 : undefined
             }
           >
-            <PullToRefresh>
+            <PullToRefresh
+              onRefresh={async () => {
+                window.dispatchEvent(new CustomEvent('pull-to-refresh'));
+                router.refresh();
+              }}
+            >
               {children}
             </PullToRefresh>
           </main>

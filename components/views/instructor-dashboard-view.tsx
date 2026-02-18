@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Calendar, MapPin, Users } from 'lucide-react';
+import { ChevronLeft, Calendar, MapPin, Users, List, CalendarDays } from 'lucide-react';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import { InstructorScheduleDetailModal } from '@/components/modals/instructor-schedule-detail-modal';
+import { InstructorScheduleCalendar } from '@/components/views/instructor-schedule-calendar';
 
 type TabType = 'upcoming' | 'past';
+type ViewMode = 'list' | 'calendar';
 
 interface ScheduleItem {
   id: string;
@@ -47,6 +49,7 @@ function formatDateHeader(iso: string) {
 export function InstructorDashboardView() {
   const router = useRouter();
   const [tab, setTab] = useState<TabType>('upcoming');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [academyId, setAcademyId] = useState<string>('');
   const [academies, setAcademies] = useState<{ id: string; name_kr: string | null }[]>([]);
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
@@ -80,6 +83,13 @@ export function InstructorDashboardView() {
     loadSchedules();
   }, [loadSchedules]);
 
+  // 스와이프 새로고침 시 현재 페이지 유지하며 목록만 갱신
+  useEffect(() => {
+    const handler = () => loadSchedules();
+    window.addEventListener('pull-to-refresh', handler);
+    return () => window.removeEventListener('pull-to-refresh', handler);
+  }, [loadSchedules]);
+
   const groupedByDate = schedules.reduce<Record<string, ScheduleItem[]>>((acc, s) => {
     const key = s.start_time.slice(0, 10);
     if (!acc[key]) acc[key] = [];
@@ -105,6 +115,7 @@ export function InstructorDashboardView() {
       </header>
 
       <div className="px-4 py-3 space-y-4">
+        {/* 예정된 수업 / 지난 수업 */}
         <div className="flex rounded-xl bg-neutral-100 dark:bg-neutral-800 p-1">
           <button
             type="button"
@@ -127,6 +138,34 @@ export function InstructorDashboardView() {
             }`}
           >
             지난 수업
+          </button>
+        </div>
+
+        {/* 목록보기 / 달력보기 */}
+        <div className="flex rounded-xl bg-neutral-100 dark:bg-neutral-800 p-1">
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
+              viewMode === 'list'
+                ? 'bg-white dark:bg-neutral-700 text-black dark:text-white shadow'
+                : 'text-neutral-600 dark:text-neutral-400'
+            }`}
+          >
+            <List size={16} />
+            목록보기
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('calendar')}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
+              viewMode === 'calendar'
+                ? 'bg-white dark:bg-neutral-700 text-black dark:text-white shadow'
+                : 'text-neutral-600 dark:text-neutral-400'
+            }`}
+          >
+            <CalendarDays size={16} />
+            달력보기
           </button>
         </div>
 
@@ -160,6 +199,14 @@ export function InstructorDashboardView() {
           </div>
         )}
 
+        <div className="min-h-[320px]">
+        {viewMode === 'calendar' ? (
+          <InstructorScheduleCalendar
+            academyId={academyId}
+            onRefresh={loadSchedules}
+          />
+        ) : (
+          <>
         {loading ? (
           <div className="py-12 text-center text-neutral-500 dark:text-neutral-400 text-sm">
             로딩 중...
@@ -220,6 +267,9 @@ export function InstructorDashboardView() {
             ))}
           </div>
         )}
+          </>
+        )}
+        </div>
       </div>
 
       {selectedScheduleId && (

@@ -20,6 +20,7 @@ interface ScheduleWithDetails {
   current_students: number | null;
   max_students: number | null;
   is_canceled: boolean;
+  instructor_name_text?: string | null;
   classes: {
     id: string;
     title: string | null;
@@ -532,7 +533,7 @@ interface ScheduleCellProps {
 }
 
 function ScheduleCell({ schedule, status, onClick }: ScheduleCellProps) {
-  const instructorName = schedule.instructors?.name_kr || schedule.instructors?.name_en || null;
+  const instructorName = schedule.instructor_name_text || schedule.instructors?.name_kr || schedule.instructors?.name_en || null;
   const classTitle = schedule.classes?.title || '수업명 없음';
   
   const formatTime = (dateString: string): string => {

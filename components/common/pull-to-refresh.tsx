@@ -82,9 +82,9 @@ export function PullToRefresh({
       try {
         if (onRefresh) {
           await onRefresh();
-        } else {
-          window.location.reload();
         }
+        // onRefresh 미제공 시에는 전역 새로고침 이벤트만 발생 (layout에서 주입한 onRefresh가 처리).
+        // window.location.reload()는 호출하지 않아 세션/현재 화면 유지.
       } catch {
         // 실패해도 새로고침 상태 해제
       } finally {

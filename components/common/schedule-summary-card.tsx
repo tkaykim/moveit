@@ -8,6 +8,7 @@ interface ScheduleSummaryCardProps {
     start_time: string;
     end_time: string;
     max_students: number | null;
+    instructor_name_text?: string | null;
     classes: {
       title: string;
       academies: {
@@ -53,9 +54,9 @@ export function ScheduleSummaryCard({
     });
   };
 
-  const instructorName = schedule.instructors
-    ? schedule.instructors.name_kr || schedule.instructors.name_en || '강사 정보 없음'
-    : '강사 정보 없음';
+  const instructorName = schedule.instructor_name_text
+    || (schedule.instructors ? schedule.instructors.name_kr || schedule.instructors.name_en : null)
+    || '강사 정보 없음';
 
   const academyName = schedule.classes?.academies
     ? schedule.classes.academies.name_kr || schedule.classes.academies.name_en || '학원 정보 없음'

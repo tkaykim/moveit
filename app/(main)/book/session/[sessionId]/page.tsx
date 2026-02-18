@@ -18,6 +18,8 @@ interface SessionData {
   max_students: number;
   current_students: number;
   is_canceled: boolean;
+  /** 대강 시 표시용 이름 (schedules.instructor_name_text) */
+  instructor_name_text?: string | null;
   classes: {
     id: string;
     title: string;
@@ -186,6 +188,7 @@ export default function SessionBookingPage() {
           current_students,
           max_students,
           is_canceled,
+          instructor_name_text,
           instructors (name_kr, name_en),
           halls (name)
         `)
@@ -664,7 +667,7 @@ export default function SessionBookingPage() {
         <div className="space-y-3 text-sm text-neutral-600 dark:text-neutral-400">
           <div className="flex items-center gap-3">
             <User size={18} className="text-neutral-400" />
-            <span className="font-medium">{session.instructors?.name_kr || session.instructors?.name_en || t('sessionBooking.instructorTbd')}</span>
+            <span className="font-medium">{session.instructor_name_text || session.instructors?.name_kr || session.instructors?.name_en || t('sessionBooking.instructorTbd')}</span>
           </div>
           <div className="flex items-center gap-3">
             <Calendar size={18} className="text-neutral-400" />
