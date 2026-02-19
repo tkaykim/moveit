@@ -1998,6 +1998,204 @@ export type Database = {
         }
         Relationships: []
       }
+      academy_subscriptions: {
+        Row: {
+          id: string
+          academy_id: string
+          plan_id: string
+          billing_cycle: string
+          status: string
+          trial_ends_at: string | null
+          current_period_start: string | null
+          current_period_end: string | null
+          toss_customer_key: string | null
+          toss_billing_key: string | null
+          card_company: string | null
+          card_number_masked: string | null
+          cancel_at_period_end: boolean
+          canceled_at: string | null
+          cancellation_reason: string | null
+          grace_period_end: string | null
+          promo_code: string | null
+          discount_percent: number | null
+          first_month_free: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          academy_id: string
+          plan_id: string
+          billing_cycle: string
+          status?: string
+          trial_ends_at?: string | null
+          current_period_start?: string | null
+          current_period_end?: string | null
+          toss_customer_key?: string | null
+          toss_billing_key?: string | null
+          card_company?: string | null
+          card_number_masked?: string | null
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          cancellation_reason?: string | null
+          grace_period_end?: string | null
+          promo_code?: string | null
+          discount_percent?: number | null
+          first_month_free?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          academy_id?: string
+          plan_id?: string
+          billing_cycle?: string
+          status?: string
+          trial_ends_at?: string | null
+          current_period_start?: string | null
+          current_period_end?: string | null
+          toss_customer_key?: string | null
+          toss_billing_key?: string | null
+          card_company?: string | null
+          card_number_masked?: string | null
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          cancellation_reason?: string | null
+          grace_period_end?: string | null
+          promo_code?: string | null
+          discount_percent?: number | null
+          first_month_free?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      billing_plans: {
+        Row: {
+          id: string
+          display_name: string
+          description: string | null
+          monthly_price: number
+          annual_price_per_month: number
+          max_students: number | null
+          max_sessions: number | null
+          features: Json | null
+          is_active: boolean
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          display_name: string
+          description?: string | null
+          monthly_price: number
+          annual_price_per_month: number
+          max_students?: number | null
+          max_sessions?: number | null
+          features?: Json | null
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          display_name?: string
+          description?: string | null
+          monthly_price?: number
+          annual_price_per_month?: number
+          max_students?: number | null
+          max_sessions?: number | null
+          features?: Json | null
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subscription_payments: {
+        Row: {
+          id: string
+          subscription_id: string
+          academy_id: string
+          amount: number
+          billing_cycle: string
+          period_start: string | null
+          period_end: string | null
+          toss_payment_key: string | null
+          toss_order_id: string | null
+          status: string
+          failure_code: string | null
+          failure_message: string | null
+          retry_count: number
+          next_retry_at: string | null
+          paid_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          subscription_id: string
+          academy_id: string
+          amount: number
+          billing_cycle: string
+          period_start?: string | null
+          period_end?: string | null
+          toss_payment_key?: string | null
+          toss_order_id?: string | null
+          status?: string
+          failure_code?: string | null
+          failure_message?: string | null
+          retry_count?: number
+          next_retry_at?: string | null
+          paid_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          subscription_id?: string
+          academy_id?: string
+          amount?: number
+          billing_cycle?: string
+          period_start?: string | null
+          period_end?: string | null
+          toss_payment_key?: string | null
+          toss_order_id?: string | null
+          status?: string
+          failure_code?: string | null
+          failure_message?: string | null
+          retry_count?: number
+          next_retry_at?: string | null
+          paid_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      billing_webhook_events: {
+        Row: {
+          id: string
+          event_id: string
+          event_type: string | null
+          processed_at: string
+          payload_snapshot: Json | null
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          event_type?: string | null
+          processed_at?: string
+          payload_snapshot?: Json | null
+        }
+        Update: {
+          id?: string
+          event_id?: string
+          event_type?: string | null
+          processed_at?: string
+          payload_snapshot?: Json | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
