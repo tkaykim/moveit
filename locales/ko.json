@@ -287,6 +287,7 @@
   "sessionBooking.onsiteWarningCancel": "취소",
   "sessionBooking.onsiteWarningLogin": "로그인하고 수강권으로 예약",
   "sessionBooking.paymentMethod": "결제 방법",
+  "sessionBooking.selectPaymentMethod": "결제 방법 선택",
   "sessionBooking.useTicket": "수강권 사용",
   "sessionBooking.haveCount": "보유 {count}개",
   "sessionBooking.noAvailableTicket": "사용 가능한 수강권 없음",

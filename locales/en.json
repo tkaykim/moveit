@@ -287,6 +287,7 @@
   "sessionBooking.onsiteWarningCancel": "Cancel",
   "sessionBooking.onsiteWarningLogin": "Log in and book with a ticket",
   "sessionBooking.paymentMethod": "Payment Method",
+  "sessionBooking.selectPaymentMethod": "Select payment method",
   "sessionBooking.useTicket": "Use Ticket",
   "sessionBooking.haveCount": "{count} owned",
   "sessionBooking.noAvailableTicket": "No available tickets",

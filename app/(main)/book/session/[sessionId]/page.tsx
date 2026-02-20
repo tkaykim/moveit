@@ -93,8 +93,8 @@ export default function SessionBookingPage() {
   const [user, setUser] = useState<any>(null);
   const [error, setError] = useState('');
 
-  // 결제 방법
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('onsite');
+  // 결제 방법 (미선택이 기본)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
 
   // 보유 수강권 (ticket_classes에 연결된 것만)
   const [userTickets, setUserTickets] = useState<UserTicket[]>([]);
@@ -225,11 +225,11 @@ export default function SessionBookingPage() {
       if (user) {
         loadUserTickets();
       } else {
-        // 로그인하지 않은 경우 수강권 데이터 초기화
+        // 로그인하지 않은 경우 수강권 데이터 초기화, 결제 방법 미선택으로
         setUserTickets([]);
         setSelectedUserTicketId('');
         if (paymentMethod === 'ticket' || paymentMethod === 'purchase') {
-          setPaymentMethod('onsite');
+          setPaymentMethod(null);
         }
       }
       loadPurchasableTickets();
@@ -632,6 +632,7 @@ export default function SessionBookingPage() {
   };
 
   const handleSubmit = () => {
+    if (paymentMethod === null) return;
     if (paymentMethod === 'ticket') {
       handleTicketBooking();
     } else if (paymentMethod === 'purchase') {
@@ -935,7 +936,7 @@ export default function SessionBookingPage() {
                   : 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
               }`}
             >
-                <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                   paymentMethod === 'onsite' ? 'bg-primary/20 dark:bg-[#CCFF00]/20' : 'bg-neutral-200 dark:bg-neutral-800'
                 }`}>
@@ -1194,10 +1195,18 @@ export default function SessionBookingPage() {
           {/* 결제 금액 표시 */}
           <div className="flex justify-between items-center mb-3">
             <span className="text-sm text-neutral-500">
-              {paymentMethod === 'ticket' ? t('sessionBooking.ticketUse') : paymentMethod === 'purchase' ? t('sessionBooking.ticketPurchase') : t('sessionBooking.onSitePayment')}
+              {paymentMethod === null
+                ? t('sessionBooking.selectPaymentMethod')
+                : paymentMethod === 'ticket'
+                ? t('sessionBooking.ticketUse')
+                : paymentMethod === 'purchase'
+                ? t('sessionBooking.ticketPurchase')
+                : t('sessionBooking.onSitePayment')}
             </span>
             <span className="text-lg font-bold text-primary dark:text-[#CCFF00]">
-              {paymentMethod === 'purchase' && selectedPurchaseTicket
+              {paymentMethod === null
+                ? ''
+                : paymentMethod === 'purchase' && selectedPurchaseTicket
                 ? `${selectedPurchaseTicket.price.toLocaleString()}${language === 'ko' ? '원' : ' KRW'}`
                 : paymentMethod === 'ticket'
                 ? t('sessionBooking.ticketDeduction')
@@ -1209,6 +1218,7 @@ export default function SessionBookingPage() {
             onClick={handleSubmit}
             disabled={
               submitting ||
+              paymentMethod === null ||
               (paymentMethod === 'ticket' && !selectedUserTicketId) ||
               (paymentMethod === 'purchase' && !selectedPurchaseTicketId)
             }
@@ -1221,6 +1231,8 @@ export default function SessionBookingPage() {
                   {paymentMethod === 'purchase' ? t('sessionBooking.processingPurchase') : paymentMethod === 'ticket' ? t('sessionBooking.processingTicket') : t('sessionBooking.processingGuest')}
                 </span>
               </>
+            ) : paymentMethod === null ? (
+              t('sessionBooking.selectPaymentMethod')
             ) : paymentMethod === 'ticket' ? (
               t('sessionBooking.bookWithTicket')
             ) : paymentMethod === 'purchase' ? (

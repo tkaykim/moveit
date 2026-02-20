@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Clock, Music, MapPin, Play, X, User, Tag, Calendar } from 'lucide-react';
 import { LevelBadge } from '@/components/common/level-badge';
 import { ClassInfo } from '@/types';
@@ -150,17 +151,24 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
 
   const endTimeStr = formatEndTime();
 
-  return (
+  const modalContent = (
     <>
-      <div className="fixed inset-0 z-50 flex flex-col justify-end" style={{ height: '100dvh' }}>
-        <div 
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in" 
-          onClick={onClose} 
-        />
-        <div 
-          className="relative w-full max-w-[420px] mx-auto bg-white dark:bg-neutral-900 rounded-t-3xl animate-in slide-in-from-bottom duration-300 border-t border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col"
-          style={{ maxHeight: 'min(90dvh, 90vh)', minHeight: '50dvh' }}
-        >
+      {/* 오버레이: 뷰포트 전체 */}
+      <div
+        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm animate-in fade-in"
+        style={{ height: '100dvh' }}
+        onClick={onClose}
+        aria-hidden
+      />
+      {/* 드로어 패널: 화면 하단에 고정 (navbar/뷰포트 하단 기준) */}
+      <div
+        className="fixed left-1/2 z-50 w-full max-w-[420px] -translate-x-1/2 bg-white dark:bg-neutral-900 rounded-t-3xl animate-in slide-in-from-bottom duration-300 border-t border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col"
+        style={{
+          bottom: 0,
+          maxHeight: 'min(90dvh, 90vh)',
+          minHeight: '50dvh',
+        }}
+      >
           {/* 드래그 핸들 */}
           <div className="flex-shrink-0 pt-3 pb-2">
             <div className="w-12 h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full mx-auto" />
@@ -374,7 +382,6 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
             </div>
           </div>
         </div>
-      </div>
 
       {/* 전체화면 비디오 모달 */}
       {showVideo && embedUrl && (
@@ -402,4 +409,7 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
       )}
     </>
   );
-};
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(modalContent, document.body);
+}
