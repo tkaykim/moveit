@@ -114,18 +114,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '역할 등록에 실패했습니다.' }, { status: 500 });
     }
 
-    const { data: existingRoles } = await supabase
-      .from('academy_user_roles')
-      .select('role')
-      .eq('user_id', user.id);
-
-    const allRoles = [...(existingRoles ?? []).map((r: { role: string }) => r.role), 'ACADEMY_OWNER'];
-    const highestRole: UserRole = allRoles.includes('ACADEMY_OWNER') ? 'ACADEMY_OWNER' : 'ACADEMY_MANAGER';
-
-    await supabase
+    // users.role 갱신: SUPER_ADMIN은 유지, 그 외에만 학원 역할 중 최고 등급으로 설정
+    const { data: currentUser } = await supabase
       .from('users')
-      .update({ role: highestRole })
-      .eq('id', user.id);
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if ((currentUser as { role?: string } | null)?.role !== 'SUPER_ADMIN') {
+      const { data: existingRoles } = await supabase
+        .from('academy_user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+
+      const allRoles = [...(existingRoles ?? []).map((r: { role: string }) => r.role), 'ACADEMY_OWNER'];
+      const highestRole: UserRole = allRoles.includes('ACADEMY_OWNER') ? 'ACADEMY_OWNER' : 'ACADEMY_MANAGER';
+
+      await supabase
+        .from('users')
+        .update({ role: highestRole })
+        .eq('id', user.id);
+    }
 
     return NextResponse.json({ academyId });
   } catch (error) {

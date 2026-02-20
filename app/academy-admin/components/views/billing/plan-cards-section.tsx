@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Check, Zap } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { PLANS, PLAN_COLOR_MAP } from '@/app/intro/components/pricing-cards';
 import type { BillingPlanId, BillingCycle, BillingPlan } from '@/types/billing';
 
@@ -48,6 +49,9 @@ export function PlanCardsSection({
   currentCycle = null,
   buttonMode = 'pay',
 }: PlanCardsSectionProps) {
+  const { resolvedTheme } = useTheme();
+  const isLight = resolvedTheme === 'light';
+
   return (
     <div className="max-w-5xl">
       <div className="text-center mb-8">
@@ -91,6 +95,7 @@ export function PlanCardsSection({
             const annualTotal = getAnnualTotal(plan.id, apiPlans);
             const colors = PLAN_COLOR_MAP[plan.id];
             const isGrowth = plan.id === 'growth';
+            const borderClass = colors.border[isLight ? 'light' : 'dark'];
             const isCurrentPlan =
               currentPlanId === plan.id && currentCycle === billingCycle;
             const annualPricePerMonth =
@@ -103,7 +108,7 @@ export function PlanCardsSection({
                 className={`relative rounded-2xl p-5 sm:p-6 flex-shrink-0 min-w-[260px] md:min-w-0 flex flex-col overflow-visible ${
                   isGrowth
                     ? 'bg-slate-800 text-white shadow-xl z-10 pt-8'
-                    : `bg-white dark:bg-neutral-900 text-slate-900 dark:text-white border ${colors.border} shadow-sm`
+                    : `bg-white dark:bg-neutral-900 text-slate-900 dark:text-white border ${borderClass} shadow-sm`
                 }`}
               >
                 {plan.isPopular && (

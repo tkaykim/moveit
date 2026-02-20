@@ -85,54 +85,56 @@ export const PLANS = [
   },
 ];
 
-export const PLAN_COLOR_MAP: Record<BillingPlanId, { bg: string; text: string; border: string; badge: string }> = {
+export const PLAN_COLOR_MAP: Record<BillingPlanId, { bg: { light: string; dark: string }; text: { light: string; dark: string }; border: { light: string; dark: string }; badge: string }> = {
   starter: {
-    bg: 'bg-violet-50 dark:bg-violet-950/20',
-    text: 'text-violet-700 dark:text-violet-300',
-    border: 'border-violet-200 dark:border-violet-800',
+    bg: { light: 'bg-violet-50', dark: 'bg-violet-950/20' },
+    text: { light: 'text-violet-700', dark: 'text-violet-300' },
+    border: { light: 'border-violet-200', dark: 'border-violet-800' },
     badge: 'bg-violet-600',
   },
   growth: {
-    bg: 'bg-slate-800',
-    text: 'text-emerald-400',
-    border: 'border-emerald-500',
+    bg: { light: 'bg-slate-800', dark: 'bg-slate-800' },
+    text: { light: 'text-emerald-400', dark: 'text-emerald-400' },
+    border: { light: 'border-emerald-500', dark: 'border-emerald-500' },
     badge: 'bg-emerald-500',
   },
   pro: {
-    bg: 'bg-amber-50 dark:bg-amber-950/20',
-    text: 'text-amber-700 dark:text-amber-300',
-    border: 'border-amber-200 dark:border-amber-700',
+    bg: { light: 'bg-amber-50', dark: 'bg-amber-950/20' },
+    text: { light: 'text-amber-700', dark: 'text-amber-300' },
+    border: { light: 'border-amber-200', dark: 'border-amber-700' },
     badge: 'bg-amber-500',
   },
 };
 
-export function PricingCards() {
+type PricingCardsProps = { isLight?: boolean };
+
+export function PricingCards({ isLight = true }: PricingCardsProps) {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
 
   return (
     <div className="max-w-5xl mx-auto px-4">
       <div className="text-center mb-10">
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">
+        <h2 className={`text-2xl sm:text-3xl font-bold mb-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
           학원 규모에 맞는 합리적인 요금제
         </h2>
-        <p className="text-slate-600 dark:text-slate-200 text-sm sm:text-base mb-8">
+        <p className={`text-sm sm:text-base mb-8 ${isLight ? 'text-slate-600' : 'text-slate-200'}`}>
           숨겨진 비용 없이, 필요한 기능만큼만 결제하세요.
         </p>
         <div className="flex items-center justify-center gap-4 flex-wrap">
-          <span className={`text-sm font-medium ${billingCycle === 'monthly' ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-300'}`}>
+          <span className={`text-sm font-medium ${billingCycle === 'monthly' ? (isLight ? 'text-slate-900' : 'text-white') : (isLight ? 'text-slate-400' : 'text-slate-300')}`}>
             월간 결제
           </span>
           <button
             type="button"
             onClick={() => setBillingCycle((c) => (c === 'monthly' ? 'annual' : 'monthly'))}
-            className="relative w-14 h-7 bg-slate-200 dark:bg-slate-600 rounded-full p-1 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+            className={`relative w-14 h-7 rounded-full p-1 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 ${isLight ? 'bg-slate-200 focus:ring-slate-300 focus:ring-offset-white' : 'bg-slate-600 focus:ring-slate-500 focus:ring-offset-slate-900'}`}
             aria-pressed={billingCycle === 'annual'}
           >
             <span
               className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${billingCycle === 'annual' ? 'translate-x-8 left-1' : 'left-1 translate-x-0'}`}
             />
           </button>
-          <span className={`text-sm font-medium flex items-center gap-2 ${billingCycle === 'annual' ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-300'}`}>
+          <span className={`text-sm font-medium flex items-center gap-2 ${billingCycle === 'annual' ? (isLight ? 'text-slate-900' : 'text-white') : (isLight ? 'text-slate-400' : 'text-slate-300')}`}>
             연간 결제
             <span className="bg-violet-500 text-white text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
               20% 할인
@@ -147,6 +149,7 @@ export function PricingCards() {
             const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.annualPricePerMonth;
             const colors = PLAN_COLOR_MAP[plan.id];
             const isGrowth = plan.id === 'growth';
+            const borderClass = colors.border[isLight ? 'light' : 'dark'];
 
             return (
               <div
@@ -154,11 +157,11 @@ export function PricingCards() {
                 className={`relative rounded-2xl p-5 sm:p-6 flex-shrink-0 min-w-[260px] md:min-w-0 flex flex-col overflow-visible ${
                   isGrowth
                     ? 'bg-slate-800 text-white shadow-xl z-10 pt-8'
-                    : `bg-white dark:bg-neutral-900 text-slate-900 dark:text-white border ${colors.border} shadow-sm`
+                    : `border shadow-sm ${isLight ? 'bg-white text-slate-900' : 'bg-neutral-900 text-white'} ${borderClass}`
                 }`}
               >
                 {plan.isPopular && (
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap z-20 shadow-md ring-2 ring-white dark:ring-slate-800 flex items-center gap-1">
+                  <div className={`absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap z-20 shadow-md ring-2 flex items-center gap-1 ${isLight ? 'ring-white' : 'ring-slate-800'}`}>
                     <Zap size={11} className="fill-white" />
                     인기 플랜
                   </div>
@@ -171,28 +174,28 @@ export function PricingCards() {
                   </span>
                 </div>
 
-                <p className={`text-sm mb-4 leading-snug min-w-0 break-words ${isGrowth ? 'text-slate-200' : 'text-slate-600 dark:text-slate-400'}`}>
+                <p className={`text-sm mb-4 leading-snug min-w-0 break-words ${isGrowth ? 'text-slate-200' : (isLight ? 'text-slate-600' : 'text-slate-400')}`}>
                   {plan.description}
                 </p>
 
                 <div className="mb-1">
                   <span className="text-3xl font-bold">{price.toLocaleString()}</span>
-                  <span className={`text-sm ml-1 ${isGrowth ? 'text-slate-300' : 'text-slate-500 dark:text-slate-400'}`}>
+                  <span className={`text-sm ml-1 ${isGrowth ? 'text-slate-300' : (isLight ? 'text-slate-500' : 'text-slate-400')}`}>
                     원 / 월
                   </span>
                 </div>
                 {billingCycle === 'annual' ? (
-                  <p className={`text-xs mb-4 ${isGrowth ? 'text-slate-400' : 'text-slate-500 dark:text-slate-500'}`}>
+                  <p className={`text-xs mb-4 ${isGrowth ? 'text-slate-400' : (isLight ? 'text-slate-500' : 'text-slate-500')}`}>
                     연간 {plan.annualTotal.toLocaleString()}원 청구 (월 {plan.monthlyPrice.toLocaleString()}원 대비 20% 할인)
                   </p>
                 ) : (
-                  <p className={`text-xs mb-4 ${isGrowth ? 'text-slate-400' : 'text-slate-500 dark:text-slate-500'}`}>
+                  <p className={`text-xs mb-4 ${isGrowth ? 'text-slate-400' : (isLight ? 'text-slate-500' : 'text-slate-500')}`}>
                     연간 결제 시 월 {plan.annualPricePerMonth.toLocaleString()}원
                   </p>
                 )}
 
                 {plan.maxStudents && (
-                  <p className={`text-xs font-semibold mb-3 px-2 py-1 rounded-lg inline-block ${isGrowth ? 'bg-white/10 text-slate-200' : 'bg-neutral-100 dark:bg-neutral-800 text-slate-600 dark:text-slate-400'}`}>
+                  <p className={`text-xs font-semibold mb-3 px-2 py-1 rounded-lg inline-block ${isGrowth ? 'bg-white/10 text-slate-200' : (isLight ? 'bg-neutral-100 text-slate-600' : 'bg-neutral-800 text-slate-400')}`}>
                     최대 {plan.maxStudents}명 수강생
                   </p>
                 )}
@@ -204,7 +207,7 @@ export function PricingCards() {
                         size={15}
                         className={`flex-shrink-0 mt-0.5 ${isGrowth ? 'text-emerald-400' : 'text-emerald-600'}`}
                       />
-                      <span className={`min-w-0 break-words ${isGrowth ? 'text-slate-100' : 'text-slate-700 dark:text-slate-300'}`}>
+                      <span className={`min-w-0 break-words ${isGrowth ? 'text-slate-100' : (isLight ? 'text-slate-700' : 'text-slate-300')}`}>
                         {feature}
                       </span>
                     </li>
@@ -230,7 +233,7 @@ export function PricingCards() {
       </div>
 
       {/* 하단 안내 */}
-      <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-6">
+      <p className={`text-center text-xs mt-6 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
         모든 플랜은 <strong>14일 무료 체험</strong>을 제공합니다. 체험 기간 중 언제든 취소 가능합니다.
         <br className="hidden sm:block" />
         월간 결제는 매월 자동 갱신, 연간 결제는 1년 단위로 청구됩니다. 토스페이먼츠를 통한 안전한 자동결제.
