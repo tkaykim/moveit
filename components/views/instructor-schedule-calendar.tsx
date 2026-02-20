@@ -212,16 +212,18 @@ export function InstructorScheduleCalendar({ academyId, onRefresh }: InstructorS
         </div>
       </div>
 
-      {/* 하단 드로어: 선택한 날짜의 수업 목록 */}
+      {/* 하단 드로어: 선택한 날짜의 수업 목록 - 화면(뷰포트) 기준으로 항상 보이도록 */}
       {selectedDate && (
         <>
           <div
             className="fixed inset-0 bg-black/40 z-40 animate-in fade-in duration-200"
+            style={{ height: '100dvh' }}
             onClick={closeDrawer}
             aria-hidden
           />
           <div
-            className="fixed left-1/2 -translate-x-1/2 bottom-0 w-full max-w-[420px] min-h-[50vh] max-h-[88vh] bg-white dark:bg-neutral-900 rounded-t-2xl border-t border-neutral-200 dark:border-neutral-800 shadow-2xl z-50 flex flex-col animate-in slide-in-from-bottom duration-300"
+            className="fixed left-1/2 -translate-x-1/2 bottom-0 w-full max-w-[420px] bg-white dark:bg-neutral-900 rounded-t-2xl border-t border-neutral-200 dark:border-neutral-800 shadow-2xl z-50 flex flex-col animate-in slide-in-from-bottom duration-300"
+            style={{ maxHeight: 'min(90dvh, 90vh)', minHeight: '40dvh' }}
             role="dialog"
             aria-label="해당 날짜 수업 목록"
           >

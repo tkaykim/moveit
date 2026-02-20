@@ -152,12 +152,15 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-end justify-center">
+      <div className="fixed inset-0 z-50 flex flex-col justify-end" style={{ height: '100dvh' }}>
         <div 
           className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in" 
           onClick={onClose} 
         />
-        <div className="relative w-full max-w-[420px] max-h-[85vh] bg-white dark:bg-neutral-900 rounded-t-3xl animate-in slide-in-from-bottom duration-300 border-t border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col">
+        <div 
+          className="relative w-full max-w-[420px] mx-auto bg-white dark:bg-neutral-900 rounded-t-3xl animate-in slide-in-from-bottom duration-300 border-t border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col"
+          style={{ maxHeight: 'min(90dvh, 90vh)', minHeight: '50dvh' }}
+        >
           {/* 드래그 핸들 */}
           <div className="flex-shrink-0 pt-3 pb-2">
             <div className="w-12 h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full mx-auto" />

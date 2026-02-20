@@ -111,8 +111,9 @@ export default function SessionBookingPage() {
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
 
-  // 모달
+  // 모달 (비로그인 시 회원가입/로그인 유도용 초기 탭)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalInitialTab, setAuthModalInitialTab] = useState<'login' | 'signup'>('login');
   const [isTicketPurchaseModalOpen, setIsTicketPurchaseModalOpen] = useState(false);
   const [showOnsiteWarning, setShowOnsiteWarning] = useState(false);
 
@@ -819,25 +820,36 @@ export default function SessionBookingPage() {
       {/* 예약 폼 */}
       {canBook && (
         <div className="space-y-6">
-          {/* 비회원 안내 */}
+          {/* 비로그인: 수강권 선택·결제를 위해 회원가입/로그인 유도 (메인 CTA) */}
           {!user && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
-              <div className="flex items-start gap-3">
-                <LogIn className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" size={20} />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">
-                    {t('sessionBooking.loginForTicket')}
-                  </p>
-                  <p className="text-xs text-blue-700 dark:text-blue-400 mb-3">
-                    {t('sessionBooking.loginBenefit')}
-                  </p>
-                  <button
-                    onClick={() => setIsAuthModalOpen(true)}
-                    className="text-xs font-bold text-blue-700 dark:text-blue-300 underline"
-                  >
-                    {t('sessionBooking.loginButton')}
-                  </button>
-                </div>
+            <div className="bg-primary/10 dark:bg-[#CCFF00]/10 border-2 border-primary/30 dark:border-[#CCFF00]/30 rounded-xl p-5">
+              <p className="text-sm font-bold text-black dark:text-white mb-1">
+                {t('sessionBooking.loginOrSignupForTicket')}
+              </p>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-4">
+                {t('sessionBooking.loginOrSignupBenefit')}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthModalInitialTab('signup');
+                    setIsAuthModalOpen(true);
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm hover:opacity-90 transition-opacity"
+                >
+                  {t('sessionBooking.signupButton')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthModalInitialTab('login');
+                    setIsAuthModalOpen(true);
+                  }}
+                  className="flex-1 py-3 rounded-xl border-2 border-neutral-800 dark:border-neutral-200 text-neutral-800 dark:text-neutral-200 font-bold text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                >
+                  {t('sessionBooking.loginButton')}
+                </button>
               </div>
             </div>
           )}
@@ -1283,13 +1295,14 @@ export default function SessionBookingPage() {
         </div>
       )}
 
-      {/* 로그인 모달 */}
+      {/* 로그인/회원가입 모달 */}
       <MyTab
         isOpen={isAuthModalOpen}
         onClose={() => {
           setIsAuthModalOpen(false);
           checkAuth();
         }}
+        initialTab={authModalInitialTab}
       />
 
       {/* 수강권 구매 모달 */}

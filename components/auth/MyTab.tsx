@@ -1,16 +1,24 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { X } from 'lucide-react';
 
 interface MyTabProps {
   isOpen: boolean;
   onClose: () => void;
+  /** 모달을 열 때 보여줄 탭. 미지정 시 로그인 */
+  initialTab?: 'login' | 'signup';
 }
 
-export function MyTab({ isOpen, onClose }: MyTabProps) {
-  const [isLogin, setIsLogin] = useState(true);
+export function MyTab({ isOpen, onClose, initialTab = 'login' }: MyTabProps) {
+  const [isLogin, setIsLogin] = useState(initialTab === 'login');
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsLogin(initialTab === 'login');
+    }
+  }, [isOpen, initialTab]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');

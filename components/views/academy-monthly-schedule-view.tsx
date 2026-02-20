@@ -422,14 +422,17 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
         </div>
       </div>
 
-      {/* 날짜별 수업 리스트 모달 */}
+      {/* 날짜별 수업 리스트 모달 - 화면(뷰포트) 기준으로 항상 보이도록 */}
       {selectedDate && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
+        <div className="fixed inset-0 z-50 flex flex-col justify-end" style={{ height: '100dvh' }}>
           <div 
             className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in" 
             onClick={closeDateModal} 
           />
-          <div className="relative w-full max-w-[420px] max-h-[70vh] bg-white dark:bg-neutral-900 rounded-t-3xl animate-in slide-in-from-bottom duration-300 border-t border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col">
+          <div 
+            className="relative w-full max-w-[420px] mx-auto bg-white dark:bg-neutral-900 rounded-t-3xl animate-in slide-in-from-bottom duration-300 border-t border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col"
+            style={{ maxHeight: 'min(90dvh, 90vh)', minHeight: '40dvh' }}
+          >
             {/* 헤더 */}
             <div className="flex-shrink-0 p-4 border-b border-neutral-200 dark:border-neutral-800">
               <div className="w-12 h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full mx-auto mb-4" />
