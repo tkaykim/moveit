@@ -80,7 +80,7 @@ export default function AdminSupportRequestsPage() {
   }, []);
 
   useEffect(() => {
-    if (profile?.role === 'SUPER_ADMIN') {
+    if (profile?.role?.toUpperCase() === 'SUPER_ADMIN') {
       fetchRequests();
     }
   }, [profile, fetchRequests]);
@@ -159,7 +159,7 @@ export default function AdminSupportRequestsPage() {
     completed: requests.filter((r) => r.status === 'completed').length,
   };
 
-  if (profile?.role !== 'SUPER_ADMIN') {
+  if (profile?.role?.toUpperCase() !== 'SUPER_ADMIN') {
     return (
       <div className="flex items-center justify-center py-20">
         <p className="text-neutral-500 dark:text-neutral-400">접근 권한이 없습니다.</p>

@@ -1,4 +1,4 @@
-import { DashboardView } from '../components/views/dashboard-view';
+import { DashboardPageClient } from '../components/dashboard-page-client';
 
 export default async function AcademyAdminDashboardPage({
   params,
@@ -6,6 +6,6 @@ export default async function AcademyAdminDashboardPage({
   params: Promise<{ academyId: string }>;
 }) {
   const { academyId } = await params;
-  return <DashboardView academyId={academyId} />;
+  return <DashboardPageClient academyId={academyId} />;
 }
 

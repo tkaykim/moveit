@@ -45,13 +45,7 @@ export default function IntroPage() {
     localStorage.setItem(INTRO_THEME_KEY, theme);
   }, [theme]);
 
-  // intro 테마에 맞춰 document에 dark 클래스 동기화 — 라이트일 때 dark: 스타일이 적용되지 않도록
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') root.classList.add('dark');
-    else root.classList.remove('dark');
-  }, [theme]);
-
+  // intro는 전역 html.dark에 의존하지 않고 isLight 상태로만 스타일 적용 (ThemeProvider와 충돌 방지)
   useEffect(() => {
     if (isMobileMenuOpen) {
       document.body.style.overflow = 'hidden';

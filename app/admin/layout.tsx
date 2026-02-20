@@ -140,8 +140,8 @@ export default function AdminLayout({
     );
   }
 
-  // 최고관리자가 아닌 경우
-  if (profile.role !== 'SUPER_ADMIN') {
+  // 최고관리자가 아닌 경우 (role 대소문자 무시 비교)
+  if (profile.role?.toUpperCase() !== 'SUPER_ADMIN') {
     return (
       <AccessDenied
         isLoggedIn={true}

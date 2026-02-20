@@ -88,6 +88,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
     { icon: MessageSquare, label: '상담 관리', href: `/academy-admin/${academyId}/consultations` },
     { icon: Bell, label: '알림 발송', href: `/academy-admin/${academyId}/push` },
     { icon: CreditCard, label: '매출/정산', href: `/academy-admin/${academyId}/revenue` },
+    { icon: Calendar, label: '구독/결제 관리', href: `/academy-admin/${academyId}/billing` },
   ];
 
   // 설정 메뉴: SUPER_ADMIN이면 무조건 표시, auth 로딩 중이면 일단 표시, 그 외 ACADEMY_OWNER만 표시

@@ -14,6 +14,7 @@ import {
   UserCheck,
   AlertTriangle,
   Bell,
+  CreditCard,
   type LucideIcon,
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
@@ -65,6 +66,11 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       title: '푸시 알림',
       icon: Bell,
       href: '/admin/push',
+    },
+    {
+      title: '구독 관리',
+      icon: CreditCard,
+      href: '/admin/billing',
     },
     {
       title: '고장신고/개발요청',

@@ -4,6 +4,8 @@
  * 쿠키 또는 Authorization Bearer 토큰 지원 (Capacitor/다른 포트 환경).
  */
 import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 
@@ -41,6 +43,13 @@ export async function GET(request: NextRequest) {
       // instructors.user_id 컬럼이 아직 없을 수 있음
     }
 
+    const validRoles = ['SUPER_ADMIN', 'ACADEMY_OWNER', 'ACADEMY_MANAGER', 'INSTRUCTOR', 'USER'] as const;
+    const rawRole = (profileRow as { role?: string | null }).role;
+    const role =
+      typeof rawRole === 'string' && validRoles.includes(rawRole.toUpperCase() as typeof validRoles[number])
+        ? (rawRole.toUpperCase() as typeof validRoles[number])
+        : 'USER';
+
     return NextResponse.json({
       profile: {
         id: profileRow.id,
@@ -50,7 +59,7 @@ export async function GET(request: NextRequest) {
         email: profileRow.email ?? null,
         phone: profileRow.phone ?? null,
         profile_image: profileRow.profile_image ?? null,
-        role: profileRow.role,
+        role,
         created_at: profileRow.created_at,
         updated_at: profileRow.updated_at,
         instructor_id,

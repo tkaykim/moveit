@@ -105,7 +105,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: p.email ?? null,
         phone: p.phone ?? null,
         profile_image: p.profile_image ?? null,
-        role: (p.role && ['SUPER_ADMIN', 'ACADEMY_OWNER', 'ACADEMY_MANAGER', 'INSTRUCTOR', 'USER'].includes(p.role)) ? p.role : 'USER',
+        role: (p.role && ['SUPER_ADMIN', 'ACADEMY_OWNER', 'ACADEMY_MANAGER', 'INSTRUCTOR', 'USER'].includes(String(p.role).toUpperCase()))
+          ? (String(p.role).toUpperCase() as UserProfile['role'])
+          : 'USER',
         created_at: p.created_at ?? new Date().toISOString(),
         updated_at: p.updated_at ?? new Date().toISOString(),
         instructor_id: p.instructor_id ?? null,
@@ -172,8 +174,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await setFallbackOrApiProfile();
         return;
       }
-      const row = data as UserProfile;
-      // API에서 instructor_id 못 받았으면 클라이언트에서 instructors 조회 (RLS 없으면 조회 가능)
+      const row = data as UserProfile & { role?: string };
+      const validRoles = ['SUPER_ADMIN', 'ACADEMY_OWNER', 'ACADEMY_MANAGER', 'INSTRUCTOR', 'USER'] as const;
+      const normalizedRole =
+        row.role && validRoles.includes(String(row.role).toUpperCase() as typeof validRoles[number])
+          ? (String(row.role).toUpperCase() as UserProfile['role'])
+          : ('USER' as const);
       let instructorId: string | null = apiProfile?.instructor_id ?? (row as { instructor_id?: string }).instructor_id ?? null;
       if (!instructorId && supabase) {
         try {
@@ -185,6 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setProfile({
         ...row,
+        role: normalizedRole,
         instructor_id: instructorId,
       });
     } catch (error) {

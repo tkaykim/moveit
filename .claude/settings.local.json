@@ -6,13 +6,16 @@
       "supabase_*",
       "playwright_*",
       "Bash(tree:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(ls:*)"
     ]
   },
   "mcpServers": {
     "supabase": {
       "command": "python",
-      "args": ["C:\\Users\\그리고\\Desktop\\MOVEIT\\mcp_supabase_server.py"],
+      "args": [
+        "C:\\Users\\그리고\\Desktop\\MOVEIT\\mcp_supabase_server.py"
+      ],
       "env": {
         "SUPABASE_URL": "your_supabase_url_here",
         "SUPABASE_ANON_KEY": "your_supabase_anon_key_here"
@@ -20,7 +23,9 @@
     },
     "playwright": {
       "command": "python",
-      "args": ["C:\\Users\\그리고\\Desktop\\MOVEIT\\mcp_playwright_server.py"],
+      "args": [
+        "C:\\Users\\그리고\\Desktop\\MOVEIT\\mcp_playwright_server.py"
+      ],
       "env": {
         "PLAYWRIGHT_BROWSER": "chromium"
       }
