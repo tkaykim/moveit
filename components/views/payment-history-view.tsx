@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { LanguageToggle } from '@/components/common/language-toggle';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
+import { getPaymentMethodDisplayLabel } from '@/lib/toss/payment-method';
 
 interface PaymentHistoryViewProps {
   onBack: () => void;
@@ -84,6 +85,12 @@ export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
     if (status === 'CONFIRMED' || status === 'COMPLETED') return '완료';
     if (status === 'CANCELLED') return '취소';
     return '대기중';
+  };
+
+  const getPaymentMethodLabel = (method?: string) => {
+    if (!method) return null;
+    const label = getPaymentMethodDisplayLabel(method);
+    return label || method;
   };
 
   if (loading) {
@@ -185,6 +192,9 @@ export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
                   <div className="flex items-center gap-1 text-xs text-neutral-400 dark:text-neutral-500">
                     <Calendar size={12} />
                     {formatDate(payment.date)}
+                    {payment.type === 'PURCHASE' && getPaymentMethodLabel(payment.payment_method) && (
+                      <span className="ml-1">· {getPaymentMethodLabel(payment.payment_method)}</span>
+                    )}
                   </div>
                 </div>
                 <div className="text-right">

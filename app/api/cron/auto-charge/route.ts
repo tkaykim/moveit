@@ -202,19 +202,155 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 2. 만료된 trial 구독 처리
+    // 2. 만료된 trial 구독: 첫 결제 시도 (성공 시 active, 실패 시 past_due). completed 건 0개인 경우만
     const { data: expiredTrials } = await supabase
       .from('academy_subscriptions')
-      .select('id')
+      .select('id, academy_id, plan_id, billing_cycle, toss_billing_key, toss_customer_key, discount_percent, first_month_free')
       .eq('status', 'trial')
-      .lte('trial_ends_at', new Date().toISOString());
+      .lte('trial_ends_at', today)
+      .not('toss_billing_key', 'is', null);
 
     for (const trial of expiredTrials ?? []) {
-      await supabase
-        .from('academy_subscriptions')
-        .update({ status: 'expired', updated_at: new Date().toISOString() })
-        .eq('id', (trial as any).id);
-      results.trialExpired++;
+      const t = trial as any;
+      const { count: completedCount } = await supabase
+        .from('subscription_payments')
+        .select('id', { count: 'exact', head: true })
+        .eq('subscription_id', t.id)
+        .eq('status', 'completed');
+      if ((completedCount ?? 0) > 0) {
+        await supabase
+          .from('academy_subscriptions')
+          .update({ status: 'expired', updated_at: new Date().toISOString() })
+          .eq('id', t.id);
+        results.trialExpired++;
+        continue;
+      }
+
+      const { data: planRow } = await supabase
+        .from('billing_plans')
+        .select('monthly_price, annual_price_per_month, display_name')
+        .eq('id', t.plan_id)
+        .single();
+      const { data: academyRow } = await supabase
+        .from('academies')
+        .select('name_kr, name_en')
+        .eq('id', t.academy_id)
+        .single();
+
+      const billingCycle = (t.billing_cycle || 'monthly') as 'monthly' | 'annual';
+      const baseAmount =
+        billingCycle === 'annual'
+          ? (planRow as any)?.annual_price_per_month * 12
+          : (planRow as any)?.monthly_price ?? 0;
+      const amount = calculateAmount(baseAmount, {
+        discountPercent: t.discount_percent ?? null,
+        firstMonthFree: t.first_month_free ?? false,
+      });
+
+      const orderId = `trial_${t.academy_id.replace(/-/g, '').slice(0, 8)}_${Date.now()}`;
+      const nowLoop = new Date();
+      const newPeriodStart = today;
+      const newPeriodEnd = new Date(today);
+      if (billingCycle === 'annual') {
+        newPeriodEnd.setFullYear(newPeriodEnd.getFullYear() + 1);
+      } else {
+        newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 1);
+      }
+      const newPeriodEndStr = newPeriodEnd.toISOString().split('T')[0];
+      const academyName = (academyRow as any)?.name_kr || (academyRow as any)?.name_en || '학원';
+      const planName = (planRow as any)?.display_name ?? '';
+
+      if (!tossSecretKey) {
+        results.errors.push(`No TOSS_SECRET_KEY for trial sub ${t.id}`);
+        await supabase
+          .from('academy_subscriptions')
+          .update({ status: 'expired', updated_at: nowLoop.toISOString() })
+          .eq('id', t.id);
+        results.trialExpired++;
+        continue;
+      }
+
+      try {
+        const tossResponse = await fetch(
+          `https://api.tosspayments.com/v1/billing/${t.toss_billing_key}`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Basic ${Buffer.from(tossSecretKey + ':').toString('base64')}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              customerKey: t.toss_customer_key,
+              amount,
+              orderId,
+              orderName: `MOVEIT ${planName} ${billingCycle === 'annual' ? '연간' : '월간'} 구독`,
+              customerName: academyName,
+            }),
+          }
+        );
+
+        if (tossResponse.ok) {
+          const tossData = await tossResponse.json();
+          await supabase
+            .from('academy_subscriptions')
+            .update({
+              status: 'active',
+              current_period_start: newPeriodStart,
+              current_period_end: newPeriodEndStr,
+              grace_period_end: null,
+              updated_at: nowLoop.toISOString(),
+            })
+            .eq('id', t.id);
+          await supabase.from('subscription_payments').insert({
+            subscription_id: t.id,
+            academy_id: t.academy_id,
+            amount,
+            billing_cycle: billingCycle,
+            period_start: newPeriodStart,
+            period_end: newPeriodEndStr,
+            toss_payment_key: tossData.paymentKey,
+            toss_order_id: orderId,
+            status: 'completed',
+            paid_at: nowLoop.toISOString(),
+          });
+          results.charged++;
+        } else {
+          const errorData = await tossResponse.json();
+          const retryAt = new Date(nowLoop);
+          retryAt.setDate(retryAt.getDate() + 3);
+          const graceEnd = new Date(nowLoop);
+          graceEnd.setDate(graceEnd.getDate() + 7);
+          const graceEndStr = graceEnd.toISOString().split('T')[0];
+          await supabase
+            .from('academy_subscriptions')
+            .update({
+              status: 'past_due',
+              grace_period_end: graceEndStr,
+              updated_at: nowLoop.toISOString(),
+            })
+            .eq('id', t.id);
+          await supabase.from('subscription_payments').insert({
+            subscription_id: t.id,
+            academy_id: t.academy_id,
+            amount,
+            billing_cycle: billingCycle,
+            toss_order_id: orderId,
+            status: 'failed',
+            failure_code: errorData.code,
+            failure_message: errorData.message,
+            retry_count: 0,
+            next_retry_at: retryAt.toISOString(),
+          });
+          results.failed++;
+        }
+      } catch (err) {
+        results.errors.push(`Trial sub ${t.id}: ${String(err)}`);
+        await supabase
+          .from('academy_subscriptions')
+          .update({ status: 'expired', updated_at: nowLoop.toISOString() })
+          .eq('id', t.id);
+        results.trialExpired++;
+      }
     }
 
     // 3. past_due 재시도: 가장 최근 실패 건 중 next_retry_at <= now(), retry_count < 3

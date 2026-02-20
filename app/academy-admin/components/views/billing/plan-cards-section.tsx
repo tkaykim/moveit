@@ -217,8 +217,9 @@ export function PlanCardsSection({
       )}
 
       <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-6">
-        모든 플랜은 <strong>14일 무료 체험</strong>을 제공합니다. 체험 기간 중
-        언제든 취소 가능합니다.
+        모든 플랜은 <strong>14일 무료 체험</strong>을 제공합니다. 체험 기간 중 언제든 취소 가능합니다.
+        <br className="hidden sm:block" />
+        <strong>체험 종료일</strong> 이후 자동으로 첫 결제가 시도되며, 결제가 완료되면 정기 구독이 시작됩니다.
         <br className="hidden sm:block" />
         월간 결제는 매월 자동 갱신, 연간 결제는 1년 단위로 청구됩니다.
       </p>

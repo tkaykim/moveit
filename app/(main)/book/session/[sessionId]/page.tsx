@@ -478,18 +478,73 @@ export default function SessionBookingPage() {
     }
   };
 
-  // 수강권 구매 후 예약
+  // 수강권 구매 후 예약 (카드/계좌 = Toss 결제창, 그 외는 기존 구매 API)
   const handlePurchaseBooking = async () => {
     if (!selectedPurchaseTicketId || !selectedPurchaseTicket) {
       setError(t('sessionBooking.selectTicketError'));
       return;
     }
 
+    const useTossPayment = purchasePaymentType === 'card' || purchasePaymentType === 'account';
     setSubmitting(true);
     setError('');
 
     try {
-      // 1. 수강권 구매 (쿠폰제 count_options 옵션 인덱스 전달)
+      if (useTossPayment) {
+        // Toss Payments: 주문 생성 후 결제창 호출
+        const orderRes = await fetchWithAuth('/api/tickets/payment-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ticketId: selectedPurchaseTicket.id,
+            scheduleId: sessionId,
+            ...(typeof selectedPurchaseTicket.countOptionIndex === 'number' && { countOptionIndex: selectedPurchaseTicket.countOptionIndex }),
+          }),
+        });
+        if (!orderRes.ok) {
+          const data = await orderRes.json();
+          throw new Error(data.error || t('sessionBooking.purchaseFailed'));
+        }
+        const { orderId, amount, orderName } = await orderRes.json();
+
+        const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
+        if (!clientKey) {
+          throw new Error('결제 설정이 완료되지 않았습니다.');
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://js.tosspayments.com/v2/standard';
+        script.async = true;
+        document.body.appendChild(script);
+        await new Promise<void>((resolve, reject) => {
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error('토스페이먼츠 스크립트 로드 실패'));
+        });
+
+        const TossPayments = (window as any).TossPayments;
+        if (!TossPayments) throw new Error('토스페이먼츠 SDK를 불러올 수 없습니다.');
+
+        const origin = window.location.origin;
+        const successUrl = `${origin}/payment/ticket/success?returnTo=session&sessionId=${sessionId}`;
+        const failUrl = `${origin}/payment/ticket/fail?sessionId=${sessionId}`;
+
+        const payment = TossPayments(clientKey).payment({});
+        const method = purchasePaymentType === 'account' ? 'TRANSFER' : 'CARD';
+        await payment.requestPayment({
+          method,
+          amount: { currency: 'KRW', value: amount },
+          orderId,
+          orderName,
+          successUrl,
+          failUrl,
+          customerEmail: '',
+          customerName: '',
+          ...(method === 'CARD' && { card: { useEscrow: false, useCardPoint: false, useAppCardOnly: false } }),
+        });
+        return;
+      }
+
+      // 기존: 수강권 즉시 구매(테스트 등) 후 예약
       const purchaseResponse = await fetchWithAuth('/api/tickets/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -512,15 +567,14 @@ export default function SessionBookingPage() {
         throw new Error(t('sessionBooking.purchaseInfoFailed'));
       }
 
-      // 2. 구매한 수강권으로 예약 (카드결제인 경우 데모 결제 상태로 전달)
       const bookingResponse = await fetchWithAuth('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           scheduleId: sessionId,
           userTicketId: userTicketId,
-          paymentMethod: purchasePaymentType === 'card' ? 'CARD_DEMO' : purchasePaymentType, // 데모 결제 표시
-          paymentStatus: purchasePaymentType === 'card' ? 'COMPLETED' : 'PENDING', // 카드결제는 데모로 즉시 완료
+          paymentMethod: purchasePaymentType === 'card' ? 'CARD_DEMO' : purchasePaymentType,
+          paymentStatus: purchasePaymentType === 'card' ? 'COMPLETED' : 'PENDING',
         }),
       });
 

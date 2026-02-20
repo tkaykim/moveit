@@ -45,10 +45,19 @@ export default function BillingCallbackPage() {
 
     (async () => {
       try {
+        const body: { authKey: string; customerKey: string; academyId: string; planId?: string; billingCycle?: string } = {
+          authKey,
+          customerKey,
+          academyId,
+        };
+        if (planId && VALID_PLAN_IDS.includes(planId) && cycle && VALID_CYCLES.includes(cycle)) {
+          body.planId = planId;
+          body.billingCycle = cycle;
+        }
         const res = await authFetch('/api/billing/request-billing-auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ authKey, customerKey, academyId }),
+          body: JSON.stringify(body),
         });
         const data = await res.json();
 
@@ -68,47 +77,14 @@ export default function BillingCallbackPage() {
 
         processedAuthKeys.add(authKey);
 
-        const goToDashboard = returnTo === 'dashboard';
-        const goToBilling = returnTo === 'billing';
-        const canAutoSubscribe =
-          (goToDashboard || goToBilling) &&
-          planId &&
-          VALID_PLAN_IDS.includes(planId) &&
-          cycle &&
-          VALID_CYCLES.includes(cycle);
-
-        if (canAutoSubscribe) {
-          try {
-            const subRes = await authFetch('/api/billing/subscribe', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                academyId,
-                planId,
-                billingCycle: cycle,
-              }),
-            });
-            if (subRes.ok) {
-              await new Promise((r) => setTimeout(r, REDIRECT_DELAY_MS));
-              window.location.href = goToBilling
-                ? `/academy-admin/${academyId}/billing?subscription=success`
-                : `/academy-admin/${academyId}?subscription=success`;
-              return;
-            }
-          } catch {
-            // 구독 시작 실패해도 카드는 등록됨 → 대시보드/결제 관리로 이동 후 사용자가 구독 시작 가능
-          }
-          await new Promise((r) => setTimeout(r, REDIRECT_DELAY_MS));
-          window.location.href = goToBilling
-            ? `/academy-admin/${academyId}/billing?subscription=card_ok`
-            : `/academy-admin/${academyId}?subscription=card_ok`;
-          return;
-        }
-
+        // 카드 등록 = 14일 무료 체험 시작. 별도 결제 없이 구독/결제 관리 또는 대시보드로 이동
         setStatus('success');
-        setMessage('카드가 등록되었습니다.');
+        setMessage('카드가 등록되었습니다. 14일 무료 체험이 시작되었습니다.');
+        const goToBilling = returnTo === 'billing';
         await new Promise((r) => setTimeout(r, REDIRECT_DELAY_MS));
-        window.location.href = `/academy-admin/${academyId}/billing?card=ok`;
+        window.location.href = goToBilling
+          ? `/academy-admin/${academyId}/billing?card=ok`
+          : `/academy-admin/${academyId}?card=ok`;
       } catch {
         setStatus('error');
         setMessage('카드 등록 처리 중 오류가 발생했습니다.');

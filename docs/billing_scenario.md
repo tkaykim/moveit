@@ -44,7 +44,18 @@
 
 ### 자동화 (Cron)
 
-- `app/api/cron/auto-charge/route.ts` — 매일 결제 대상(active, current_period_end 도래) 조회 후 토스 빌링 결제 호출, 성공 시 subscription_payments INSERT 및 academy_subscriptions 기간 갱신, 실패 시 past_due 등 처리.
+- `app/api/cron/auto-charge/route.ts` — 매일 결제 대상(active, current_period_end 도래) 조회 후 토스 빌링 결제 호출, 성공 시 subscription_payments INSERT 및 academy_subscriptions 기간 갱신, 실패 시 past_due 등 처리. **만료된 trial**(trial_ends_at <= 오늘)은 첫 결제 시도 후 성공 시 active, 실패 시 past_due 처리.
+
+---
+
+## 0.1 카드 등록 후 14일 무료 체험
+
+일반 플랫폼과 동일하게 **카드 등록 완료 시점에 바로 14일 무료 체험**이 시작됩니다.
+
+- **플로우**: 사용자가 "14일 무료 체험 시작" 등으로 플랜/주기 선택 → 토스 카드 등록 창 → 카드 등록 성공 → `POST /api/billing/request-billing-auth` 호출 시 서버에서 **신규 구독 행을 `status: 'trial'`**, `trial_ends_at = 오늘 + 14일`, 선택한 `plan_id`/`billing_cycle` 및 `current_period_start`/`current_period_end`(체험 기간)로 생성. 별도 "구독 시작" 버튼 없이 체험 이용 가능.
+- **body**: `authKey`, `customerKey`, `academyId` 필수. 선택으로 `planId`, `billingCycle` 전달 시 해당 플랜으로 체험 시작(미전달 시 starter 월간).
+- **체험 종료**: Cron(`/api/cron/auto-charge`)에서 `status = 'trial'` 이고 `trial_ends_at <= 오늘` 인 구독 중 **completed 결제 0건**인 경우 **첫 결제 시도**. 성공 시 `status: 'active'`, 기간 갱신, `subscription_payments` INSERT. 실패 시 `status: 'past_due'`, `grace_period_end` 설정, failed 결제 기록 후 기존 past_due 재시도 로직으로 재결제 시도.
+- **상수**: `lib/billing/constants.ts`에 `TRIAL_DAYS = 14`, `getTrialEndsAt()` (오늘 + 14일 DATE 문자열).
 
 ---
 

@@ -1391,6 +1391,8 @@ export type Database = {
           ticket_id: string | null
           ticket_name: string | null
           ticket_type_snapshot: string | null
+          toss_order_id: string | null
+          toss_payment_key: string | null
           transaction_date: string | null
           user_id: string
           user_ticket_id: string | null
@@ -1412,6 +1414,8 @@ export type Database = {
           ticket_id?: string | null
           ticket_name?: string | null
           ticket_type_snapshot?: string | null
+          toss_order_id?: string | null
+          toss_payment_key?: string | null
           transaction_date?: string | null
           user_id: string
           user_ticket_id?: string | null
@@ -1433,6 +1437,8 @@ export type Database = {
           ticket_id?: string | null
           ticket_name?: string | null
           ticket_type_snapshot?: string | null
+          toss_order_id?: string | null
+          toss_payment_key?: string | null
           transaction_date?: string | null
           user_id?: string
           user_ticket_id?: string | null

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { SectionHeader } from '../common/section-header';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { formatCurrency } from './utils/format-currency';
+import { getPaymentMethodDisplayLabel } from '@/lib/toss/payment-method';
 
 interface RevenueViewProps {
   academyId: string;
@@ -236,7 +237,7 @@ export function RevenueView({ academyId }: RevenueViewProps) {
                         {formatCurrency(rev.final_price)}
                       </td>
                       <td className="px-3 py-3 text-gray-600 dark:text-gray-400">
-                        {rev.payment_method || '-'}
+                        {rev.payment_method ? getPaymentMethodDisplayLabel(rev.payment_method) : '-'}
                       </td>
                       <td className="px-3 py-3 text-right">
                         <button className="text-xs border dark:border-neutral-700 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-800 text-gray-700 dark:text-gray-300 transition-colors">

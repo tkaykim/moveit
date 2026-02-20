@@ -188,6 +188,7 @@ export async function POST(request: Request) {
         ? `${ticket.name} ${optionCount}회권`
         : ticket.name;
 
+      const transactionDate = new Date().toISOString().split('T')[0];
       await (supabase as any)
         .from('revenue_transactions')
         .insert({
@@ -206,6 +207,7 @@ export async function POST(request: Request) {
           valid_days: optionValidDays,
           ticket_name: ticketDisplayName,
           ticket_type_snapshot: ticket.ticket_type,
+          transaction_date: transactionDate,
         });
 
       // 학원 학생으로 자동 등록 (중복 방지: 이미 등록된 경우 무시)

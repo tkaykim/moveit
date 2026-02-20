@@ -6,6 +6,7 @@ import { Menu, LogOut, User, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AdminLoginModal } from '@/components/auth/AdminLoginModal';
 import { AccessDenied } from '@/components/auth/AccessDenied';
+import { authFetch } from '@/lib/supabase/auth-fetch';
 
 const LOADING_TIMEOUT_MS = 12_000;
 const PROFILE_TIMEOUT_MS = 10_000;
@@ -62,8 +63,38 @@ export default function AdminLayout({
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
   const [profileTimedOut, setProfileTimedOut] = useState(false);
+  const [serverSuperAdmin, setServerSuperAdmin] = useState<boolean | null>(null);
   const profileTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { user, profile, loading, signOut, refreshProfile } = useAuth();
+
+  // 프로필에서 SUPER_ADMIN이 아니라고 나와도 서버에서 한 번 더 확인 (프로필 API 실패/캐시 대비)
+  const checkAdminMe = useCallback(async () => {
+    try {
+      const res = await authFetch('/api/admin/me', { cache: 'no-store' });
+      setServerSuperAdmin(res.ok ? true : false);
+    } catch {
+      setServerSuperAdmin(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setServerSuperAdmin(null);
+      return;
+    }
+    if (profile?.role?.toUpperCase() === 'SUPER_ADMIN') {
+      setServerSuperAdmin(true);
+      return;
+    }
+    setServerSuperAdmin(null);
+    checkAdminMe();
+  }, [user, profile?.role, checkAdminMe]);
+
+  useEffect(() => {
+    if (serverSuperAdmin !== null) return;
+    const t = setTimeout(() => setServerSuperAdmin((v) => (v === null ? false : v)), 8000);
+    return () => clearTimeout(t);
+  }, [serverSuperAdmin]);
 
   const handleLoginSuccess = useCallback(() => {
     setLoadingTimedOut(false);
@@ -140,14 +171,31 @@ export default function AdminLayout({
     );
   }
 
-  // 최고관리자가 아닌 경우 (role 대소문자 무시 비교)
-  if (profile.role?.toUpperCase() !== 'SUPER_ADMIN') {
+  // 최고관리자가 아닌 경우: 프로필 role과 서버 확인(admin/me) 모두 실패할 때만 차단
+  const isSuperAdminByProfile = profile.role?.toUpperCase() === 'SUPER_ADMIN';
+  if (!isSuperAdminByProfile && serverSuperAdmin !== true) {
+    if (serverSuperAdmin === false) {
+      return (
+        <AccessDenied
+          isLoggedIn={true}
+          onLoginSuccess={handleLoginSuccess}
+          message="최고관리자(SUPER_ADMIN)만 접근할 수 있는 페이지입니다."
+        />
+      );
+    }
     return (
-      <AccessDenied
-        isLoggedIn={true}
-        onLoginSuccess={handleLoginSuccess}
-        message="최고관리자(SUPER_ADMIN)만 접근할 수 있는 페이지입니다."
-      />
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex flex-col items-center justify-center gap-4 px-4">
+        <div className="w-8 h-8 border-2 border-neutral-300 dark:border-neutral-600 border-t-primary dark:border-t-[#CCFF00] rounded-full animate-spin" />
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">권한 확인 중...</p>
+        <button
+          type="button"
+          onClick={() => { setServerSuperAdmin(null); checkAdminMe(); refreshProfile(); }}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-black hover:opacity-90 text-sm font-medium"
+        >
+          <RefreshCw className="w-4 h-4" />
+          다시 확인
+        </button>
+      </div>
     );
   }
 

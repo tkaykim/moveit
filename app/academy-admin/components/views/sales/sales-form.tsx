@@ -236,6 +236,7 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
       if (ticketError) throw ticketError;
 
       // 2. revenue_transaction 생성 (구매 시점 상품 스냅샷 포함)
+      const transactionDate = new Date().toISOString().split('T')[0];
       const { data: transaction, error: transactionError } = await supabase
         .from('revenue_transactions')
         .insert([
@@ -255,6 +256,7 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
             valid_days: productValidDays,
             ticket_name: selectedProduct.name,
             ticket_type_snapshot: isPeriodTicket ? 'PERIOD' : 'COUNT',
+            transaction_date: transactionDate,
           },
         ])
         .select()

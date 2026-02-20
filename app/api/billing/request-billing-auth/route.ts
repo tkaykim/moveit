@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
+import { getTrialEndsAt } from '@/lib/billing/constants';
+
+const VALID_PLAN_IDS = ['starter', 'growth', 'pro'] as const;
+const VALID_BILLING_CYCLES = ['monthly', 'annual'] as const;
 
 // 토스페이먼츠 빌링 키 발급
 // 프론트엔드에서 TossPayments.requestBillingAuth() 성공 후 받은 authKey로 서버에서 빌링키를 발급받아 저장
+// 신규 구독 시 카드 등록 = 14일 무료 체험 시작 (status: trial, trial_ends_at: 오늘+14일)
 export async function POST(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser(request);
@@ -12,11 +17,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { authKey, customerKey, academyId } = body;
+    const { authKey, customerKey, academyId, planId, billingCycle } = body as {
+      authKey?: string;
+      customerKey?: string;
+      academyId?: string;
+      planId?: string;
+      billingCycle?: string;
+    };
 
     if (!authKey || !customerKey || !academyId) {
       return NextResponse.json({ error: 'authKey, customerKey, academyId가 필요합니다.' }, { status: 400 });
     }
+
+    const plan = planId && VALID_PLAN_IDS.includes(planId as any) ? planId : 'starter';
+    const cycle = billingCycle && VALID_BILLING_CYCLES.includes(billingCycle as any) ? billingCycle : 'monthly';
 
     const supabase = createServiceClient();
 
@@ -68,7 +82,7 @@ export async function POST(request: NextRequest) {
     const tossData = await tossResponse.json();
     const { billingKey, card } = tossData;
 
-    // DB에 저장: 구독이 있으면 카드만 갱신, 없으면 card_only(플랜 미선택)로 생성
+    // DB에 저장: 구독이 있으면 카드만 갱신, 없으면 14일 무료 체험(trial)으로 생성
     const { data: existingSub } = await supabase
       .from('academy_subscriptions')
       .select('id, status')
@@ -87,12 +101,19 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', existingSub.id);
     } else {
-      // 카드만 등록. 플랜 선택 후 결제 시 구독(trial/active) 시작
+      // 신규: 카드 등록 = 14일 무료 체험 시작 (status: trial)
+      const now = new Date();
+      const trialEndsAt = getTrialEndsAt();
+      const periodStart = now.toISOString().split('T')[0];
+
       await supabase.from('academy_subscriptions').insert({
         academy_id: academyId,
-        plan_id: 'starter',
-        billing_cycle: 'monthly',
-        status: 'card_only',
+        plan_id: plan,
+        billing_cycle: cycle,
+        status: 'trial',
+        trial_ends_at: trialEndsAt,
+        current_period_start: periodStart,
+        current_period_end: trialEndsAt,
         toss_customer_key: customerKey,
         toss_billing_key: billingKey,
         card_company: card?.company ?? null,
