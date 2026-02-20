@@ -528,7 +528,8 @@ export default function SessionBookingPage() {
         const successUrl = `${origin}/payment/ticket/success?returnTo=session&sessionId=${sessionId}`;
         const failUrl = `${origin}/payment/ticket/fail?sessionId=${sessionId}`;
 
-        const payment = TossPayments(clientKey).payment({});
+        const customerKey = user?.id ?? `anon_${orderId}`;
+        const payment = TossPayments(clientKey).payment({ customerKey });
         const method = purchasePaymentType === 'account' ? 'TRANSFER' : 'CARD';
         await payment.requestPayment({
           method,
