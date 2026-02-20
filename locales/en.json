@@ -277,7 +277,7 @@
   "sessionBooking.loginBenefit": "Log in to book quickly with your tickets and manage your class schedule at a glance.",
   "sessionBooking.loginButton": "Login",
   "sessionBooking.loginOrSignupForTicket": "Log in or sign up to select a ticket and pay by card",
-  "sessionBooking.loginOrSignupBenefit": "After logging in, you can choose a ticket and complete your booking. If you prefer to pay on-site only, use the option below.",
+  "sessionBooking.loginOrSignupBenefit": "After logging in, you can choose a ticket and complete your booking.",
   "sessionBooking.signupButton": "Sign up",
   "sessionBooking.onsiteWarningTitle": "On-site Payment Notice",
   "sessionBooking.onsiteWarningMessage1": "The class may fill up on a first-come basis and you might not be able to attend.",
