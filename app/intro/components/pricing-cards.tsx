@@ -236,7 +236,7 @@ export function PricingCards({ isLight = true }: PricingCardsProps) {
       <p className={`text-center text-xs mt-6 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
         모든 플랜은 <strong>14일 무료 체험</strong>을 제공합니다. 체험 기간 중 언제든 취소 가능합니다.
         <br className="hidden sm:block" />
-        체험 종료일 이후 자동으로 첫 결제가 시도되며, 결제 완료 시 정기 구독이 시작됩니다.
+        체험 종료일 다음날부터 선택한 월간/연간 결제가 자동으로 진행되며, 정기 구독이 이어집니다.
         <br className="hidden sm:block" />
         월간 결제는 매월 자동 갱신, 연간 결제는 1년 단위로 청구됩니다. 토스페이먼츠를 통한 안전한 자동결제.
       </p>

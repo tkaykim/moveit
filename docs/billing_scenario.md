@@ -54,8 +54,9 @@
 
 - **플로우**: 사용자가 "14일 무료 체험 시작" 등으로 플랜/주기 선택 → 토스 카드 등록 창 → 카드 등록 성공 → `POST /api/billing/request-billing-auth` 호출 시 서버에서 **신규 구독 행을 `status: 'trial'`**, `trial_ends_at = 오늘 + 14일`, 선택한 `plan_id`/`billing_cycle` 및 `current_period_start`/`current_period_end`(체험 기간)로 생성. 별도 "구독 시작" 버튼 없이 체험 이용 가능.
 - **body**: `authKey`, `customerKey`, `academyId` 필수. 선택으로 `planId`, `billingCycle` 전달 시 해당 플랜으로 체험 시작(미전달 시 starter 월간).
-- **체험 종료**: Cron(`/api/cron/auto-charge`)에서 `status = 'trial'` 이고 `trial_ends_at <= 오늘` 인 구독 중 **completed 결제 0건**인 경우 **첫 결제 시도**. 성공 시 `status: 'active'`, 기간 갱신, `subscription_payments` INSERT. 실패 시 `status: 'past_due'`, `grace_period_end` 설정, failed 결제 기록 후 기존 past_due 재시도 로직으로 재결제 시도.
-- **상수**: `lib/billing/constants.ts`에 `TRIAL_DAYS = 14`, `getTrialEndsAt()` (오늘 + 14일 DATE 문자열).
+- **체험 종료일**: `trial_ends_at` = 가입일 + 14일(마지막 무료 이용일). 예: 3월 1일 시작 시 3월 15일이 체험 종료일이면, 3월 15일까지 무료, **3월 16일부터** 유료 구독 시작.
+- **체험 종료 후 자동 전환**: Cron(`/api/cron/auto-charge`)에서 `status = 'trial'` 이고 `trial_ends_at <= 오늘` 인 구독에 대해 **첫 결제 실행**. 성공 시 `status: 'active'`, `current_period_start`/`current_period_end`를 체험 종료일 다음날 기준으로 설정(월간이면 +1달, 연간이면 +1년), 이후부터 선택한 월간/연간 결제가 그대로 이어짐. 실패 시 `status: 'past_due'`, 재시도 로직 적용.
+- **상수**: `lib/billing/constants.ts`에 `TRIAL_DAYS = 14`, `getTrialEndsAt()` (가입일 + 14일 DATE).
 
 ---
 

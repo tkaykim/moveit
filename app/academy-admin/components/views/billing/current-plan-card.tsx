@@ -95,13 +95,19 @@ export function CurrentPlanCard({ subscription, plan, loading }: CurrentPlanCard
             </span>
           </dd>
         </div>
-        {periodEnd && (
+        {periodEnd && status === 'trial' && periodEnd === trialEndsAt && (
+          <div>
+            <dt className="text-gray-500 dark:text-gray-400">체험 기간 종료일</dt>
+            <dd className="font-medium text-gray-900 dark:text-white">{formatDate(periodEnd)}</dd>
+          </div>
+        )}
+        {periodEnd && !(status === 'trial' && periodEnd === trialEndsAt) && (
           <div>
             <dt className="text-gray-500 dark:text-gray-400">현재 기간 종료일</dt>
             <dd className="font-medium text-gray-900 dark:text-white">{formatDate(periodEnd)}</dd>
           </div>
         )}
-        {trialEndsAt && status === 'trial' && (
+        {trialEndsAt && status === 'trial' && periodEnd !== trialEndsAt && (
           <div>
             <dt className="text-gray-500 dark:text-gray-400">체험 종료일</dt>
             <dd className="font-medium text-gray-900 dark:text-white">{formatDate(trialEndsAt)}</dd>
@@ -121,8 +127,8 @@ export function CurrentPlanCard({ subscription, plan, loading }: CurrentPlanCard
           <p className="font-medium mb-1">무료 체험 안내</p>
           <ul className="list-disc list-inside space-y-0.5 text-blue-700 dark:text-blue-300">
             <li>지금 <strong>14일 무료 체험</strong> 중입니다.</li>
-            <li><strong>체험 종료일</strong>: {formatDate(trialEndsAt)}</li>
-            <li><strong>결제 시작</strong>: 체험 종료일 이후 자동으로 첫 결제가 시도됩니다. 결제가 완료되면 정기 구독이 시작됩니다.</li>
+            <li><strong>체험 종료일</strong>: {formatDate(trialEndsAt)} (이날까지 무료 이용)</li>
+            <li><strong>체험 종료일 다음날부터</strong> 선택하신 {subscription.billing_cycle === 'annual' ? '연간' : '월간'} 결제가 <strong>자동으로</strong> 진행됩니다. 시스템이 첫 결제를 실행하고, 성공 시 당일부터 정기 구독이 이어집니다.</li>
           </ul>
         </div>
       )}
