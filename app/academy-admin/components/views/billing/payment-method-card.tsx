@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { CreditCard, AlertCircle } from 'lucide-react';
 import { buildTossCustomerKey } from '@/lib/billing/toss-customer-key';
-import { isCapacitorNative, APP_SCHEME } from '@/lib/capacitor/env';
+import { isCapacitorNative, APP_SCHEME, getPaymentSuccessUrl, getPaymentFailUrl } from '@/lib/capacitor/env';
 
 interface PaymentMethodCardProps {
   academyId: string;
@@ -53,9 +53,8 @@ export function PaymentMethodCard({
       }
 
       const customerKey = buildTossCustomerKey(academyId);
-      const baseUrl = window.location.origin;
-      const successUrl = `${baseUrl}/academy-admin/${academyId}/billing/callback`;
-      const failUrl = `${baseUrl}/academy-admin/${academyId}/billing?billing=fail`;
+      const successUrl = getPaymentSuccessUrl(`academy-admin/${academyId}/billing/callback`);
+      const failUrl = getPaymentFailUrl(`academy-admin/${academyId}/billing`, { billing: 'fail' });
 
       const tossPayments = TossPayments(TOSS_CLIENT_KEY);
       const payment = tossPayments.payment({ customerKey });

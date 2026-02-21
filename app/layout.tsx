@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PushNotificationProvider } from "@/contexts/PushNotificationContext";
 import { CapacitorSafeArea } from "@/components/common/capacitor-safe-area";
+import { PaymentWindowOverride } from "@/lib/capacitor/payment-window-override";
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -134,6 +135,7 @@ export default function RootLayout({
           <AuthProvider>
             <PushNotificationProvider>
               <CapacitorSafeArea />
+              <PaymentWindowOverride />
               {children}
             </PushNotificationProvider>
           </AuthProvider>

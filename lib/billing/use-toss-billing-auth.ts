@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { buildTossCustomerKey } from '@/lib/billing/toss-customer-key';
-import { isCapacitorNative, APP_SCHEME } from '@/lib/capacitor/env';
+import { isCapacitorNative, APP_SCHEME, getPaymentSuccessUrl, getPaymentFailUrl } from '@/lib/capacitor/env';
 
 const TOSS_CLIENT_KEY =
   typeof window !== 'undefined' ? process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY : undefined;
@@ -50,16 +50,12 @@ export function useTossBillingAuth(academyId: string) {
         if (!TossPayments) throw new Error('토스페이먼츠 SDK를 불러올 수 없습니다.');
 
         const customerKey = buildTossCustomerKey(academyId);
-        const baseUrl = window.location.origin;
-        let successUrl = `${baseUrl}/academy-admin/${academyId}/billing/callback`;
-        if (params?.returnTo || params?.planId || params?.cycle) {
-          const q = new URLSearchParams();
-          if (params.returnTo) q.set('returnTo', params.returnTo);
-          if (params.planId) q.set('planId', params.planId);
-          if (params.cycle) q.set('cycle', params.cycle);
-          successUrl += '?' + q.toString();
-        }
-        const failUrl = `${baseUrl}/academy-admin/${academyId}/billing?billing=fail`;
+        const q: Record<string, string> = {};
+        if (params?.returnTo) q.returnTo = params.returnTo;
+        if (params?.planId) q.planId = params.planId;
+        if (params?.cycle) q.cycle = params.cycle;
+        const successUrl = getPaymentSuccessUrl(`academy-admin/${academyId}/billing/callback`, Object.keys(q).length ? q : undefined);
+        const failUrl = getPaymentFailUrl(`academy-admin/${academyId}/billing`, { billing: 'fail' });
 
         const tossPayments = TossPayments(TOSS_CLIENT_KEY);
         const payment = tossPayments.payment({ customerKey });

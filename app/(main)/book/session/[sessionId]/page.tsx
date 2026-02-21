@@ -10,7 +10,7 @@ import { formatKSTTime, formatKSTDate } from '@/lib/utils/kst-time';
 import { MyTab } from '@/components/auth/MyTab';
 import { TicketRechargeModal } from '@/components/modals/ticket-recharge-modal';
 import { useLocale } from '@/contexts/LocaleContext';
-import { isCapacitorNative, APP_SCHEME } from '@/lib/capacitor/env';
+import { isCapacitorNative, APP_SCHEME, getPaymentSuccessUrl, getPaymentFailUrl } from '@/lib/capacitor/env';
 
 interface SessionData {
   id: string;
@@ -526,9 +526,8 @@ export default function SessionBookingPage() {
         const TossPayments = (window as any).TossPayments;
         if (!TossPayments) throw new Error('토스페이먼츠 SDK를 불러올 수 없습니다.');
 
-        const origin = window.location.origin;
-        const successUrl = `${origin}/payment/ticket/success?returnTo=session&sessionId=${sessionId}`;
-        const failUrl = `${origin}/payment/ticket/fail?sessionId=${sessionId}`;
+        const successUrl = getPaymentSuccessUrl('payment/ticket/success', { returnTo: 'session', sessionId });
+        const failUrl = getPaymentFailUrl('payment/ticket/fail', { sessionId });
 
         const customerKey = user?.id ?? `anon_${orderId}`;
         const payment = TossPayments(clientKey).payment({ customerKey });
