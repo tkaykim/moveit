@@ -10,17 +10,16 @@ interface TicketTossPaymentModalProps {
   onClose: () => void;
   onSuccess: () => void;
   onError: (message: string) => void;
-  /** 위젯 연동 키 (결제위젯 전용). 없으면 모달은 사용하지 않음 */
-  widgetClientKey: string | undefined;
+  /** 토스 클라이언트 키 (NEXT_PUBLIC_TOSS_CLIENT_KEY). 없으면 모달은 사용하지 않음 */
+  clientKey: string | undefined;
   orderId: string;
   amount: number;
   orderName: string;
   customerKey: string;
-  /** successUrl (같은 origin 권장). 빈 문자열이면 내부에서 window.location.origin 기준으로 생성 */
+  /** successUrl (같은 origin 권장). 앱 WebView 내 리다이렉트용 */
   successUrl: string;
   /** failUrl (같은 origin 권장) */
   failUrl: string;
-  method: 'CARD' | 'TRANSFER';
 }
 
 /**
@@ -32,21 +31,20 @@ export function TicketTossPaymentModal({
   isOpen,
   onClose,
   onError,
-  widgetClientKey,
+  clientKey,
   orderId,
   amount,
   orderName,
   customerKey,
   successUrl,
   failUrl,
-  method,
 }: TicketTossPaymentModalProps) {
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const widgetsRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!isOpen || !widgetClientKey || amount <= 0) return;
+    if (!isOpen || !clientKey || amount <= 0) return;
 
     let cancelled = false;
 
@@ -67,7 +65,7 @@ export function TicketTossPaymentModal({
         if (cancelled) return;
 
         const TossPayments = (window as any).TossPayments;
-        const tossPayments = TossPayments(widgetClientKey);
+        const tossPayments = TossPayments(clientKey);
         const widgets = tossPayments.widgets({ customerKey });
         widgetsRef.current = widgets;
 
@@ -88,7 +86,7 @@ export function TicketTossPaymentModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, widgetClientKey, amount, customerKey]);
+  }, [isOpen, clientKey, amount, customerKey]);
 
   const handleRequestPayment = async () => {
     if (!widgetsRef.current) return;

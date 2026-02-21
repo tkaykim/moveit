@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Android 11+ 패키지 가시성: 카드사/결제 앱 실행을 위해 필요 (토스 웹뷰 연동 가이드) -->
+    <queries>
+        <package android:name="com.hyundaicard.appcard" /> <!-- 현대카드 앱카드 -->
+        <package android:name="viva.republica.toss" /> <!-- 토스 -->
+        <package android:name="kr.co.samsungcard.mpocket" /> <!-- 삼성카드 -->
+        <package android:name="com.shinhan.smartcaremgr" /> <!-- 신한 -->
+        <package android:name="com.kbcard.cxh.appcard" /> <!-- KB Pay -->
+        <package android:name="com.lcacApp" /> <!-- 롯데카드 -->
+        <package android:name="com.hanaskcard.paycla" /> <!-- 하나카드 -->
+        <package android:name="kvp.jjy.MispAndroid320" /> <!-- ISP/페이북 -->
+    </queries>
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"

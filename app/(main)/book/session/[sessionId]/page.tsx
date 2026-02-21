@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { formatKSTTime, formatKSTDate } from '@/lib/utils/kst-time';
 import { MyTab } from '@/components/auth/MyTab';
 import { TicketRechargeModal } from '@/components/modals/ticket-recharge-modal';
+import { TicketTossPaymentModal } from '@/components/modals/ticket-toss-payment-modal';
 import { useLocale } from '@/contexts/LocaleContext';
 
 interface SessionData {
@@ -116,6 +117,17 @@ export default function SessionBookingPage() {
   const [authModalInitialTab, setAuthModalInitialTab] = useState<'login' | 'signup'>('login');
   const [isTicketPurchaseModalOpen, setIsTicketPurchaseModalOpen] = useState(false);
   const [showOnsiteWarning, setShowOnsiteWarning] = useState(false);
+
+  // 결제 위젯 모달 (수강권 구매 후 예약 — 앱 내 결제 유지)
+  const [widgetModalOpen, setWidgetModalOpen] = useState(false);
+  const [widgetOrder, setWidgetOrder] = useState<{
+    orderId: string;
+    amount: number;
+    orderName: string;
+    successUrl: string;
+    failUrl: string;
+    customerKey: string;
+  } | null>(null);
 
   // 종료된 수업일 때 같은 클래스의 다음 가능한 날짜 목록
   const [upcomingSessions, setUpcomingSessions] = useState<Array<{
@@ -479,7 +491,7 @@ export default function SessionBookingPage() {
     }
   };
 
-  // 수강권 구매 후 예약 (카드/계좌 = Toss 결제 위젯 모달 또는 결제창, 그 외는 기존 구매 API)
+  // 수강권 구매 후 예약 (카드/계좌 = Toss 결제창, 그 외는 기존 구매 API)
   const handlePurchaseBooking = async () => {
     if (!selectedPurchaseTicketId || !selectedPurchaseTicket) {
       setError(t('sessionBooking.selectTicketError'));
@@ -507,42 +519,21 @@ export default function SessionBookingPage() {
         }
         const { orderId, amount, orderName } = await orderRes.json();
 
-        // 결제창은 Android에서 앱 내 오버레이로만 열림 (MoveitWebChromeClient). success/fail은 같은 origin이라 앱 WebView에서 확인됨.
-        const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
-        if (!clientKey) {
-          throw new Error('결제 설정이 완료되지 않았습니다.');
-        }
-
-        const script = document.createElement('script');
-        script.src = 'https://js.tosspayments.com/v2/standard';
-        script.async = true;
-        document.body.appendChild(script);
-        await new Promise<void>((resolve, reject) => {
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error('토스페이먼츠 스크립트 로드 실패'));
-        });
-
-        const TossPayments = (window as any).TossPayments;
-        if (!TossPayments) throw new Error('토스페이먼츠 SDK를 불러올 수 없습니다.');
-
         const origin = window.location.origin;
         const successUrl = `${origin}/payment/ticket/success?returnTo=session&sessionId=${sessionId}`;
         const failUrl = `${origin}/payment/ticket/fail?sessionId=${sessionId}`;
-
         const customerKey = user?.id ?? `anon_${orderId}`;
-        const payment = TossPayments(clientKey).payment({ customerKey });
-        const method = purchasePaymentType === 'account' ? 'TRANSFER' : 'CARD';
-        await payment.requestPayment({
-          method,
-          amount: { currency: 'KRW', value: amount },
+
+        setWidgetOrder({
           orderId,
+          amount,
           orderName,
           successUrl,
           failUrl,
-          customerEmail: '',
-          customerName: '',
-          ...(method === 'CARD' && { card: { useEscrow: false, useCardPoint: false, useAppCardOnly: false } }),
+          customerKey,
         });
+        setWidgetModalOpen(true);
+        setSubmitting(false);
         return;
       }
 
@@ -1332,6 +1323,30 @@ export default function SessionBookingPage() {
           setIsTicketPurchaseModalOpen(false);
         }}
       />
+
+      {/* 수강권 결제 위젯 모달 (앱 내 결제 유지) */}
+      {widgetOrder && (
+        <TicketTossPaymentModal
+          isOpen={widgetModalOpen}
+          onClose={() => {
+            setWidgetModalOpen(false);
+            setWidgetOrder(null);
+          }}
+          onSuccess={() => {}}
+          onError={(msg) => {
+            setError(msg);
+            setWidgetModalOpen(false);
+            setWidgetOrder(null);
+          }}
+          clientKey={process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY}
+          orderId={widgetOrder.orderId}
+          amount={widgetOrder.amount}
+          orderName={widgetOrder.orderName}
+          customerKey={widgetOrder.customerKey}
+          successUrl={widgetOrder.successUrl}
+          failUrl={widgetOrder.failUrl}
+        />
+      )}
     </div>
   );
 }

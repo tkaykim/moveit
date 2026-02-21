@@ -24,11 +24,12 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void load() {
         super.load();
+        if (getBridge() == null || getBridge().getWebView() == null) return;
         // 결제 등 window.open() 시 앱 내 WebView에서만 열리도록 처리 (외부 브라우저 미오픈)
-        if (getBridge() != null && getBridge().getWebView() != null) {
-            getBridge().getWebView().getSettings().setSupportMultipleWindows(true);
-            getBridge().getWebView().setWebChromeClient(new MoveitWebChromeClient(getBridge()));
-        }
+        getBridge().getWebView().getSettings().setSupportMultipleWindows(true);
+        getBridge().getWebView().setWebChromeClient(new MoveitWebChromeClient(getBridge()));
+        // 토스/결제 URL이 메인 WebView에서 로드될 때도 외부 브라우저로 나가지 않도록
+        getBridge().setWebViewClient(new MoveitBridgeWebViewClient(getBridge()));
     }
 
     private void createNotificationChannel() {

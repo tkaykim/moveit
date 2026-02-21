@@ -37,49 +37,20 @@
 
 ## 3. 이 프로젝트에서의 대응
 
-### 현재 구조
+이 프로젝트는 **수강권 결제에 결제위젯**을, **구독·빌링에 결제창/빌링**을 사용합니다. 사용 키는 **`NEXT_PUBLIC_TOSS_CLIENT_KEY`**, **`TOSS_SECRET_KEY`** 두 개만 씁니다.
 
-- **NEXT_PUBLIC_TOSS_CLIENT_KEY**: 세션 예약 결제(현재 `payment.requestPayment`), 구독 모달, 카드 등록, 빌링 훅에서 사용 → 모두 **결제창/빌링** 용도이므로 **API 개별 연동 키**가 맞음.
-- **TOSS_SECRET_KEY**: 서버 결제 승인, 빌링키 발급, 자동결제, 환불 등에 사용 → **API 개별 연동 키와 쌍인 시크릿 키**여야 함.
+- **수강권 구매 후 예약**: **결제위젯** (`TossPayments(clientKey).widgets()`) — 앱 내 모달에서 결제하여 외부 브라우저 이탈 방지. 세션 예약 페이지에서 `NEXT_PUBLIC_TOSS_CLIENT_KEY`로 위젯 초기화.
+- **구독·카드 등록·빌링**: 결제창·빌링 (동일한 `NEXT_PUBLIC_TOSS_CLIENT_KEY`)
+- **결제 승인** (수강권·구독·환불 등): `TOSS_SECRET_KEY` 하나로 처리
 
-현재는 **결제위젯을 쓰지 않고** 결제창만 쓰므로, 위 설정이면 **결제위젯 연동 키 / API 개별 연동 키** 정책에 맞습니다.
-
-### 결제위젯 도입 시 (계획된 수강권 결제 모달)
-
-- **결제위젯**을 쓰는 코드에서는 **반드시 결제위젯 연동 키**로만 SDK를 초기화해야 합니다.  
-  지금처럼 `NEXT_PUBLIC_TOSS_CLIENT_KEY`(API 개별 연동 키)만 쓰면, `widgets()` 호출 시 **NOT_SUPPORTED_API_INDIVIDUAL_KEY** 에러가 납니다.
-
-**권장 환경 변수 정리:**
+### 환경 변수 (필수 2개)
 
 | 변수명 | 용도 | 사용 위치 |
 |--------|------|-----------|
-| `NEXT_PUBLIC_TOSS_WIDGET_CLIENT_KEY` | 결제위젯 연동 키 (클라이언트) | 수강권 결제 **위젯** 모달에서만 `TossPayments(clientKey).widgets(...)` |
-| `NEXT_PUBLIC_TOSS_CLIENT_KEY` | API 개별 연동 키 (클라이언트) | 결제창(`payment()`), 빌링(`requestBillingAuth`) — 세션 예약 기존 결제창, 구독·카드 등록 |
-| `TOSS_SECRET_KEY` | API 개별 연동 키와 쌍인 시크릿 키 | 결제창/빌링으로 결제·등록한 건에 대한 결제 승인, 빌링키 발급, 자동결제, 환불 등 |
-| `TOSS_WIDGET_SECRET_KEY` (선택) | 결제위젯 연동 키와 쌍인 시크릿 키 | **결제위젯**으로 결제한 건에 대한 결제 승인 (`/api/tickets/payment-confirm` 등) |
+| `NEXT_PUBLIC_TOSS_CLIENT_KEY` | 클라이언트 키 (위젯·결제창·빌링 공용) | 수강권 결제 위젯 모달, 구독 모달, 카드 등록, 빌링 |
+| `TOSS_SECRET_KEY` | 위 클라이언트 키와 쌍인 시크릿 | `/api/tickets/payment-confirm`, 빌링키 발급, 자동결제, 환불 등 |
 
-- 개발자센터에서 **결제위젯 연동 키**와 **API 개별 연동 키**가 **같은 MID·같은 시크릿**을 쓰는 경우에는, 서버는 `TOSS_SECRET_KEY` 하나만 써도 될 수 있습니다.
-- **결제위젯 연동 키** 전용 시크릿이 따로 있다면, 위젯으로 결제한 건은 `TOSS_WIDGET_SECRET_KEY`로 결제 승인하도록 분기하는 것이 안전합니다. (개발자센터 API 키 메뉴에서 키 종류별 시크릿 확인 필요.)
-
-### 구현 시 체크리스트
-
-1. **결제위젯** 사용하는 컴포넌트/훅  
-   - `TossPayments(process.env.NEXT_PUBLIC_TOSS_WIDGET_CLIENT_KEY)` 사용.  
-   - `NEXT_PUBLIC_TOSS_CLIENT_KEY`(API 개별 연동 키) 사용 금지.
-
-2. **결제창 / 빌링** 사용하는 곳  
-   - `TossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY)` 유지.  
-   - `NEXT_PUBLIC_TOSS_WIDGET_CLIENT_KEY` 사용 금지.
-
-3. **서버 결제 승인**  
-   - 위젯으로 생성된 결제 → 결제위젯 연동 키와 쌍인 시크릿 키 사용.  
-   - 결제창/빌링으로 생성된 결제 → 기존처럼 `TOSS_SECRET_KEY` 사용.  
-   - 개발자센터에서 두 키가 같은 시크릿을 쓰면 `TOSS_SECRET_KEY` 하나로 통일 가능.
-
-4. **TOSS_SECRET_KEY와 NEXT_PUBLIC_TOSS_CLIENT_KEY “다르면 안 되나?”**  
-   - 값이 “같다”는 뜻이 아니라, **같은 쌍(같은 MID/키 세트)**이어야 한다는 뜻입니다.  
-   - 클라이언트에는 **API 개별 연동 키**, 서버에는 그와 **매칭된 시크릿 키**를 넣으면 됩니다.  
-   - 결제위젯용은 **결제위젯 연동 키 + 그에 매칭된 시크릿 키**를 사용하면 됩니다.
+**위젯 사용 시 `NOT_SUPPORTED_API_INDIVIDUAL_KEY`가 나오면**: 공식 문서상 결제위젯은 "결제위젯 연동 키"를 쓰도록 안내하고 있습니다. 개발자센터 API 키 메뉴에서 **결제위젯 연동 키**를 확인한 뒤, 동일한 `NEXT_PUBLIC_TOSS_CLIENT_KEY` 자리에 넣어 사용할 수 있습니다.
 
 ---
 

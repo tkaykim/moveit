@@ -1,16 +1,20 @@
 package com.moveit.app;
 
 import android.annotation.SuppressLint;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Message;
 import android.view.ViewGroup;
+import android.webkit.URLUtil;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.widget.FrameLayout;
 import androidx.appcompat.app.AppCompatActivity;
 import com.getcapacitor.Bridge;
 import com.getcapacitor.BridgeWebChromeClient;
+import java.net.URISyntaxException;
 
 /**
  * 결제 등 window.open() 시 외부 브라우저로 나가지 않고 앱 내 WebView에서만 열기 위해
@@ -52,6 +56,7 @@ public class MoveitWebChromeClient extends BridgeWebChromeClient {
             ViewGroup.LayoutParams.MATCH_PARENT
         ));
         overlayWebView.getSettings().setJavaScriptEnabled(true);
+        overlayWebView.getSettings().setSupportMultipleWindows(true);
         overlayWebView.setBackgroundColor(Color.WHITE);
 
         // 우리 앱 도메인으로 로드되면 메인 WebView로 옮기고 오버레이 제거
@@ -63,10 +68,23 @@ public class MoveitWebChromeClient extends BridgeWebChromeClient {
             @Override
             public boolean shouldOverrideUrlLoading(WebView w, android.webkit.WebResourceRequest request) {
                 Uri uri = request.getUrl();
-                if (uri != null && appHost != null && appHost.equalsIgnoreCase(uri.getHost())) {
+                if (uri == null) return false;
+                String url = uri.toString();
+
+                // intent:// → 카드사 앱 실행 또는 fallback
+                if (url.startsWith("intent://")) {
+                    if (handleIntentUrlInOverlay(activity, w, url)) return true;
+                }
+
+                // 커스텀 스킴(앱카드 실행: hdcardappcardansimclick:// 등) → ACTION_VIEW로 앱 실행
+                if (!URLUtil.isNetworkUrl(url) && !URLUtil.isJavaScriptUrl(url)) {
+                    if (handleCustomSchemeInOverlay(activity, url)) return true;
+                }
+
+                if (appHost != null && appHost.equalsIgnoreCase(uri.getHost())) {
                     // success/fail 등 우리 도메인 → 메인 WebView에서 열어 세션 유지
                     activity.runOnUiThread(() -> {
-                        mainWebView.loadUrl(uri.toString());
+                        mainWebView.loadUrl(url);
                         removeOverlay();
                     });
                     return true;
@@ -114,6 +132,56 @@ public class MoveitWebChromeClient extends BridgeWebChromeClient {
         transport.setWebView(overlayWebView);
         resultMsg.sendToTarget();
         return true;
+    }
+
+    /**
+     * hdcardappcardansimclick://, ispmobile:// 등 커스텀 스킴 → 카드사 앱 실행 (토스 웹뷰 가이드).
+     */
+    private static boolean handleCustomSchemeInOverlay(AppCompatActivity activity, String url) {
+        try {
+            Uri schemeUri = Uri.parse(url);
+            Intent intent = new Intent(Intent.ACTION_VIEW, schemeUri);
+            if (intent.resolveActivity(activity.getPackageManager()) != null) {
+                activity.startActivity(intent);
+                return true;
+            }
+        } catch (ActivityNotFoundException e) {
+            // 앱 미설치
+        } catch (Exception e) {
+            // ignore
+        }
+        return true; // WebView에 ERR_UNKNOWN_URL_SCHEME 뜨지 않도록
+    }
+
+    /**
+     * 토스페이먼츠 웹뷰 연동 가이드: intent 파싱 후 카드사 앱 실행, 없으면 fallback URL을 오버레이에서 로드, 없으면 마켓 이동.
+     */
+    private static boolean handleIntentUrlInOverlay(AppCompatActivity activity, WebView overlay, String url) {
+        try {
+            Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
+            if (intent.resolveActivity(activity.getPackageManager()) != null) {
+                activity.startActivity(intent);
+                return true;
+            }
+            String fallbackUrl = intent.getStringExtra("browser_fallback_url");
+            if (fallbackUrl == null) fallbackUrl = intent.getStringExtra("S.browser_fallback_url");
+            if (fallbackUrl != null) {
+                overlay.loadUrl(fallbackUrl);
+                return true;
+            }
+            if (intent.getPackage() != null) {
+                Intent marketIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + intent.getPackage()));
+                if (marketIntent.resolveActivity(activity.getPackageManager()) != null) {
+                    activity.startActivity(marketIntent);
+                    return true;
+                }
+            }
+        } catch (URISyntaxException e) {
+            // not a valid intent uri
+        } catch (Exception e) {
+            // ignore
+        }
+        return false;
     }
 
     private void removeOverlay() {
