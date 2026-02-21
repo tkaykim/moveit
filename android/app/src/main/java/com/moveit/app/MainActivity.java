@@ -6,6 +6,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebSettings;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -18,6 +19,16 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         createNotificationChannel();
         applyNavigationBarInsets();
+    }
+
+    @Override
+    protected void load() {
+        super.load();
+        // 결제 등 window.open() 시 앱 내 WebView에서만 열리도록 처리 (외부 브라우저 미오픈)
+        if (getBridge() != null && getBridge().getWebView() != null) {
+            getBridge().getWebView().getSettings().setSupportMultipleWindows(true);
+            getBridge().getWebView().setWebChromeClient(new MoveitWebChromeClient(getBridge()));
+        }
     }
 
     private void createNotificationChannel() {

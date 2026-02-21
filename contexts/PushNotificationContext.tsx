@@ -53,8 +53,21 @@ export function PushNotificationProvider({ children }: { children: ReactNode }) 
       const route = path.startsWith('/') ? path : `/${path}`;
       routerRef.current?.push(route);
     } else if (url && typeof url === 'string') {
-      if (url.startsWith('http')) window.open(url, '_blank');
-      else routerRef.current?.push(url.startsWith('/') ? url : `/${url}`);
+      if (url.startsWith('http')) {
+        try {
+          const origin = window.location.origin;
+          if (origin && url.startsWith(origin)) {
+            const path = url.slice(origin.length) || '/';
+            routerRef.current?.push(path);
+          } else {
+            window.open(url, '_blank');
+          }
+        } catch {
+          window.open(url, '_blank');
+        }
+      } else {
+        routerRef.current?.push(url.startsWith('/') ? url : `/${url}`);
+      }
     }
   }, []);
 

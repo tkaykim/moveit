@@ -479,7 +479,7 @@ export default function SessionBookingPage() {
     }
   };
 
-  // 수강권 구매 후 예약 (카드/계좌 = Toss 결제창, 그 외는 기존 구매 API)
+  // 수강권 구매 후 예약 (카드/계좌 = Toss 결제 위젯 모달 또는 결제창, 그 외는 기존 구매 API)
   const handlePurchaseBooking = async () => {
     if (!selectedPurchaseTicketId || !selectedPurchaseTicket) {
       setError(t('sessionBooking.selectTicketError'));
@@ -492,7 +492,6 @@ export default function SessionBookingPage() {
 
     try {
       if (useTossPayment) {
-        // Toss Payments: 주문 생성 후 결제창 호출
         const orderRes = await fetchWithAuth('/api/tickets/payment-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -508,6 +507,7 @@ export default function SessionBookingPage() {
         }
         const { orderId, amount, orderName } = await orderRes.json();
 
+        // 결제창은 Android에서 앱 내 오버레이로만 열림 (MoveitWebChromeClient). success/fail은 같은 origin이라 앱 WebView에서 확인됨.
         const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
         if (!clientKey) {
           throw new Error('결제 설정이 완료되지 않았습니다.');

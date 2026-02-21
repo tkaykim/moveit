@@ -9,6 +9,13 @@ const config: CapacitorConfig = {
   server: {
     url: process.env.CAPACITOR_SERVER_URL || 'https://moveit-xi.vercel.app',
     cleartext: true,
+    // 결제 등 외부 도메인을 앱 내 WebView에서 열기 (외부 브라우저로 나가는 것 방지)
+    allowNavigation: [
+      '*.tosspayments.com',
+      '*.toss.im',
+      'tosspayments.com',
+      'toss.im',
+    ],
   },
 
   plugins: {
