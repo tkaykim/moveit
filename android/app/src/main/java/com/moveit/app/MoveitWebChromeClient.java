@@ -19,11 +19,13 @@ import com.getcapacitor.BridgeWebChromeClient;
  */
 public class MoveitWebChromeClient extends BridgeWebChromeClient {
 
+    private final Bridge bridge;
     private FrameLayout overlayContainer;
     private WebView overlayWebView;
 
     public MoveitWebChromeClient(Bridge bridge) {
         super(bridge);
+        this.bridge = bridge;
     }
 
     @Override
@@ -33,12 +35,12 @@ public class MoveitWebChromeClient extends BridgeWebChromeClient {
             return false;
         }
 
-        WebView mainWebView = getBridge().getWebView();
+        WebView mainWebView = bridge.getWebView();
         if (mainWebView == null) {
             return false;
         }
 
-        AppCompatActivity activity = (AppCompatActivity) getBridge().getContext();
+        AppCompatActivity activity = (AppCompatActivity) bridge.getContext();
         if (activity == null) {
             return false;
         }
@@ -53,7 +55,7 @@ public class MoveitWebChromeClient extends BridgeWebChromeClient {
         overlayWebView.setBackgroundColor(Color.WHITE);
 
         // 우리 앱 도메인으로 로드되면 메인 WebView로 옮기고 오버레이 제거
-        String appUrl = getBridge().getAppUrl();
+        String appUrl = bridge.getAppUrl();
         Uri appUri = appUrl != null ? Uri.parse(appUrl) : null;
         String appHost = appUri != null ? appUri.getHost() : null;
 
