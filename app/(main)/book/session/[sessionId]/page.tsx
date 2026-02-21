@@ -9,8 +9,9 @@ import Image from 'next/image';
 import { formatKSTTime, formatKSTDate } from '@/lib/utils/kst-time';
 import { MyTab } from '@/components/auth/MyTab';
 import { TicketRechargeModal } from '@/components/modals/ticket-recharge-modal';
-import { TicketTossPaymentModal } from '@/components/modals/ticket-toss-payment-modal';
 import { useLocale } from '@/contexts/LocaleContext';
+import { getTicketPaymentSuccessUrl, getTicketPaymentFailUrl } from '@/lib/toss/payment-urls';
+import { requestTossPaymentRedirect } from '@/lib/toss/request-payment-redirect';
 
 interface SessionData {
   id: string;
@@ -117,8 +118,6 @@ export default function SessionBookingPage() {
   const [authModalInitialTab, setAuthModalInitialTab] = useState<'login' | 'signup'>('login');
   const [isTicketPurchaseModalOpen, setIsTicketPurchaseModalOpen] = useState(false);
   const [showOnsiteWarning, setShowOnsiteWarning] = useState(false);
-  /** 토스 결제위젯 모달: 주문 생성 후 열림 */
-  const [tossPaymentOrder, setTossPaymentOrder] = useState<{ orderId: string; amount: number; orderName: string } | null>(null);
 
   // 종료된 수업일 때 같은 클래스의 다음 가능한 날짜 목록
   const [upcomingSessions, setUpcomingSessions] = useState<Array<{
@@ -221,185 +220,250 @@ export default function SessionBookingPage() {
     }
   }, [session?.id, session?.classes?.id, session?.start_time]);
 
-  // 세션 로드 후 사용자 수강권 및 구매 가능 수강권 로드
+  // 세션 로드 후: ticket_classes 1회 조회 → 보유/구매 수강권 병렬 로드 (체감 속도 개선)
   useEffect(() => {
-    if (session?.classes?.id) {
-      // 보유 수강권은 로그인한 사용자만 조회
-      if (user) {
-        loadUserTickets();
-      } else {
-        // 로그인하지 않은 경우 수강권 데이터 초기화, 결제 방법 미선택으로
-        setUserTickets([]);
-        setSelectedUserTicketId('');
-        if (paymentMethod === 'ticket' || paymentMethod === 'purchase') {
-          setPaymentMethod(null);
-        }
-      }
-      loadPurchasableTickets();
-    }
-  }, [session?.classes?.id, user]);
+    if (!session?.classes?.id) return;
 
-  // 사용자 보유 수강권 로드 - 클라이언트 Supabase에서 직접 조회 (서버 API 인증 문제 방지)
+    if (!user) {
+      setUserTickets([]);
+      setSelectedUserTicketId('');
+      setLoadingUserTickets(false);
+      if (paymentMethod === 'ticket' || paymentMethod === 'purchase') {
+        setPaymentMethod(null);
+      }
+    }
+
+    const classId = session.classes.id;
+    const academyId = session.classes.academy_id;
+    const allowCoupon = session.classes.access_config?.allowCoupon === true || session.classes.access_config?.allowPopup === true;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      setLoadingUserTickets(!!user);
+      setLoadingPurchasableTickets(true);
+
+      try {
+        // 1. ticket_classes 1회만 조회
+        const { data: ticketClassesData, error: tcError } = await (supabase as any)
+          .from('ticket_classes')
+          .select('ticket_id')
+          .eq('class_id', classId);
+
+        if (tcError) {
+          console.error('ticket_classes 클라이언트 쿼리 오류:', tcError);
+        }
+        const linkedTicketIds = (ticketClassesData || []).map((tc: any) => tc.ticket_id);
+        const linkedSet = new Set(linkedTicketIds);
+
+        // 2. 보유 수강권 / 구매 가능 수강권 병렬 조회
+        const today = new Date().toISOString().split('T')[0];
+
+        const [userTicketsResult, ticketsResult] = await Promise.all([
+          user
+            ? (supabase as any)
+                .from('user_tickets')
+                .select(`
+                  *,
+                  tickets (
+                    id, name, ticket_type, total_count, valid_days, is_general, is_coupon, access_group, ticket_category, academy_id
+                  )
+                `)
+                .eq('user_id', user.id)
+                .eq('status', 'ACTIVE')
+                .or('remaining_count.gt.0,remaining_count.is.null')
+                .order('created_at', { ascending: false })
+            : Promise.resolve({ data: [], error: null }),
+          (supabase as any)
+            .from('tickets')
+            .select('id, name, price, ticket_type, total_count, valid_days, is_general, is_coupon, academy_id, ticket_category, access_group, count_options')
+            .eq('is_on_sale', true)
+            .eq('academy_id', session.classes.academy_id)
+            .or('is_public.eq.true,is_public.is.null'),
+        ]);
+
+        if (cancelled) return;
+
+        // 3. 보유 수강권 필터/설정
+        if (user && userTicketsResult.error == null) {
+          const raw = (userTicketsResult.data || []).filter((row: any) => {
+            const exp = row.expiry_date;
+            const start = row.start_date;
+            return (exp == null || exp >= today) && (start == null || start <= today);
+          });
+          const filtered: UserTicket[] = raw.filter((item: any) => {
+            const ticket = item.tickets;
+            if (!ticket) return false;
+            if (academyId && ticket.academy_id && ticket.academy_id !== academyId) return false;
+            if (linkedSet.has(ticket.id)) return true;
+            if (ticket.is_general === true) return true;
+            if (ticket.is_coupon === true) return allowCoupon;
+            return false;
+          });
+          setUserTickets(filtered);
+          if (filtered.length > 0) {
+            setSelectedUserTicketId(filtered[0].id);
+            setPaymentMethod('ticket');
+          }
+        } else if (user) {
+          setUserTickets([]);
+        }
+        setLoadingUserTickets(false);
+
+        // 4. 구매 가능 수강권 필터/확장/설정
+        if (ticketsResult.error) throw ticketsResult.error;
+        const ticketsData = ticketsResult.data || [];
+        const filteredTickets = ticketsData.filter((ticket: any) => {
+          if (linkedTicketIds.includes(ticket.id)) return true;
+          if (ticket.is_general === true) return true;
+          if (ticket.is_coupon && allowCoupon) return true;
+          return false;
+        });
+        filteredTickets.sort((a: any, b: any) => {
+          const aL = linkedTicketIds.includes(a.id);
+          const bL = linkedTicketIds.includes(b.id);
+          if (aL && !bL) return -1;
+          if (!aL && bL) return 1;
+          if (a.is_coupon && !b.is_coupon) return 1;
+          if (!a.is_coupon && b.is_coupon) return -1;
+          return 0;
+        });
+
+        const expanded: PurchasableTicket[] = [];
+        for (const ticket of filteredTickets) {
+          const opts = (ticket.count_options as { count?: number; price?: number; valid_days?: number | null }[] | null) || [];
+          const hasCountOptions = opts.length > 0 && (ticket.ticket_category === 'popup' || ticket.access_group === 'popup');
+          if (hasCountOptions) {
+            opts.forEach((o: any, idx: number) => {
+              const count = Number(o?.count ?? 1);
+              if (count > 0) {
+                expanded.push({
+                  id: ticket.id,
+                  productKey: `${ticket.id}_${count}`,
+                  name: `${ticket.name} ${count}회권`,
+                  price: Number(o?.price ?? 0),
+                  ticket_type: 'COUNT',
+                  total_count: count,
+                  valid_days: o?.valid_days ?? ticket.valid_days ?? null,
+                  is_general: ticket.is_general,
+                  is_coupon: ticket.is_coupon,
+                  ticket_category: ticket.ticket_category,
+                  countOptionIndex: idx,
+                });
+              }
+            });
+          } else {
+            expanded.push({
+              id: ticket.id,
+              name: ticket.name,
+              price: ticket.price ?? 0,
+              ticket_type: ticket.ticket_type ?? 'PERIOD',
+              total_count: ticket.total_count,
+              valid_days: ticket.valid_days,
+              is_general: ticket.is_general,
+              is_coupon: ticket.is_coupon,
+              ticket_category: ticket.ticket_category,
+            });
+          }
+        }
+        setPurchasableTickets(expanded);
+        if (expanded.length > 0) {
+          setSelectedPurchaseTicketId(expanded[0].productKey ?? expanded[0].id);
+        }
+      } catch (err) {
+        console.error('Error loading tickets:', err);
+      } finally {
+        if (!cancelled) setLoadingPurchasableTickets(false);
+      }
+    };
+
+    run();
+    return () => { cancelled = true; };
+  }, [session?.classes?.id, user?.id]);
+
+  // 모달/외부에서 수강권 목록 갱신 시 호출용 (기존 함수명 유지)
   const loadUserTickets = async () => {
     if (!session?.classes?.id || !user) return;
-
     setLoadingUserTickets(true);
     try {
       const supabase = getSupabaseClient();
       if (!supabase) return;
-
-      const classId = session.classes.id;
-      const academyId = session.classes.academy_id;
-      const allowCoupon = session.classes.access_config?.allowCoupon === true || session.classes.access_config?.allowPopup === true;
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-
-      // 1. 사용자의 ACTIVE 수강권 조회 (remaining_count > 0 또는 기간권 null)
+      const { data: ticketClassesData } = await (supabase as any)
+        .from('ticket_classes')
+        .select('ticket_id')
+        .eq('class_id', session.classes.id);
+      const linkedSet = new Set((ticketClassesData || []).map((tc: any) => tc.ticket_id));
+      const today = new Date().toISOString().split('T')[0];
       const { data: rawUserTickets, error: utError } = await (supabase as any)
         .from('user_tickets')
-        .select(`
-          *,
-          tickets (
-            id,
-            name,
-            ticket_type,
-            total_count,
-            valid_days,
-            is_general,
-            is_coupon,
-            access_group,
-            ticket_category,
-            academy_id
-          )
-        `)
+        .select(`*, tickets (id, name, ticket_type, total_count, valid_days, is_general, is_coupon, access_group, ticket_category, academy_id)`)
         .eq('user_id', user.id)
         .eq('status', 'ACTIVE')
         .or('remaining_count.gt.0,remaining_count.is.null')
         .order('created_at', { ascending: false });
-
-      if (utError) {
-        console.error('user_tickets 클라이언트 쿼리 오류:', utError);
-        return;
-      }
-
-      // 2. 유효기간 및 시작일 필터링
+      if (utError) return;
+      const allowCoupon = session.classes.access_config?.allowCoupon === true || session.classes.access_config?.allowPopup === true;
+      const academyId = session.classes.academy_id;
       const validTickets = (rawUserTickets || []).filter((row: any) => {
         const exp = row.expiry_date;
         const start = row.start_date;
-        const expValid = exp == null || exp >= today;
-        const startValid = start == null || start <= today;
-        return expValid && startValid;
+        return (exp == null || exp >= today) && (start == null || start <= today);
       });
-
-      // 3. ticket_classes에서 해당 클래스에 연결된 ticket_id 목록 조회
-      const { data: ticketClassesData, error: tcError } = await (supabase as any)
-        .from('ticket_classes')
-        .select('ticket_id')
-        .eq('class_id', classId);
-
-      if (tcError) {
-        console.error('ticket_classes 클라이언트 쿼리 오류:', tcError);
-      }
-
-      const linkedTicketIds = new Set((ticketClassesData || []).map((tc: any) => tc.ticket_id));
-
-      // 4. 필터: ticket_classes 연결, is_general, 쿠폰(allowCoupon) 기준
       const filteredTickets: UserTicket[] = validTickets.filter((item: any) => {
         const ticket = item.tickets;
         if (!ticket) return false;
-
-        const ticketId = ticket.id;
-        const isCoupon = ticket.is_coupon === true;
-        const isGeneral = ticket.is_general === true;
-        const ticketAcademyId = ticket.academy_id;
-
-        // 다른 학원의 수강권 제외
-        if (academyId && ticketAcademyId && ticketAcademyId !== academyId) {
-          return false;
-        }
-
-        // ticket_classes에 연결된 수강권 → 해당 수업에서 사용 가능
-        if (linkedTicketIds.has(ticketId)) {
-          return true;
-        }
-
-        // is_general 수강권 → 같은 학원이면 모든 수업에서 사용 가능
-        if (isGeneral) {
-          return true;
-        }
-
-        // 쿠폰: allowCoupon이 true인 수업에서만 사용 가능
-        if (isCoupon) {
-          return allowCoupon;
-        }
-
+        if (academyId && ticket.academy_id && ticket.academy_id !== academyId) return false;
+        if (linkedSet.has(ticket.id)) return true;
+        if (ticket.is_general === true) return true;
+        if (ticket.is_coupon === true) return allowCoupon;
         return false;
       });
-
       setUserTickets(filteredTickets);
-
-      // 수강권이 있으면 기본값으로 선택
       if (filteredTickets.length > 0) {
         setSelectedUserTicketId(filteredTickets[0].id);
         setPaymentMethod('ticket');
       }
-    } catch (err) {
-      console.error('Error loading user tickets:', err);
     } finally {
       setLoadingUserTickets(false);
     }
   };
 
-  // 구매 가능한 수강권 로드 (ticket_classes에 연결된 것만 + allowCoupon 적용)
   const loadPurchasableTickets = async () => {
     if (!session?.classes?.id) return;
-
     setLoadingPurchasableTickets(true);
     try {
       const supabase = getSupabaseClient();
       if (!supabase) return;
-
-      const classId = session.classes.id;
-      const allowCoupon = session.classes.access_config?.allowCoupon === true || session.classes.access_config?.allowPopup === true;
-
-      // 1. ticket_classes에서 이 클래스와 연결된 ticket_id 목록 조회
       const { data: ticketClassesData } = await (supabase as any)
         .from('ticket_classes')
         .select('ticket_id')
-        .eq('class_id', classId);
-
+        .eq('class_id', session.classes.id);
       const linkedTicketIds = (ticketClassesData || []).map((tc: any) => tc.ticket_id);
-
-      // 2. 연결된 수강권 + is_general + (allowCoupon이면 쿠폰) 조회 (count_options 포함)
+      const allowCoupon = session.classes.access_config?.allowCoupon === true || session.classes.access_config?.allowPopup === true;
       const { data: ticketsData, error } = await (supabase as any)
         .from('tickets')
         .select('id, name, price, ticket_type, total_count, valid_days, is_general, is_coupon, academy_id, ticket_category, access_group, count_options')
         .eq('is_on_sale', true)
         .eq('academy_id', session.classes.academy_id)
         .or('is_public.eq.true,is_public.is.null');
-
       if (error) throw error;
-
       const filteredTickets = (ticketsData || []).filter((ticket: any) => {
-        // ticket_classes에 직접 연결된 수강권
         if (linkedTicketIds.includes(ticket.id)) return true;
-        // is_general 수강권은 같은 학원의 모든 클래스에서 구매/사용 가능
         if (ticket.is_general === true) return true;
-        // 쿠폰(팝업 등): 클래스에서 허용한 경우
         if (ticket.is_coupon && allowCoupon) return true;
         return false;
       });
-
       filteredTickets.sort((a: any, b: any) => {
-        const aLinked = linkedTicketIds.includes(a.id);
-        const bLinked = linkedTicketIds.includes(b.id);
-        if (aLinked && !bLinked) return -1;
-        if (!aLinked && bLinked) return 1;
+        const aL = linkedTicketIds.includes(a.id);
+        const bL = linkedTicketIds.includes(b.id);
+        if (aL && !bL) return -1;
+        if (!aL && bL) return 1;
         if (a.is_coupon && !b.is_coupon) return 1;
         if (!a.is_coupon && b.is_coupon) return -1;
         return 0;
       });
-
-      // count_options가 있으면 옵션별로 확장 (쿠폰제)
       const expanded: PurchasableTicket[] = [];
       for (const ticket of filteredTickets) {
         const opts = (ticket.count_options as { count?: number; price?: number; valid_days?: number | null }[] | null) || [];
@@ -437,13 +501,8 @@ export default function SessionBookingPage() {
           });
         }
       }
-
       setPurchasableTickets(expanded);
-      if (expanded.length > 0) {
-        setSelectedPurchaseTicketId(expanded[0].productKey ?? expanded[0].id);
-      }
-    } catch (err) {
-      console.error('Error loading purchasable tickets:', err);
+      if (expanded.length > 0) setSelectedPurchaseTicketId(expanded[0].productKey ?? expanded[0].id);
     } finally {
       setLoadingPurchasableTickets(false);
     }
@@ -514,7 +573,18 @@ export default function SessionBookingPage() {
         if (!clientKey) {
           throw new Error('결제 설정이 완료되지 않았습니다.');
         }
-        setTossPaymentOrder({ orderId, amount, orderName });
+        const successUrl = getTicketPaymentSuccessUrl({ sessionId, returnTo: 'session' });
+        const failUrl = getTicketPaymentFailUrl({ sessionId });
+        const method = purchasePaymentType === 'card' ? 'CARD' : 'TRANSFER';
+        await requestTossPaymentRedirect({
+          clientKey,
+          method,
+          orderId,
+          orderName,
+          amount,
+          successUrl,
+          failUrl,
+        });
         setSubmitting(false);
         return;
       }
@@ -869,13 +939,16 @@ export default function SessionBookingPage() {
               </button>
             )}
 
-            {/* 2. 수강권 구매 후 예약 (로그인 + 구매 가능 수강권 있을 때) */}
-            {user && purchasableTickets.length > 0 && (
+            {/* 2. 수강권 구매 후 예약 (로그인 시 항상 자리 확보, 로딩 중에는 플레이스홀더) */}
+            {user && (
               <button
-                onClick={() => setPaymentMethod('purchase')}
+                onClick={() => !loadingPurchasableTickets && setPaymentMethod('purchase')}
+                disabled={loadingPurchasableTickets || purchasableTickets.length === 0}
                 className={`w-full rounded-xl p-4 flex justify-between items-center border-2 transition-colors text-left ${
                   paymentMethod === 'purchase'
                     ? 'bg-primary/10 dark:bg-[#CCFF00]/10 border-primary dark:border-[#CCFF00]'
+                    : loadingPurchasableTickets || purchasableTickets.length === 0
+                    ? 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 opacity-70'
                     : 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
                 }`}
               >
@@ -888,14 +961,17 @@ export default function SessionBookingPage() {
                   <div>
                     <div className="text-black dark:text-white font-bold">{t('sessionBooking.purchaseAndBook')}</div>
                     <div className="text-xs text-neutral-500">
-                      {loadingPurchasableTickets ? t('common.loading') : t('sessionBooking.purchasableCount', { count: purchasableTickets.length })}
+                      {loadingPurchasableTickets ? t('common.loading') : purchasableTickets.length > 0 ? t('sessionBooking.purchasableCount', { count: purchasableTickets.length }) : t('sessionBooking.noAvailableTicket')}
                     </div>
                   </div>
                 </div>
-                {paymentMethod === 'purchase' && (
+                {paymentMethod === 'purchase' && purchasableTickets.length > 0 && (
                   <div className="w-5 h-5 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center">
                     <CheckCircle size={14} className="text-black" />
                   </div>
+                )}
+                {(loadingPurchasableTickets || purchasableTickets.length === 0) && (
+                  <AlertCircle size={18} className="text-neutral-400 flex-shrink-0" />
                 )}
               </button>
             )}
@@ -1306,19 +1382,6 @@ export default function SessionBookingPage() {
         }}
       />
 
-      {/* 토스 결제위젯 모달 (카드/계좌 결제 시, 새 창 없이 모달 내 결제) */}
-      {tossPaymentOrder && (
-        <TicketTossPaymentModal
-          isOpen={!!tossPaymentOrder}
-          onClose={() => setTossPaymentOrder(null)}
-          orderId={tossPaymentOrder.orderId}
-          amount={tossPaymentOrder.amount}
-          orderName={tossPaymentOrder.orderName}
-          customerKey={user?.id ?? `anon_${tossPaymentOrder.orderId}`}
-          sessionId={sessionId}
-          returnTo="session"
-        />
-      )}
     </div>
   );
 }
