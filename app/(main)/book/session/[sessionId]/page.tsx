@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { formatKSTTime, formatKSTDate } from '@/lib/utils/kst-time';
 import { MyTab } from '@/components/auth/MyTab';
 import { TicketRechargeModal } from '@/components/modals/ticket-recharge-modal';
+import { TicketTossPaymentModal } from '@/components/modals/ticket-toss-payment-modal';
 import { useLocale } from '@/contexts/LocaleContext';
 
 interface SessionData {
@@ -116,6 +117,8 @@ export default function SessionBookingPage() {
   const [authModalInitialTab, setAuthModalInitialTab] = useState<'login' | 'signup'>('login');
   const [isTicketPurchaseModalOpen, setIsTicketPurchaseModalOpen] = useState(false);
   const [showOnsiteWarning, setShowOnsiteWarning] = useState(false);
+  /** 토스 결제위젯 모달: 주문 생성 후 열림 */
+  const [tossPaymentOrder, setTossPaymentOrder] = useState<{ orderId: string; amount: number; orderName: string } | null>(null);
 
   // 종료된 수업일 때 같은 클래스의 다음 가능한 날짜 목록
   const [upcomingSessions, setUpcomingSessions] = useState<Array<{
@@ -492,7 +495,7 @@ export default function SessionBookingPage() {
 
     try {
       if (useTossPayment) {
-        // Toss Payments: 주문 생성 후 결제창 호출
+        // Toss Payments: 주문 생성 후 결제위젯 모달 오픈 (새 창 없이 모달 내 결제)
         const orderRes = await fetchWithAuth('/api/tickets/payment-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -507,42 +510,12 @@ export default function SessionBookingPage() {
           throw new Error(data.error || t('sessionBooking.purchaseFailed'));
         }
         const { orderId, amount, orderName } = await orderRes.json();
-
         const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
         if (!clientKey) {
           throw new Error('결제 설정이 완료되지 않았습니다.');
         }
-
-        const script = document.createElement('script');
-        script.src = 'https://js.tosspayments.com/v2/standard';
-        script.async = true;
-        document.body.appendChild(script);
-        await new Promise<void>((resolve, reject) => {
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error('토스페이먼츠 스크립트 로드 실패'));
-        });
-
-        const TossPayments = (window as any).TossPayments;
-        if (!TossPayments) throw new Error('토스페이먼츠 SDK를 불러올 수 없습니다.');
-
-        const origin = window.location.origin;
-        const successUrl = `${origin}/payment/ticket/success?returnTo=session&sessionId=${sessionId}`;
-        const failUrl = `${origin}/payment/ticket/fail?sessionId=${sessionId}`;
-
-        const customerKey = user?.id ?? `anon_${orderId}`;
-        const payment = TossPayments(clientKey).payment({ customerKey });
-        const method = purchasePaymentType === 'account' ? 'TRANSFER' : 'CARD';
-        await payment.requestPayment({
-          method,
-          amount: { currency: 'KRW', value: amount },
-          orderId,
-          orderName,
-          successUrl,
-          failUrl,
-          customerEmail: '',
-          customerName: '',
-          ...(method === 'CARD' && { card: { useEscrow: false, useCardPoint: false, useAppCardOnly: false } }),
-        });
+        setTossPaymentOrder({ orderId, amount, orderName });
+        setSubmitting(false);
         return;
       }
 
@@ -1332,6 +1305,20 @@ export default function SessionBookingPage() {
           setIsTicketPurchaseModalOpen(false);
         }}
       />
+
+      {/* 토스 결제위젯 모달 (카드/계좌 결제 시, 새 창 없이 모달 내 결제) */}
+      {tossPaymentOrder && (
+        <TicketTossPaymentModal
+          isOpen={!!tossPaymentOrder}
+          onClose={() => setTossPaymentOrder(null)}
+          orderId={tossPaymentOrder.orderId}
+          amount={tossPaymentOrder.amount}
+          orderName={tossPaymentOrder.orderName}
+          customerKey={user?.id ?? `anon_${tossPaymentOrder.orderId}`}
+          sessionId={sessionId}
+          returnTo="session"
+        />
+      )}
     </div>
   );
 }
