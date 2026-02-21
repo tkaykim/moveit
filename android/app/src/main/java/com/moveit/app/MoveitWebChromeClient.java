@@ -75,7 +75,20 @@ public class MoveitWebChromeClient extends BridgeWebChromeClient {
             }
         });
 
+        // 결제 페이지 내부에서 "다음" 등으로 또 window.open() 하면 여기서 처리.
+        // 같은 오버레이 WebView에 로드해 두어, 결제 전체가 앱 안에서만 진행되게 함.
         overlayWebView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
+                if (resultMsg != null && resultMsg.obj != null && overlayWebView != null) {
+                    WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+                    transport.setWebView(overlayWebView);
+                    resultMsg.sendToTarget();
+                    return true;
+                }
+                return false;
+            }
+
             @Override
             public void onCloseWindow(WebView w) {
                 activity.runOnUiThread(() -> removeOverlay());
