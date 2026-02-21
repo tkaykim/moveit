@@ -64,6 +64,16 @@ export function TicketTossPaymentModal({
 
         if (cancelled) return;
 
+        // 공식 문서: "주문서의 DOM이 생성된 이후에 호출" — React 커밋 직후를 보장하기 위해 한 프레임 대기
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        });
+
+        if (cancelled) return;
+        if (!document.querySelector('#toss-widget-payment') || !document.querySelector('#toss-widget-agreement')) {
+          throw new Error('결제 영역을 찾을 수 없습니다.');
+        }
+
         const TossPayments = (window as any).TossPayments;
         const tossPayments = TossPayments(clientKey);
         const widgets = tossPayments.widgets({ customerKey });
@@ -127,17 +137,15 @@ export function TicketTossPaymentModal({
           </button>
         </div>
 
-        <div className="overflow-y-auto flex-1 p-4 min-h-0">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
+        <div className="overflow-y-auto flex-1 p-4 min-h-0 relative">
+          {/* selector 대상 요소는 DOM에 항상 있어야 함(공식: "DOM 생성된 이후에 호출") */}
+          <div id="toss-widget-payment" className="min-h-[120px]" />
+          <div id="toss-widget-agreement" className="mt-4 min-h-[80px]" />
+          {loading && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white dark:bg-neutral-900 rounded-b-2xl sm:rounded-b-2xl">
               <Loader2 size={32} className="text-primary dark:text-[#CCFF00] animate-spin" />
               <p className="text-sm text-neutral-500">결제 UI를 불러오는 중…</p>
             </div>
-          ) : (
-            <>
-              <div id="toss-widget-payment" className="min-h-[120px]" />
-              <div id="toss-widget-agreement" className="mt-4 min-h-[80px]" />
-            </>
           )}
         </div>
 
