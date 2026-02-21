@@ -127,6 +127,8 @@ export default function SessionBookingPage() {
     successUrl: string;
     failUrl: string;
     customerKey: string;
+    /** 토스 requestPayment용. 숫자만 8~15자 (하이픈 없음) */
+    customerMobilePhone?: string;
   } | null>(null);
 
   // 종료된 수업일 때 같은 클래스의 다음 가능한 날짜 목록
@@ -524,6 +526,23 @@ export default function SessionBookingPage() {
         const failUrl = `${origin}/payment/ticket/fail?sessionId=${sessionId}`;
         const customerKey = user?.id ?? `anon_${orderId}`;
 
+        let customerMobilePhone: string | undefined;
+        if (user?.id) {
+          try {
+            const profileRes = await fetchWithAuth('/api/auth/profile');
+            if (profileRes.ok) {
+              const data = await profileRes.json();
+              const raw = data?.profile?.phone;
+              if (typeof raw === 'string' && raw.trim()) {
+                const digits = raw.replace(/\D/g, '');
+                if (digits.length >= 8 && digits.length <= 15) customerMobilePhone = digits;
+              }
+            }
+          } catch {
+            // 프로필 조회 실패 시 전화번호 없이 진행
+          }
+        }
+
         setWidgetOrder({
           orderId,
           amount,
@@ -531,6 +550,7 @@ export default function SessionBookingPage() {
           successUrl,
           failUrl,
           customerKey,
+          customerMobilePhone,
         });
         setWidgetModalOpen(true);
         setSubmitting(false);
@@ -1345,6 +1365,7 @@ export default function SessionBookingPage() {
           customerKey={widgetOrder.customerKey}
           successUrl={widgetOrder.successUrl}
           failUrl={widgetOrder.failUrl}
+          customerMobilePhone={widgetOrder.customerMobilePhone}
         />
       )}
     </div>

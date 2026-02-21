@@ -2,8 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
+import { normalizePhone } from '@/lib/utils/phone';
 
 const TOSS_SCRIPT = 'https://js.tosspayments.com/v2/standard';
+
+/** 토스 customerMobilePhone: `-` 없이 숫자만 8~15자 */
+function toTossPhone(value: string | undefined): string {
+  if (!value) return '';
+  const digits = normalizePhone(value);
+  return digits.length >= 8 && digits.length <= 15 ? digits : '';
+}
 
 interface TicketTossPaymentModalProps {
   isOpen: boolean;
@@ -20,6 +28,8 @@ interface TicketTossPaymentModalProps {
   successUrl: string;
   /** failUrl (같은 origin 권장) */
   failUrl: string;
+  /** 휴대폰 번호. 숫자만 8~15자로 전달됨 (하이픈 없음). 없으면 빈 문자열 전달 */
+  customerMobilePhone?: string;
 }
 
 /**
@@ -38,6 +48,7 @@ export function TicketTossPaymentModal({
   customerKey,
   successUrl,
   failUrl,
+  customerMobilePhone: customerMobilePhoneProp,
 }: TicketTossPaymentModalProps) {
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
@@ -102,6 +113,7 @@ export function TicketTossPaymentModal({
     if (!widgetsRef.current) return;
     setPaying(true);
     try {
+      const customerMobilePhone = toTossPhone(customerMobilePhoneProp);
       await widgetsRef.current.requestPayment({
         orderId,
         orderName,
@@ -109,11 +121,15 @@ export function TicketTossPaymentModal({
         failUrl,
         customerEmail: '',
         customerName: '',
-        customerMobilePhone: '',
+        customerMobilePhone: customerMobilePhone || undefined,
       });
       // 성공/실패는 리다이렉트로 처리됨
     } catch (e: any) {
-      onError(e?.message || '결제 요청에 실패했습니다.');
+      const msg = e?.message ?? '결제 요청에 실패했습니다.';
+      const isPhoneFormatError =
+        typeof msg === 'string' &&
+        (msg.includes('전화번호') && (msg.includes('특수문자') || msg.includes('형식')));
+      onError(isPhoneFormatError ? '전화번호는 하이픈(-) 없이 숫자만 입력해주세요.' : msg);
     } finally {
       setPaying(false);
     }
@@ -124,8 +140,8 @@ export function TicketTossPaymentModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden />
-      <div className="relative bg-white dark:bg-neutral-900 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-h-[90vh] flex flex-col max-w-lg animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
-        <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800">
+      <div className="relative bg-white dark:bg-neutral-900 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-h-[90vh] flex flex-col max-w-lg animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 border border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800 dark:border-b-primary/30">
           <h3 className="text-lg font-bold text-black dark:text-white">결제</h3>
           <button
             type="button"
@@ -143,18 +159,18 @@ export function TicketTossPaymentModal({
           <div id="toss-widget-agreement" className="mt-4 min-h-[80px]" />
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white dark:bg-neutral-900 rounded-b-2xl sm:rounded-b-2xl">
-              <Loader2 size={32} className="text-primary dark:text-[#CCFF00] animate-spin" />
-              <p className="text-sm text-neutral-500">결제 UI를 불러오는 중…</p>
+              <Loader2 size={32} className="text-primary animate-spin" />
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">결제 UI를 불러오는 중…</p>
             </div>
           )}
         </div>
 
-        <div className="p-4 border-t border-neutral-200 dark:border-neutral-800">
+        <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 dark:border-t-primary/20">
           <button
             type="button"
             disabled={loading || paying}
             onClick={handleRequestPayment}
-            className="w-full bg-primary dark:bg-[#CCFF00] text-black font-bold py-3 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full bg-primary text-black font-bold py-3 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
           >
             {paying ? (
               <>
