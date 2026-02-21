@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { buildTossCustomerKey } from '@/lib/billing/toss-customer-key';
+import { isCapacitorNative, APP_SCHEME } from '@/lib/capacitor/env';
 
 const TOSS_CLIENT_KEY =
   typeof window !== 'undefined' ? process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY : undefined;
@@ -68,6 +69,7 @@ export function useTossBillingAuth(academyId: string) {
           failUrl,
           customerEmail: '',
           customerName: '',
+          ...(isCapacitorNative() && { appScheme: APP_SCHEME }),
         });
       } catch (err: any) {
         setError(err?.message ?? '카드 등록 창을 열 수 없습니다.');

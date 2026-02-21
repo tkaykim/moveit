@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { CreditCard, AlertCircle } from 'lucide-react';
 import { buildTossCustomerKey } from '@/lib/billing/toss-customer-key';
+import { isCapacitorNative, APP_SCHEME } from '@/lib/capacitor/env';
 
 interface PaymentMethodCardProps {
   academyId: string;
@@ -65,6 +66,7 @@ export function PaymentMethodCard({
         failUrl,
         customerEmail: '',
         customerName: '',
+        ...(isCapacitorNative() && { appScheme: APP_SCHEME }),
       });
     } catch (err: any) {
       setError(err?.message ?? '카드 등록 창을 열 수 없습니다.');

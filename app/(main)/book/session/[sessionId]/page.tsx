@@ -10,6 +10,7 @@ import { formatKSTTime, formatKSTDate } from '@/lib/utils/kst-time';
 import { MyTab } from '@/components/auth/MyTab';
 import { TicketRechargeModal } from '@/components/modals/ticket-recharge-modal';
 import { useLocale } from '@/contexts/LocaleContext';
+import { isCapacitorNative, APP_SCHEME } from '@/lib/capacitor/env';
 
 interface SessionData {
   id: string;
@@ -541,6 +542,7 @@ export default function SessionBookingPage() {
           failUrl,
           customerEmail: '',
           customerName: '',
+          ...(isCapacitorNative() && { appScheme: APP_SCHEME }),
           ...(method === 'CARD' && { card: { useEscrow: false, useCardPoint: false, useAppCardOnly: false } }),
         });
         return;

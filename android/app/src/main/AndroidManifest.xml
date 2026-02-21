@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- 토스페이먼츠 WebView 결제: 카드사/은행 앱 앱투앱 복귀용 패키지 (Android 11+ 가시성) -->
+    <!-- @see https://docs.tosspayments.com/guides/v2/webview -->
+    <queries>
+        <!-- ISP/BC/국민 -->
+        <package android:name="kr.co.smartro" />
+        <package android:name="com.kbcard.cxh.appcard" />
+        <package android:name="com.kbcard.kbminiapp" />
+        <!-- 신한카드 -->
+        <package android:name="com.shinhan.smartdigital" />
+        <!-- 카카오뱅크 -->
+        <package android:name="com.kakaobank.channel" />
+        <!-- 토스페이 -->
+        <package android:name="com.vcnc.toss" />
+        <package android:name="viva.republica.toss" />
+    </queries>
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -20,6 +36,14 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- 토스페이먼츠 appScheme: 카드사/은행 앱 인증 후 앱 복귀용 딥링크 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="moveit" android:host="*" android:pathPrefix="/" />
             </intent-filter>
 
         </activity>

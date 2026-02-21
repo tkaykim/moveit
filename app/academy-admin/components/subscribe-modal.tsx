@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, AlertCircle } from 'lucide-react';
 import { buildTossCustomerKey } from '@/lib/billing/toss-customer-key';
+import { isCapacitorNative, APP_SCHEME } from '@/lib/capacitor/env';
 import type { BillingPlanId, BillingCycle } from '@/types/billing';
 
 const TOSS_CLIENT_KEY =
@@ -91,6 +92,7 @@ export function SubscribeModal({ academyId, isOpen, onClose, initialPlanId, init
         failUrl,
         customerEmail: '',
         customerName: '',
+        ...(isCapacitorNative() && { appScheme: APP_SCHEME }),
       });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '카드 등록 창을 열 수 없습니다.');
