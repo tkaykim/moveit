@@ -1,8 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, X, Clock, User, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, User, MapPin } from 'lucide-react';
 import { ClassInfo } from '@/types';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import { formatKSTTime, getKSTDateParts, convertKSTInputToUTC } from '@/lib/utils/kst-time';
 import { useLocale } from '@/contexts/LocaleContext';
 
@@ -422,122 +429,108 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
         </div>
       </div>
 
-      {/* 날짜별 수업 리스트 모달 - 화면(뷰포트) 기준으로 항상 보이도록 */}
-      {selectedDate && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end" style={{ height: '100dvh' }}>
-          <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in" 
-            onClick={closeDateModal} 
-          />
-          <div 
-            className="relative w-full max-w-[420px] mx-auto bg-white dark:bg-neutral-900 rounded-t-3xl animate-in slide-in-from-bottom duration-300 border-t border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col"
-            style={{ maxHeight: 'min(90dvh, 90vh)', minHeight: '40dvh' }}
-          >
-            {/* 헤더 */}
-            <div className="flex-shrink-0 p-4 border-b border-neutral-200 dark:border-neutral-800">
-              <div className="w-12 h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full mx-auto mb-4" />
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-black dark:text-white">
-                  {getSelectedDateString()}
-                </h3>
-                <button
-                  onClick={closeDateModal}
-                  className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors"
-                >
-                  <X size={20} className="text-neutral-500" />
-                </button>
+      {/* 날짜별 수업 리스트 - shadcn Sheet 하단 드로어 */}
+      <Sheet open={!!selectedDate} onOpenChange={(open) => { if (!open) closeDateModal(); }}>
+        <SheetContent
+          side="bottom"
+          showCloseButton={false}
+          className="left-0 right-0 w-full max-w-[420px] mx-auto rounded-t-2xl border-neutral-200 dark:border-neutral-800 p-0 flex flex-col animate-in slide-in-from-bottom duration-300"
+          style={{ maxHeight: 'min(90dvh, 90vh)', minHeight: '40dvh' }}
+        >
+          <SheetHeader className="flex-shrink-0 p-4 pb-2 border-b border-neutral-200 dark:border-neutral-800 text-left">
+            <div className="w-12 h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full mx-auto mb-3" />
+            <div className="flex items-center justify-between">
+              <div>
+                <SheetTitle className="text-lg font-bold text-black dark:text-white">
+                  {selectedDate ? getSelectedDateString() : ''}
+                </SheetTitle>
+                <SheetDescription className="text-sm text-neutral-500 dark:text-neutral-400">
+                  {selectedDate ? t('schedule.classesCountShort', { count: String(selectedDateSchedules.length) }) : ''}
+                </SheetDescription>
               </div>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-                {t('schedule.classesCountShort', { count: String(selectedDateSchedules.length) })}
-              </p>
+              <button
+                type="button"
+                onClick={closeDateModal}
+                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors"
+              >
+                <X size={20} className="text-neutral-500" />
+              </button>
             </div>
+          </SheetHeader>
 
-            {/* 수업 리스트 */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {selectedDateSchedules.map((classInfo, idx) => {
-                const levelColor = getLevelColor(classInfo.level);
-                const isFull = classInfo.status === 'FULL';
-                const endTimeStr = classInfo.endTime 
-                  ? new Date(classInfo.endTime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
-                  : null;
-                const hallName = (classInfo as any).hallName || classInfo.hall_name;
-                
-                return (
-                  <button
-                    key={`${classInfo.schedule_id || classInfo.id}-${idx}`}
-                    onClick={() => handleClassClick(classInfo)}
-                    className={`w-full p-4 rounded-2xl border-2 text-left transition-all hover:shadow-md active:scale-[0.98] ${levelColor.bg} ${levelColor.border} ${
-                      isFull ? 'opacity-60' : ''
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      {/* 시간 */}
-                      <div className="flex-shrink-0 text-center min-w-[50px]">
-                        <div className={`text-lg font-black ${levelColor.text}`}>
-                          {classInfo.time}
-                        </div>
-                        {endTimeStr && (
-                          <div className="text-[10px] text-neutral-500 dark:text-neutral-400">
-                            ~{endTimeStr}
-                          </div>
-                        )}
+          {/* 수업 리스트 */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+            {selectedDateSchedules.map((classInfo, idx) => {
+              const levelColor = getLevelColor(classInfo.level);
+              const isFull = classInfo.status === 'FULL';
+              const endTimeStr = classInfo.endTime
+                ? new Date(classInfo.endTime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
+                : null;
+              const hallName = (classInfo as any).hallName || classInfo.hall_name;
+
+              return (
+                <button
+                  key={`${classInfo.schedule_id || classInfo.id}-${idx}`}
+                  onClick={() => handleClassClick(classInfo)}
+                  className={`w-full p-4 rounded-2xl border-2 text-left transition-all hover:shadow-md active:scale-[0.98] ${levelColor.bg} ${levelColor.border} ${
+                    isFull ? 'opacity-60' : ''
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 text-center min-w-[50px]">
+                      <div className={`text-lg font-black ${levelColor.text}`}>
+                        {classInfo.time}
                       </div>
-                      
-                      {/* 구분선 */}
-                      <div className={`w-0.5 self-stretch rounded-full ${levelColor.dot} opacity-50`}></div>
-                      
-                      {/* 수업 정보 */}
-                      <div className="flex-1 min-w-0">
-                        {/* 수업명 */}
-                        <div className="font-bold text-black dark:text-white text-base leading-tight">
-                          {classInfo.class_title || classInfo.genre || t('schedule.classLabel')}
+                      {endTimeStr && (
+                        <div className="text-[10px] text-neutral-500 dark:text-neutral-400">
+                          ~{endTimeStr}
                         </div>
-                        
-                        {/* 강사 & 장르 */}
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <div className="flex items-center gap-1">
-                            <User size={12} className="text-neutral-400" />
-                            <span className="text-sm text-neutral-600 dark:text-neutral-300">
-                              {classInfo.instructor === INSTRUCTOR_TBD ? t('schedule.instructorTbd') : classInfo.instructor}
-                            </span>
-                          </div>
-                          {classInfo.genre && classInfo.class_title && (
-                            <span className="text-xs px-2 py-0.5 bg-black/5 dark:bg-white/10 rounded-full text-neutral-600 dark:text-neutral-300">
-                              {classInfo.genre}
-                            </span>
-                          )}
-                        </div>
-                        
-                        {/* 홀 정보 */}
-                        {hallName && (
-                          <div className="flex items-center gap-1 mt-1.5">
-                            <MapPin size={11} className="text-neutral-400" />
-                            <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                              {hallName}
-                            </span>
-                          </div>
-                        )}
+                      )}
+                    </div>
+                    <div className={`w-0.5 self-stretch rounded-full ${levelColor.dot} opacity-50`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-black dark:text-white text-base leading-tight">
+                        {classInfo.class_title || classInfo.genre || t('schedule.classLabel')}
                       </div>
-                      
-                      {/* 난이도 & 상태 */}
-                      <div className="flex-shrink-0 flex flex-col items-end gap-1">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${levelColor.text} bg-white/50 dark:bg-black/20`}>
-                          {getLevelLabelKey(classInfo.level) ? t(getLevelLabelKey(classInfo.level)!) : 'All'}
-                        </span>
-                        {isFull && (
-                          <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400">
-                            {t('schedule.full')}
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <div className="flex items-center gap-1">
+                          <User size={12} className="text-neutral-400" />
+                          <span className="text-sm text-neutral-600 dark:text-neutral-300">
+                            {classInfo.instructor === INSTRUCTOR_TBD ? t('schedule.instructorTbd') : classInfo.instructor}
+                          </span>
+                        </div>
+                        {classInfo.genre && classInfo.class_title && (
+                          <span className="text-xs px-2 py-0.5 bg-black/5 dark:bg-white/10 rounded-full text-neutral-600 dark:text-neutral-300">
+                            {classInfo.genre}
                           </span>
                         )}
                       </div>
+                      {hallName && (
+                        <div className="flex items-center gap-1 mt-1.5">
+                          <MapPin size={11} className="text-neutral-400" />
+                          <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                            {hallName}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  </button>
-                );
-              })}
-            </div>
+                    <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${levelColor.text} bg-white/50 dark:bg-black/20`}>
+                        {getLevelLabelKey(classInfo.level) ? t(getLevelLabelKey(classInfo.level)!) : 'All'}
+                      </span>
+                      {isFull && (
+                        <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400">
+                          {t('schedule.full')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        </div>
-      )}
+        </SheetContent>
+      </Sheet>
     </>
   );
 };

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { normalizePhone } from '@/lib/utils/phone';
+import { isNativePlatform } from '@/lib/capacitor/platform';
 
 const TOSS_SCRIPT = 'https://js.tosspayments.com/v2/standard';
 
@@ -52,6 +53,7 @@ export function TicketTossPaymentModal({
 }: TicketTossPaymentModalProps) {
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
+  const [cancelMsg, setCancelMsg] = useState('');
   const widgetsRef = useRef<any>(null);
 
   useEffect(() => {
@@ -114,7 +116,9 @@ export function TicketTossPaymentModal({
     setPaying(true);
     try {
       const customerMobilePhone = toTossPhone(customerMobilePhoneProp);
-      await widgetsRef.current.requestPayment({
+      const isApp = isNativePlatform();
+      // 모바일/앱: 같은 WebView에서 결제창 열기. 페이북/ISP·카드사 앱에서 결제 후 상점 앱으로 복귀용 스킴.
+      const paymentRequest: Record<string, unknown> = {
         orderId,
         orderName,
         successUrl,
@@ -122,14 +126,26 @@ export function TicketTossPaymentModal({
         customerEmail: '',
         customerName: '',
         customerMobilePhone: customerMobilePhone || undefined,
-      });
+      };
+      if (isApp) {
+        paymentRequest.windowTarget = 'self';
+        paymentRequest.card = { appScheme: 'moveitapp://' };
+      }
+      await widgetsRef.current.requestPayment(paymentRequest);
       // 성공/실패는 리다이렉트로 처리됨
     } catch (e: any) {
-      const msg = e?.message ?? '결제 요청에 실패했습니다.';
-      const isPhoneFormatError =
-        typeof msg === 'string' &&
-        (msg.includes('전화번호') && (msg.includes('특수문자') || msg.includes('형식')));
-      onError(isPhoneFormatError ? '전화번호는 하이픈(-) 없이 숫자만 입력해주세요.' : msg);
+      const code: string = e?.code ?? '';
+      const isCancelled = code === 'PAY_PROCESS_CANCELED' || code === 'PAY_PROCESS_ABORTED';
+      if (isCancelled) {
+        setCancelMsg('결제가 취소되었습니다. 다시 시도하려면 결제하기를 눌러주세요.');
+        setTimeout(() => setCancelMsg(''), 4000);
+      } else {
+        const msg = e?.message ?? '결제 요청에 실패했습니다.';
+        const isPhoneFormatError =
+          typeof msg === 'string' &&
+          (msg.includes('전화번호') && (msg.includes('특수문자') || msg.includes('형식')));
+        onError(isPhoneFormatError ? '전화번호는 하이픈(-) 없이 숫자만 입력해주세요.' : msg);
+      }
     } finally {
       setPaying(false);
     }
@@ -166,6 +182,9 @@ export function TicketTossPaymentModal({
         </div>
 
         <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 dark:border-t-primary/20">
+          {cancelMsg && (
+            <p className="mb-2 text-center text-sm text-amber-500 dark:text-amber-400">{cancelMsg}</p>
+          )}
           <button
             type="button"
             disabled={loading || paying}

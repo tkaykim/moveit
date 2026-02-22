@@ -28,6 +28,7 @@
     "@capacitor/push-notifications": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.1",
+    "@radix-ui/react-dialog": "^1.1.15",
     "@react-google-maps/api": "^2.20.8",
     "@supabase/ssr": "^0.1.0",
     "@supabase/supabase-js": "^2.39.3",
