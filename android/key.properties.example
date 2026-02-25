@@ -1,0 +1,18 @@
+# Play 스토어 업로드용 릴리스 서명
+# 사용법: 이 파일을 key.properties 로 복사한 뒤 실제 비밀번호·별칭으로 수정하세요.
+# key.properties 는 .gitignore 되어 있어 저장소에 올라가지 않습니다.
+#
+# 비밀번호/별칭을 잊었다면?
+#   키스토어 비밀번호는 복구 불가입니다. 새 키스토어를 만들어야 합니다.
+#   PowerShell에서: cd android 후 .\create-upload-keystore.ps1 실행
+#   (기존 upload.keystore 는 upload.keystore.old 로 백업됨)
+#   이미 Play에 올린 앱이면: Play Console > 앱 무결성 > 앱 서명 > 업로드 키 재설정 요청
+#
+# 키 별칭 확인 (PowerShell, android 폴더에서):
+#   & "$env:ProgramFiles\Android\Android Studio\jbr\bin\keytool.exe" -list -keystore app\upload.keystore
+
+# 새 키스토어를 create-upload-keystore.ps1 로 만들었고 파일이 사용 중이었다면 upload-new.keystore 로 생성됨
+storeFile=app/upload-new.keystore
+storePassword=키스토어_비밀번호
+keyAlias=upload
+keyPassword=키_비밀번호

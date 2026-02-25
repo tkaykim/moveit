@@ -23,6 +23,14 @@ $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"; $projectRoot = J
 - JAVA_HOME이 이미 시스템에 설정되어 있으면 앞의 `$env:JAVA_HOME = "..."` 생략 가능.
 - 성공 시 APK 위치: `%USERPROFILE%\Desktop\MOVEIT\android\app\build\outputs\apk\debug\app-debug.apk`
 
+**릴리스 AAB (Play 스토어 업로드용):**
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"; $projectRoot = Join-Path $env:USERPROFILE "Desktop\MOVEIT"; $androidPath = Join-Path $projectRoot "android"; Set-Location $androidPath; .\gradlew.bat bundleRelease
+```
+
+- 성공 시 AAB 위치: `android\app\build\outputs\bundle\release\app-release.aab`
+
 ## 3. 테스트 기기 설치 (PowerShell)
 
 연결된 기기 한 대에 설치(덮어쓰기 `-r`):
