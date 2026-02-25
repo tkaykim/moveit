@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getTicketById } from '@/lib/db/tickets';
-import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
+import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
+import { createServiceClient } from '@/lib/supabase/server';
 
 /**
  * 계좌이체 신청 주문 생성 (입금 대기).
  * Body: { ticketId, scheduleId?, countOptionIndex?, discountId? }
  * Returns: orderId, amount, orderName, bankName, bankAccountNumber, bankDepositorName (클라이언트에서 계좌 안내·복사용)
+ * INSERT는 서비스 역할로 수행하여 RLS/권한 이슈 없이 목록에 정상 노출되도록 함.
  */
 export async function POST(request: Request) {
   try {
@@ -14,7 +16,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }
 
-    const supabase = await getAuthenticatedSupabase(request);
+    const supabase = createServiceClient() as any;
     const body = await request.json();
     const { ticketId, scheduleId, countOptionIndex, discountId } = body;
 

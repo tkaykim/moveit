@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
-import { Landmark, RefreshCw, Loader2, CheckCircle, Clock } from 'lucide-react';
+import { Landmark, RefreshCw, Loader2, CheckCircle, Clock, Ticket, CalendarCheck } from 'lucide-react';
 
 interface BankTransferOrder {
   id: string;
@@ -99,6 +99,19 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
     }
   };
 
+  const formatTimeRange = (startIso: string, endIso: string) => {
+    try {
+      const start = new Date(startIso);
+      const end = new Date(endIso);
+      const dateStr = start.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', weekday: 'short' });
+      const startStr = start.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+      const endStr = end.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+      return `${dateStr} ${startStr} ~ ${endStr}`;
+    } catch {
+      return `${startIso} ~ ${endIso}`;
+    }
+  };
+
   return (
     <div className="p-4 lg:p-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
@@ -154,57 +167,86 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
         </div>
       ) : (
         <ul className="space-y-3">
-          {orders.map((order) => (
-            <li
-              key={order.id}
-              className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-black dark:text-white">
-                      {order.user_name || '(이름 없음)'}
-                    </span>
-                    {order.user_phone && (
-                      <span className="text-sm text-neutral-500">{order.user_phone}</span>
-                    )}
-                  </div>
-                  <div className="text-sm text-neutral-600 dark:text-neutral-400">
-                    {order.tickets?.name || order.order_name || '수강권'} · {order.amount.toLocaleString()}원
-                  </div>
-                  {order.schedules && (
-                    <div className="text-xs text-neutral-500 flex items-center gap-1">
-                      <Clock size={12} />
-                      {order.schedules.classes?.title} · {formatDate(order.schedules.start_time)}
+          {orders.map((order) => {
+            const hasBooking = !!order.schedule_id && !!order.schedules;
+            return (
+              <li
+                key={order.id}
+                className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="space-y-2 flex-1 min-w-0">
+                    {/* 구분 뱃지: 수강권만 vs 수강권+예약 */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {hasBooking ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200">
+                          <CalendarCheck size={14} />
+                          수강권 + 수업 예약
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                          <Ticket size={14} />
+                          수강권만 구매
+                        </span>
+                      )}
                     </div>
-                  )}
-                  <div className="text-xs text-neutral-400">
-                    신청일: {formatDate(order.created_at)}
-                    {order.confirmed_at && ` · 확인일: ${formatDate(order.confirmed_at)}`}
-                  </div>
-                </div>
-                {tab === 'PENDING' && (
-                  <button
-                    onClick={() => handleConfirm(order.id)}
-                    disabled={confirmingId !== null}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-medium"
-                  >
-                    {confirmingId === order.id ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <CheckCircle size={16} />
+
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-black dark:text-white">
+                        {order.user_name || '(이름 없음)'}
+                      </span>
+                      {order.user_phone && (
+                        <span className="text-sm text-neutral-500">{order.user_phone}</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-neutral-600 dark:text-neutral-400">
+                      {order.tickets?.name || order.order_name || '수강권'} · {order.amount.toLocaleString()}원
+                    </div>
+
+                    {/* 예약한 수업 정보 — 수강권+예약인 경우에만 강조 표시 */}
+                    {hasBooking && order.schedules && (
+                      <div className="mt-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                        <div className="text-xs font-medium text-blue-800 dark:text-blue-200 mb-1 flex items-center gap-1">
+                          <Clock size={12} />
+                          예약한 수업
+                        </div>
+                        <div className="text-sm font-medium text-black dark:text-white">
+                          {order.schedules.classes?.title || '(클래스명 없음)'}
+                        </div>
+                        <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
+                          {formatTimeRange(order.schedules.start_time, order.schedules.end_time)}
+                        </div>
+                      </div>
                     )}
-                    입금확인
-                  </button>
-                )}
-                {tab === 'CONFIRMED' && (
-                  <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
-                    <CheckCircle size={16} /> 확인완료
-                  </span>
-                )}
-              </div>
-            </li>
-          ))}
+
+                    <div className="text-xs text-neutral-400">
+                      신청일: {formatDate(order.created_at)}
+                      {order.confirmed_at && ` · 확인일: ${formatDate(order.confirmed_at)}`}
+                    </div>
+                  </div>
+                  {tab === 'PENDING' && (
+                    <button
+                      onClick={() => handleConfirm(order.id)}
+                      disabled={confirmingId !== null}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-medium shrink-0"
+                    >
+                      {confirmingId === order.id ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <CheckCircle size={16} />
+                      )}
+                      입금확인
+                    </button>
+                  )}
+                  {tab === 'CONFIRMED' && (
+                    <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400 shrink-0">
+                      <CheckCircle size={16} /> 확인완료
+                    </span>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
