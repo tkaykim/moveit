@@ -127,7 +127,25 @@ export default function SessionBookingPage() {
     bankName: string;
     bankAccountNumber: string;
     bankDepositorName: string;
+    ordererName?: string;
   } | null>(null);
+
+  // 계좌이체 시: 비로그인 선택 모달 / 비회원 폼 / 입금자명 모달
+  const [bankTransferAuthModalOpen, setBankTransferAuthModalOpen] = useState(false);
+  const [bankTransferGuestFormOpen, setBankTransferGuestFormOpen] = useState(false);
+  const [guestOrderer, setGuestOrderer] = useState<{ name: string; phone: string; email: string } | null>(null);
+  const [depositorModalOpen, setDepositorModalOpen] = useState(false);
+  const [depositorName, setDepositorName] = useState('');
+  const [depositorModalPreFillLoading, setDepositorModalPreFillLoading] = useState(false);
+  const [pendingBankTransfer, setPendingBankTransfer] = useState<{
+    ticketId: string;
+    scheduleId: string;
+    countOptionIndex?: number;
+  } | null>(null);
+  // 비회원 폼 입력값
+  const [guestFormName, setGuestFormName] = useState('');
+  const [guestFormPhone, setGuestFormPhone] = useState('');
+  const [guestFormEmail, setGuestFormEmail] = useState('');
 
   // 결제 위젯 모달 (수강권 구매 후 예약 — 앱 내 결제 유지)
   const [widgetModalOpen, setWidgetModalOpen] = useState(false);
@@ -504,6 +522,56 @@ export default function SessionBookingPage() {
     }
   };
 
+  // 계좌이체: 입금자명 모달에서 신청하기 클릭 시 실제 API 호출
+  const submitBankTransferOrder = async (ordererName: string, ordererPhone?: string | null, ordererEmail?: string | null) => {
+    if (!pendingBankTransfer || !selectedPurchaseTicket) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      const body: Record<string, unknown> = {
+        ticketId: pendingBankTransfer.ticketId,
+        scheduleId: pendingBankTransfer.scheduleId,
+        ordererName: ordererName.trim(),
+        ...(typeof pendingBankTransfer.countOptionIndex === 'number' && { countOptionIndex: pendingBankTransfer.countOptionIndex }),
+      };
+      if (ordererPhone?.trim()) body.ordererPhone = ordererPhone.trim();
+      if (ordererEmail?.trim()) body.ordererEmail = ordererEmail.trim();
+      const isGuest = !!guestOrderer;
+      const orderRes = isGuest
+        ? await fetch('/api/tickets/bank-transfer-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          })
+        : await fetchWithAuth('/api/tickets/bank-transfer-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+      if (!orderRes.ok) {
+        const data = await orderRes.json();
+        throw new Error(data.error || t('sessionBooking.purchaseFailed'));
+      }
+      const data = await orderRes.json();
+      setBankTransferResult({
+        orderId: data.orderId,
+        amount: data.amount,
+        orderName: data.orderName,
+        bankName: data.bankName,
+        bankAccountNumber: data.bankAccountNumber,
+        bankDepositorName: data.bankDepositorName,
+        ordererName: data.ordererName,
+      });
+      setDepositorModalOpen(false);
+      setPendingBankTransfer(null);
+      setGuestOrderer(null);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // 수강권 구매 후 예약 (카드/계좌 = Toss 결제창, 그 외는 기존 구매 API)
   const handlePurchaseBooking = async () => {
     if (!selectedPurchaseTicketId || !selectedPurchaseTicket) {
@@ -513,36 +581,40 @@ export default function SessionBookingPage() {
 
     const useTossPayment = ENABLE_TOSS_PAYMENT && (purchasePaymentType === 'card' || purchasePaymentType === 'account');
     const useBankTransfer = !ENABLE_TOSS_PAYMENT || purchasePaymentType === 'account';
-    setSubmitting(true);
     setError('');
 
-    try {
-      if (useBankTransfer) {
-        const orderRes = await fetchWithAuth('/api/tickets/bank-transfer-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ticketId: selectedPurchaseTicket.id,
-            scheduleId: sessionId,
-            ...(typeof selectedPurchaseTicket.countOptionIndex === 'number' && { countOptionIndex: selectedPurchaseTicket.countOptionIndex }),
-          }),
-        });
-        if (!orderRes.ok) {
-          const data = await orderRes.json();
-          throw new Error(data.error || t('sessionBooking.purchaseFailed'));
-        }
-        const data = await orderRes.json();
-        setBankTransferResult({
-          orderId: data.orderId,
-          amount: data.amount,
-          orderName: data.orderName,
-          bankName: data.bankName,
-          bankAccountNumber: data.bankAccountNumber,
-          bankDepositorName: data.bankDepositorName,
-        });
-        setSubmitting(false);
+    if (useBankTransfer) {
+      const payload = {
+        ticketId: selectedPurchaseTicket.id,
+        scheduleId: sessionId,
+        ...(typeof selectedPurchaseTicket.countOptionIndex === 'number' && { countOptionIndex: selectedPurchaseTicket.countOptionIndex }),
+      };
+      setPendingBankTransfer(payload);
+      if (!user) {
+        setBankTransferAuthModalOpen(true);
         return;
       }
+      setDepositorModalPreFillLoading(true);
+      setDepositorModalOpen(true);
+      try {
+        const profileRes = await fetchWithAuth('/api/auth/profile');
+        if (profileRes.ok) {
+          const data = await profileRes.json();
+          const name = data?.profile?.name ?? data?.profile?.name_en ?? '';
+          setDepositorName(String(name).trim() || '');
+        } else {
+          setDepositorName('');
+        }
+      } catch {
+        setDepositorName('');
+      } finally {
+        setDepositorModalPreFillLoading(false);
+      }
+      return;
+    }
+
+    setSubmitting(true);
+    try {
 
       if (useTossPayment) {
         const orderRes = await fetchWithAuth('/api/tickets/payment-order', {
@@ -1363,6 +1435,178 @@ export default function SessionBookingPage() {
         </div>
       )}
 
+      {/* 계좌이체 시 비로그인: 로그인/회원가입/비회원 선택 */}
+      {bankTransferAuthModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setBankTransferAuthModalOpen(false)} />
+          <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-sm w-full p-6">
+            <h3 className="text-lg font-bold text-black dark:text-white mb-2">
+              {language === 'ko' ? '수강권 구매 및 예약' : 'Ticket & booking'}
+            </h3>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
+              {language === 'ko' ? '로그인하시겠습니까? 비회원으로 진행하시면 이름·연락처를 입력해 주세요.' : 'Log in or continue as guest with name and contact.'}
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  setBankTransferAuthModalOpen(false);
+                  setAuthModalInitialTab('login');
+                  setIsAuthModalOpen(true);
+                }}
+                className="w-full py-3 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm"
+              >
+                {t('sessionBooking.loginButton')}
+              </button>
+              <button
+                onClick={() => {
+                  setBankTransferAuthModalOpen(false);
+                  setAuthModalInitialTab('signup');
+                  setIsAuthModalOpen(true);
+                }}
+                className="w-full py-3 rounded-xl border-2 border-neutral-300 dark:border-neutral-600 text-neutral-800 dark:text-neutral-200 font-medium text-sm"
+              >
+                {t('sessionBooking.signupButton')}
+              </button>
+              <button
+                onClick={() => {
+                  setBankTransferAuthModalOpen(false);
+                  setBankTransferGuestFormOpen(true);
+                  setGuestFormName('');
+                  setGuestFormPhone('');
+                  setGuestFormEmail('');
+                }}
+                className="w-full py-2.5 text-sm text-neutral-600 dark:text-neutral-400 underline underline-offset-2"
+              >
+                {language === 'ko' ? '비회원으로 계속하기' : 'Continue as guest'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 비회원 정보 입력 (이름, 연락처, 이메일 — 연락처 또는 이메일 필수) */}
+      {bankTransferGuestFormOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setBankTransferGuestFormOpen(false)} />
+          <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
+            <h3 className="text-lg font-bold text-black dark:text-white">
+              {language === 'ko' ? '비회원 정보 입력' : 'Guest information'}
+            </h3>
+            <p className="text-xs text-neutral-500">
+              {language === 'ko' ? '연락처 또는 이메일 중 하나는 필수입니다.' : 'Phone or email is required.'}
+            </p>
+            <div>
+              <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">{language === 'ko' ? '이름' : 'Name'} *</label>
+              <input
+                type="text"
+                value={guestFormName}
+                onChange={(e) => setGuestFormName(e.target.value)}
+                placeholder={language === 'ko' ? '이름' : 'Name'}
+                className="w-full px-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">{language === 'ko' ? '연락처' : 'Phone'}</label>
+              <input
+                type="tel"
+                value={guestFormPhone}
+                onChange={(e) => setGuestFormPhone(e.target.value)}
+                placeholder="010-0000-0000"
+                className="w-full px-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">{language === 'ko' ? '이메일' : 'Email'}</label>
+              <input
+                type="email"
+                value={guestFormEmail}
+                onChange={(e) => setGuestFormEmail(e.target.value)}
+                placeholder="email@example.com"
+                className="w-full px-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setBankTransferGuestFormOpen(false)}
+                className="flex-1 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-600 text-sm"
+              >
+                {language === 'ko' ? '취소' : 'Cancel'}
+              </button>
+              <button
+                onClick={() => {
+                  if (!guestFormName.trim()) {
+                    setError(language === 'ko' ? '이름을 입력해 주세요.' : 'Enter name.');
+                    return;
+                  }
+                  if (!guestFormPhone.trim() && !guestFormEmail.trim()) {
+                    setError(language === 'ko' ? '연락처 또는 이메일 중 하나를 입력해 주세요.' : 'Enter phone or email.');
+                    return;
+                  }
+                  setGuestOrderer({
+                    name: guestFormName.trim(),
+                    phone: guestFormPhone.trim(),
+                    email: guestFormEmail.trim(),
+                  });
+                  setBankTransferGuestFormOpen(false);
+                  setDepositorName(guestFormName.trim());
+                  setDepositorModalOpen(true);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm"
+              >
+                {language === 'ko' ? '다음' : 'Next'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 입금자명 입력 모달 (계좌이체 신청 전) */}
+      {depositorModalOpen && pendingBankTransfer && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { setDepositorModalOpen(false); setPendingBankTransfer(null); setGuestOrderer(null); }} />
+          <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
+            <h3 className="text-lg font-bold text-black dark:text-white">
+              {language === 'ko' ? '입금자명' : 'Depositor name'}
+            </h3>
+            <p className="text-sm text-neutral-500">
+              {language === 'ko' ? '입금 시 사용할 이름을 입력해 주세요. (수정 가능)' : 'Enter the name to use when transferring.'}
+            </p>
+            {depositorModalPreFillLoading ? (
+              <div className="py-4 flex justify-center"><Loader2 className="animate-spin text-primary dark:text-[#CCFF00]" size={24} /></div>
+            ) : (
+              <input
+                type="text"
+                value={depositorName}
+                onChange={(e) => setDepositorName(e.target.value)}
+                placeholder={language === 'ko' ? '입금자명' : 'Depositor name'}
+                className="w-full px-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white"
+              />
+            )}
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => { setDepositorModalOpen(false); setPendingBankTransfer(null); setGuestOrderer(null); }}
+                className="flex-1 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-600 text-sm"
+              >
+                {language === 'ko' ? '취소' : 'Cancel'}
+              </button>
+              <button
+                disabled={submitting || !depositorName.trim() || depositorModalPreFillLoading}
+                onClick={() => {
+                  if (guestOrderer) {
+                    submitBankTransferOrder(depositorName, guestOrderer.phone || null, guestOrderer.email || null);
+                  } else {
+                    submitBankTransferOrder(depositorName);
+                  }
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm disabled:opacity-50"
+              >
+                {submitting ? <Loader2 size={18} className="animate-spin mx-auto" /> : (language === 'ko' ? '신청하기' : 'Submit')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 로그인/회원가입 모달 */}
       <MyTab
         isOpen={isAuthModalOpen}
@@ -1436,9 +1680,15 @@ export default function SessionBookingPage() {
                 </button>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-neutral-500">{language === 'ko' ? '예금주' : 'Depositor'}</span>
+                <span className="text-neutral-500">{language === 'ko' ? '예금주' : 'Account holder'}</span>
                 <span>{bankTransferResult.bankDepositorName}</span>
               </div>
+              {bankTransferResult.ordererName && (
+                <div className="flex justify-between text-sm pt-1 border-t border-neutral-200 dark:border-neutral-700">
+                  <span className="text-neutral-500">{language === 'ko' ? '입금자명' : 'Your depositor name'}</span>
+                  <span className="font-medium">{bankTransferResult.ordererName}</span>
+                </div>
+              )}
             </div>
             <button
               type="button"

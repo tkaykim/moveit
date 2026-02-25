@@ -68,6 +68,24 @@ export async function POST(
     }
 
     const customerUserId = order.user_id;
+
+    // 비회원 주문: 입금 확인만 처리(수강권 발급 불가), 연락처로 안내 유도
+    if (!customerUserId) {
+      await supabase
+        .from('bank_transfer_orders')
+        .update({
+          status: 'CONFIRMED',
+          confirmed_at: new Date().toISOString(),
+          confirmed_by: user.id,
+        })
+        .eq('id', orderId);
+      return NextResponse.json({
+        success: true,
+        data: null,
+        message: '비회원 주문은 확인 처리되었습니다. 주문자 연락처로 수강권 수령 방법을 안내해 주세요.',
+      });
+    }
+
     const ticket = await getTicketById(order.ticket_id);
     if (!ticket) {
       return NextResponse.json({ error: '티켓 정보를 찾을 수 없습니다.' }, { status: 404 });

@@ -5,20 +5,73 @@ import { createServiceClient } from '@/lib/supabase/server';
 
 /**
  * 계좌이체 신청 주문 생성 (입금 대기).
- * Body: { ticketId, scheduleId?, countOptionIndex?, discountId? }
- * Returns: orderId, amount, orderName, bankName, bankAccountNumber, bankDepositorName (클라이언트에서 계좌 안내·복사용)
- * INSERT는 서비스 역할로 수행하여 RLS/권한 이슈 없이 목록에 정상 노출되도록 함.
+ * Body: { ticketId, scheduleId?, countOptionIndex?, discountId?, ordererName?, ordererPhone?, ordererEmail?, depositorName? }
+ * - 로그인 시: orderer*·depositorName 생략 가능(프로필/이름 사용). 전달 시 그대로 저장.
+ * - 비회원(guest): ordererName 필수, ordererPhone 또는 ordererEmail 중 하나 필수. depositorName 생략 시 ordererName 사용.
+ * Returns: orderId, amount, orderName, bankName, bankAccountNumber, bankDepositorName
  */
 export async function POST(request: Request) {
   try {
     const user = await getAuthenticatedUser(request);
-    if (!user) {
-      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
-    }
-
     const supabase = createServiceClient() as any;
     const body = await request.json();
-    const { ticketId, scheduleId, countOptionIndex, discountId } = body;
+    const {
+      ticketId,
+      scheduleId,
+      countOptionIndex,
+      discountId,
+      ordererName: bodyOrdererName,
+      ordererPhone: bodyOrdererPhone,
+      ordererEmail: bodyOrdererEmail,
+      depositorName: bodyDepositorName,
+    } = body;
+
+    let ordererName: string;
+    let ordererPhone: string | null = null;
+    let ordererEmail: string | null = null;
+    let depositorName: string;
+    let userId: string | null = null;
+
+    if (user) {
+      userId = user.id;
+      const { data: profile } = await supabase
+        .from('users')
+        .select('name, name_en, phone, email')
+        .eq('id', user.id)
+        .single();
+      const rawName = profile?.name ?? profile?.name_en ?? '';
+      const rawPhone = profile?.phone != null ? String(profile.phone).trim() : '';
+      const rawEmail = profile?.email != null ? String(profile.email).trim() : '';
+      ordererName = bodyOrdererName != null && String(bodyOrdererName).trim()
+        ? String(bodyOrdererName).trim()
+        : (rawName || '이름 없음');
+      ordererPhone = bodyOrdererPhone != null && String(bodyOrdererPhone).trim()
+        ? String(bodyOrdererPhone).trim()
+        : (rawPhone || null);
+      ordererEmail = bodyOrdererEmail != null && String(bodyOrdererEmail).trim()
+        ? String(bodyOrdererEmail).trim()
+        : (rawEmail || null);
+      depositorName = bodyDepositorName != null && String(bodyDepositorName).trim()
+        ? String(bodyDepositorName).trim()
+        : ordererName;
+    } else {
+      // 비회원
+      const name = bodyOrdererName != null ? String(bodyOrdererName).trim() : '';
+      const phone = bodyOrdererPhone != null ? String(bodyOrdererPhone).trim() : '';
+      const email = bodyOrdererEmail != null ? String(bodyOrdererEmail).trim() : '';
+      if (!name) {
+        return NextResponse.json({ error: '이름을 입력해 주세요.' }, { status: 400 });
+      }
+      if (!phone && !email) {
+        return NextResponse.json({ error: '연락처 또는 이메일 중 하나는 필수입니다.' }, { status: 400 });
+      }
+      ordererName = name;
+      ordererPhone = phone || null;
+      ordererEmail = email || null;
+      depositorName = bodyDepositorName != null && String(bodyDepositorName).trim()
+        ? String(bodyDepositorName).trim()
+        : ordererName;
+    }
 
     if (!ticketId) {
       return NextResponse.json({ error: 'ticketId가 필요합니다.' }, { status: 400 });
@@ -137,7 +190,7 @@ export async function POST(request: Request) {
       .from('bank_transfer_orders')
       .insert({
         academy_id: academyId,
-        user_id: user.id,
+        user_id: userId,
         ticket_id: ticketId,
         schedule_id: scheduleId || null,
         class_id: classIdForOrder,
@@ -145,6 +198,9 @@ export async function POST(request: Request) {
         count_option_index: hasCountOptions ? optIndex : null,
         discount_id: discountId || null,
         order_name: orderName,
+        orderer_name: ordererName,
+        orderer_phone: ordererPhone,
+        orderer_email: ordererEmail,
         status: 'PENDING',
       })
       .select('id')
@@ -162,6 +218,7 @@ export async function POST(request: Request) {
       bankName,
       bankAccountNumber,
       bankDepositorName,
+      ordererName: ordererName,
     });
   } catch (e: any) {
     console.error('bank-transfer-order error:', e);

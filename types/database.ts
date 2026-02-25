@@ -1495,7 +1495,7 @@ export type Database = {
         Row: {
           id: string
           academy_id: string
-          user_id: string
+          user_id: string | null
           ticket_id: string
           schedule_id: string | null
           class_id: string | null
@@ -1503,6 +1503,9 @@ export type Database = {
           count_option_index: number | null
           discount_id: string | null
           order_name: string | null
+          orderer_name: string | null
+          orderer_phone: string | null
+          orderer_email: string | null
           status: string
           user_ticket_id: string | null
           revenue_transaction_id: string | null
@@ -1513,7 +1516,7 @@ export type Database = {
         Insert: {
           id?: string
           academy_id: string
-          user_id: string
+          user_id?: string | null
           ticket_id: string
           schedule_id?: string | null
           class_id?: string | null
@@ -1521,6 +1524,9 @@ export type Database = {
           count_option_index?: number | null
           discount_id?: string | null
           order_name?: string | null
+          orderer_name?: string | null
+          orderer_phone?: string | null
+          orderer_email?: string | null
           status?: string
           user_ticket_id?: string | null
           revenue_transaction_id?: string | null
@@ -1531,7 +1537,7 @@ export type Database = {
         Update: {
           id?: string
           academy_id?: string
-          user_id?: string
+          user_id?: string | null
           ticket_id?: string
           schedule_id?: string | null
           class_id?: string | null
@@ -1539,6 +1545,9 @@ export type Database = {
           count_option_index?: number | null
           discount_id?: string | null
           order_name?: string | null
+          orderer_name?: string | null
+          orderer_phone?: string | null
+          orderer_email?: string | null
           status?: string
           user_ticket_id?: string | null
           revenue_transaction_id?: string | null

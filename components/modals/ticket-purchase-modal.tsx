@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
-import { X, Ticket, Calendar, Hash, Check, Tag, Gift, Copy } from 'lucide-react';
+import { X, Ticket, Calendar, Hash, Check, Tag, Gift, Copy, Loader2 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { useLocale } from '@/contexts/LocaleContext';
 import { ENABLE_TOSS_PAYMENT } from '@/lib/constants/payment';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TicketInfo {
   id: string;
@@ -35,6 +36,8 @@ interface TicketPurchaseModalProps {
   academyId: string;
   academyName?: string;
   onPurchaseComplete?: () => void;
+  /** 계좌이체 시 비로그인일 때 로그인 모달 열기 (선택) */
+  onRequireAuth?: () => void;
 }
 
 export const TicketPurchaseModal = ({
@@ -43,8 +46,10 @@ export const TicketPurchaseModal = ({
   academyId,
   academyName,
   onPurchaseComplete,
+  onRequireAuth,
 }: TicketPurchaseModalProps) => {
   const { t, language } = useLocale();
+  const { user } = useAuth();
   const [tickets, setTickets] = useState<TicketInfo[]>([]);
   const [discounts, setDiscounts] = useState<DiscountInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +69,11 @@ export const TicketPurchaseModal = ({
     bankName: string;
     bankAccountNumber: string;
     bankDepositorName: string;
+    ordererName?: string;
   } | null>(null);
+  const [showDepositorStep, setShowDepositorStep] = useState(false);
+  const [depositorName, setDepositorName] = useState('');
+  const [depositorStepLoading, setDepositorStepLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen && academyId) {
@@ -139,33 +148,33 @@ export const TicketPurchaseModal = ({
   const handlePurchase = async () => {
     if (!selectedTicket) return;
 
-    try {
-      setPurchasing(true);
-
-      if (!ENABLE_TOSS_PAYMENT) {
-        const response = await fetchWithAuth('/api/tickets/bank-transfer-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ticketId: selectedTicket.id,
-            discountId: selectedDiscount?.id ?? undefined,
-          }),
-        });
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error || '신청에 실패했습니다.');
-        }
-        setBankTransferResult({
-          orderId: data.orderId,
-          amount: data.amount,
-          orderName: data.orderName,
-          bankName: data.bankName,
-          bankAccountNumber: data.bankAccountNumber,
-          bankDepositorName: data.bankDepositorName,
-        });
-        setPurchasing(false);
+    if (!ENABLE_TOSS_PAYMENT) {
+      if (!user) {
+        if (onRequireAuth) onRequireAuth();
+        else alert(language === 'ko' ? '로그인이 필요합니다.' : 'Please log in.');
         return;
       }
+      setShowDepositorStep(true);
+      setDepositorStepLoading(true);
+      try {
+        const profileRes = await fetchWithAuth('/api/auth/profile');
+        if (profileRes.ok) {
+          const data = await profileRes.json();
+          const name = data?.profile?.name ?? data?.profile?.name_en ?? '';
+          setDepositorName(String(name).trim() || '');
+        } else {
+          setDepositorName('');
+        }
+      } catch {
+        setDepositorName('');
+      } finally {
+        setDepositorStepLoading(false);
+      }
+      return;
+    }
+
+    try {
+      setPurchasing(true);
 
       const response = await fetchWithAuth('/api/tickets/purchase', {
         method: 'POST',
@@ -204,8 +213,45 @@ export const TicketPurchaseModal = ({
     setSelectedDiscount(null);
     setPurchaseSuccess(false);
     setBankTransferResult(null);
+    setShowDepositorStep(false);
+    setDepositorName('');
     setActiveTab('ticket');
     onClose();
+  };
+
+  const handleDepositorSubmit = async () => {
+    if (!selectedTicket || !depositorName.trim()) return;
+    setPurchasing(true);
+    try {
+      const response = await fetchWithAuth('/api/tickets/bank-transfer-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketId: selectedTicket.id,
+          discountId: selectedDiscount?.id ?? undefined,
+          ordererName: depositorName.trim(),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || '신청에 실패했습니다.');
+      }
+      setBankTransferResult({
+        orderId: data.orderId,
+        amount: data.amount,
+        orderName: data.orderName,
+        bankName: data.bankName,
+        bankAccountNumber: data.bankAccountNumber,
+        bankDepositorName: data.bankDepositorName,
+        ordererName: data.ordererName,
+      });
+      setShowDepositorStep(false);
+      setDepositorName('');
+    } catch (error: any) {
+      alert(error.message || '신청에 실패했습니다.');
+    } finally {
+      setPurchasing(false);
+    }
   };
 
   const getDiscountText = (discount: DiscountInfo) => {
@@ -300,7 +346,44 @@ export const TicketPurchaseModal = ({
 
         {/* 컨텐츠 */}
         <div className="p-4 overflow-y-auto max-h-[60vh]">
-          {bankTransferResult ? (
+          {showDepositorStep ? (
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold text-black dark:text-white">
+                {language === 'ko' ? '입금자명' : 'Depositor name'}
+              </h3>
+              <p className="text-sm text-neutral-500">
+                {language === 'ko' ? '입금 시 사용할 이름을 입력해 주세요. (수정 가능)' : 'Enter the name to use when transferring.'}
+              </p>
+              {depositorStepLoading ? (
+                <div className="py-4 flex justify-center"><Loader2 className="animate-spin text-primary dark:text-[#CCFF00]" size={24} /></div>
+              ) : (
+                <input
+                  type="text"
+                  value={depositorName}
+                  onChange={(e) => setDepositorName(e.target.value)}
+                  placeholder={language === 'ko' ? '입금자명' : 'Depositor name'}
+                  className="w-full px-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white"
+                />
+              )}
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowDepositorStep(false); setDepositorName(''); }}
+                  className="flex-1 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-600 text-sm"
+                >
+                  {language === 'ko' ? '취소' : 'Cancel'}
+                </button>
+                <button
+                  type="button"
+                  disabled={purchasing || !depositorName.trim() || depositorStepLoading}
+                  onClick={handleDepositorSubmit}
+                  className="flex-1 py-2.5 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm disabled:opacity-50"
+                >
+                  {purchasing ? <Loader2 size={18} className="animate-spin mx-auto" /> : (language === 'ko' ? '신청하기' : 'Submit')}
+                </button>
+              </div>
+            </div>
+          ) : bankTransferResult ? (
             <div className="space-y-4">
               <div className="text-center">
                 <h3 className="text-lg font-bold text-black dark:text-white mb-1">
@@ -332,9 +415,15 @@ export const TicketPurchaseModal = ({
                   </button>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-neutral-500">{language === 'ko' ? '예금주' : 'Depositor'}</span>
+                  <span className="text-neutral-500">{language === 'ko' ? '예금주' : 'Account holder'}</span>
                   <span>{bankTransferResult.bankDepositorName}</span>
                 </div>
+                {bankTransferResult.ordererName && (
+                  <div className="flex justify-between text-sm pt-1 border-t border-neutral-200 dark:border-neutral-700">
+                    <span className="text-neutral-500">{language === 'ko' ? '입금자명' : 'Your depositor name'}</span>
+                    <span className="font-medium">{bankTransferResult.ordererName}</span>
+                  </div>
+                )}
               </div>
               <button
                 type="button"
@@ -498,7 +587,7 @@ export const TicketPurchaseModal = ({
         </div>
 
         {/* 하단 버튼 */}
-        {!purchaseSuccess && !bankTransferResult && selectedTicket && (
+        {!purchaseSuccess && !bankTransferResult && !showDepositorStep && selectedTicket && (
           <div className="p-4 border-t border-neutral-200 dark:border-neutral-800">
             {/* 가격 정보 */}
             <div className="space-y-1 mb-3">

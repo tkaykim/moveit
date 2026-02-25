@@ -23,6 +23,7 @@ interface BankTransferOrder {
   } | null;
   user_name?: string | null;
   user_phone?: string | null;
+  user_email?: string | null;
 }
 
 interface DepositConfirmViewProps {
@@ -36,21 +37,30 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
   const [orders, setOrders] = useState<BankTransferOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
 
   const loadOrders = useCallback(async () => {
+    if (!academyId) {
+      setOrders([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
+    setListError(null);
     try {
       const res = await fetchWithAuth(
         `/api/academy-admin/${academyId}/bank-transfer-orders?status=${tab}`
       );
       const data = await res.json();
       if (res.ok) {
-        setOrders(data.data || []);
+        setOrders(Array.isArray(data.data) ? data.data : []);
       } else {
         setOrders([]);
+        setListError(data?.error || `목록을 불러올 수 없습니다. (${res.status})`);
       }
-    } catch {
+    } catch (e: any) {
       setOrders([]);
+      setListError(e?.message || '목록을 불러오는 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -59,6 +69,15 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
+
+  // 다른 탭에서 주문 후 이 페이지 탭으로 돌아왔을 때 목록 새로고침
+  useEffect(() => {
+    const handler = () => {
+      if (document.visibilityState === 'visible' && academyId) loadOrders();
+    };
+    document.addEventListener('visibilitychange', handler);
+    return () => document.removeEventListener('visibilitychange', handler);
+  }, [academyId, loadOrders]);
 
   const handleConfirm = async (orderId: string) => {
     setConfirmingId(orderId);
@@ -157,6 +176,12 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
         </button>
       </div>
 
+      {listError && (
+        <div className="mb-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">
+          {listError}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="animate-spin text-primary dark:text-[#CCFF00]" size={32} />
@@ -191,12 +216,15 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                       <span className="font-medium text-black dark:text-white">
                         {order.user_name || '(이름 없음)'}
                       </span>
                       {order.user_phone && (
                         <span className="text-sm text-neutral-500">{order.user_phone}</span>
+                      )}
+                      {order.user_email && (
+                        <span className="text-sm text-neutral-500">{order.user_email}</span>
                       )}
                     </div>
                     <div className="text-sm text-neutral-600 dark:text-neutral-400">
