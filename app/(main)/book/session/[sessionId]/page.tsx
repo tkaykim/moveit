@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
-import { ChevronLeft, Calendar, Clock, MapPin, User, Users, Wallet, CheckCircle, CreditCard, Building2, LogIn, AlertCircle, Ticket, Gift, CalendarDays, ChevronRight, Loader2, AlertTriangle, X } from 'lucide-react';
+import { ChevronLeft, Calendar, Clock, MapPin, User, Users, Wallet, CheckCircle, CreditCard, Building2, LogIn, AlertCircle, Ticket, Gift, CalendarDays, ChevronRight, Loader2, AlertTriangle, X, Copy } from 'lucide-react';
 import Image from 'next/image';
 import { formatKSTTime, formatKSTDate } from '@/lib/utils/kst-time';
 import { MyTab } from '@/components/auth/MyTab';
 import { TicketRechargeModal } from '@/components/modals/ticket-recharge-modal';
 import { TicketTossPaymentModal } from '@/components/modals/ticket-toss-payment-modal';
 import { useLocale } from '@/contexts/LocaleContext';
+import { ENABLE_TOSS_PAYMENT } from '@/lib/constants/payment';
 
 interface SessionData {
   id: string;
@@ -117,6 +118,16 @@ export default function SessionBookingPage() {
   const [authModalInitialTab, setAuthModalInitialTab] = useState<'login' | 'signup'>('login');
   const [isTicketPurchaseModalOpen, setIsTicketPurchaseModalOpen] = useState(false);
   const [showOnsiteWarning, setShowOnsiteWarning] = useState(false);
+
+  // 계좌이체 신청 완료 시 표시할 계좌 정보 (복사용)
+  const [bankTransferResult, setBankTransferResult] = useState<{
+    orderId: string;
+    amount: number;
+    orderName: string;
+    bankName: string;
+    bankAccountNumber: string;
+    bankDepositorName: string;
+  } | null>(null);
 
   // 결제 위젯 모달 (수강권 구매 후 예약 — 앱 내 결제 유지)
   const [widgetModalOpen, setWidgetModalOpen] = useState(false);
@@ -500,11 +511,39 @@ export default function SessionBookingPage() {
       return;
     }
 
-    const useTossPayment = purchasePaymentType === 'card' || purchasePaymentType === 'account';
+    const useTossPayment = ENABLE_TOSS_PAYMENT && (purchasePaymentType === 'card' || purchasePaymentType === 'account');
+    const useBankTransfer = !ENABLE_TOSS_PAYMENT || purchasePaymentType === 'account';
     setSubmitting(true);
     setError('');
 
     try {
+      if (useBankTransfer) {
+        const orderRes = await fetchWithAuth('/api/tickets/bank-transfer-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ticketId: selectedPurchaseTicket.id,
+            scheduleId: sessionId,
+            ...(typeof selectedPurchaseTicket.countOptionIndex === 'number' && { countOptionIndex: selectedPurchaseTicket.countOptionIndex }),
+          }),
+        });
+        if (!orderRes.ok) {
+          const data = await orderRes.json();
+          throw new Error(data.error || t('sessionBooking.purchaseFailed'));
+        }
+        const data = await orderRes.json();
+        setBankTransferResult({
+          orderId: data.orderId,
+          amount: data.amount,
+          orderName: data.orderName,
+          bankName: data.bankName,
+          bankAccountNumber: data.bankAccountNumber,
+          bankDepositorName: data.bankDepositorName,
+        });
+        setSubmitting(false);
+        return;
+      }
+
       if (useTossPayment) {
         const orderRes = await fetchWithAuth('/api/tickets/payment-order', {
           method: 'POST',
@@ -1116,31 +1155,37 @@ export default function SessionBookingPage() {
                     );
                   })}
 
-                  {/* 결제 방식 선택 */}
+                  {/* 결제 방식 선택 — 토스 비활성화 시 계좌이체만 표시 */}
                   <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800">
                     <p className="text-sm text-neutral-500 mb-3">{t('sessionBooking.paymentType')}</p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setPurchasePaymentType('card')}
-                        className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                          purchasePaymentType === 'card'
-                            ? 'bg-primary dark:bg-[#CCFF00] text-black'
-                            : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
-                        }`}
-                      >
-                        {t('sessionBooking.cardPayment')}
-                      </button>
-                      <button
-                        onClick={() => setPurchasePaymentType('account')}
-                        className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                          purchasePaymentType === 'account'
-                            ? 'bg-primary dark:bg-[#CCFF00] text-black'
-                            : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
-                        }`}
-                      >
-                        {t('sessionBooking.bankTransfer')}
-                      </button>
-                    </div>
+                    {ENABLE_TOSS_PAYMENT ? (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setPurchasePaymentType('card')}
+                          className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                            purchasePaymentType === 'card'
+                              ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                              : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+                          }`}
+                        >
+                          {t('sessionBooking.cardPayment')}
+                        </button>
+                        <button
+                          onClick={() => setPurchasePaymentType('account')}
+                          className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                            purchasePaymentType === 'account'
+                              ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                              : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+                          }`}
+                        >
+                          {t('sessionBooking.bankTransfer')}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="py-2.5 rounded-lg text-sm font-medium bg-primary/20 dark:bg-[#CCFF00]/20 text-primary dark:text-[#CCFF00] text-center">
+                        {t('sessionBooking.bankTransfer')} ({language === 'ko' ? '입금 확인 후 예약 확정' : 'Confirm after transfer'})
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -1344,8 +1389,70 @@ export default function SessionBookingPage() {
         }}
       />
 
-      {/* 수강권 결제 위젯 모달 (앱 내 결제 유지) */}
-      {widgetOrder && (
+      {/* 계좌이체 신청 완료 모달 — 계좌 정보 표시 및 복사 */}
+      {bankTransferResult && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-black dark:text-white">
+                {language === 'ko' ? '입금 안내' : 'Transfer details'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setBankTransferResult(null)}
+                className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400"
+                aria-label="닫기"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400">
+              {language === 'ko'
+                ? '아래 계좌로 입금해 주시면 학원에서 확인 후 예약이 확정됩니다.'
+                : 'Transfer the amount to the account below. Your booking will be confirmed after the academy verifies.'}
+            </p>
+            <div className="space-y-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 p-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-neutral-500">{language === 'ko' ? '금액' : 'Amount'}</span>
+                <span className="font-semibold">{bankTransferResult.amount.toLocaleString()}원</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-neutral-500">{language === 'ko' ? '은행' : 'Bank'}</span>
+                <span>{bankTransferResult.bankName}</span>
+              </div>
+              <div className="flex justify-between items-center gap-2 text-sm">
+                <span className="text-neutral-500 shrink-0">{language === 'ko' ? '계좌번호' : 'Account'}</span>
+                <span className="font-mono truncate">{bankTransferResult.bankAccountNumber}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(bankTransferResult.bankAccountNumber);
+                    // 간단 토스트는 생략 가능
+                  }}
+                  className="shrink-0 p-1.5 rounded-lg bg-primary dark:bg-[#CCFF00] text-black hover:opacity-90"
+                  title={language === 'ko' ? '복사' : 'Copy'}
+                >
+                  <Copy size={16} />
+                </button>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-neutral-500">{language === 'ko' ? '예금주' : 'Depositor'}</span>
+                <span>{bankTransferResult.bankDepositorName}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setBankTransferResult(null)}
+              className="w-full py-3 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-medium"
+            >
+              {language === 'ko' ? '확인' : 'OK'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 수강권 결제 위젯 모달 (앱 내 결제 유지) — 토스 활성화 시에만 노출 */}
+      {ENABLE_TOSS_PAYMENT && widgetOrder && (
         <TicketTossPaymentModal
           isOpen={widgetModalOpen}
           onClose={() => {

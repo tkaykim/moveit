@@ -143,6 +143,9 @@ export type Database = {
       academies: {
         Row: {
           address: string | null
+          bank_account_number: string | null
+          bank_depositor_name: string | null
+          bank_name: string | null
           consultation_availability: Json | null
           contact_number: string | null
           created_at: string | null
@@ -168,6 +171,9 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          bank_account_number?: string | null
+          bank_depositor_name?: string | null
+          bank_name?: string | null
           consultation_availability?: Json | null
           contact_number?: string | null
           created_at?: string | null
@@ -193,6 +199,9 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          bank_account_number?: string | null
+          bank_depositor_name?: string | null
+          bank_name?: string | null
           consultation_availability?: Json | null
           contact_number?: string | null
           created_at?: string | null
@@ -1478,6 +1487,127 @@ export type Database = {
             columns: ["user_ticket_id"]
             isOneToOne: false
             referencedRelation: "user_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_transfer_orders: {
+        Row: {
+          id: string
+          academy_id: string
+          user_id: string
+          ticket_id: string
+          schedule_id: string | null
+          class_id: string | null
+          amount: number
+          count_option_index: number | null
+          discount_id: string | null
+          order_name: string | null
+          status: string
+          user_ticket_id: string | null
+          revenue_transaction_id: string | null
+          created_at: string
+          confirmed_at: string | null
+          confirmed_by: string | null
+        }
+        Insert: {
+          id?: string
+          academy_id: string
+          user_id: string
+          ticket_id: string
+          schedule_id?: string | null
+          class_id?: string | null
+          amount: number
+          count_option_index?: number | null
+          discount_id?: string | null
+          order_name?: string | null
+          status?: string
+          user_ticket_id?: string | null
+          revenue_transaction_id?: string | null
+          created_at?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+        }
+        Update: {
+          id?: string
+          academy_id?: string
+          user_id?: string
+          ticket_id?: string
+          schedule_id?: string | null
+          class_id?: string | null
+          amount?: number
+          count_option_index?: number | null
+          discount_id?: string | null
+          order_name?: string | null
+          status?: string
+          user_ticket_id?: string | null
+          revenue_transaction_id?: string | null
+          created_at?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_transfer_orders_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transfer_orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transfer_orders_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transfer_orders_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transfer_orders_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transfer_orders_discount_id_fkey"
+            columns: ["discount_id"]
+            isOneToOne: false
+            referencedRelation: "discounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transfer_orders_user_ticket_id_fkey"
+            columns: ["user_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "user_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transfer_orders_revenue_transaction_id_fkey"
+            columns: ["revenue_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "revenue_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transfer_orders_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]

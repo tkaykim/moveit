@@ -63,6 +63,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '학원 이름(한글)은 필수입니다.' }, { status: 400 });
     }
 
+    const bank_name = body?.bank_name?.trim();
+    const bank_account_number = body?.bank_account_number?.trim();
+    const bank_depositor_name = body?.bank_depositor_name?.trim();
+    if (!bank_name || !bank_account_number || !bank_depositor_name) {
+      return NextResponse.json(
+        { error: '입금 받을 계좌 정보(은행명, 계좌번호, 입금자명)를 모두 입력해 주세요.' },
+        { status: 400 }
+      );
+    }
+
     const supabase = createServiceClient();
 
     const academyInsert: Record<string, unknown> = {
@@ -71,6 +81,9 @@ export async function POST(request: NextRequest) {
       address: body?.address?.trim() || null,
       contact_number: body?.contact_number?.trim() || null,
       is_active: true,
+      bank_name,
+      bank_account_number,
+      bank_depositor_name,
     };
     if (body?.tags && Array.isArray(body.tags)) {
       academyInsert.tags = body.tags.filter(Boolean).join(', ');

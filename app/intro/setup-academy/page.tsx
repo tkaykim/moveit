@@ -37,6 +37,9 @@ export default function SetupAcademyPage() {
           contact_number: data.contact_number.trim() || undefined,
           hall_name: data.hall_name.trim() || undefined,
           hall_capacity: data.hall_capacity,
+          bank_name: data.bank_name.trim(),
+          bank_account_number: data.bank_account_number.trim(),
+          bank_depositor_name: data.bank_depositor_name.trim(),
         }),
       });
       const json = await res.json();

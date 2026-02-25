@@ -5,6 +5,7 @@ import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import { Academy, ClassInfo } from '@/types';
 import { LanguageToggle } from '@/components/common/language-toggle';
 import { useState, useEffect } from 'react';
+import { ENABLE_TOSS_PAYMENT } from '@/lib/constants/payment';
 
 interface PaymentViewProps {
   academy: Academy | null;
@@ -163,57 +164,59 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
       <div className="space-y-3 mb-8">
         <h3 className="text-black dark:text-white font-bold text-sm">결제 수단</h3>
         
-        {/* 카드 결제 */}
-        <button
-          onClick={() => handlePaymentMethodSelect('card')}
-          className={`w-full rounded-xl p-4 flex justify-between items-center border-2 transition-colors ${
-            paymentMethod === 'card'
-              ? 'bg-neutral-200 dark:bg-neutral-800 border-primary dark:border-[#CCFF00]'
-              : 'bg-neutral-100 dark:bg-neutral-900 border-transparent hover:border-neutral-300 dark:hover:border-neutral-700'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-              paymentMethod === 'card' ? 'bg-primary/20 dark:bg-[#CCFF00]/20' : 'bg-neutral-200 dark:bg-neutral-800'
-            }`}>
-              <CreditCard className={paymentMethod === 'card' ? 'text-primary dark:text-[#CCFF00]' : 'text-neutral-500'} size={20} />
-            </div>
-            <div className="text-left">
-              <div className="text-black dark:text-white font-bold">카드</div>
-            </div>
-          </div>
-          {paymentMethod === 'card' && (
-            <div className="w-5 h-5 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center">
-              <CheckCircle size={14} className="text-black" />
-            </div>
-          )}
-        </button>
-
-        {/* 계좌이체 */}
-        <button
-          onClick={() => handlePaymentMethodSelect('account')}
-          className={`w-full rounded-xl p-4 flex justify-between items-center border-2 transition-colors ${
-            paymentMethod === 'account'
-              ? 'bg-neutral-200 dark:bg-neutral-800 border-primary dark:border-[#CCFF00]'
-              : 'bg-neutral-100 dark:bg-neutral-900 border-transparent hover:border-neutral-300 dark:hover:border-neutral-700'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-              paymentMethod === 'account' ? 'bg-primary/20 dark:bg-[#CCFF00]/20' : 'bg-neutral-200 dark:bg-neutral-800'
-            }`}>
-              <Building2 className={paymentMethod === 'account' ? 'text-primary dark:text-[#CCFF00]' : 'text-neutral-500'} size={20} />
-            </div>
-            <div className="text-left">
-              <div className="text-black dark:text-white font-bold">계좌이체</div>
-            </div>
-          </div>
-          {paymentMethod === 'account' && (
-            <div className="w-5 h-5 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center">
-              <CheckCircle size={14} className="text-black" />
-            </div>
-          )}
-        </button>
+        {/* 카드 / 계좌이체 — 토스 활성화 시에만 노출 */}
+        {ENABLE_TOSS_PAYMENT && (
+          <>
+            <button
+              onClick={() => handlePaymentMethodSelect('card')}
+              className={`w-full rounded-xl p-4 flex justify-between items-center border-2 transition-colors ${
+                paymentMethod === 'card'
+                  ? 'bg-neutral-200 dark:bg-neutral-800 border-primary dark:border-[#CCFF00]'
+                  : 'bg-neutral-100 dark:bg-neutral-900 border-transparent hover:border-neutral-300 dark:hover:border-neutral-700'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  paymentMethod === 'card' ? 'bg-primary/20 dark:bg-[#CCFF00]/20' : 'bg-neutral-200 dark:bg-neutral-800'
+                }`}>
+                  <CreditCard className={paymentMethod === 'card' ? 'text-primary dark:text-[#CCFF00]' : 'text-neutral-500'} size={20} />
+                </div>
+                <div className="text-left">
+                  <div className="text-black dark:text-white font-bold">카드</div>
+                </div>
+              </div>
+              {paymentMethod === 'card' && (
+                <div className="w-5 h-5 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center">
+                  <CheckCircle size={14} className="text-black" />
+                </div>
+              )}
+            </button>
+            <button
+              onClick={() => handlePaymentMethodSelect('account')}
+              className={`w-full rounded-xl p-4 flex justify-between items-center border-2 transition-colors ${
+                paymentMethod === 'account'
+                  ? 'bg-neutral-200 dark:bg-neutral-800 border-primary dark:border-[#CCFF00]'
+                  : 'bg-neutral-100 dark:bg-neutral-900 border-transparent hover:border-neutral-300 dark:hover:border-neutral-700'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  paymentMethod === 'account' ? 'bg-primary/20 dark:bg-[#CCFF00]/20' : 'bg-neutral-200 dark:bg-neutral-800'
+                }`}>
+                  <Building2 className={paymentMethod === 'account' ? 'text-primary dark:text-[#CCFF00]' : 'text-neutral-500'} size={20} />
+                </div>
+                <div className="text-left">
+                  <div className="text-black dark:text-white font-bold">계좌이체</div>
+                </div>
+              </div>
+              {paymentMethod === 'account' && (
+                <div className="w-5 h-5 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center">
+                  <CheckCircle size={14} className="text-black" />
+                </div>
+              )}
+            </button>
+          </>
+        )}
 
         {/* 전체 수강권 사용 */}
         {!loading && ticketGroups.find(g => g.type === 'general') && (() => {
@@ -286,7 +289,7 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
         className="w-full bg-primary dark:bg-[#CCFF00] text-black font-black py-4 rounded-xl text-lg shadow-[0_0_20px_rgba(204,255,0,0.3)] active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={loading || ((paymentMethod === 'general_ticket' || paymentMethod === 'academy_ticket') && !selectedTicketId)}
       >
-        {paymentMethod === 'card' || paymentMethod === 'account'
+        {ENABLE_TOSS_PAYMENT && (paymentMethod === 'card' || paymentMethod === 'account')
           ? '결제하기'
           : '1회권 차감하여 결제하기'
         }

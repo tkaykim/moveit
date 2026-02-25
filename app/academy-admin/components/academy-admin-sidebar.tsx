@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   QrCode,
   Bell,
+  Landmark,
   type LucideIcon,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -79,6 +80,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
     { icon: BookOpen, label: '클래스(반) 관리', href: `/academy-admin/${academyId}/class-masters` },
     { icon: CalendarDays, label: '스케줄 관리', href: `/academy-admin/${academyId}/schedule` },
     { icon: UserCog, label: '출석/신청 관리', href: `/academy-admin/${academyId}/enrollments` },
+    { icon: Landmark, label: '수동 입금확인', href: `/academy-admin/${academyId}/deposit-confirm` },
     { icon: QrCode, label: 'QR 출석 리더', href: `/academy-admin/${academyId}/qr-reader` },
     { icon: Pause, label: '연장/일시정지 관리', href: `/academy-admin/${academyId}/extension-requests` },
     { icon: Replace, label: '대강/취소 신청 관리', href: `/academy-admin/${academyId}/schedule-change-requests` },

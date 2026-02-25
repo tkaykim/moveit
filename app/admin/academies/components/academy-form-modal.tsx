@@ -31,6 +31,9 @@ interface AcademyFormData {
   tiktok_handle: string | null;
   website_url: string | null;
   other_url: string | null;
+  bank_name: string | null;
+  bank_account_number: string | null;
+  bank_depositor_name: string | null;
   halls: HallData[];
   academy_images: AcademyImageData[];
 }
@@ -62,6 +65,9 @@ export function AcademyFormModal({
     tiktok_handle: '',
     website_url: '',
     other_url: '',
+    bank_name: '',
+    bank_account_number: '',
+    bank_depositor_name: '',
     halls: [],
     academy_images: [],
   });
@@ -84,6 +90,9 @@ export function AcademyFormModal({
           tiktok_handle: initialData.tiktok_handle || '',
           website_url: initialData.website_url || '',
           other_url: initialData.other_url || '',
+          bank_name: initialData.bank_name || '',
+          bank_account_number: initialData.bank_account_number || '',
+          bank_depositor_name: initialData.bank_depositor_name || '',
           halls: initialData.halls || [],
           academy_images: initialData.academy_images || [],
         });
@@ -101,6 +110,9 @@ export function AcademyFormModal({
           tiktok_handle: '',
           website_url: '',
           other_url: '',
+          bank_name: '',
+          bank_account_number: '',
+          bank_depositor_name: '',
           halls: [],
           academy_images: [],
         });
@@ -276,6 +288,10 @@ export function AcademyFormModal({
       alert('한글명 또는 영문명 중 하나는 필수입니다.');
       return;
     }
+    if (!formData.bank_name?.trim() || !formData.bank_account_number?.trim() || !formData.bank_depositor_name?.trim()) {
+      alert('입금 받을 계좌 정보(은행명, 계좌번호, 입금자명)를 모두 입력해 주세요.');
+      return;
+    }
 
     // 디버깅: 제출 전 formData 확인
     console.log('Form submission - academy_images:', formData.academy_images);
@@ -304,6 +320,9 @@ export function AcademyFormModal({
         tiktok_handle: '',
         website_url: '',
         other_url: '',
+        bank_name: '',
+        bank_account_number: '',
+        bank_depositor_name: '',
         halls: [],
         academy_images: [],
       });
@@ -389,6 +408,48 @@ export function AcademyFormModal({
                     placeholder="예: 02-1234-5678"
                     className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
                   />
+                </div>
+
+                {/* 입금 받을 계좌 정보 (필수) */}
+                <div className="pt-4 border-t border-neutral-200 dark:border-neutral-700">
+                  <h4 className="text-sm font-semibold text-black dark:text-white mb-2">
+                    입금 받을 계좌 정보 <span className="text-red-500">*</span>
+                  </h4>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">
+                    수강권·수업 결제 시 계좌이체로 입금받을 계좌입니다. 은행명, 계좌번호, 입금자명을 모두 입력해 주세요.
+                  </p>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">은행명</label>
+                      <input
+                        type="text"
+                        value={formData.bank_name || ''}
+                        onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                        placeholder="예: 국민은행"
+                        className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">계좌번호</label>
+                      <input
+                        type="text"
+                        value={formData.bank_account_number || ''}
+                        onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
+                        placeholder="예: 123-45-6789012"
+                        className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">입금자명(예금주)</label>
+                      <input
+                        type="text"
+                        value={formData.bank_depositor_name || ''}
+                        onChange={(e) => setFormData({ ...formData, bank_depositor_name: e.target.value })}
+                        placeholder="예: 홍길동"
+                        className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div>

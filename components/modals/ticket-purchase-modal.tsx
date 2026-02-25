@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
-import { X, Ticket, Calendar, Hash, Check, Tag, Gift } from 'lucide-react';
+import { X, Ticket, Calendar, Hash, Check, Tag, Gift, Copy } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { useLocale } from '@/contexts/LocaleContext';
+import { ENABLE_TOSS_PAYMENT } from '@/lib/constants/payment';
 
 interface TicketInfo {
   id: string;
@@ -56,6 +57,14 @@ export const TicketPurchaseModal = ({
   });
   const [purchasing, setPurchasing] = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
+  const [bankTransferResult, setBankTransferResult] = useState<{
+    orderId: string;
+    amount: number;
+    orderName: string;
+    bankName: string;
+    bankAccountNumber: string;
+    bankDepositorName: string;
+  } | null>(null);
 
   useEffect(() => {
     if (isOpen && academyId) {
@@ -132,7 +141,32 @@ export const TicketPurchaseModal = ({
 
     try {
       setPurchasing(true);
-      
+
+      if (!ENABLE_TOSS_PAYMENT) {
+        const response = await fetchWithAuth('/api/tickets/bank-transfer-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ticketId: selectedTicket.id,
+            discountId: selectedDiscount?.id ?? undefined,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || '신청에 실패했습니다.');
+        }
+        setBankTransferResult({
+          orderId: data.orderId,
+          amount: data.amount,
+          orderName: data.orderName,
+          bankName: data.bankName,
+          bankAccountNumber: data.bankAccountNumber,
+          bankDepositorName: data.bankDepositorName,
+        });
+        setPurchasing(false);
+        return;
+      }
+
       const response = await fetchWithAuth('/api/tickets/purchase', {
         method: 'POST',
         headers: {
@@ -169,6 +203,7 @@ export const TicketPurchaseModal = ({
     setSelectedTicket(null);
     setSelectedDiscount(null);
     setPurchaseSuccess(false);
+    setBankTransferResult(null);
     setActiveTab('ticket');
     onClose();
   };
@@ -265,7 +300,51 @@ export const TicketPurchaseModal = ({
 
         {/* 컨텐츠 */}
         <div className="p-4 overflow-y-auto max-h-[60vh]">
-          {purchaseSuccess ? (
+          {bankTransferResult ? (
+            <div className="space-y-4">
+              <div className="text-center">
+                <h3 className="text-lg font-bold text-black dark:text-white mb-1">
+                  {language === 'ko' ? '입금 안내' : 'Transfer details'}
+                </h3>
+                <p className="text-sm text-neutral-500">
+                  {language === 'ko' ? '아래 계좌로 입금해 주시면 학원에서 확인 후 수강권이 발급됩니다.' : 'Transfer the amount below. Your ticket will be issued after the academy verifies.'}
+                </p>
+              </div>
+              <div className="space-y-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 p-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-neutral-500">{language === 'ko' ? '금액' : 'Amount'}</span>
+                  <span className="font-semibold">{bankTransferResult.amount.toLocaleString()}원</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-neutral-500">{language === 'ko' ? '은행' : 'Bank'}</span>
+                  <span>{bankTransferResult.bankName}</span>
+                </div>
+                <div className="flex justify-between items-center gap-2 text-sm">
+                  <span className="text-neutral-500 shrink-0">{language === 'ko' ? '계좌번호' : 'Account'}</span>
+                  <span className="font-mono truncate">{bankTransferResult.bankAccountNumber}</span>
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard.writeText(bankTransferResult.bankAccountNumber)}
+                    className="shrink-0 p-1.5 rounded-lg bg-neutral-800 dark:bg-[#CCFF00] text-white dark:text-black hover:opacity-90"
+                    title={language === 'ko' ? '복사' : 'Copy'}
+                  >
+                    <Copy size={16} />
+                  </button>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-neutral-500">{language === 'ko' ? '예금주' : 'Depositor'}</span>
+                  <span>{bankTransferResult.bankDepositorName}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleClose}
+                className="w-full py-3 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-medium"
+              >
+                {language === 'ko' ? '확인' : 'OK'}
+              </button>
+            </div>
+          ) : purchaseSuccess ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Check size={32} className="text-green-600 dark:text-green-400" />
@@ -419,7 +498,7 @@ export const TicketPurchaseModal = ({
         </div>
 
         {/* 하단 버튼 */}
-        {!purchaseSuccess && selectedTicket && (
+        {!purchaseSuccess && !bankTransferResult && selectedTicket && (
           <div className="p-4 border-t border-neutral-200 dark:border-neutral-800">
             {/* 가격 정보 */}
             <div className="space-y-1 mb-3">

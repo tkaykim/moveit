@@ -6,6 +6,7 @@ import { SectionHeader } from '../common/section-header';
 import { CurrentPlanCard } from './billing/current-plan-card';
 import { PaymentMethodCard } from './billing/payment-method-card';
 import { PlanCardsSection } from './billing/plan-cards-section';
+import { ENABLE_TOSS_PAYMENT } from '@/lib/constants/payment';
 import { CancelSubscriptionSection } from './billing/cancel-subscription-section';
 import { PaymentHistoryTable } from './billing/payment-history-table';
 import { authFetch } from '@/lib/supabase/auth-fetch';
@@ -225,14 +226,16 @@ export function BillingView({ academyId }: BillingViewProps) {
         loading={loadingSub}
       />
 
-      {/* 3. 결제 수단 */}
-      <PaymentMethodCard
-        academyId={academyId}
-        cardCompany={subscription?.card_company ?? null}
-        cardNumberMasked={subscription?.card_number_masked ?? null}
-        hasBillingKey={!!subscription?.toss_billing_key}
-        onSuccess={refresh}
-      />
+      {/* 3. 결제 수단 — 토스 활성화 시에만 카드 등록 노출 */}
+      {ENABLE_TOSS_PAYMENT && (
+        <PaymentMethodCard
+          academyId={academyId}
+          cardCompany={subscription?.card_company ?? null}
+          cardNumberMasked={subscription?.card_number_masked ?? null}
+          hasBillingKey={!!subscription?.toss_billing_key}
+          onSuccess={refresh}
+        />
+      )}
 
       {subscription && (
         <CancelSubscriptionSection

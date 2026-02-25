@@ -15,7 +15,7 @@ import {
   BUILTIN_SECTION_IDS,
   migrateSectionConfig
 } from '@/types/database';
-import { GripVertical, Eye, EyeOff, ChevronUp, ChevronDown, ChevronRight, RotateCcw, LayoutList, Info, Building2, Link2, MessageSquare, FileText, Plus, Trash2, ImageIcon, Type, Video, Pencil, X, Upload, ExternalLink, Bold, Italic, Underline as UnderlineIcon, Strikethrough, Heading1, Heading2, Heading3, AlignLeft, AlignCenter, AlignRight, List, ListOrdered } from 'lucide-react';
+import { GripVertical, Eye, EyeOff, ChevronUp, ChevronDown, ChevronRight, RotateCcw, LayoutList, Info, Building2, Link2, MessageSquare, FileText, Plus, Trash2, ImageIcon, Type, Video, Pencil, X, Upload, ExternalLink, Bold, Italic, Underline as UnderlineIcon, Strikethrough, Heading1, Heading2, Heading3, AlignLeft, AlignCenter, AlignRight, List, ListOrdered, Landmark } from 'lucide-react';
 import { ConsultationSettingsTab } from './consultations/consultation-settings-tab';
 import { IntroductionEditor } from './introduction-editor';
 import Image from 'next/image';
@@ -538,6 +538,9 @@ export function SettingsView({ academyId }: SettingsViewProps) {
     youtube_url: '',
     naver_map_url: '',
     kakao_channel_url: '',
+    bank_name: '',
+    bank_account_number: '',
+    bank_depositor_name: '',
   });
   const [sectionConfig, setSectionConfig] = useState<SectionConfig>(
     JSON.parse(JSON.stringify(DEFAULT_SECTION_CONFIG))
@@ -550,6 +553,7 @@ export function SettingsView({ academyId }: SettingsViewProps) {
   const [editingCustomSection, setEditingCustomSection] = useState<SectionConfigItem | null>(null);
   const [showIntroEditor, setShowIntroEditor] = useState(false);
   const [openPanels, setOpenPanels] = useState<Record<string, boolean>>({
+    bankAccount: true,
     basicInfo: true,
     links: false,
     introduction: false,
@@ -591,6 +595,9 @@ export function SettingsView({ academyId }: SettingsViewProps) {
         youtube_url: data.youtube_url || '',
         naver_map_url: data.naver_map_url || '',
         kakao_channel_url: data.kakao_channel_url || '',
+        bank_name: data.bank_name || '',
+        bank_account_number: data.bank_account_number || '',
+        bank_depositor_name: data.bank_depositor_name || '',
       });
 
       // section_config 로드 (레거시 tabs/homeSections 형식도 자동 변환)
@@ -768,6 +775,9 @@ export function SettingsView({ academyId }: SettingsViewProps) {
         youtube_url: formData.youtube_url.trim() ? formData.youtube_url.trim() : null,
         naver_map_url: formData.naver_map_url.trim() ? formData.naver_map_url.trim() : null,
         kakao_channel_url: formData.kakao_channel_url.trim() ? formData.kakao_channel_url.trim() : null,
+        bank_name: formData.bank_name.trim() || null,
+        bank_account_number: formData.bank_account_number.trim() || null,
+        bank_depositor_name: formData.bank_depositor_name.trim() || null,
       };
       const { error } = await supabase
         .from('academies')
@@ -785,6 +795,42 @@ export function SettingsView({ academyId }: SettingsViewProps) {
     }
   };
 
+  const handleSaveBankAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.bank_account_number?.trim()) {
+      alert('계좌번호를 입력해 주세요. 계좌이체 결제 시 입금받을 계좌로 사용됩니다.');
+      return;
+    }
+    if (!formData.bank_name?.trim() || !formData.bank_depositor_name?.trim()) {
+      alert('은행명, 계좌번호, 입금자명을 모두 입력해 주세요.');
+      return;
+    }
+    setSaving(true);
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setSaving(false);
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('academies')
+        .update({
+          bank_name: formData.bank_name.trim(),
+          bank_account_number: formData.bank_account_number.trim(),
+          bank_depositor_name: formData.bank_depositor_name.trim(),
+        })
+        .eq('id', academyId);
+      if (error) throw error;
+      alert('계좌 정보가 저장되었습니다.');
+      loadAcademy();
+    } catch (err: any) {
+      console.error('Error updating bank account:', err);
+      alert('계좌 정보 저장에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -796,6 +842,73 @@ export function SettingsView({ academyId }: SettingsViewProps) {
   return (
     <div className="space-y-3" data-onboarding="page-settings-0">
       <SectionHeader title="시스템 설정" />
+
+      {/* ─── 입금 계좌 정보 (계좌이체 결제용, 꼭 등록) ─── */}
+      <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => togglePanel('bankAccount')}
+          className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors"
+        >
+          <Landmark size={18} className="text-amber-500 dark:text-amber-400 flex-shrink-0" />
+          <span className="flex-1 font-bold text-gray-800 dark:text-white">입금 계좌 정보</span>
+          <span className="text-xs text-gray-400 dark:text-neutral-500 mr-1">
+            {formData.bank_account_number ? '등록됨' : '미등록'}
+          </span>
+          <ChevronRight
+            size={18}
+            className={`text-gray-400 dark:text-neutral-500 transition-transform duration-200 ${openPanels.bankAccount ? 'rotate-90' : ''}`}
+          />
+        </button>
+        {openPanels.bankAccount && (
+          <form onSubmit={handleSaveBankAccount} className="px-5 pb-5 border-t border-gray-100 dark:border-neutral-800">
+            <div className="space-y-4 pt-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                수강권·수업 결제 시 계좌이체로 입금받을 계좌입니다. 계좌번호를 꼭 등록해 주세요.
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">은행명</label>
+                <input
+                  type="text"
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={formData.bank_name}
+                  onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                  placeholder="예: 국민은행"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">계좌번호</label>
+                <input
+                  type="text"
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={formData.bank_account_number}
+                  onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
+                  placeholder="예: 123-45-6789012"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">입금자명(예금주)</label>
+                <input
+                  type="text"
+                  className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                  value={formData.bank_depositor_name}
+                  onChange={(e) => setFormData({ ...formData, bank_depositor_name: e.target.value })}
+                  placeholder="예: 홍길동"
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="bg-amber-600 dark:bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-700 dark:hover:bg-amber-600 transition-colors disabled:opacity-50"
+                >
+                  {saving ? '저장 중...' : '계좌 정보 저장'}
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
+      </div>
 
       {/* ─── 아코디언 1: 학원 기본 정보 ─── */}
       <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 overflow-hidden">

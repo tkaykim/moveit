@@ -33,6 +33,9 @@ interface AcademyFormData {
   tiktok_handle: string | null;
   website_url: string | null;
   other_url: string | null;
+  bank_name: string | null;
+  bank_account_number: string | null;
+  bank_depositor_name: string | null;
   halls: HallData[];
   academy_images: AcademyImageData[];
 }
@@ -116,6 +119,9 @@ export default function AcademiesPage() {
           tiktok_handle: formData.tiktok_handle || null,
           website_url: formData.website_url || null,
           other_url: formData.other_url || null,
+          bank_name: formData.bank_name?.trim() || null,
+          bank_account_number: formData.bank_account_number?.trim() || null,
+          bank_depositor_name: formData.bank_depositor_name?.trim() || null,
         };
 
         const { error } = await supabase
@@ -138,6 +144,9 @@ export default function AcademiesPage() {
           tiktok_handle: formData.tiktok_handle || null,
           website_url: formData.website_url || null,
           other_url: formData.other_url || null,
+          bank_name: formData.bank_name?.trim() || null,
+          bank_account_number: formData.bank_account_number?.trim() || null,
+          bank_depositor_name: formData.bank_depositor_name?.trim() || null,
         };
 
         const { data: newAcademy, error } = await supabase
@@ -346,13 +355,16 @@ export default function AcademiesPage() {
         tiktok_handle: (academy as any).tiktok_handle || '',
         website_url: (academy as any).website_url || '',
         other_url: (academy as any).other_url || '',
+        bank_name: (academy as any).bank_name || '',
+        bank_account_number: (academy as any).bank_account_number || '',
+        bank_depositor_name: (academy as any).bank_depositor_name || '',
         halls: (halls || []).map((hall: any) => ({
           id: hall.id,
           name: hall.name,
           capacity: hall.capacity || 0,
         })),
         academy_images: images.map((img: any) => ({
-          id: undefined, // JSONB에는 id가 없음
+          id: undefined,
           image_url: img.url || '',
           display_order: img.order || 0,
         })),
