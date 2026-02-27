@@ -165,6 +165,9 @@ export type Database = {
           other_url: string | null
           section_config: Json | null
           tags: string | null
+          ticket_label_popup: string | null
+          ticket_label_regular: string | null
+          ticket_label_workshop: string | null
           tiktok_handle: string | null
           website_url: string | null
           youtube_url: string | null
@@ -193,6 +196,9 @@ export type Database = {
           other_url?: string | null
           section_config?: Json | null
           tags?: string | null
+          ticket_label_popup?: string | null
+          ticket_label_regular?: string | null
+          ticket_label_workshop?: string | null
           tiktok_handle?: string | null
           website_url?: string | null
           youtube_url?: string | null
@@ -221,6 +227,9 @@ export type Database = {
           other_url?: string | null
           section_config?: Json | null
           tags?: string | null
+          ticket_label_popup?: string | null
+          ticket_label_regular?: string | null
+          ticket_label_workshop?: string | null
           tiktok_handle?: string | null
           website_url?: string | null
           youtube_url?: string | null
@@ -1858,6 +1867,7 @@ export type Database = {
           class_id: string | null
           count_options: Json | null
           created_at: string | null
+          description: string | null
           id: string
           is_coupon: boolean | null
           is_general: boolean
@@ -1876,6 +1886,7 @@ export type Database = {
           class_id?: string | null
           count_options?: Json | null
           created_at?: string | null
+          description?: string | null
           id?: string
           is_coupon?: boolean | null
           is_general?: boolean
@@ -1894,6 +1905,7 @@ export type Database = {
           class_id?: string | null
           count_options?: Json | null
           created_at?: string | null
+          description?: string | null
           id?: string
           is_coupon?: boolean | null
           is_general?: boolean

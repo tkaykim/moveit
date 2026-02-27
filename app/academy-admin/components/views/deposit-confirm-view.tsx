@@ -132,17 +132,17 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
   };
 
   return (
-    <div className="p-4 lg:p-6 max-w-4xl mx-auto">
-      <div className="flex items-center gap-2 mb-6">
-        <Landmark className="text-primary dark:text-[#CCFF00]" size={24} />
-        <h1 className="text-xl font-bold text-black dark:text-white">수동 입금확인</h1>
+    <div className="p-4 lg:p-6 max-w-6xl mx-auto">
+      <div className="flex items-center gap-2 mb-3">
+        <Landmark className="text-primary dark:text-[#CCFF00]" size={22} />
+        <h1 className="text-lg font-bold text-black dark:text-white">수동 입금확인</h1>
       </div>
 
-      <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
+      <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-3">
         계좌이체로 신청한 주문을 확인한 뒤 입금 확인을 누르면 수강권이 발급되고, 수업 예약이 있으면 예약이 확정됩니다.
       </p>
 
-      <div className="flex gap-2 border-b border-neutral-200 dark:border-neutral-700 mb-4">
+      <div className="flex gap-2 border-b border-neutral-200 dark:border-neutral-700 mb-3">
         <button
           onClick={() => setTab('PENDING')}
           className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
@@ -191,84 +191,66 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
           {tab === 'PENDING' ? '입금 대기 중인 주문이 없습니다.' : '확인 완료된 주문이 없습니다.'}
         </div>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-2">
           {orders.map((order) => {
             const hasBooking = !!order.schedule_id && !!order.schedules;
             return (
               <li
                 key={order.id}
-                className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900"
+                className="p-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900"
               >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="space-y-2 flex-1 min-w-0">
-                    {/* 구분 뱃지: 수강권만 vs 수강권+예약 */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      {hasBooking ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200">
-                          <CalendarCheck size={14} />
-                          수강권 + 수업 예약
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
-                          <Ticket size={14} />
-                          수강권만 구매
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <span className="font-medium text-black dark:text-white">
-                        {order.user_name || '(이름 없음)'}
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 flex-1 min-w-0">
+                    {hasBooking ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 shrink-0">
+                        <CalendarCheck size={12} />
+                        수강권+예약
                       </span>
-                      {order.user_phone && (
-                        <span className="text-sm text-neutral-500">{order.user_phone}</span>
-                      )}
-                      {order.user_email && (
-                        <span className="text-sm text-neutral-500">{order.user_email}</span>
-                      )}
-                    </div>
-                    <div className="text-sm text-neutral-600 dark:text-neutral-400">
-                      {order.tickets?.name || order.order_name || '수강권'} · {order.amount.toLocaleString()}원
-                    </div>
-
-                    {/* 예약한 수업 정보 — 수강권+예약인 경우에만 강조 표시 */}
-                    {hasBooking && order.schedules && (
-                      <div className="mt-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                        <div className="text-xs font-medium text-blue-800 dark:text-blue-200 mb-1 flex items-center gap-1">
-                          <Clock size={12} />
-                          예약한 수업
-                        </div>
-                        <div className="text-sm font-medium text-black dark:text-white">
-                          {order.schedules.classes?.title || '(클래스명 없음)'}
-                        </div>
-                        <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                          {formatTimeRange(order.schedules.start_time, order.schedules.end_time)}
-                        </div>
-                      </div>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 shrink-0">
+                        <Ticket size={12} />
+                        수강권만
+                      </span>
                     )}
-
-                    <div className="text-xs text-neutral-400">
-                      신청일: {formatDate(order.created_at)}
-                      {order.confirmed_at && ` · 확인일: ${formatDate(order.confirmed_at)}`}
-                    </div>
+                    <span className="font-medium text-black dark:text-white">
+                      {order.user_name || '(이름 없음)'}
+                    </span>
+                    {order.user_phone && (
+                      <span className="text-sm text-neutral-500">{order.user_phone}</span>
+                    )}
+                    {order.user_email && (
+                      <span className="text-sm text-neutral-500 truncate max-w-[180px]">{order.user_email}</span>
+                    )}
+                    <span className="text-sm text-neutral-600 dark:text-neutral-400">
+                      {order.tickets?.name || order.order_name || '수강권'} · {order.amount.toLocaleString()}원
+                    </span>
+                    {hasBooking && order.schedules && (
+                      <span className="text-xs text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded">
+                        {order.schedules.classes?.title || '(클래스)'} {formatTimeRange(order.schedules.start_time, order.schedules.end_time)}
+                      </span>
+                    )}
+                    <span className="text-xs text-neutral-400">
+                      {formatDate(order.created_at)}
+                      {order.confirmed_at && ` · ${formatDate(order.confirmed_at)}`}
+                    </span>
                   </div>
                   {tab === 'PENDING' && (
                     <button
                       onClick={() => handleConfirm(order.id)}
                       disabled={confirmingId !== null}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-medium shrink-0"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-medium shrink-0"
                     >
                       {confirmingId === order.id ? (
-                        <Loader2 size={16} className="animate-spin" />
+                        <Loader2 size={14} className="animate-spin" />
                       ) : (
-                        <CheckCircle size={16} />
+                        <CheckCircle size={14} />
                       )}
                       입금확인
                     </button>
                   )}
                   {tab === 'CONFIRMED' && (
-                    <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400 shrink-0">
-                      <CheckCircle size={16} /> 확인완료
+                    <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 shrink-0">
+                      <CheckCircle size={14} /> 확인완료
                     </span>
                   )}
                 </div>

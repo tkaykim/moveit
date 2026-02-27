@@ -5,8 +5,10 @@ import { Ticket, TrendingUp, Settings, Plus, Tag, Zap, ChevronDown, ChevronUp, S
 import { SectionHeader } from '../common/section-header';
 import { TicketModal } from './products/ticket-modal';
 import { DiscountModal } from './products/discount-modal';
+import { TicketLabelEditBlock } from './products/TicketLabelEditBlock';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { formatCurrency } from './utils/format-currency';
+import { useAcademyTicketLabels } from './hooks/useAcademyTicketLabels';
 
 interface ProductViewProps {
   academyId: string;
@@ -15,6 +17,7 @@ interface ProductViewProps {
 type TicketCategoryFilter = 'all' | 'regular' | 'popup' | 'workshop';
 
 export function ProductView({ academyId }: ProductViewProps) {
+  const { labels, raw, refetch } = useAcademyTicketLabels(academyId);
   const [tickets, setTickets] = useState<any[]>([]);
   const [discounts, setDiscounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,30 +110,33 @@ export function ProductView({ academyId }: ProductViewProps) {
     }
   };
 
-  // 수강권 유형 정보
-  const TICKET_CATEGORY_CONFIG = {
-    regular: {
-      name: '기간제',
-      fullName: '기간제 수강권',
-      classType: 'Regular',
-      badgeColor: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
-      borderColor: 'hover:border-blue-300 dark:hover:border-blue-600',
-    },
-    popup: {
-      name: '쿠폰제',
-      fullName: '쿠폰제(횟수제) 수강권',
-      classType: 'Popup',
-      badgeColor: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400',
-      borderColor: 'hover:border-purple-300 dark:hover:border-purple-600',
-    },
-    workshop: {
-      name: '워크샵(특강)',
-      fullName: '워크샵(특강) 수강권',
-      classType: 'Workshop',
-      badgeColor: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
-      borderColor: 'hover:border-amber-300 dark:hover:border-amber-600',
-    },
-  };
+  // 수강권 유형 정보 (fullName은 학원별 표기 사용)
+  const TICKET_CATEGORY_CONFIG = useMemo(
+    () => ({
+      regular: {
+        name: '기간제',
+        fullName: labels.regular,
+        classType: 'Regular' as const,
+        badgeColor: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
+        borderColor: 'hover:border-blue-300 dark:hover:border-blue-600',
+      },
+      popup: {
+        name: '쿠폰제',
+        fullName: labels.popup,
+        classType: 'Popup' as const,
+        badgeColor: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400',
+        borderColor: 'hover:border-purple-300 dark:hover:border-purple-600',
+      },
+      workshop: {
+        name: '워크샵(특강)',
+        fullName: labels.workshop,
+        classType: 'Workshop' as const,
+        badgeColor: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
+        borderColor: 'hover:border-amber-300 dark:hover:border-amber-600',
+      },
+    }),
+    [labels.regular, labels.popup, labels.workshop]
+  );
 
   const getTicketCategory = (ticket: any): 'regular' | 'popup' | 'workshop' => {
     // access_group으로 먼저 판단
@@ -208,9 +214,9 @@ export function ProductView({ academyId }: ProductViewProps) {
 
   const getCategoryDescription = (category: 'regular' | 'popup' | 'workshop') => {
     switch (category) {
-      case 'regular': return '기간제 수강권. 구매 시 시작일 선택, 기간 내 무제한 수강';
-      case 'popup': return '횟수제 쿠폰. 유효기간 내 미소진 시 잔여 수량 소멸';
-      case 'workshop': return '특정 워크샵 전용. 해당 워크샵에서만 사용 가능';
+      case 'regular': return `${labels.regular}. 구매 시 시작일 선택, 기간 내 무제한 수강`;
+      case 'popup': return `${labels.popup}. 유효기간 내 미소진 시 잔여 수량 소멸`;
+      case 'workshop': return `${labels.workshop}. 해당 워크샵에서만 사용 가능`;
     }
   };
 
@@ -255,6 +261,15 @@ export function ProductView({ academyId }: ProductViewProps) {
           }}
           dataOnboarding="page-products-add"
         />
+
+        {/* 수강권 유형 표기 변경 (학원별) */}
+        <div className="mb-4">
+          <TicketLabelEditBlock
+            academyId={academyId}
+            initialLabels={raw}
+            onSaved={refetch}
+          />
+        </div>
 
         {/* 검색 및 카테고리 필터 */}
         <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 p-4 space-y-4">
@@ -568,6 +583,7 @@ export function ProductView({ academyId }: ProductViewProps) {
           academyId={academyId}
           ticket={selectedTicket}
           initialCategory={initialTicketCategory}
+          ticketLabels={labels}
           onClose={() => {
             setShowTicketModal(false);
             setSelectedTicket(null);

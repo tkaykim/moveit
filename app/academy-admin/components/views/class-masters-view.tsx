@@ -8,6 +8,7 @@ import { ClassMasterModal } from './class-masters/class-master-modal';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { AccessConfig } from '@/types/database';
 import { formatExclusiveClassText } from '@/lib/utils/exclusive-class';
+import { useAcademyTicketLabels } from './hooks/useAcademyTicketLabels';
 
 interface ClassMastersViewProps {
   academyId: string;
@@ -29,6 +30,7 @@ type FilterTab = 'all' | 'active' | 'inactive';
 type ClassTypeFilter = 'all' | 'regular' | 'popup' | 'workshop';
 
 export function ClassMastersView({ academyId }: ClassMastersViewProps) {
+  const { labels } = useAcademyTicketLabels(academyId);
   const [classMasters, setClassMasters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -225,20 +227,19 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
     if (allowedTypes.length === 1) {
       const singleType = allowedTypes[0];
       if (singleType === '정규') {
-        return { icon: Unlock, text: '기간제 수강권', color: typeColors.regular.color, allowedTypes };
+        return { icon: Unlock, text: labels.regular, color: typeColors.regular.color, allowedTypes };
       }
       if (singleType === '팝업') {
-        return { icon: Unlock, text: '쿠폰제(횟수제) 수강권', color: typeColors.popup.color, allowedTypes };
+        return { icon: Unlock, text: labels.popup, color: typeColors.popup.color, allowedTypes };
       }
       if (singleType === '워크샵') {
-        return { icon: Unlock, text: '워크샵(특강) 수강권', color: typeColors.workshop.color, allowedTypes };
+        return { icon: Unlock, text: labels.workshop, color: typeColors.workshop.color, allowedTypes };
       }
     }
     
     // 클래스 타입에 따른 기본값
     const defaultConfig = typeColors[classType] || typeColors.regular;
-    const defaultText = classType === 'popup' ? '쿠폰제(횟수제) 수강권' :
-                        classType === 'workshop' ? '워크샵(특강) 수강권' : '기간제 수강권';
+    const defaultText = classType === 'popup' ? labels.popup : classType === 'workshop' ? labels.workshop : labels.regular;
     
     return { 
       icon: defaultConfig.icon, 
@@ -501,6 +502,7 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
         <ClassMasterModal
           academyId={academyId}
           classData={selectedClass}
+          ticketLabels={labels}
           onClose={() => {
             setShowModal(false);
             setSelectedClass(null);

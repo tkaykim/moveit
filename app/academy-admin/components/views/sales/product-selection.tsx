@@ -3,12 +3,15 @@
 import { useState, useMemo } from 'react';
 import { Check, Search } from 'lucide-react';
 import { formatCurrency } from '../utils/format-currency';
+import type { AcademyTicketLabels } from '../hooks/useAcademyTicketLabels';
+import { DEFAULT_TICKET_LABELS } from '@/lib/constants/ticket-labels';
 
 interface ProductSelectionProps {
   selectedProduct: any;
   products: any[];
   onProductSelect: (product: any) => void;
   disabled: boolean;
+  ticketLabels?: AcademyTicketLabels;
 }
 
 export function ProductSelection({
@@ -16,11 +19,14 @@ export function ProductSelection({
   products,
   onProductSelect,
   disabled,
+  ticketLabels,
 }: ProductSelectionProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
-  const getCategoryLabel = (cat: string) =>
-    cat === 'workshop' ? '워크샵(특강)' : cat === 'popup' ? '쿠폰제(횟수제)' : '기간제';
+  const getCategoryLabel = (cat: string) => {
+    const labels = ticketLabels ?? { regular: DEFAULT_TICKET_LABELS.regular, popup: DEFAULT_TICKET_LABELS.popup, workshop: DEFAULT_TICKET_LABELS.workshop };
+    return cat === 'workshop' ? labels.workshop : cat === 'popup' ? labels.popup : labels.regular;
+  };
 
   // 검색 필터링된 상품 목록 (기간제/쿠폰제/워크샵 라벨로도 검색 가능)
   const filteredProducts = useMemo(() => {

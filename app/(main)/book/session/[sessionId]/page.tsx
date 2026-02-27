@@ -12,6 +12,7 @@ import { TicketRechargeModal } from '@/components/modals/ticket-recharge-modal';
 import { TicketTossPaymentModal } from '@/components/modals/ticket-toss-payment-modal';
 import { useLocale } from '@/contexts/LocaleContext';
 import { ENABLE_TOSS_PAYMENT } from '@/lib/constants/payment';
+import { useTicketLabels } from '@/lib/hooks/useTicketLabels';
 
 interface SessionData {
   id: string;
@@ -71,6 +72,7 @@ interface PurchasableTicket {
   id: string;
   productKey?: string; // count_options용: 'ticketId_count'
   name: string;
+  description?: string | null;
   price: number;
   ticket_type: 'PERIOD' | 'COUNT';
   total_count?: number;
@@ -90,6 +92,8 @@ export default function SessionBookingPage() {
   const sessionId = params.sessionId as string;
 
   const [session, setSession] = useState<SessionData | null>(null);
+  const academyId = session?.classes?.academy_id;
+  const { labels: ticketLabels } = useTicketLabels(academyId);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -412,7 +416,7 @@ export default function SessionBookingPage() {
       // 2. 연결된 수강권 + is_general + (allowCoupon이면 쿠폰) 조회 (count_options 포함)
       const { data: ticketsData, error } = await (supabase as any)
         .from('tickets')
-        .select('id, name, price, ticket_type, total_count, valid_days, is_general, is_coupon, academy_id, ticket_category, access_group, count_options')
+        .select('id, name, description, price, ticket_type, total_count, valid_days, is_general, is_coupon, academy_id, ticket_category, access_group, count_options')
         .eq('is_on_sale', true)
         .eq('academy_id', session.classes.academy_id)
         .or('is_public.eq.true,is_public.is.null');
@@ -452,6 +456,7 @@ export default function SessionBookingPage() {
                 id: ticket.id,
                 productKey: `${ticket.id}_${count}`,
                 name: `${ticket.name} ${count}회권`,
+                description: ticket.description ?? null,
                 price: Number(o?.price ?? 0),
                 ticket_type: 'COUNT',
                 total_count: count,
@@ -467,6 +472,7 @@ export default function SessionBookingPage() {
           expanded.push({
             id: ticket.id,
             name: ticket.name,
+            description: ticket.description ?? null,
             price: ticket.price ?? 0,
             ticket_type: ticket.ticket_type ?? 'PERIOD',
             total_count: ticket.total_count,
@@ -1176,7 +1182,7 @@ export default function SessionBookingPage() {
                   {purchasableTickets.map((ticket) => {
                     const selKey = ticket.productKey ?? ticket.id;
                     const category = ticket.ticket_category || (ticket.is_coupon ? 'popup' : 'regular');
-                    const categoryLabel = category === 'regular' ? t('my.periodTicket') : category === 'popup' ? t('my.countTicket') : t('my.workshopTicket');
+                    const categoryLabel = category === 'regular' ? ticketLabels.regular : category === 'popup' ? ticketLabels.popup : ticketLabels.workshop;
                     const categoryColor = category === 'regular' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : category === 'popup' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400';
                     return (
                       <button
@@ -1216,6 +1222,9 @@ export default function SessionBookingPage() {
                                 {ticket.price.toLocaleString()}원
                               </span>
                             </div>
+                            {ticket.description && (
+                              <p className="mt-1 text-xs text-neutral-400 line-clamp-2">{ticket.description}</p>
+                            )}
                           </div>
                         </div>
                         {selectedPurchaseTicketId === selKey && (
@@ -1376,61 +1385,55 @@ export default function SessionBookingPage() {
       {showOnsiteWarning && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowOnsiteWarning(false)} />
-          <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-in zoom-in-95 duration-200">
-            {/* 닫기 버튼 */}
-            <button
-              onClick={() => setShowOnsiteWarning(false)}
-              className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
-            >
-              <X size={20} />
-            </button>
-
-            {/* 아이콘 */}
-            <div className="flex justify-center mb-4">
-              <div className="w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                <AlertTriangle size={28} className="text-amber-500" />
+          <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-xl w-full p-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                <AlertTriangle size={24} className="text-amber-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <h3 className="text-lg font-bold text-black dark:text-white">
+                    {t('sessionBooking.onsiteWarningTitle')}
+                  </h3>
+                  <button
+                    onClick={() => setShowOnsiteWarning(false)}
+                    className="p-1.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 rounded-lg"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
+                  1. {t('sessionBooking.onsiteWarningMessage1')} 2. {t('sessionBooking.onsiteWarningMessage2')}
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setShowOnsiteWarning(false);
+                      if (user && purchasableTickets.length > 0) {
+                        setPaymentMethod('purchase');
+                      } else if (user && purchasableTickets.length === 0) {
+                        setIsTicketPurchaseModalOpen(true);
+                      } else {
+                        setIsAuthModalOpen(true);
+                      }
+                    }}
+                    className="py-2.5 px-4 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-xl text-sm transition-colors flex items-center gap-2"
+                  >
+                    <Ticket size={16} />
+                    {t('sessionBooking.onsiteWarningBuyTicket')}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPaymentMethod('onsite');
+                      setShowOnsiteWarning(false);
+                    }}
+                    className="py-2 text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 underline underline-offset-2"
+                  >
+                    {t('sessionBooking.onsiteWarningProceed')}
+                  </button>
+                </div>
               </div>
             </div>
-
-            {/* 제목 */}
-            <h3 className="text-lg font-bold text-black dark:text-white text-center mb-3">
-              {t('sessionBooking.onsiteWarningTitle')}
-            </h3>
-
-            {/* 경고 메시지 */}
-            <div className="space-y-2 mb-6 text-sm text-neutral-600 dark:text-neutral-400">
-              <p>1. {t('sessionBooking.onsiteWarningMessage1')}</p>
-              <p>2. {t('sessionBooking.onsiteWarningMessage2')}</p>
-            </div>
-
-            {/* 수강권 구매하고 사전예약하기 (메인 버튼) */}
-            <button
-              onClick={() => {
-                setShowOnsiteWarning(false);
-                if (user && purchasableTickets.length > 0) {
-                  setPaymentMethod('purchase');
-                } else if (user && purchasableTickets.length === 0) {
-                  setIsTicketPurchaseModalOpen(true);
-                } else {
-                  setIsAuthModalOpen(true);
-                }
-              }}
-              className="w-full py-3.5 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-xl transition-colors flex items-center justify-center gap-2 mb-3"
-            >
-              <Ticket size={18} />
-              {t('sessionBooking.onsiteWarningBuyTicket')}
-            </button>
-
-            {/* 그래도 현장결제 할래요 - 클릭 시에만 현장결제 선택됨 */}
-            <button
-              onClick={() => {
-                setPaymentMethod('onsite');
-                setShowOnsiteWarning(false);
-              }}
-              className="w-full py-1.5 text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 underline underline-offset-2 transition-colors"
-            >
-              {t('sessionBooking.onsiteWarningProceed')}
-            </button>
           </div>
         </div>
       )}
@@ -1439,21 +1442,21 @@ export default function SessionBookingPage() {
       {bankTransferAuthModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setBankTransferAuthModalOpen(false)} />
-          <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-sm w-full p-6">
-            <h3 className="text-lg font-bold text-black dark:text-white mb-2">
+          <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-xl w-full p-5">
+            <h3 className="text-lg font-bold text-black dark:text-white mb-1">
               {language === 'ko' ? '수강권 구매 및 예약' : 'Ticket & booking'}
             </h3>
             <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
               {language === 'ko' ? '로그인하시겠습니까? 비회원으로 진행하시면 이름·연락처를 입력해 주세요.' : 'Log in or continue as guest with name and contact.'}
             </p>
-            <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => {
                   setBankTransferAuthModalOpen(false);
                   setAuthModalInitialTab('login');
                   setIsAuthModalOpen(true);
                 }}
-                className="w-full py-3 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm"
+                className="py-2.5 px-5 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm"
               >
                 {t('sessionBooking.loginButton')}
               </button>
@@ -1463,7 +1466,7 @@ export default function SessionBookingPage() {
                   setAuthModalInitialTab('signup');
                   setIsAuthModalOpen(true);
                 }}
-                className="w-full py-3 rounded-xl border-2 border-neutral-300 dark:border-neutral-600 text-neutral-800 dark:text-neutral-200 font-medium text-sm"
+                className="py-2.5 px-5 rounded-xl border-2 border-neutral-300 dark:border-neutral-600 text-neutral-800 dark:text-neutral-200 font-medium text-sm"
               >
                 {t('sessionBooking.signupButton')}
               </button>
@@ -1475,7 +1478,7 @@ export default function SessionBookingPage() {
                   setGuestFormPhone('');
                   setGuestFormEmail('');
                 }}
-                className="w-full py-2.5 text-sm text-neutral-600 dark:text-neutral-400 underline underline-offset-2"
+                className="py-2.5 px-4 text-sm text-neutral-600 dark:text-neutral-400 underline underline-offset-2"
               >
                 {language === 'ko' ? '비회원으로 계속하기' : 'Continue as guest'}
               </button>
@@ -1488,47 +1491,49 @@ export default function SessionBookingPage() {
       {bankTransferGuestFormOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setBankTransferGuestFormOpen(false)} />
-          <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
-            <h3 className="text-lg font-bold text-black dark:text-white">
+          <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-2xl w-full p-5">
+            <h3 className="text-lg font-bold text-black dark:text-white mb-1">
               {language === 'ko' ? '비회원 정보 입력' : 'Guest information'}
             </h3>
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-neutral-500 mb-3">
               {language === 'ko' ? '연락처 또는 이메일 중 하나는 필수입니다.' : 'Phone or email is required.'}
             </p>
-            <div>
-              <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">{language === 'ko' ? '이름' : 'Name'} *</label>
-              <input
-                type="text"
-                value={guestFormName}
-                onChange={(e) => setGuestFormName(e.target.value)}
-                placeholder={language === 'ko' ? '이름' : 'Name'}
-                className="w-full px-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+              <div>
+                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-0.5">{language === 'ko' ? '이름' : 'Name'} *</label>
+                <input
+                  type="text"
+                  value={guestFormName}
+                  onChange={(e) => setGuestFormName(e.target.value)}
+                  placeholder={language === 'ko' ? '이름' : 'Name'}
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-0.5">{language === 'ko' ? '연락처' : 'Phone'}</label>
+                <input
+                  type="tel"
+                  value={guestFormPhone}
+                  onChange={(e) => setGuestFormPhone(e.target.value)}
+                  placeholder="010-0000-0000"
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-0.5">{language === 'ko' ? '이메일' : 'Email'}</label>
+                <input
+                  type="email"
+                  value={guestFormEmail}
+                  onChange={(e) => setGuestFormEmail(e.target.value)}
+                  placeholder="email@example.com"
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">{language === 'ko' ? '연락처' : 'Phone'}</label>
-              <input
-                type="tel"
-                value={guestFormPhone}
-                onChange={(e) => setGuestFormPhone(e.target.value)}
-                placeholder="010-0000-0000"
-                className="w-full px-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-1">{language === 'ko' ? '이메일' : 'Email'}</label>
-              <input
-                type="email"
-                value={guestFormEmail}
-                onChange={(e) => setGuestFormEmail(e.target.value)}
-                placeholder="email@example.com"
-                className="w-full px-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white"
-              />
-            </div>
-            <div className="flex gap-2 pt-2">
+            <div className="flex justify-end gap-2">
               <button
                 onClick={() => setBankTransferGuestFormOpen(false)}
-                className="flex-1 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-600 text-sm"
+                className="py-2 px-4 rounded-xl border border-neutral-300 dark:border-neutral-600 text-sm"
               >
                 {language === 'ko' ? '취소' : 'Cancel'}
               </button>
@@ -1551,7 +1556,7 @@ export default function SessionBookingPage() {
                   setDepositorName(guestFormName.trim());
                   setDepositorModalOpen(true);
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm"
+                className="py-2 px-5 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm"
               >
                 {language === 'ko' ? '다음' : 'Next'}
               </button>
@@ -1564,44 +1569,45 @@ export default function SessionBookingPage() {
       {depositorModalOpen && pendingBankTransfer && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { setDepositorModalOpen(false); setPendingBankTransfer(null); setGuestOrderer(null); }} />
-          <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
-            <h3 className="text-lg font-bold text-black dark:text-white">
-              {language === 'ko' ? '입금자명' : 'Depositor name'}
-            </h3>
-            <p className="text-sm text-neutral-500">
-              {language === 'ko' ? '입금 시 사용할 이름을 입력해 주세요. (수정 가능)' : 'Enter the name to use when transferring.'}
-            </p>
-            {depositorModalPreFillLoading ? (
-              <div className="py-4 flex justify-center"><Loader2 className="animate-spin text-primary dark:text-[#CCFF00]" size={24} /></div>
-            ) : (
-              <input
-                type="text"
-                value={depositorName}
-                onChange={(e) => setDepositorName(e.target.value)}
-                placeholder={language === 'ko' ? '입금자명' : 'Depositor name'}
-                className="w-full px-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white"
-              />
-            )}
-            <div className="flex gap-2 pt-2">
-              <button
-                onClick={() => { setDepositorModalOpen(false); setPendingBankTransfer(null); setGuestOrderer(null); }}
-                className="flex-1 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-600 text-sm"
-              >
-                {language === 'ko' ? '취소' : 'Cancel'}
-              </button>
-              <button
-                disabled={submitting || !depositorName.trim() || depositorModalPreFillLoading}
-                onClick={() => {
-                  if (guestOrderer) {
-                    submitBankTransferOrder(depositorName, guestOrderer.phone || null, guestOrderer.email || null);
-                  } else {
-                    submitBankTransferOrder(depositorName);
-                  }
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm disabled:opacity-50"
-              >
-                {submitting ? <Loader2 size={18} className="animate-spin mx-auto" /> : (language === 'ko' ? '신청하기' : 'Submit')}
-              </button>
+          <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-xl w-full p-5">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-sm font-bold text-black dark:text-white mb-1">
+                  {language === 'ko' ? '입금자명' : 'Depositor name'}
+                </label>
+                {depositorModalPreFillLoading ? (
+                  <div className="py-2 flex items-center gap-2"><Loader2 className="animate-spin text-primary dark:text-[#CCFF00]" size={20} /><span className="text-sm text-neutral-500">...</span></div>
+                ) : (
+                  <input
+                    type="text"
+                    value={depositorName}
+                    onChange={(e) => setDepositorName(e.target.value)}
+                    placeholder={language === 'ko' ? '입금 시 사용할 이름' : 'Name for transfer'}
+                    className="w-full px-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm"
+                  />
+                )}
+              </div>
+              <div className="flex items-end gap-2 shrink-0">
+                <button
+                  onClick={() => { setDepositorModalOpen(false); setPendingBankTransfer(null); setGuestOrderer(null); }}
+                  className="py-2 px-4 rounded-xl border border-neutral-300 dark:border-neutral-600 text-sm"
+                >
+                  {language === 'ko' ? '취소' : 'Cancel'}
+                </button>
+                <button
+                  disabled={submitting || !depositorName.trim() || depositorModalPreFillLoading}
+                  onClick={() => {
+                    if (guestOrderer) {
+                      submitBankTransferOrder(depositorName, guestOrderer.phone || null, guestOrderer.email || null);
+                    } else {
+                      submitBankTransferOrder(depositorName);
+                    }
+                  }}
+                  className="py-2 px-5 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm disabled:opacity-50"
+                >
+                  {submitting ? <Loader2 size={18} className="animate-spin" /> : (language === 'ko' ? '신청하기' : 'Submit')}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1636,7 +1642,7 @@ export default function SessionBookingPage() {
       {/* 계좌이체 신청 완료 모달 — 계좌 정보 표시 및 복사 */}
       {bankTransferResult && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl max-w-xl w-full p-5">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-black dark:text-white">
                 {language === 'ko' ? '입금 안내' : 'Transfer details'}
@@ -1650,44 +1656,35 @@ export default function SessionBookingPage() {
                 <X size={20} />
               </button>
             </div>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-3">
               {language === 'ko'
                 ? '아래 계좌로 입금해 주시면 학원에서 확인 후 예약이 확정됩니다.'
                 : 'Transfer the amount to the account below. Your booking will be confirmed after the academy verifies.'}
             </p>
-            <div className="space-y-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 p-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-neutral-500">{language === 'ko' ? '금액' : 'Amount'}</span>
-                <span className="font-semibold">{bankTransferResult.amount.toLocaleString()}원</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-neutral-500">{language === 'ko' ? '은행' : 'Bank'}</span>
-                <span>{bankTransferResult.bankName}</span>
-              </div>
-              <div className="flex justify-between items-center gap-2 text-sm">
-                <span className="text-neutral-500 shrink-0">{language === 'ko' ? '계좌번호' : 'Account'}</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 p-3 text-sm">
+              <span className="text-neutral-500">{language === 'ko' ? '금액' : 'Amount'}</span>
+              <span className="font-semibold">{bankTransferResult.amount.toLocaleString()}원</span>
+              <span className="text-neutral-500">{language === 'ko' ? '은행' : 'Bank'}</span>
+              <span>{bankTransferResult.bankName}</span>
+              <span className="text-neutral-500">{language === 'ko' ? '계좌번호' : 'Account'}</span>
+              <div className="flex items-center gap-1.5">
                 <span className="font-mono truncate">{bankTransferResult.bankAccountNumber}</span>
                 <button
                   type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(bankTransferResult.bankAccountNumber);
-                    // 간단 토스트는 생략 가능
-                  }}
-                  className="shrink-0 p-1.5 rounded-lg bg-primary dark:bg-[#CCFF00] text-black hover:opacity-90"
+                  onClick={() => navigator.clipboard.writeText(bankTransferResult.bankAccountNumber)}
+                  className="shrink-0 p-1 rounded-lg bg-primary dark:bg-[#CCFF00] text-black hover:opacity-90"
                   title={language === 'ko' ? '복사' : 'Copy'}
                 >
-                  <Copy size={16} />
+                  <Copy size={14} />
                 </button>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-neutral-500">{language === 'ko' ? '예금주' : 'Account holder'}</span>
-                <span>{bankTransferResult.bankDepositorName}</span>
-              </div>
+              <span className="text-neutral-500">{language === 'ko' ? '예금주' : 'Holder'}</span>
+              <span>{bankTransferResult.bankDepositorName}</span>
               {bankTransferResult.ordererName && (
-                <div className="flex justify-between text-sm pt-1 border-t border-neutral-200 dark:border-neutral-700">
-                  <span className="text-neutral-500">{language === 'ko' ? '입금자명' : 'Your depositor name'}</span>
+                <>
+                  <span className="text-neutral-500">{language === 'ko' ? '입금자명' : 'Depositor'}</span>
                   <span className="font-medium">{bankTransferResult.ordererName}</span>
-                </div>
+                </>
               )}
             </div>
             <button

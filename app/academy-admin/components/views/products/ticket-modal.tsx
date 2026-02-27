@@ -3,11 +3,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { X, Lock, Info, CheckSquare, Square, Ticket, Tag, Search } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import type { AcademyTicketLabels } from '../hooks/useAcademyTicketLabels';
 
 interface TicketModalProps {
   academyId: string;
   ticket?: any;
   initialCategory?: 'regular' | 'popup' | 'workshop';
+  ticketLabels?: AcademyTicketLabels;
   onClose: () => void;
 }
 
@@ -43,8 +45,8 @@ const POPUP_VALIDITY_PRESETS = [
   { label: '무제한', days: null },
 ];
 
-// 수강권 유형 정보
-const TICKET_CATEGORY_INFO = {
+// 수강권 유형 정보 (name은 ticketLabels로 덮어쓸 수 있음)
+const TICKET_CATEGORY_INFO_BASE = {
   regular: {
     name: '기간제 수강권',
     description: '특정 클래스를 기간 내 무제한 수강 가능. 구매 시 시작일 선택.',
@@ -70,12 +72,21 @@ const TICKET_CATEGORY_INFO = {
 
 type ProductCategory = 'regular' | 'popup' | 'workshop';
 
-export function TicketModal({ academyId, ticket, initialCategory, onClose }: TicketModalProps) {
+export function TicketModal({ academyId, ticket, initialCategory, ticketLabels, onClose }: TicketModalProps) {
+  const TICKET_CATEGORY_INFO = useMemo(
+    () => ({
+      regular: { ...TICKET_CATEGORY_INFO_BASE.regular, name: ticketLabels?.regular ?? TICKET_CATEGORY_INFO_BASE.regular.name },
+      popup: { ...TICKET_CATEGORY_INFO_BASE.popup, name: ticketLabels?.popup ?? TICKET_CATEGORY_INFO_BASE.popup.name },
+      workshop: { ...TICKET_CATEGORY_INFO_BASE.workshop, name: ticketLabels?.workshop ?? TICKET_CATEGORY_INFO_BASE.workshop.name },
+    }),
+    [ticketLabels?.regular, ticketLabels?.popup, ticketLabels?.workshop]
+  );
   // 상품 카테고리: 기간제 수강권 / 쿠폰제(횟수제) 수강권 / 워크샵(특강) 수강권
   const [productCategory, setProductCategory] = useState<ProductCategory>(initialCategory || 'regular');
   
   const [formData, setFormData] = useState({
     name: '',
+    description: '' as string,
     price: 0,
     ticket_type: (initialCategory === 'popup' || initialCategory === 'workshop' ? 'COUNT' : 'PERIOD') as 'COUNT' | 'PERIOD',
     total_count: (initialCategory === 'popup' || initialCategory === 'workshop' ? 1 : null) as number | null,
@@ -137,6 +148,7 @@ export function TicketModal({ academyId, ticket, initialCategory, onClose }: Tic
       
       setFormData({
         name: ticket.name || '',
+        description: ticket.description ?? '',
         price: ticket.price || 0,
         ticket_type: ticket.ticket_type || (category === 'regular' ? 'PERIOD' : 'COUNT'),
         total_count: ticket.total_count,
@@ -279,6 +291,7 @@ export function TicketModal({ academyId, ticket, initialCategory, onClose }: Tic
       const ticketData: Record<string, unknown> = {
         academy_id: academyId,
         name: formData.name,
+        description: formData.description?.trim() || null,
         price: productCategory === 'popup' && countOptions.length > 0
           ? (countOptions.find(o => o.count === 1)?.price ?? countOptions[0]?.price ?? formData.price)
           : formData.price,
@@ -485,12 +498,26 @@ export function TicketModal({ academyId, ticket, initialCategory, onClose }: Tic
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder={
-                productCategory === 'regular' 
-                  ? '예: 3개월 정기권' 
+                productCategory === 'regular'
+                  ? '예: 3개월 정기권'
                   : productCategory === 'popup'
                   ? '예: 팝업 5회권'
                   : '예: 워크샵 3회권'
               }
+            />
+          </div>
+
+          {/* 상품 설명 (선택) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              설명 <span className="text-gray-400 font-normal">(선택)</span>
+            </label>
+            <textarea
+              rows={3}
+              className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white resize-y min-h-[72px]"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="수강권 목록에서 사용자에게 보여줄 설명을 입력하세요."
             />
           </div>
 

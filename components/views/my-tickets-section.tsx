@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Ticket, Calendar, Hash, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
+import { useTicketLabelsMap } from '@/lib/hooks/useTicketLabels';
 
 interface UserTicketDetail {
   id: string;
@@ -36,7 +37,7 @@ interface MyTicketsSectionProps {
   onAcademyClick?: (academyId: string) => void;
 }
 
-const CATEGORY_CONFIG = {
+const CATEGORY_CONFIG: Record<'all' | 'regular' | 'popup' | 'workshop', { label: string; color: string; textColor: string }> = {
   all: { label: '전체', color: 'bg-neutral-600', textColor: 'text-neutral-600 dark:text-neutral-400' },
   regular: { label: '정규권', color: 'bg-blue-600', textColor: 'text-blue-600 dark:text-blue-400' },
   popup: { label: '팝업', color: 'bg-purple-600', textColor: 'text-purple-600 dark:text-purple-400' },
@@ -48,6 +49,8 @@ export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
   const [tickets, setTickets] = useState<UserTicketDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TicketCategory>('all');
+  const academyIds = useMemo(() => [...new Set(tickets.map((t) => t.tickets?.academy_id).filter(Boolean))] as string[], [tickets]);
+  const { labelsMap } = useTicketLabelsMap(academyIds);
 
   useEffect(() => {
     loadTickets();
@@ -134,15 +137,15 @@ export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
     );
   };
 
-  const getCategoryBadge = (category: 'regular' | 'popup' | 'workshop') => {
-    const config = CATEGORY_CONFIG[category];
+  const getCategoryBadge = (category: 'regular' | 'popup' | 'workshop', displayLabel?: string) => {
+    const label = displayLabel ?? CATEGORY_CONFIG[category].label;
     return (
       <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
         category === 'regular' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
         category === 'popup' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' :
         'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
       }`}>
-        {config.label}
+        {label}
       </span>
     );
   };
@@ -239,11 +242,14 @@ export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
 
               {/* 수강권 목록 */}
               <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                {group.tickets.map((ticket) => (
+                {group.tickets.map((ticket) => {
+                  const academyId = ticket.tickets?.academy_id;
+                  const customLabel = academyId ? labelsMap[academyId]?.[ticket.category] : undefined;
+                  return (
                   <div key={ticket.id} className="p-4">
                     <div className="flex items-start justify-between mb-2 min-w-0">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
-                        {getCategoryBadge(ticket.category)}
+                        {getCategoryBadge(ticket.category, customLabel)}
                         <span className="font-bold text-black dark:text-white break-words [word-break:keep-all] min-w-0">
                           {ticket.tickets?.name || '수강권'}
                         </span>
@@ -269,7 +275,8 @@ export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
                       </div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}

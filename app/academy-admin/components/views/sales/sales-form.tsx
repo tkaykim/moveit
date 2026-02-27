@@ -9,6 +9,7 @@ import { ConfirmModal } from './confirm-modal';
 import { SuccessModal } from './success-modal';
 import { StudentRegisterModal } from '../students/student-register-modal';
 import { usePricing } from '../hooks/use-pricing';
+import { useAcademyTicketLabels } from '../hooks/useAcademyTicketLabels';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 
 interface SalesFormProps {
@@ -18,6 +19,7 @@ interface SalesFormProps {
 }
 
 export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFormProps) {
+  const { labels: ticketLabels } = useAcademyTicketLabels(academyId);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -348,6 +350,7 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
             products={products}
             onProductSelect={setSelectedProduct}
             disabled={!selectedStudent}
+            ticketLabels={ticketLabels}
           />
 
           <DiscountApplication

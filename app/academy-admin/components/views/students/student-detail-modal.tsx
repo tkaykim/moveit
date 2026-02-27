@@ -5,6 +5,7 @@ import { X, User } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { normalizePhone, formatPhoneDisplay, parsePhoneInput } from '@/lib/utils/phone';
 import { ProfileImageUpload } from '@/components/common/profile-image-upload';
+import { useAcademyTicketLabels } from '../hooks/useAcademyTicketLabels';
 
 interface StudentDetailModalProps {
   student: any;
@@ -13,6 +14,7 @@ interface StudentDetailModalProps {
 }
 
 export function StudentDetailModal({ student, academyId, onClose }: StudentDetailModalProps) {
+  const { labels } = useAcademyTicketLabels(academyId);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -219,8 +221,8 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
                     const cat = ticket.tickets?.ticket_category || ticket.tickets?.access_group;
                     const categoryLabel =
                       ticketType === 'COUNT'
-                        ? (cat === 'workshop' ? '워크샵(특강)' : '쿠폰제(횟수제)')
-                        : '기간제';
+                        ? (cat === 'workshop' ? labels.workshop : labels.popup)
+                        : labels.regular;
                     const isPeriod = ticketType === 'PERIOD';
                     
                     // 실제 상태 계산 (DB가 ACTIVE지만 실제 만료/소진인 경우)

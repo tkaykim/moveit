@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 interface TicketInfo {
   id: string;
   name: string;
-  description?: string;
+  description?: string | null;
   price: number;
   ticket_type: 'PERIOD' | 'COUNT';
   total_count?: number;
@@ -297,7 +297,7 @@ export const TicketPurchaseModal = ({
       onClick={handleClose}
     >
       <div 
-        className="w-full sm:max-w-lg max-h-[90vh] bg-white dark:bg-neutral-900 rounded-t-3xl sm:rounded-3xl overflow-hidden animate-in slide-in-from-bottom"
+        className="w-full sm:max-w-xl max-h-[85vh] bg-white dark:bg-neutral-900 rounded-t-3xl sm:rounded-3xl overflow-hidden animate-in slide-in-from-bottom"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
@@ -347,29 +347,28 @@ export const TicketPurchaseModal = ({
         {/* 컨텐츠 */}
         <div className="p-4 overflow-y-auto max-h-[60vh]">
           {showDepositorStep ? (
-            <div className="space-y-4">
-              <h3 className="text-lg font-bold text-black dark:text-white">
-                {language === 'ko' ? '입금자명' : 'Depositor name'}
-              </h3>
-              <p className="text-sm text-neutral-500">
-                {language === 'ko' ? '입금 시 사용할 이름을 입력해 주세요. (수정 가능)' : 'Enter the name to use when transferring.'}
-              </p>
-              {depositorStepLoading ? (
-                <div className="py-4 flex justify-center"><Loader2 className="animate-spin text-primary dark:text-[#CCFF00]" size={24} /></div>
-              ) : (
-                <input
-                  type="text"
-                  value={depositorName}
-                  onChange={(e) => setDepositorName(e.target.value)}
-                  placeholder={language === 'ko' ? '입금자명' : 'Depositor name'}
-                  className="w-full px-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white"
-                />
-              )}
-              <div className="flex gap-2 pt-2">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-sm font-bold text-black dark:text-white mb-1">
+                  {language === 'ko' ? '입금자명' : 'Depositor name'}
+                </label>
+                {depositorStepLoading ? (
+                  <div className="py-2 flex items-center gap-2"><Loader2 className="animate-spin text-primary dark:text-[#CCFF00]" size={20} /><span className="text-sm text-neutral-500">...</span></div>
+                ) : (
+                  <input
+                    type="text"
+                    value={depositorName}
+                    onChange={(e) => setDepositorName(e.target.value)}
+                    placeholder={language === 'ko' ? '입금 시 사용할 이름' : 'Name for transfer'}
+                    className="w-full px-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm"
+                  />
+                )}
+              </div>
+              <div className="flex items-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => { setShowDepositorStep(false); setDepositorName(''); }}
-                  className="flex-1 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-600 text-sm"
+                  className="py-2 px-4 rounded-xl border border-neutral-300 dark:border-neutral-600 text-sm"
                 >
                   {language === 'ko' ? '취소' : 'Cancel'}
                 </button>
@@ -377,52 +376,41 @@ export const TicketPurchaseModal = ({
                   type="button"
                   disabled={purchasing || !depositorName.trim() || depositorStepLoading}
                   onClick={handleDepositorSubmit}
-                  className="flex-1 py-2.5 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm disabled:opacity-50"
+                  className="py-2 px-5 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm disabled:opacity-50"
                 >
-                  {purchasing ? <Loader2 size={18} className="animate-spin mx-auto" /> : (language === 'ko' ? '신청하기' : 'Submit')}
+                  {purchasing ? <Loader2 size={18} className="animate-spin" /> : (language === 'ko' ? '신청하기' : 'Submit')}
                 </button>
               </div>
             </div>
           ) : bankTransferResult ? (
-            <div className="space-y-4">
-              <div className="text-center">
-                <h3 className="text-lg font-bold text-black dark:text-white mb-1">
-                  {language === 'ko' ? '입금 안내' : 'Transfer details'}
-                </h3>
-                <p className="text-sm text-neutral-500">
-                  {language === 'ko' ? '아래 계좌로 입금해 주시면 학원에서 확인 후 수강권이 발급됩니다.' : 'Transfer the amount below. Your ticket will be issued after the academy verifies.'}
-                </p>
-              </div>
-              <div className="space-y-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 p-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-neutral-500">{language === 'ko' ? '금액' : 'Amount'}</span>
-                  <span className="font-semibold">{bankTransferResult.amount.toLocaleString()}원</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-neutral-500">{language === 'ko' ? '은행' : 'Bank'}</span>
-                  <span>{bankTransferResult.bankName}</span>
-                </div>
-                <div className="flex justify-between items-center gap-2 text-sm">
-                  <span className="text-neutral-500 shrink-0">{language === 'ko' ? '계좌번호' : 'Account'}</span>
+            <div>
+              <p className="text-sm text-neutral-500 mb-3">
+                {language === 'ko' ? '아래 계좌로 입금해 주시면 학원에서 확인 후 수강권이 발급됩니다.' : 'Transfer the amount below. Your ticket will be issued after the academy verifies.'}
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 p-3 text-sm">
+                <span className="text-neutral-500">{language === 'ko' ? '금액' : 'Amount'}</span>
+                <span className="font-semibold">{bankTransferResult.amount.toLocaleString()}원</span>
+                <span className="text-neutral-500">{language === 'ko' ? '은행' : 'Bank'}</span>
+                <span>{bankTransferResult.bankName}</span>
+                <span className="text-neutral-500">{language === 'ko' ? '계좌번호' : 'Account'}</span>
+                <div className="flex items-center gap-1.5">
                   <span className="font-mono truncate">{bankTransferResult.bankAccountNumber}</span>
                   <button
                     type="button"
                     onClick={() => navigator.clipboard.writeText(bankTransferResult.bankAccountNumber)}
-                    className="shrink-0 p-1.5 rounded-lg bg-neutral-800 dark:bg-[#CCFF00] text-white dark:text-black hover:opacity-90"
+                    className="shrink-0 p-1 rounded-lg bg-primary dark:bg-[#CCFF00] text-black hover:opacity-90"
                     title={language === 'ko' ? '복사' : 'Copy'}
                   >
-                    <Copy size={16} />
+                    <Copy size={14} />
                   </button>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-neutral-500">{language === 'ko' ? '예금주' : 'Account holder'}</span>
-                  <span>{bankTransferResult.bankDepositorName}</span>
-                </div>
+                <span className="text-neutral-500">{language === 'ko' ? '예금주' : 'Holder'}</span>
+                <span>{bankTransferResult.bankDepositorName}</span>
                 {bankTransferResult.ordererName && (
-                  <div className="flex justify-between text-sm pt-1 border-t border-neutral-200 dark:border-neutral-700">
-                    <span className="text-neutral-500">{language === 'ko' ? '입금자명' : 'Your depositor name'}</span>
+                  <>
+                    <span className="text-neutral-500">{language === 'ko' ? '입금자명' : 'Depositor'}</span>
                     <span className="font-medium">{bankTransferResult.ordererName}</span>
-                  </div>
+                  </>
                 )}
               </div>
               <button

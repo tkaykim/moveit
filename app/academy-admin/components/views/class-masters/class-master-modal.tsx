@@ -6,10 +6,13 @@ import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { TicketModal } from '../products/ticket-modal';
 import { ImageUpload } from '@/components/common/image-upload';
 import { uploadFile, deleteFile, extractFilePathFromUrl } from '@/lib/utils/storage';
+import type { AcademyTicketLabels } from '../hooks/useAcademyTicketLabels';
+import { DEFAULT_TICKET_LABELS } from '@/lib/constants/ticket-labels';
 
 interface ClassMasterModalProps {
   academyId: string;
   classData?: any;
+  ticketLabels?: AcademyTicketLabels;
   onClose: () => void;
 }
 
@@ -28,7 +31,8 @@ const CLASS_TYPES = [
   { value: 'workshop', label: 'Workshop (워크샵)' },
 ];
 
-export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterModalProps) {
+export function ClassMasterModal({ academyId, classData, ticketLabels, onClose }: ClassMasterModalProps) {
+  const labels = ticketLabels ?? { regular: DEFAULT_TICKET_LABELS.regular, popup: DEFAULT_TICKET_LABELS.popup, workshop: DEFAULT_TICKET_LABELS.workshop };
   const [formData, setFormData] = useState({
     title: '',
     genre: '',
@@ -847,9 +851,9 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
   );
 
   const TICKET_SECTION_CONFIG: Record<'regular' | 'popup' | 'workshop', { label: string; headerBg: string; border: string; iconBg: string }> = {
-    regular: { label: '기간제 수강권', headerBg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800', iconBg: 'bg-blue-100 dark:bg-blue-900/40' },
-    popup: { label: '쿠폰제(횟수제) 수강권', headerBg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800', iconBg: 'bg-purple-100 dark:bg-purple-900/40' },
-    workshop: { label: '워크샵(특강) 수강권', headerBg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800', iconBg: 'bg-amber-100 dark:bg-amber-900/40' },
+    regular: { label: labels.regular, headerBg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800', iconBg: 'bg-blue-100 dark:bg-blue-900/40' },
+    popup: { label: labels.popup, headerBg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800', iconBg: 'bg-purple-100 dark:bg-purple-900/40' },
+    workshop: { label: labels.workshop, headerBg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800', iconBg: 'bg-amber-100 dark:bg-amber-900/40' },
   };
 
   const renderTicketCard = (ticket: any, isSelected: boolean) => (
@@ -1328,6 +1332,7 @@ export function ClassMasterModal({ academyId, classData, onClose }: ClassMasterM
         <TicketModal
           academyId={academyId}
           ticket={null}
+          ticketLabels={labels}
           onClose={() => {
             setShowTicketModal(false);
             // 수강권이 생성되면 목록 새로고침
