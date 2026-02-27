@@ -1,6 +1,7 @@
 /**
- * GET /api/academy-admin/[academyId]/bank-transfer-orders?status=PENDING|CONFIRMED
+ * GET /api/academy-admin/[academyId]/bank-transfer-orders
  * 계좌이체 주문 목록 (수동 입금확인 페이지용)
+ * Query: page=1, limit=20, q=검색어(이름/연락처/이메일/주문명)
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
@@ -12,6 +13,14 @@ const NO_CACHE_HEADERS = {
   'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
   Pragma: 'no-cache',
 } as const;
+
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
+
+/** ilike 패턴용 검색어 이스케이프 (% _ 제어) */
+function escapeIlike(q: string): string {
+  return q.replace(/[%_\\]/g, '\\$&');
+}
 
 async function assertAcademyAdmin(academyId: string, userId: string) {
   const supabase = createServiceClient();
@@ -45,22 +54,28 @@ export async function GET(
     }
     await assertAcademyAdmin(academyId, user.id);
 
-    const status = request.nextUrl.searchParams.get('status') || undefined;
+    const page = Math.max(1, parseInt(request.nextUrl.searchParams.get('page') || '1', 10) || 1);
+    const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(request.nextUrl.searchParams.get('limit') || String(DEFAULT_LIMIT), 10) || DEFAULT_LIMIT));
+    const q = (request.nextUrl.searchParams.get('q') || '').trim().replace(/,/g, '');
+    const offset = (page - 1) * limit;
 
     const supabase = createServiceClient() as any;
+    const selectCols = 'id, user_id, ticket_id, schedule_id, amount, order_name, orderer_name, orderer_phone, orderer_email, status, created_at, confirmed_at';
 
-    // 1) 주문만 조회 (orderer_* 포함 — 목록 표시용)
     let query = supabase
       .from('bank_transfer_orders')
-      .select('id, user_id, ticket_id, schedule_id, amount, order_name, orderer_name, orderer_phone, orderer_email, status, created_at, confirmed_at')
+      .select(selectCols, { count: 'exact' })
       .eq('academy_id', academyId)
       .order('created_at', { ascending: false });
 
-    if (status && ['PENDING', 'CONFIRMED', 'CANCELLED'].includes(status)) {
-      query = query.eq('status', status);
+    if (q) {
+      const pattern = `%${escapeIlike(q)}%`;
+      query = query.or(
+        `orderer_name.ilike.${pattern},orderer_phone.ilike.${pattern},orderer_email.ilike.${pattern},order_name.ilike.${pattern}`
+      );
     }
 
-    const { data: orders, error: ordersError } = await query;
+    const { data: orders, error: ordersError, count: totalCount } = await query.range(offset, offset + limit - 1);
 
     if (ordersError) {
       console.error('[GET bank-transfer-orders]', ordersError);
@@ -68,8 +83,10 @@ export async function GET(
     }
 
     const list = orders || [];
+    const total = typeof totalCount === 'number' ? totalCount : 0;
+
     if (list.length === 0) {
-      return NextResponse.json({ data: [] }, { headers: NO_CACHE_HEADERS });
+      return NextResponse.json({ data: [], total, page, limit }, { headers: NO_CACHE_HEADERS });
     }
 
     const userIds = [...new Set(list.map((o: any) => o.user_id).filter(Boolean))];
@@ -140,7 +157,7 @@ export async function GET(
       };
     });
 
-    return NextResponse.json({ data: result }, { headers: NO_CACHE_HEADERS });
+    return NextResponse.json({ data: result, total, page, limit }, { headers: NO_CACHE_HEADERS });
   } catch (e: any) {
     if (e.message === '학원 관리자 권한이 필요합니다.') {
       return NextResponse.json({ error: e.message }, { status: 403, headers: NO_CACHE_HEADERS });
