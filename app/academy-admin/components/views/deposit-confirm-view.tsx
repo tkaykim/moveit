@@ -77,7 +77,7 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [statusTab, setStatusTab] = useState<'PENDING' | 'CONFIRMED' | ''>('PENDING'); // 기본: 입금대기
+  const [statusTab, setStatusTab] = useState<'PENDING' | 'CONFIRMED' | ''>('PENDING'); // 기본: 입금대기 (계좌이체 신청 건이 여기서 먼저 보이도록)
   const [academyName, setAcademyName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
@@ -252,77 +252,84 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
         <p className="text-sm text-neutral-500 dark:text-neutral-400">
           계좌이체로 신청한 주문을 확인한 뒤 입금 확인을 누르면 수강권이 발급되고, 수업 예약이 있으면 예약이 확정됩니다.
         </p>
+        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+          ※ 이 목록은 <strong>계좌이체</strong>로 신청한 주문만 표시됩니다. 수업 예약 페이지(book/session)에서 <strong>카드·간편결제</strong>로 구매한 건은 결제 완료 시 자동 발급되며, 출석/신청 관리 또는 매출/정산에서 확인할 수 있습니다.
+        </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <span className="text-sm text-neutral-500 dark:text-neutral-400">상태:</span>
-        <div className="flex rounded-lg border border-neutral-200 dark:border-neutral-700 p-0.5 bg-neutral-100 dark:bg-neutral-800">
-          <button
-            type="button"
-            onClick={() => setStatusTab('PENDING')}
-            className={cn(
-              'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-              statusTab === 'PENDING'
-                ? 'bg-amber-500 text-white dark:bg-amber-500 dark:text-black'
-                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-            )}
-          >
-            <Clock size={14} className="inline mr-1.5 align-middle" />
-            입금대기
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusTab('CONFIRMED')}
-            className={cn(
-              'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-              statusTab === 'CONFIRMED'
-                ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black'
-                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-            )}
-          >
-            <CheckCircle size={14} className="inline mr-1.5 align-middle" />
-            입금완료
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusTab('')}
-            className={cn(
-              'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-              statusTab === ''
-                ? 'bg-neutral-600 text-white dark:bg-neutral-500 dark:text-black'
-                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-            )}
-          >
-            전체
-          </button>
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">필터</span>
+          <div className="flex rounded-lg border border-neutral-200 dark:border-neutral-700 p-0.5 bg-neutral-100 dark:bg-neutral-800">
+            <button
+              type="button"
+              onClick={() => setStatusTab('PENDING')}
+              className={cn(
+                'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                statusTab === 'PENDING'
+                  ? 'bg-amber-500 text-white dark:bg-amber-500 dark:text-black'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+              )}
+            >
+              <Clock size={14} className="inline mr-1.5 align-middle" />
+              입금대기
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusTab('CONFIRMED')}
+              className={cn(
+                'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                statusTab === 'CONFIRMED'
+                  ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+              )}
+            >
+              <CheckCircle size={14} className="inline mr-1.5 align-middle" />
+              입금완료
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusTab('')}
+              className={cn(
+                'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                statusTab === ''
+                  ? 'bg-neutral-600 text-white dark:bg-neutral-500 dark:text-black'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+              )}
+            >
+              전체
+            </button>
+          </div>
+          <span className="text-sm text-neutral-500 dark:text-neutral-400">정렬: 최신순</span>
         </div>
-      </div>
 
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <div className="relative flex-1 min-w-[240px] max-w-md">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
-          <Input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder="이름, 연락처, 이메일, 주문명 검색"
-            className="pl-9 h-9"
-          />
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">검색</span>
+          <div className="relative flex-1 min-w-[240px] max-w-md">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+            <Input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="이름, 연락처, 이메일, 주문명 검색"
+              className="pl-9 h-9"
+            />
+          </div>
+          <Button type="button" onClick={handleSearch} variant="secondary" size="default">
+            검색
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={refreshCurrent}
+            disabled={loading}
+            title="새로고침"
+          >
+            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+          </Button>
         </div>
-        <Button type="button" onClick={handleSearch} variant="secondary" size="default">
-          검색
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          onClick={refreshCurrent}
-          disabled={loading}
-          title="새로고침"
-        >
-          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-        </Button>
       </div>
 
       {listError && (
@@ -337,7 +344,19 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
         </div>
       ) : orders.length === 0 ? (
         <div className="text-center py-16 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 text-neutral-500 dark:text-neutral-400">
-          {searchQuery ? '검색 결과가 없습니다.' : '주문이 없습니다.'}
+          {searchQuery ? (
+            '검색 결과가 없습니다.'
+          ) : statusTab === 'PENDING' ? (
+            <>
+              입금대기 건이 없습니다.
+              <br />
+              <span className="text-xs mt-2 block">‘전체’ 탭에서 모든 계좌이체 주문을 확인하거나, 검색어를 입력해 보세요.</span>
+            </>
+          ) : statusTab === 'CONFIRMED' ? (
+            '입금완료 건이 없습니다.'
+          ) : (
+            '계좌이체 주문이 없습니다.'
+          )}
         </div>
       ) : (
         <>

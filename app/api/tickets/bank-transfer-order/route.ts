@@ -158,6 +158,8 @@ export async function POST(request: Request) {
     }
 
     let classIdForOrder: string | null = null;
+    /** 주문이 표시될 학원: 예약이 출석/신청 관리에 보이는 학원과 동일하게 맞춤(수동 입금확인 목록 정합성) */
+    let orderAcademyId = academyId;
     if (scheduleId) {
       const { data: scheduleRow, error: scheduleErr } = await (supabase as any)
         .from('schedules')
@@ -180,6 +182,9 @@ export async function POST(request: Request) {
       if (scheduleRow.class_id) {
         classIdForOrder = scheduleRow.class_id;
       }
+      if (scheduleAcademyId) {
+        orderAcademyId = scheduleAcademyId;
+      }
     }
 
     const orderName = selectedOption
@@ -189,7 +194,7 @@ export async function POST(request: Request) {
     const { data: order, error: insertError } = await (supabase as any)
       .from('bank_transfer_orders')
       .insert({
-        academy_id: academyId,
+        academy_id: orderAcademyId,
         user_id: userId,
         ticket_id: ticketId,
         schedule_id: scheduleId || null,

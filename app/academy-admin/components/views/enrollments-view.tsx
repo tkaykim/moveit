@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Search, Download, User, Users, Calendar, X, RefreshCw, Loader2, Clock, MapPin, UserPlus, ChevronDown } from 'lucide-react';
+import Link from 'next/link';
+import { Search, Download, User, Users, Calendar, X, RefreshCw, Loader2, Clock, MapPin, UserPlus, ChevronDown, Landmark } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { BookingStatusBadge } from '@/components/common/booking-status-badge';
 import { EnrollmentActionMenu } from './enrollments/enrollment-action-menu';
@@ -926,10 +927,21 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <BookingStatusBadge
-                            status={enrollment.status || ''}
-                            bankTransferOrderId={enrollment.bank_transfer_order_id}
-                          />
+                          <div className="flex flex-col gap-1">
+                            <BookingStatusBadge
+                              status={enrollment.status || ''}
+                              bankTransferOrderId={enrollment.bank_transfer_order_id}
+                            />
+                            {enrollment.status === 'PENDING' && enrollment.bank_transfer_order_id && (
+                              <Link
+                                href={`/academy-admin/${academyId}/deposit-confirm`}
+                                className="text-xs text-primary dark:text-[#CCFF00] hover:underline inline-flex items-center gap-0.5"
+                              >
+                                <Landmark size={10} />
+                                수동 입금확인에서 확인
+                              </Link>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                           {formatDate(enrollment.created_at)}
