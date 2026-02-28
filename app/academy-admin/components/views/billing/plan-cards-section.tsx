@@ -20,22 +20,15 @@ interface PlanCardsSectionProps {
   buttonMode?: 'pay' | 'change';
 }
 
-function getPrice(planId: string, cycle: BillingCycle, apiPlans: BillingPlan[]) {
-  const api = apiPlans.find((p) => p.id === planId);
-  const fallback = PLANS.find((p) => p.id === planId);
-  if (cycle === 'annual' && api) return api.annual_price_per_month;
-  if (cycle === 'monthly' && api) return api.monthly_price;
-  if (cycle === 'annual' && fallback) return fallback.annualPricePerMonth;
-  if (fallback) return fallback.monthlyPrice;
-  return 0;
+/** 구독료 표기를 0원으로 고정 (일단 0원 표기) */
+const DISPLAY_PRICE = 0;
+
+function getPrice(_planId: string, _cycle: BillingCycle, _apiPlans: BillingPlan[]) {
+  return DISPLAY_PRICE;
 }
 
-function getAnnualTotal(planId: string, apiPlans: BillingPlan[]) {
-  const api = apiPlans.find((p) => p.id === planId);
-  const fallback = PLANS.find((p) => p.id === planId);
-  if (api) return api.annual_price_per_month * 12;
-  if (fallback) return fallback.annualTotal;
-  return 0;
+function getAnnualTotal(_planId: string, _apiPlans: BillingPlan[]) {
+  return DISPLAY_PRICE;
 }
 
 export function PlanCardsSection({
@@ -98,9 +91,7 @@ export function PlanCardsSection({
             const borderClass = colors.border[isLight ? 'light' : 'dark'];
             const isCurrentPlan =
               currentPlanId === plan.id && currentCycle === billingCycle;
-            const annualPricePerMonth =
-              apiPlans.find((p) => p.id === plan.id)?.annual_price_per_month ??
-              plan.annualPricePerMonth;
+            const annualPricePerMonth = DISPLAY_PRICE;
 
             return (
               <div
