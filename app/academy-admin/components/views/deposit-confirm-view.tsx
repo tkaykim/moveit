@@ -3,6 +3,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import { Landmark, RefreshCw, Loader2, CheckCircle, Clock, Ticket, CalendarCheck, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface BankTransferOrder {
   id: string;
@@ -41,7 +53,11 @@ function CellChip({
   return (
     <span
       title={s !== '—' && s.length > 20 ? s : undefined}
-      className={`inline-block px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs truncate ${maxWidth} ${className}`}
+      className={cn(
+        'inline-block px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs truncate',
+        maxWidth,
+        className
+      )}
     >
       {s}
     </span>
@@ -193,80 +209,77 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
   const hasNext = page < totalPages;
 
   return (
-    <div className="p-4 lg:p-6 max-w-6xl mx-auto">
-      <div className="flex items-center gap-2 mb-3">
-        <Landmark className="text-primary dark:text-[#CCFF00]" size={22} />
-        <h1 className="text-lg font-bold text-black dark:text-white">수동 입금확인</h1>
+    <div className="w-full">
+      <div className="flex flex-col gap-1 mb-6">
+        <div className="flex items-center gap-2">
+          <Landmark className="text-primary dark:text-[#CCFF00]" size={24} />
+          <h1 className="text-xl font-bold text-neutral-900 dark:text-white">수동 입금확인</h1>
+        </div>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">
+          계좌이체로 신청한 주문을 확인한 뒤 입금 확인을 누르면 수강권이 발급되고, 수업 예약이 있으면 예약이 확정됩니다.
+        </p>
       </div>
 
-      <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
-        계좌이체로 신청한 주문을 확인한 뒤 입금 확인을 누르면 수강권이 발급되고, 수업 예약이 있으면 예약이 확정됩니다.
-      </p>
-
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex-1 min-w-[200px] flex gap-2">
-          <span className="relative flex-1">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="이름, 연락처, 이메일, 주문명 검색"
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-black dark:text-white text-sm"
-            />
-          </span>
-          <button
-            type="button"
-            onClick={handleSearch}
-            className="px-4 py-2 rounded-lg bg-neutral-800 dark:bg-neutral-200 text-white dark:text-black text-sm font-medium hover:opacity-90"
-          >
-            검색
-          </button>
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <div className="relative flex-1 min-w-[240px] max-w-md">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+          <Input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            placeholder="이름, 연락처, 이메일, 주문명 검색"
+            className="pl-9 h-9"
+          />
         </div>
-        <button
+        <Button type="button" onClick={handleSearch} variant="secondary" size="default">
+          검색
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
           onClick={refreshCurrent}
           disabled={loading}
-          className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 disabled:opacity-50"
           title="새로고침"
         >
           <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-        </button>
+        </Button>
       </div>
 
       {listError && (
-        <div className="mb-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">
+        <div className="mb-6 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-300">
           {listError}
         </div>
       )}
 
       {loading && orders.length === 0 ? (
-        <div className="flex items-center justify-center py-12">
+        <div className="flex items-center justify-center py-16 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
           <Loader2 className="animate-spin text-primary dark:text-[#CCFF00]" size={32} />
         </div>
       ) : orders.length === 0 ? (
-        <div className="text-center py-12 text-neutral-500 dark:text-neutral-400">
+        <div className="text-center py-16 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 text-neutral-500 dark:text-neutral-400">
           {searchQuery ? '검색 결과가 없습니다.' : '주문이 없습니다.'}
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-neutral-700">
-            <table className="w-full min-w-[900px] text-sm">
-              <thead>
-                <tr className="border-b border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/80">
-                  <th className="text-left py-3 px-3 font-semibold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">이름</th>
-                  <th className="text-left py-3 px-3 font-semibold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">연락처</th>
-                  <th className="text-left py-3 px-3 font-semibold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">회원여부</th>
-                  <th className="text-left py-3 px-3 font-semibold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">유형</th>
-                  <th className="text-left py-3 px-3 font-semibold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">상품</th>
-                  <th className="text-left py-3 px-3 font-semibold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">신청수업</th>
-                  <th className="text-right py-3 px-3 font-semibold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">결제금액</th>
-                  <th className="text-left py-3 px-3 font-semibold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">예금주명</th>
-                  <th className="text-left py-3 px-3 font-semibold text-neutral-700 dark:text-neutral-300 whitespace-nowrap">상태</th>
-                  <th className="text-center py-3 px-3 font-semibold text-neutral-700 dark:text-neutral-300 whitespace-nowrap w-[90px]">비고</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 shadow-sm overflow-hidden">
+            <Table className="min-w-[900px]">
+              <TableHeader>
+                <TableRow className="bg-neutral-50 dark:bg-neutral-900/80 hover:bg-neutral-50 dark:hover:bg-neutral-900/80">
+                  <TableHead className="whitespace-nowrap">이름</TableHead>
+                  <TableHead className="whitespace-nowrap">연락처</TableHead>
+                  <TableHead className="whitespace-nowrap">회원여부</TableHead>
+                  <TableHead className="whitespace-nowrap">유형</TableHead>
+                  <TableHead className="whitespace-nowrap">상품</TableHead>
+                  <TableHead className="whitespace-nowrap">신청수업</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">결제금액</TableHead>
+                  <TableHead className="whitespace-nowrap">예금주명</TableHead>
+                  <TableHead className="whitespace-nowrap">상태</TableHead>
+                  <TableHead className="text-center w-[100px] whitespace-nowrap">비고</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {orders.map((order) => {
                   const hasBooking = !!order.schedule_id && !!order.schedules;
                   const isPending = order.status === 'PENDING';
@@ -275,118 +288,115 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
                     ? `${order.schedules.classes?.title || '(클래스)'} ${formatTimeRange(order.schedules.start_time, order.schedules.end_time)}`
                     : '—';
                   return (
-                    <tr
-                      key={order.id}
-                      className="border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
-                    >
-                      <td className="py-2.5 px-3 align-middle">
+                    <TableRow key={order.id}>
+                      <TableCell className="py-3">
                         <CellChip text={order.user_name || '(이름 없음)'} maxWidth="max-w-[100px]" />
-                      </td>
-                      <td className="py-2.5 px-3 align-middle">
+                      </TableCell>
+                      <TableCell className="py-3">
                         <CellChip text={contact} maxWidth="max-w-[140px]" />
-                      </td>
-                      <td className="py-2.5 px-3 align-middle">
-                        <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
-                          order.user_id ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'
-                        }`}>
+                      </TableCell>
+                      <TableCell className="py-3">
+                        <Badge variant={order.user_id ? 'info' : 'secondary'}>
                           {order.user_id ? '회원' : '비회원'}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3 align-middle">
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="py-3">
                         {hasBooking ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200">
+                          <Badge variant="info" className="gap-1">
                             <CalendarCheck size={12} />
                             수강권+예약
-                          </span>
+                          </Badge>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                          <Badge variant="secondary" className="gap-1">
                             <Ticket size={12} />
                             수강권만
-                          </span>
+                          </Badge>
                         )}
-                      </td>
-                      <td className="py-2.5 px-3 align-middle">
+                      </TableCell>
+                      <TableCell className="py-3">
                         <CellChip text={order.tickets?.name || order.order_name || '수강권'} maxWidth="max-w-[140px]" />
-                      </td>
-                      <td className="py-2.5 px-3 align-middle">
+                      </TableCell>
+                      <TableCell className="py-3">
                         <CellChip text={classText} maxWidth="max-w-[180px]" />
-                      </td>
-                      <td className="py-2.5 px-3 text-right text-neutral-800 dark:text-neutral-200 font-medium whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="py-3 text-right font-medium whitespace-nowrap">
                         {order.amount.toLocaleString()}원
-                      </td>
-                      <td className="py-2.5 px-3 align-middle">
+                      </TableCell>
+                      <TableCell className="py-3">
                         <CellChip text={order.orderer_name ?? undefined} maxWidth="max-w-[100px]" />
-                      </td>
-                      <td className="py-2.5 px-3 align-middle">
+                      </TableCell>
+                      <TableCell className="py-3">
                         {isPending ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
+                          <Badge variant="warning" className="gap-1">
                             <Clock size={12} />
                             입금대기
-                          </span>
+                          </Badge>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200">
+                          <Badge variant="success" className="gap-1">
                             <CheckCircle size={12} />
                             확인완료
-                          </span>
+                          </Badge>
                         )}
-                      </td>
-                      <td className="py-2.5 px-3 align-middle text-center">
+                      </TableCell>
+                      <TableCell className="py-3 text-center">
                         {isPending && (
-                          <button
+                          <Button
+                            size="sm"
+                            variant="success"
                             onClick={() => handleConfirm(order.id)}
                             disabled={confirmingId !== null}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-xs font-medium"
+                            className="gap-1.5"
                           >
                             {confirmingId === order.id ? (
-                              <Loader2 size={12} className="animate-spin" />
+                              <Loader2 size={14} className="animate-spin" />
                             ) : (
-                              <CheckCircle size={12} />
+                              <CheckCircle size={14} />
                             )}
                             입금확인
-                          </button>
+                          </Button>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           {totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
-              <button
+            <div className="mt-6 flex items-center justify-center gap-2 flex-wrap">
+              <Button
                 type="button"
+                variant="outline"
+                size="icon"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={!hasPrev || loading}
-                className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:pointer-events-none"
               >
                 <ChevronLeft size={18} />
-              </button>
+              </Button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button
+                <Button
                   key={p}
                   type="button"
+                  variant={page === p ? 'default' : 'outline'}
+                  size="sm"
                   onClick={() => setPage(p)}
                   disabled={loading}
-                  className={`min-w-[2rem] py-1.5 px-2 rounded-lg text-sm font-medium ${
-                    page === p
-                      ? 'bg-primary dark:bg-[#CCFF00] text-black'
-                      : 'border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                  } disabled:opacity-50`}
+                  className={cn(page === p && 'bg-primary dark:bg-[#CCFF00] text-black hover:bg-primary/90 dark:hover:bg-[#CCFF00]/90')}
                 >
                   {p}
-                </button>
+                </Button>
               ))}
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="icon"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={!hasNext || loading}
-                className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:pointer-events-none"
               >
                 <ChevronRight size={18} />
-              </button>
-              <span className="text-xs text-neutral-500 ml-2">
+              </Button>
+              <span className="text-sm text-neutral-500 dark:text-neutral-400 ml-2">
                 {total}건 · {page}/{totalPages}페이지
               </span>
             </div>
