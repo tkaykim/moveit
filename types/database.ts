@@ -467,6 +467,7 @@ export type Database = {
       bookings: {
         Row: {
           admin_note: string | null
+          bank_transfer_order_id: string | null
           class_id: string | null
           created_at: string | null
           guest_name: string | null
@@ -482,6 +483,7 @@ export type Database = {
         }
         Insert: {
           admin_note?: string | null
+          bank_transfer_order_id?: string | null
           class_id?: string | null
           created_at?: string | null
           guest_name?: string | null
@@ -497,6 +499,7 @@ export type Database = {
         }
         Update: {
           admin_note?: string | null
+          bank_transfer_order_id?: string | null
           class_id?: string | null
           created_at?: string | null
           guest_name?: string | null

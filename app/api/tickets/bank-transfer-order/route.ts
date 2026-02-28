@@ -211,6 +211,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '주문 생성에 실패했습니다.' }, { status: 500 });
     }
 
+    // 수업 예약( schedule_id )인 경우: 출석/신청 관리에 반영되도록 booking 선생성 (status=PENDING)
+    if (scheduleId && classIdForOrder) {
+      const { data: scheduleForBooking } = await (supabase as any)
+        .from('schedules')
+        .select('id, class_id, hall_id')
+        .eq('id', scheduleId)
+        .single();
+      if (scheduleForBooking) {
+        const bookingInsert: Record<string, unknown> = {
+          schedule_id: scheduleId,
+          class_id: classIdForOrder,
+          hall_id: scheduleForBooking.hall_id ?? null,
+          user_id: userId,
+          user_ticket_id: null,
+          status: 'PENDING',
+          payment_status: 'PENDING',
+          bank_transfer_order_id: order.id,
+        };
+        if (!userId) {
+          bookingInsert.guest_name = ordererName;
+          bookingInsert.guest_phone = ordererPhone ?? '';
+        }
+        const { error: bookErr } = await (supabase as any)
+          .from('bookings')
+          .insert(bookingInsert);
+        if (bookErr) {
+          console.error('bank-transfer-order: booking pre-create error', bookErr);
+          // 주문은 이미 생성됐으므로 롤백하지 않고 진행. 입금 확인 시 기존처럼 booking 생성됨.
+        }
+      }
+    }
+
     return NextResponse.json({
       orderId: order.id,
       amount,

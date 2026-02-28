@@ -69,7 +69,7 @@ export async function POST(
 
     const customerUserId = order.user_id;
 
-    // 비회원 주문: 입금 확인만 처리(수강권 발급 불가), 연락처로 안내 유도
+    // 비회원 주문: 입금 확인만 처리(수강권 발급 불가). 예약이 있으면 해당 booking은 CONFIRMED로 업데이트
     if (!customerUserId) {
       await supabase
         .from('bank_transfer_orders')
@@ -79,6 +79,29 @@ export async function POST(
           confirmed_by: user.id,
         })
         .eq('id', orderId);
+      if (order.schedule_id) {
+        const { data: pendingBooking } = await supabase
+          .from('bookings')
+          .select('id')
+          .eq('bank_transfer_order_id', orderId)
+          .maybeSingle();
+        if (pendingBooking) {
+          await supabase
+            .from('bookings')
+            .update({ status: 'CONFIRMED', payment_status: 'COMPLETED' })
+            .eq('id', pendingBooking.id);
+          const { data: confirmedBookings } = await supabase
+            .from('bookings')
+            .select('id')
+            .eq('schedule_id', order.schedule_id)
+            .in('status', ['CONFIRMED', 'COMPLETED']);
+          const actualCount = confirmedBookings?.length || 0;
+          await supabase
+            .from('schedules')
+            .update({ current_students: actualCount })
+            .eq('id', order.schedule_id);
+        }
+      }
       return NextResponse.json({
         success: true,
         data: null,
@@ -204,12 +227,7 @@ export async function POST(
 
     let booking = null;
     if (order.schedule_id) {
-      const { data: scheduleRow } = await supabase
-        .from('schedules')
-        .select('class_id')
-        .eq('id', order.schedule_id)
-        .single();
-      const resolvedClassId = scheduleRow?.class_id || order.class_id || ticket.class_id;
+      const resolvedClassId = order.class_id || ticket.class_id;
       if (resolvedClassId) {
         const { consumeUserTicket } = await import('@/lib/db/user-tickets');
         let consumeOk = false;
@@ -220,20 +238,47 @@ export async function POST(
           console.error('Consume ticket for booking error:', e);
         }
         if (consumeOk) {
-          const bookingData: Database['public']['Tables']['bookings']['Insert'] = {
-            user_id: customerUserId,
-            class_id: resolvedClassId,
-            schedule_id: order.schedule_id,
-            user_ticket_id: userTicket.id,
-            status: 'CONFIRMED',
-            payment_status: 'COMPLETED',
-          };
-          const { data: bookingRow } = await supabase
+          // 계좌이체 신청 시 선생성된 booking이 있으면 업데이트, 없으면(레거시) 새로 생성
+          const { data: existingBooking } = await supabase
             .from('bookings')
-            .insert(bookingData)
-            .select()
-            .single();
-          booking = bookingRow;
+            .select('id')
+            .eq('bank_transfer_order_id', orderId)
+            .maybeSingle();
+
+          if (existingBooking) {
+            const { data: updatedRow } = await supabase
+              .from('bookings')
+              .update({
+                status: 'CONFIRMED',
+                user_ticket_id: userTicket.id,
+                payment_status: 'COMPLETED',
+              })
+              .eq('id', existingBooking.id)
+              .select()
+              .single();
+            booking = updatedRow;
+          } else {
+            const { data: scheduleRow } = await supabase
+              .from('schedules')
+              .select('class_id')
+              .eq('id', order.schedule_id)
+              .single();
+            const classId = scheduleRow?.class_id || resolvedClassId;
+            const bookingData: Database['public']['Tables']['bookings']['Insert'] = {
+              user_id: customerUserId,
+              class_id: classId,
+              schedule_id: order.schedule_id,
+              user_ticket_id: userTicket.id,
+              status: 'CONFIRMED',
+              payment_status: 'COMPLETED',
+            };
+            const { data: bookingRow } = await supabase
+              .from('bookings')
+              .insert(bookingData)
+              .select()
+              .single();
+            booking = bookingRow;
+          }
           if (booking) {
             const { data: confirmedBookings } = await supabase
               .from('bookings')
