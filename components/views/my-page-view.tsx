@@ -65,6 +65,9 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
     profileRefreshDoneRef.current = true;
     refreshProfile();
   }, [user, authLoading, profile?.instructor_id, refreshProfile]);
+
+  // 로그인 후 비회원 시절 예약을 현재 사용자에 매핑 (1회). 연동 완료 후 loadData 호출해 레이스 제거.
+  const linkGuestDoneRef = useRef(false);
   const [ticketSummary, setTicketSummary] = useState<TicketSummary>({ regular: 0, popup: 0, workshop: 0, total: 0 });
   const [nextClass, setNextClass] = useState<UpcomingBooking | null>(null);
   const [weekSchedule, setWeekSchedule] = useState<WeekSchedule[]>([]);
@@ -211,11 +214,12 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
     }
   }, [user, language]);
 
-  // 데이터 로드 effect
+  // 데이터 로드 effect — 비회원 예약 연동(link-guest-bookings)을 먼저 수행한 뒤 loadData 호출해 첫 로드에서 연동된 예약이 보이도록 함
   useEffect(() => {
     mountedRef.current = true;
 
     if (!user) {
+      linkGuestDoneRef.current = false;
       setTicketSummary({ regular: 0, popup: 0, workshop: 0, total: 0 });
       setNextClass(null);
       setWeekSchedule([]);
@@ -225,10 +229,22 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
       return;
     }
 
-    loadData();
+    let cancelled = false;
+    (async () => {
+      if (!linkGuestDoneRef.current) {
+        linkGuestDoneRef.current = true;
+        try {
+          await fetchWithAuth('/api/me/link-guest-bookings', { method: 'POST' });
+        } catch (_) {
+          // 매핑 실패가 화면 로딩을 막지 않음
+        }
+      }
+      if (!cancelled) loadData();
+    })();
 
     return () => {
       mountedRef.current = false;
+      cancelled = true;
     };
   }, [user, loadData]);
 

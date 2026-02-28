@@ -191,23 +191,25 @@ export async function POST(request: Request) {
       ? `${ticket.name} ${selectedOption.count ?? 1}회권`
       : (ticket.name || '수강권');
 
+    const orderInsert: Record<string, unknown> = {
+      academy_id: orderAcademyId,
+      user_id: userId,
+      ticket_id: ticketId,
+      schedule_id: scheduleId || null,
+      class_id: classIdForOrder,
+      amount,
+      count_option_index: hasCountOptions ? optIndex : null,
+      discount_id: discountId || null,
+      order_name: orderName,
+      orderer_name: ordererName,
+      orderer_phone: ordererPhone,
+      orderer_email: ordererEmail,
+      status: 'PENDING',
+    };
+    orderInsert.depositor_name = depositorName || ordererName;
     const { data: order, error: insertError } = await (supabase as any)
       .from('bank_transfer_orders')
-      .insert({
-        academy_id: orderAcademyId,
-        user_id: userId,
-        ticket_id: ticketId,
-        schedule_id: scheduleId || null,
-        class_id: classIdForOrder,
-        amount,
-        count_option_index: hasCountOptions ? optIndex : null,
-        discount_id: discountId || null,
-        order_name: orderName,
-        orderer_name: ordererName,
-        orderer_phone: ordererPhone,
-        orderer_email: ordererEmail,
-        status: 'PENDING',
-      })
+      .insert(orderInsert)
       .select('id')
       .single();
 
@@ -237,6 +239,7 @@ export async function POST(request: Request) {
         if (!userId) {
           bookingInsert.guest_name = ordererName;
           bookingInsert.guest_phone = ordererPhone ?? '';
+          if (ordererEmail) bookingInsert.guest_email = ordererEmail;
         }
         const { error: bookErr } = await (supabase as any)
           .from('bookings')
@@ -256,6 +259,7 @@ export async function POST(request: Request) {
       bankAccountNumber,
       bankDepositorName,
       ordererName: ordererName,
+      depositorName: depositorName,
     });
   } catch (e: any) {
     console.error('bank-transfer-order error:', e);

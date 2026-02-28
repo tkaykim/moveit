@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
@@ -132,8 +132,11 @@ export default function SessionBookingPage() {
     bankAccountNumber: string;
     bankDepositorName: string;
     ordererName?: string;
+    depositorName?: string;
   } | null>(null);
   const [bankCopyFeedback, setBankCopyFeedback] = useState(false);
+  /** 계좌이체 신청 완료 후 '확인'으로 드로어를 닫았을 때, 안내 문구 표시 후 /my 이동 */
+  const [showBankTransferSuccessThenRedirect, setShowBankTransferSuccessThenRedirect] = useState(false);
 
   // 계좌이체 시: 비로그인 선택 모달 / 비회원 폼 / 입금자명 모달
   const [bankTransferAuthModalOpen, setBankTransferAuthModalOpen] = useState(false);
@@ -142,6 +145,9 @@ export default function SessionBookingPage() {
   const [depositorModalOpen, setDepositorModalOpen] = useState(false);
   const [depositorName, setDepositorName] = useState('');
   const [depositorModalPreFillLoading, setDepositorModalPreFillLoading] = useState(false);
+  const [bankTransferCompletedAsGuest, setBankTransferCompletedAsGuest] = useState(false);
+  // 성공 모달에서 회원가입/로그인 후 /my로 이동해야 함을 표시
+  const bankTransferAuthRedirectRef = useRef(false);
   const [pendingBankTransfer, setPendingBankTransfer] = useState<{
     ticketId: string;
     scheduleId: string;
@@ -530,7 +536,9 @@ export default function SessionBookingPage() {
   };
 
   // 계좌이체: 입금자명 모달에서 신청하기 클릭 시 실제 API 호출
-  const submitBankTransferOrder = async (ordererName: string, ordererPhone?: string | null, ordererEmail?: string | null) => {
+  // ordererName: 주문자 이름 (비회원 시 guestOrderer.name, 회원 시 depositorName)
+  // depositorNameArg: 입금자명 (비회원 시 depositorName 입력값, 회원 시 미사용)
+  const submitBankTransferOrder = async (ordererName: string, ordererPhone?: string | null, ordererEmail?: string | null, depositorNameArg?: string | null) => {
     if (!pendingBankTransfer || !selectedPurchaseTicket) return;
     setSubmitting(true);
     setError('');
@@ -543,6 +551,7 @@ export default function SessionBookingPage() {
       };
       if (ordererPhone?.trim()) body.ordererPhone = ordererPhone.trim();
       if (ordererEmail?.trim()) body.ordererEmail = ordererEmail.trim();
+      if (depositorNameArg?.trim()) body.depositorName = depositorNameArg.trim();
       const isGuest = !!guestOrderer;
       const orderRes = isGuest
         ? await fetch('/api/tickets/bank-transfer-order', {
@@ -560,6 +569,7 @@ export default function SessionBookingPage() {
         throw new Error(data.error || t('sessionBooking.purchaseFailed'));
       }
       const data = await orderRes.json();
+      setBankTransferCompletedAsGuest(isGuest);
       setBankTransferResult({
         orderId: data.orderId,
         amount: data.amount,
@@ -568,6 +578,7 @@ export default function SessionBookingPage() {
         bankAccountNumber: data.bankAccountNumber,
         bankDepositorName: data.bankDepositorName,
         ordererName: data.ordererName,
+        depositorName: data.depositorName,
       });
       setDepositorModalOpen(false);
       setPendingBankTransfer(null);
@@ -772,6 +783,13 @@ export default function SessionBookingPage() {
     }
   };
 
+  /** 계좌이체 입금 안내 드로어를 닫고, 완료 안내 표시 후 /my로 이동 */
+  const closeBankTransferResultAndGoToMy = () => {
+    setBankTransferResult(null);
+    setBankCopyFeedback(false);
+    setShowBankTransferSuccessThenRedirect(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-neutral-950">
@@ -804,7 +822,7 @@ export default function SessionBookingPage() {
   const selectedPurchaseTicket = purchasableTickets.find(t => (t.productKey ?? t.id) === selectedPurchaseTicketId);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-950 pt-8 px-5 pb-48 relative">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 pt-6 px-4 pb-48 relative">
       {/* 예약/구매 처리 중 로딩 오버레이 */}
       {submitting && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/50 dark:bg-black/60 backdrop-blur-sm">
@@ -821,16 +839,16 @@ export default function SessionBookingPage() {
       )}
 
       {/* 헤더 */}
-      <div className="flex items-center gap-4 mb-8">
-        <button onClick={() => router.back()} className="p-2 -ml-2">
-          <ChevronLeft className="text-black dark:text-white" />
+      <div className="flex items-center gap-3 mb-6">
+        <button onClick={() => router.back()} className="p-2 -ml-2 rounded-lg hover:bg-neutral-200/50 dark:hover:bg-neutral-800 transition-colors">
+          <ChevronLeft className="text-neutral-700 dark:text-neutral-300" size={24} />
         </button>
-        <h2 className="text-xl font-bold text-black dark:text-white">{t('sessionBooking.title')}</h2>
+        <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">{t('sessionBooking.title')}</h2>
       </div>
 
       {/* 포스터 */}
       {(session.classes as any)?.poster_url && (
-        <div className="relative w-full rounded-2xl overflow-hidden mb-4 bg-neutral-100 dark:bg-neutral-800">
+        <div className="relative w-full rounded-2xl overflow-hidden mb-5 bg-neutral-200/50 dark:bg-neutral-800/50 shadow-sm">
           <Image
             src={(session.classes as any).poster_url}
             alt={session.classes?.title || '수업 포스터'}
@@ -842,11 +860,11 @@ export default function SessionBookingPage() {
       )}
 
       {/* 세션 정보 카드 */}
-      <div className="bg-neutral-100 dark:bg-neutral-900 rounded-2xl p-5 mb-6 border border-neutral-200 dark:border-neutral-800">
-        <div className="text-xs text-neutral-500 mb-1">
+      <div className="rounded-2xl p-5 mb-6 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 shadow-sm">
+        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1">
           {session.classes?.academies?.name_kr || session.classes?.academies?.name_en}
         </div>
-        <h3 className="text-xl font-black text-black dark:text-white mb-4">
+        <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-4 tracking-tight">
           {session.classes?.title}
         </h3>
 
@@ -952,11 +970,11 @@ export default function SessionBookingPage() {
         <div className="space-y-6">
           {/* 비로그인: 수강권 선택·결제를 위해 회원가입/로그인 유도 (메인 CTA) */}
           {!user && (
-            <div className="bg-primary/10 dark:bg-[#CCFF00]/10 border-2 border-primary/30 dark:border-[#CCFF00]/30 rounded-xl p-5">
-              <p className="text-sm font-bold text-black dark:text-white mb-1">
+            <div className="rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/80 p-5 shadow-sm">
+              <p className="text-[15px] font-semibold text-neutral-900 dark:text-white mb-1">
                 {t('sessionBooking.loginOrSignupForTicket')}
               </p>
-              <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-4">
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
                 {t('sessionBooking.loginOrSignupBenefit')}
               </p>
               <div className="flex gap-3">
@@ -966,7 +984,7 @@ export default function SessionBookingPage() {
                     setAuthModalInitialTab('signup');
                     setIsAuthModalOpen(true);
                   }}
-                  className="flex-1 py-3 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm hover:opacity-90 transition-opacity"
+                  className="flex-1 py-3 rounded-xl bg-primary dark:bg-[#CCFF00] text-neutral-900 font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
                 >
                   {t('sessionBooking.signupButton')}
                 </button>
@@ -976,7 +994,7 @@ export default function SessionBookingPage() {
                     setAuthModalInitialTab('login');
                     setIsAuthModalOpen(true);
                   }}
-                  className="flex-1 py-3 rounded-xl border-2 border-neutral-800 dark:border-neutral-200 text-neutral-800 dark:text-neutral-200 font-bold text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                  className="flex-1 py-3 rounded-xl border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 font-semibold text-sm hover:bg-neutral-100 dark:hover:bg-neutral-600 transition-colors active:scale-[0.98]"
                 >
                   {t('sessionBooking.loginButton')}
                 </button>
@@ -985,287 +1003,270 @@ export default function SessionBookingPage() {
           )}
 
           {/* 결제 방법 선택 */}
-          <div className="space-y-3">
-            <h4 className="font-bold text-black dark:text-white">{t('sessionBooking.paymentMethod')}</h4>
-
-            {/* 1. 수강권 사용 (로그인 + 보유 수강권 있을 때만) */}
-            {user && (
-              <button
-                onClick={() => setPaymentMethod('ticket')}
-                disabled={userTickets.length === 0}
-                className={`w-full rounded-xl p-4 flex justify-between items-center border-2 transition-colors text-left ${
-                  paymentMethod === 'ticket'
-                    ? 'bg-primary/10 dark:bg-[#CCFF00]/10 border-primary dark:border-[#CCFF00]'
-                    : userTickets.length === 0
-                    ? 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 opacity-50'
-                    : 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    paymentMethod === 'ticket' ? 'bg-primary/20 dark:bg-[#CCFF00]/20' : 'bg-neutral-200 dark:bg-neutral-800'
-                  }`}>
-                    <Wallet className={paymentMethod === 'ticket' ? 'text-primary dark:text-[#CCFF00]' : 'text-neutral-500'} size={20} />
-                  </div>
-                  <div>
-                    <div className="text-black dark:text-white font-bold">{t('sessionBooking.useTicket')}</div>
-                    <div className="text-xs text-neutral-500">
-                      {loadingUserTickets ? t('common.loading') : userTickets.length > 0 ? t('sessionBooking.haveCount', { count: userTickets.length }) : t('sessionBooking.noAvailableTicket')}
+          <div className="space-y-4">
+            <h4 className="text-sm font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
+              {t('sessionBooking.paymentMethod')}
+            </h4>
+            <div className="space-y-2">
+              {/* 1. 수강권 사용 (로그인 + 보유 수강권 있을 때만) */}
+              {user && (
+                <button
+                  onClick={() => setPaymentMethod('ticket')}
+                  disabled={userTickets.length === 0}
+                  className={`w-full rounded-2xl p-4 flex justify-between items-center border transition-all duration-200 text-left shadow-sm ${
+                    paymentMethod === 'ticket'
+                      ? 'border-primary dark:border-[#CCFF00] bg-primary/5 dark:bg-[#CCFF00]/5 ring-2 ring-primary/20 dark:ring-[#CCFF00]/20'
+                      : userTickets.length === 0
+                      ? 'border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 opacity-60 cursor-not-allowed'
+                      : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-600 active:scale-[0.99]'
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+                      paymentMethod === 'ticket' ? 'bg-primary/15 dark:bg-[#CCFF00]/15 text-primary dark:text-[#CCFF00]' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
+                    }`}>
+                      <Wallet size={22} strokeWidth={1.5} />
+                    </div>
+                    <div>
+                      <div className="text-[15px] font-semibold text-neutral-900 dark:text-white">{t('sessionBooking.useTicket')}</div>
+                      <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                        {loadingUserTickets ? t('common.loading') : userTickets.length > 0 ? t('sessionBooking.haveCount', { count: userTickets.length }) : t('sessionBooking.noAvailableTicket')}
+                      </div>
                     </div>
                   </div>
-                </div>
-                {paymentMethod === 'ticket' && userTickets.length > 0 && (
-                  <div className="w-5 h-5 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center">
-                    <CheckCircle size={14} className="text-black" />
-                  </div>
-                )}
-                {userTickets.length === 0 && (
-                  <AlertCircle size={18} className="text-neutral-400" />
-                )}
-              </button>
-            )}
-
-            {/* 2. 수강권 구매 후 예약 (로그인 + 구매 가능 수강권 있을 때) */}
-            {user && purchasableTickets.length > 0 && (
-              <button
-                onClick={() => setPaymentMethod('purchase')}
-                className={`w-full rounded-xl p-4 flex justify-between items-center border-2 transition-colors text-left ${
-                  paymentMethod === 'purchase'
-                    ? 'bg-primary/10 dark:bg-[#CCFF00]/10 border-primary dark:border-[#CCFF00]'
-                    : 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    paymentMethod === 'purchase' ? 'bg-primary/20 dark:bg-[#CCFF00]/20' : 'bg-neutral-200 dark:bg-neutral-800'
-                  }`}>
-                    <CreditCard className={paymentMethod === 'purchase' ? 'text-primary dark:text-[#CCFF00]' : 'text-neutral-500'} size={20} />
-                  </div>
-                  <div>
-                    <div className="text-black dark:text-white font-bold">{t('sessionBooking.purchaseAndBook')}</div>
-                    <div className="text-xs text-neutral-500">
-                      {loadingPurchasableTickets ? t('common.loading') : t('sessionBooking.purchasableCount', { count: purchasableTickets.length })}
+                  {paymentMethod === 'ticket' && userTickets.length > 0 && (
+                    <div className="w-6 h-6 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center shrink-0">
+                      <CheckCircle size={14} className="text-neutral-900" strokeWidth={2.5} />
                     </div>
-                  </div>
-                </div>
-                {paymentMethod === 'purchase' && (
-                  <div className="w-5 h-5 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center">
-                    <CheckCircle size={14} className="text-black" />
-                  </div>
-                )}
-              </button>
-            )}
-
-            {/* 3. 현장 결제 - 클릭 시 항상 경고 표시, '그래도 현장결제 할래요' 선택 시에만 적용 */}
-            <button
-              onClick={() => setShowOnsiteWarning(true)}
-              className={`w-full rounded-xl p-4 flex justify-between items-center border-2 transition-colors text-left ${
-                paymentMethod === 'onsite'
-                  ? 'bg-primary/10 dark:bg-[#CCFF00]/10 border-primary dark:border-[#CCFF00]'
-                  : 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  paymentMethod === 'onsite' ? 'bg-primary/20 dark:bg-[#CCFF00]/20' : 'bg-neutral-200 dark:bg-neutral-800'
-                }`}>
-                  <Building2 className={paymentMethod === 'onsite' ? 'text-primary dark:text-[#CCFF00]' : 'text-neutral-500'} size={20} />
-                </div>
-                <div>
-                  <div className="text-black dark:text-white font-bold">{t('sessionBooking.onSitePayment')}</div>
-                  <div className="text-xs text-neutral-500">{t('sessionBooking.payOnVisit')}</div>
-                </div>
-              </div>
-              {paymentMethod === 'onsite' && (
-                <div className="w-5 h-5 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center">
-                  <CheckCircle size={14} className="text-black" />
-                </div>
+                  )}
+                  {userTickets.length === 0 && (
+                    <AlertCircle size={20} className="text-neutral-400 shrink-0" />
+                  )}
+                </button>
               )}
-            </button>
+
+              {/* 2. 수강권 구매 후 예약 */}
+              {user && purchasableTickets.length > 0 && (
+                <button
+                  onClick={() => setPaymentMethod('purchase')}
+                  className={`w-full rounded-2xl p-4 flex justify-between items-center border transition-all duration-200 text-left shadow-sm ${
+                    paymentMethod === 'purchase'
+                      ? 'border-primary dark:border-[#CCFF00] bg-primary/5 dark:bg-[#CCFF00]/5 ring-2 ring-primary/20 dark:ring-[#CCFF00]/20'
+                      : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-600 active:scale-[0.99]'
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+                      paymentMethod === 'purchase' ? 'bg-primary/15 dark:bg-[#CCFF00]/15 text-primary dark:text-[#CCFF00]' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
+                    }`}>
+                      <CreditCard size={22} strokeWidth={1.5} />
+                    </div>
+                    <div>
+                      <div className="text-[15px] font-semibold text-neutral-900 dark:text-white">{t('sessionBooking.purchaseAndBook')}</div>
+                      <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                        {loadingPurchasableTickets ? t('common.loading') : t('sessionBooking.purchasableCount', { count: purchasableTickets.length })}
+                      </div>
+                    </div>
+                  </div>
+                  {paymentMethod === 'purchase' && (
+                    <div className="w-6 h-6 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center shrink-0">
+                      <CheckCircle size={14} className="text-neutral-900" strokeWidth={2.5} />
+                    </div>
+                  )}
+                </button>
+              )}
+
+              {/* 3. 현장 결제 */}
+              <button
+                onClick={() => setShowOnsiteWarning(true)}
+                className={`w-full rounded-2xl p-4 flex justify-between items-center border transition-all duration-200 text-left shadow-sm ${
+                  paymentMethod === 'onsite'
+                    ? 'border-primary dark:border-[#CCFF00] bg-primary/5 dark:bg-[#CCFF00]/5 ring-2 ring-primary/20 dark:ring-[#CCFF00]/20'
+                    : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-600 active:scale-[0.99]'
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+                    paymentMethod === 'onsite' ? 'bg-primary/15 dark:bg-[#CCFF00]/15 text-primary dark:text-[#CCFF00]' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
+                  }`}>
+                    <Building2 size={22} strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <div className="text-[15px] font-semibold text-neutral-900 dark:text-white">{t('sessionBooking.onSitePayment')}</div>
+                    <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">{t('sessionBooking.payOnVisit')}</div>
+                  </div>
+                </div>
+                {paymentMethod === 'onsite' && (
+                  <div className="w-6 h-6 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center shrink-0">
+                    <CheckCircle size={14} className="text-neutral-900" strokeWidth={2.5} />
+                  </div>
+                )}
+              </button>
+            </div>
           </div>
 
-          {/* 수강권 선택 (수강권 사용 선택 시, 로그인 필요) */}
+          {/* 수강권 선택 (수강권 사용 선택 시) */}
           {user && paymentMethod === 'ticket' && userTickets.length > 0 && (
-            <div className="space-y-3">
-              <h4 className="font-bold text-black dark:text-white">{t('sessionBooking.selectOwnedTicket')}</h4>
-              {userTickets.map((ut) => {
-                const isCoupon = ut.tickets?.is_coupon === true;
-                const isPeriodTicket = ut.tickets?.ticket_type === 'PERIOD' || ut.remaining_count === null;
-                
-                // 날짜 포맷팅 함수
-                const formatDate = (dateStr: string | null) => {
-                  if (!dateStr) return '';
-                  const date = new Date(dateStr);
-                  return `${date.getMonth() + 1}/${date.getDate()}`;
-                };
-                
-                return (
-                  <button
-                    key={ut.id}
-                    onClick={() => setSelectedUserTicketId(ut.id)}
-                    className={`w-full rounded-xl p-4 flex justify-between items-center border-2 transition-colors text-left ${
-                      selectedUserTicketId === ut.id
-                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'
-                        : 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center ${
-                        isCoupon ? 'bg-orange-100 dark:bg-orange-900/30' : 
-                        isPeriodTicket ? 'bg-purple-100 dark:bg-purple-900/30' : 
-                        'bg-blue-100 dark:bg-blue-900/30'
-                      }`}>
-                        {isCoupon ? (
-                          <Gift size={18} className="text-orange-600 dark:text-orange-400" />
-                        ) : isPeriodTicket ? (
-                          <Calendar size={18} className="text-purple-600 dark:text-purple-400" />
-                        ) : (
-                          <Ticket size={18} className="text-blue-600 dark:text-blue-400" />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-black dark:text-white font-medium flex items-center gap-2 flex-wrap">
-                          <span className="break-words [word-break:keep-all]">{ut.tickets?.name}</span>
-                          {isCoupon && (
-                            <span className="text-xs px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full">
-                              {t('bookingConfirm.couponName')}
-                            </span>
-                          )}
-                          {isPeriodTicket && !isCoupon && (
-                            <span className="text-xs px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full">
-                              {t('sessionBooking.periodTicket')}
-                            </span>
-                          )}
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
+                {t('sessionBooking.selectOwnedTicket')}
+              </h4>
+              <div className="space-y-2">
+                {userTickets.map((ut) => {
+                  const isCoupon = ut.tickets?.is_coupon === true;
+                  const isPeriodTicket = ut.tickets?.ticket_type === 'PERIOD' || ut.remaining_count === null;
+                  const selected = selectedUserTicketId === ut.id;
+                  const formatDate = (dateStr: string | null) => {
+                    if (!dateStr) return '';
+                    const date = new Date(dateStr);
+                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                  };
+                  return (
+                    <button
+                      key={ut.id}
+                      onClick={() => setSelectedUserTicketId(ut.id)}
+                      className={`w-full rounded-2xl p-4 flex justify-between items-center border transition-all duration-200 text-left shadow-sm ${
+                        selected
+                          ? 'border-primary dark:border-[#CCFF00] bg-primary/5 dark:bg-[#CCFF00]/5 ring-2 ring-primary/20 dark:ring-[#CCFF00]/20'
+                          : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-600 active:scale-[0.99]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className={`w-11 h-11 flex-shrink-0 rounded-xl flex items-center justify-center ${
+                          isCoupon ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
+                          isPeriodTicket ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400' :
+                          'bg-sky-500/10 text-sky-600 dark:text-sky-400'
+                        }`}>
+                          {isCoupon ? <Gift size={20} strokeWidth={1.5} /> : isPeriodTicket ? <Calendar size={20} strokeWidth={1.5} /> : <Ticket size={20} strokeWidth={1.5} />}
                         </div>
-                        <div className="text-xs text-neutral-500">
-                          {isPeriodTicket ? (
-                            // 기간권: 시작일 ~ 만료일 표시
-                            ut.start_date && ut.expiry_date
-                              ? `${formatDate(ut.start_date)} ~ ${t('sessionBooking.expiryDateLabel')}${formatDate(ut.expiry_date)}`
-                              : ut.expiry_date
-                                ? `${t('sessionBooking.expiryDateLabel')}${formatDate(ut.expiry_date)}`
-                                : '-'
-                          ) : (
-                            // 횟수권: 잔여 횟수 + 만료일 표시
-                            ut.expiry_date
-                              ? `${t('sessionBooking.remaining', { count: ut.remaining_count ?? 0 })} · ${t('sessionBooking.expiryDateLabel')}${formatDate(ut.expiry_date)}`
-                              : t('sessionBooking.remaining', { count: ut.remaining_count ?? 0 })
-                          )}
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[15px] font-semibold text-neutral-900 dark:text-white flex items-center gap-2 flex-wrap">
+                            <span className="break-words [word-break:keep-all]">{ut.tickets?.name}</span>
+                            {isCoupon && (
+                              <span className="text-[11px] px-2 py-0.5 bg-amber-500/15 text-amber-700 dark:text-amber-300 rounded-md font-medium">
+                                {t('bookingConfirm.couponName')}
+                              </span>
+                            )}
+                            {isPeriodTicket && !isCoupon && (
+                              <span className="text-[11px] px-2 py-0.5 bg-violet-500/15 text-violet-700 dark:text-violet-300 rounded-md font-medium">
+                                {t('sessionBooking.periodTicket')}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                            {isPeriodTicket
+                              ? (ut.start_date && ut.expiry_date ? `${formatDate(ut.start_date)} ~ ${t('sessionBooking.expiryDateLabel')}${formatDate(ut.expiry_date)}` : ut.expiry_date ? `${t('sessionBooking.expiryDateLabel')}${formatDate(ut.expiry_date)}` : '-')
+                              : (ut.expiry_date ? `${t('sessionBooking.remaining', { count: ut.remaining_count ?? 0 })} · ${t('sessionBooking.expiryDateLabel')}${formatDate(ut.expiry_date)}` : t('sessionBooking.remaining', { count: ut.remaining_count ?? 0 }))}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    {selectedUserTicketId === ut.id && (
-                      <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
-                        <CheckCircle size={14} className="text-white" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
+                      {selected && (
+                        <div className="w-6 h-6 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center shrink-0">
+                          <CheckCircle size={14} className="text-neutral-900" strokeWidth={2.5} />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
           {/* 구매할 수강권 선택 (수강권 구매 선택 시) */}
           {paymentMethod === 'purchase' && (
             <div className="space-y-4">
-              <h4 className="font-bold text-black dark:text-white">{t('sessionBooking.selectPurchaseTicket')}</h4>
+              <h4 className="text-sm font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
+                {t('sessionBooking.selectPurchaseTicket')}
+              </h4>
 
               {loadingPurchasableTickets ? (
-                <div className="text-center py-8 text-neutral-500">{t('common.loading')}</div>
+                <div className="text-center py-10 text-neutral-500 dark:text-neutral-400 text-sm">{t('common.loading')}</div>
               ) : purchasableTickets.length === 0 ? (
-                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-center">
-                  <p className="text-sm text-amber-700 dark:text-amber-400">
-                    {t('sessionBooking.noClassTickets')}
-                  </p>
+                <div className="rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 p-5 text-center">
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400">{t('sessionBooking.noClassTickets')}</p>
                 </div>
               ) : (
                 <>
-                  {purchasableTickets.map((ticket) => {
-                    const selKey = ticket.productKey ?? ticket.id;
-                    const category = ticket.ticket_category || (ticket.is_coupon ? 'popup' : 'regular');
-                    const categoryLabel = category === 'regular' ? ticketLabels.regular : category === 'popup' ? ticketLabels.popup : ticketLabels.workshop;
-                    const categoryColor = category === 'regular' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : category === 'popup' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400';
-                    return (
-                      <button
-                        key={selKey}
-                        onClick={() => setSelectedPurchaseTicketId(selKey)}
-                        className={`w-full rounded-xl p-4 flex justify-between items-center border-2 transition-colors text-left ${
-                          selectedPurchaseTicketId === selKey
-                            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'
-                            : 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center ${
-                            category === 'regular' ? 'bg-blue-100 dark:bg-blue-900/30' : category === 'popup' ? 'bg-purple-100 dark:bg-purple-900/30' : 'bg-amber-100 dark:bg-amber-900/30'
-                          }`}>
-                            {category === 'regular' ? (
-                              <Ticket size={18} className="text-blue-600 dark:text-blue-400" />
-                            ) : category === 'popup' ? (
-                              <Gift size={18} className="text-purple-600 dark:text-purple-400" />
-                            ) : (
-                              <Ticket size={18} className="text-amber-600 dark:text-amber-400" />
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-black dark:text-white font-medium flex items-center gap-2 flex-wrap">
-                              <span className="break-words [word-break:keep-all]">{ticket.name}</span>
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${categoryColor}`}>
-                                {categoryLabel}
-                              </span>
+                  <div className="space-y-2">
+                    {purchasableTickets.map((ticket) => {
+                      const selKey = ticket.productKey ?? ticket.id;
+                      const category = ticket.ticket_category || (ticket.is_coupon ? 'popup' : 'regular');
+                      const categoryLabel = category === 'regular' ? ticketLabels.regular : category === 'popup' ? ticketLabels.popup : ticketLabels.workshop;
+                      const selected = selectedPurchaseTicketId === selKey;
+                      const iconBg = category === 'regular' ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400' : category === 'popup' ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
+                      const tagBg = category === 'regular' ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300' : category === 'popup' ? 'bg-violet-500/15 text-violet-700 dark:text-violet-300' : 'bg-amber-500/15 text-amber-700 dark:text-amber-300';
+                      return (
+                        <button
+                          key={selKey}
+                          onClick={() => setSelectedPurchaseTicketId(selKey)}
+                          className={`w-full rounded-2xl p-4 flex justify-between items-center border transition-all duration-200 text-left shadow-sm ${
+                            selected
+                              ? 'border-primary dark:border-[#CCFF00] bg-primary/5 dark:bg-[#CCFF00]/5 ring-2 ring-primary/20 dark:ring-[#CCFF00]/20'
+                              : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-600 active:scale-[0.99]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-4 min-w-0">
+                            <div className={`w-11 h-11 flex-shrink-0 rounded-xl flex items-center justify-center ${iconBg}`}>
+                              {category === 'regular' ? <Ticket size={20} strokeWidth={1.5} /> : category === 'popup' ? <Gift size={20} strokeWidth={1.5} /> : <Ticket size={20} strokeWidth={1.5} />}
                             </div>
-                            <div className="text-xs text-neutral-500">
-                              {ticket.ticket_type === 'COUNT'
-                                ? `${ticket.total_count ?? 0}${t('ticketRecharge.count')}`
-                                : `${ticket.valid_days ?? 0}${t('ticketRecharge.days')}`}
-                              {' · '}
-                              <span className="font-bold text-primary dark:text-[#CCFF00]">
-                                {ticket.price.toLocaleString()}원
-                              </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-[15px] font-semibold text-neutral-900 dark:text-white flex items-center gap-2 flex-wrap">
+                                <span className="break-words [word-break:keep-all]">{ticket.name}</span>
+                                <span className={`text-[11px] px-2 py-0.5 rounded-md font-medium ${tagBg}`}>
+                                  {categoryLabel}
+                                </span>
+                              </div>
+                              <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                                {ticket.ticket_type === 'COUNT' ? `${ticket.total_count ?? 0}${t('ticketRecharge.count')}` : `${ticket.valid_days ?? 0}${t('ticketRecharge.days')}`}
+                                {' · '}
+                                <span className="font-semibold text-neutral-800 dark:text-neutral-200">{ticket.price.toLocaleString()}원</span>
+                              </div>
+                              {ticket.description && (
+                                <p className="mt-1 text-xs text-neutral-400 dark:text-neutral-500 line-clamp-2">{ticket.description}</p>
+                              )}
                             </div>
-                            {ticket.description && (
-                              <p className="mt-1 text-xs text-neutral-400 line-clamp-2">{ticket.description}</p>
-                            )}
                           </div>
-                        </div>
-                        {selectedPurchaseTicketId === selKey && (
-                          <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
-                            <CheckCircle size={14} className="text-white" />
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
+                          {selected && (
+                            <div className="w-6 h-6 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center shrink-0">
+                              <CheckCircle size={14} className="text-neutral-900" strokeWidth={2.5} />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
 
-                  {/* 결제 방식 선택 — 토스 비활성화 시 계좌이체만 표시 */}
-                  <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800">
-                    <p className="text-sm text-neutral-500 mb-3">{t('sessionBooking.paymentType')}</p>
+                  {/* 결제 방식 선택 — 수강권 목록과 시각적으로 구분 */}
+                  <div className="pt-6 mt-6 border-t border-neutral-200 dark:border-neutral-700">
+                    <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mb-4">{t('sessionBooking.paymentType')}</p>
                     {ENABLE_TOSS_PAYMENT ? (
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 p-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800/80">
                         <button
                           onClick={() => setPurchasePaymentType('card')}
-                          className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                          className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                             purchasePaymentType === 'card'
-                              ? 'bg-primary dark:bg-[#CCFF00] text-black'
-                              : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+                              ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm border border-neutral-200 dark:border-neutral-600'
+                              : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
                           }`}
                         >
                           {t('sessionBooking.cardPayment')}
                         </button>
                         <button
                           onClick={() => setPurchasePaymentType('account')}
-                          className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                          className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                             purchasePaymentType === 'account'
-                              ? 'bg-primary dark:bg-[#CCFF00] text-black'
-                              : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+                              ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm border border-neutral-200 dark:border-neutral-600'
+                              : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
                           }`}
                         >
                           {t('sessionBooking.bankTransfer')}
                         </button>
                       </div>
                     ) : (
-                      <div className="py-2.5 rounded-lg text-sm font-medium bg-primary/20 dark:bg-[#CCFF00]/20 text-primary dark:text-[#CCFF00] text-center">
-                        {t('sessionBooking.bankTransfer')} ({language === 'ko' ? '입금 확인 후 예약 확정' : 'Confirm after transfer'})
+                      <div className="rounded-xl py-3 px-4 bg-primary/10 dark:bg-[#CCFF00]/10 border border-primary/20 dark:border-[#CCFF00]/20 text-center">
+                        <span className="text-sm font-medium text-primary dark:text-[#CCFF00]">
+                          {t('sessionBooking.bankTransfer')} ({language === 'ko' ? '입금 확인 후 예약 확정' : 'Confirm after transfer'})
+                        </span>
                       </div>
                     )}
                   </div>
@@ -1329,10 +1330,10 @@ export default function SessionBookingPage() {
 
       {/* 하단 고정 버튼 (하단 네비게이션 80px 위에 배치) */}
       {canBook && (
-        <div className="fixed bottom-[80px] left-1/2 -translate-x-1/2 w-full max-w-[420px] p-4 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-lg border-t border-neutral-200 dark:border-neutral-800 z-50">
+        <div className="fixed bottom-[80px] left-1/2 -translate-x-1/2 w-full max-w-[420px] px-4 pt-5 pb-4 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border-t border-neutral-200 dark:border-neutral-700 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] z-50">
           {/* 결제 금액 표시 */}
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-sm text-neutral-500">
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-sm text-neutral-500 dark:text-neutral-400">
               {paymentMethod === null
                 ? t('sessionBooking.selectPaymentMethod')
                 : paymentMethod === 'ticket'
@@ -1341,7 +1342,7 @@ export default function SessionBookingPage() {
                 ? t('sessionBooking.ticketPurchase')
                 : t('sessionBooking.onSitePayment')}
             </span>
-            <span className="text-lg font-bold text-primary dark:text-[#CCFF00]">
+            <span className="text-base font-semibold text-neutral-900 dark:text-white">
               {paymentMethod === null
                 ? ''
                 : paymentMethod === 'purchase' && selectedPurchaseTicket
@@ -1360,7 +1361,7 @@ export default function SessionBookingPage() {
               (paymentMethod === 'ticket' && !selectedUserTicketId) ||
               (paymentMethod === 'purchase' && !selectedPurchaseTicketId)
             }
-            className="w-full bg-primary dark:bg-[#CCFF00] text-black font-bold py-3.5 rounded-xl text-base shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full bg-primary dark:bg-[#CCFF00] text-neutral-900 font-semibold py-3.5 rounded-xl text-[15px] shadow-sm hover:opacity-95 active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {submitting ? (
               <>
@@ -1572,7 +1573,7 @@ export default function SessionBookingPage() {
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => {
-              if (bankTransferResult) { setBankTransferResult(null); setBankCopyFeedback(false); }
+              if (bankTransferResult) closeBankTransferResultAndGoToMy();
               else { setDepositorModalOpen(false); setPendingBankTransfer(null); setGuestOrderer(null); }
             }}
             aria-hidden
@@ -1596,7 +1597,7 @@ export default function SessionBookingPage() {
                     </h3>
                     <button
                       type="button"
-                      onClick={() => { setBankTransferResult(null); setBankCopyFeedback(false); }}
+                      onClick={closeBankTransferResultAndGoToMy}
                       className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400"
                       aria-label={language === 'ko' ? '닫기' : 'Close'}
                     >
@@ -1617,10 +1618,10 @@ export default function SessionBookingPage() {
                     <span className="font-mono break-all">{bankTransferResult.bankAccountNumber}</span>
                     <span className="text-neutral-500">{language === 'ko' ? '예금주' : 'Holder'}</span>
                     <span>{bankTransferResult.bankDepositorName}</span>
-                    {bankTransferResult.ordererName && (
+                    {(bankTransferResult.depositorName || bankTransferResult.ordererName) && (
                       <>
                         <span className="text-neutral-500">{language === 'ko' ? '입금자명' : 'Depositor'}</span>
-                        <span className="font-medium">{bankTransferResult.ordererName}</span>
+                        <span className="font-medium">{bankTransferResult.depositorName || bankTransferResult.ordererName}</span>
                       </>
                     )}
                   </div>
@@ -1645,7 +1646,7 @@ export default function SessionBookingPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setBankTransferResult(null); setBankCopyFeedback(false); }}
+                    onClick={closeBankTransferResultAndGoToMy}
                     className="w-full py-3 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-medium"
                   >
                     {language === 'ko' ? '확인' : 'OK'}
@@ -1692,7 +1693,8 @@ export default function SessionBookingPage() {
                       disabled={submitting || !depositorName.trim() || depositorModalPreFillLoading}
                       onClick={() => {
                         if (guestOrderer) {
-                          submitBankTransferOrder(depositorName, guestOrderer.phone || null, guestOrderer.email || null);
+                          // 비회원: ordererName = 주문자 이름, depositorName = 입금자명
+                          submitBankTransferOrder(guestOrderer.name, guestOrderer.phone || null, guestOrderer.email || null, depositorName);
                         } else {
                           submitBankTransferOrder(depositorName);
                         }
@@ -1709,11 +1711,101 @@ export default function SessionBookingPage() {
         </div>
       )}
 
+      {/* 계좌이체 신청 완료 안내 — 비회원: 회원가입/로그인 유도, 회원: 마이페이지 이동 */}
+      {showBankTransferSuccessThenRedirect && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center animate-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 rounded-full bg-primary/20 dark:bg-[#CCFF00]/20 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="text-primary dark:text-[#CCFF00]" size={32} strokeWidth={2} />
+            </div>
+            <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">
+              {language === 'ko' ? '예약이 완료되었습니다' : 'Booking submitted'}
+            </h3>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
+              {language === 'ko'
+                ? '학원에서 입금이 확인되면 예약이 확정됩니다.'
+                : 'Your booking will be confirmed after the academy verifies your payment.'}
+            </p>
+            {bankTransferCompletedAsGuest ? (
+              <>
+                <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-5">
+                  {language === 'ko'
+                    ? '예약 현황을 확인하려면 회원가입 또는 로그인해 주세요.'
+                    : 'Sign up or log in to check your booking status.'}
+                </p>
+                <div className="flex gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowBankTransferSuccessThenRedirect(false);
+                      setBankTransferCompletedAsGuest(false);
+                      bankTransferAuthRedirectRef.current = true;
+                      setAuthModalInitialTab('signup');
+                      setIsAuthModalOpen(true);
+                    }}
+                    className="flex-1 py-3 rounded-xl bg-primary dark:bg-[#CCFF00] text-neutral-900 font-semibold text-[15px] hover:opacity-95 active:scale-[0.99] transition-all"
+                  >
+                    {language === 'ko' ? '회원가입' : 'Sign up'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowBankTransferSuccessThenRedirect(false);
+                      setBankTransferCompletedAsGuest(false);
+                      bankTransferAuthRedirectRef.current = true;
+                      setAuthModalInitialTab('login');
+                      setIsAuthModalOpen(true);
+                    }}
+                    className="flex-1 py-3 rounded-xl border-2 border-neutral-300 dark:border-neutral-600 text-neutral-800 dark:text-neutral-200 font-semibold text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all"
+                  >
+                    {language === 'ko' ? '로그인' : 'Log in'}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBankTransferSuccessThenRedirect(false);
+                    setBankTransferCompletedAsGuest(false);
+                  }}
+                  className="w-full py-2 text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+                >
+                  {language === 'ko' ? '나중에 하기' : 'Maybe later'}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBankTransferSuccessThenRedirect(false);
+                  setBankTransferCompletedAsGuest(false);
+                  router.push('/my');
+                }}
+                className="w-full py-3.5 rounded-xl bg-primary dark:bg-[#CCFF00] text-neutral-900 font-semibold text-[15px] hover:opacity-95 active:scale-[0.99] transition-all"
+              >
+                {language === 'ko' ? '마이페이지로 이동' : 'Go to My Page'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 로그인/회원가입 모달 */}
       <MyTab
         isOpen={isAuthModalOpen}
-        onClose={() => {
+        onClose={async () => {
           setIsAuthModalOpen(false);
+          // 비회원 계좌이체 완료 후 회원가입/로그인한 경우: 로그인 성공이면 /my로 이동
+          if (bankTransferAuthRedirectRef.current) {
+            bankTransferAuthRedirectRef.current = false;
+            const supabase = getSupabaseClient();
+            if (supabase) {
+              const { data: { user: authUser } } = await (supabase as any).auth.getUser();
+              if (authUser) {
+                router.push('/my');
+                return;
+              }
+            }
+          }
           checkAuth();
         }}
         initialTab={authModalInitialTab}

@@ -25,6 +25,7 @@ interface BankTransferOrder {
   amount: number;
   order_name: string | null;
   orderer_name?: string | null;
+  depositor_name?: string | null;
   status: string;
   created_at: string;
   confirmed_at: string | null;
@@ -421,7 +422,15 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
                         {order.amount.toLocaleString()}원
                       </TableCell>
                       <TableCell className="py-3">
-                        <CellChip text={(order.orderer_name || order.user_name) ?? undefined} maxWidth="max-w-[100px]" />
+                        <CellChip
+                          text={
+                            order.depositor_name?.trim() &&
+                            order.depositor_name !== order.orderer_name
+                              ? `${order.orderer_name || order.user_name || '—'} / 입금: ${order.depositor_name}`
+                              : (order.orderer_name || order.user_name) ?? undefined
+                          }
+                          maxWidth="max-w-[140px]"
+                        />
                       </TableCell>
                       <TableCell className="py-3">
                         {isPending ? (

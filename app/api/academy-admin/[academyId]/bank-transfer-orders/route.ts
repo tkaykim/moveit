@@ -43,7 +43,7 @@ export async function GET(
     const offset = (page - 1) * limit;
 
     const supabase = createServiceClient() as any;
-    const selectCols = 'id, user_id, ticket_id, schedule_id, amount, order_name, orderer_name, orderer_phone, orderer_email, status, created_at, confirmed_at';
+    const selectCols = 'id, user_id, ticket_id, schedule_id, amount, order_name, orderer_name, orderer_phone, orderer_email, depositor_name, status, created_at, confirmed_at';
 
     let query = supabase
       .from('bank_transfer_orders')
@@ -58,7 +58,7 @@ export async function GET(
     if (q) {
       const pattern = `%${escapeIlike(q)}%`;
       query = query.or(
-        `orderer_name.ilike.${pattern},orderer_phone.ilike.${pattern},orderer_email.ilike.${pattern},order_name.ilike.${pattern}`
+        `orderer_name.ilike.${pattern},orderer_phone.ilike.${pattern},orderer_email.ilike.${pattern},order_name.ilike.${pattern},depositor_name.ilike.${pattern}`
       );
     }
 
