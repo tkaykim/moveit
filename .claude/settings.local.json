@@ -12,7 +12,8 @@
       "WebSearch",
       "WebFetch(domain:developers.tosspayments.com)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:techchat.tosspayments.com)"
+      "WebFetch(domain:techchat.tosspayments.com)",
+      "Bash(head:*)"
     ]
   },
   "mcpServers": {
