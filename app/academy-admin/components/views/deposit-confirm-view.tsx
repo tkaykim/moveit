@@ -149,7 +149,8 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
       .select('name_kr, name_en')
       .eq('id', academyId)
       .single()
-      .then(({ data }) => {
+      .then((res: { data: { name_kr?: string | null; name_en?: string | null } | null }) => {
+        const data = res.data;
         if (academyNameMounted.current && data) {
           setAcademyName(data.name_kr || data.name_en || null);
         }
