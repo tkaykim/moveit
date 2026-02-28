@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Ticket, TrendingUp, Settings, Plus, Tag, Zap, ChevronDown, ChevronUp, Search, Trash2, Link2 } from 'lucide-react';
+import { Ticket, TrendingUp, Settings, Plus, Tag, Zap, ChevronDown, ChevronUp, Search, Trash2, Link2, Pencil, Check, X } from 'lucide-react';
 import { SectionHeader } from '../common/section-header';
 import { TicketModal } from './products/ticket-modal';
 import { DiscountModal } from './products/discount-modal';
-import { TicketLabelEditBlock } from './products/TicketLabelEditBlock';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import { DEFAULT_TICKET_LABELS, TICKET_LABEL_MAX_LENGTH } from '@/lib/constants/ticket-labels';
 import { formatCurrency } from './utils/format-currency';
 import { useAcademyTicketLabels } from './hooks/useAcademyTicketLabels';
 
@@ -34,6 +34,9 @@ export function ProductView({ academyId }: ProductViewProps) {
   const [initialTicketCategory, setInitialTicketCategory] = useState<'regular' | 'popup' | 'workshop' | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
   const [deletingTicketId, setDeletingTicketId] = useState<string | null>(null);
+  const [editingCategory, setEditingCategory] = useState<'regular' | 'popup' | 'workshop' | null>(null);
+  const [editLabelValue, setEditLabelValue] = useState('');
+  const [savingLabel, setSavingLabel] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -188,6 +191,43 @@ export function ProductView({ academyId }: ProductViewProps) {
     }));
   };
 
+  const categoryToDbField = (category: 'regular' | 'popup' | 'workshop') =>
+    ({ regular: 'ticket_label_regular', popup: 'ticket_label_popup', workshop: 'ticket_label_workshop' } as const)[category];
+
+  const startEditLabel = (category: 'regular' | 'popup' | 'workshop') => {
+    const val = raw?.[categoryToDbField(category)] ?? '';
+    setEditLabelValue(val ?? '');
+    setEditingCategory(category);
+  };
+
+  const cancelEditLabel = () => {
+    setEditingCategory(null);
+    setEditLabelValue('');
+  };
+
+  const saveLabel = async () => {
+    if (editingCategory == null) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    setSavingLabel(true);
+    try {
+      const field = categoryToDbField(editingCategory);
+      const value = editLabelValue.trim() || null;
+      const { error } = await (supabase as any)
+        .from('academies')
+        .update({ [field]: value })
+        .eq('id', academyId);
+      if (error) throw error;
+      await refetch();
+      setEditingCategory(null);
+      setEditLabelValue('');
+    } catch (e: any) {
+      alert(e?.message || '표기 이름 저장에 실패했습니다.');
+    } finally {
+      setSavingLabel(false);
+    }
+  };
+
   // 필터링된 카테고리 목록
   const getFilteredCategories = () => {
     if (categoryFilter === 'all') {
@@ -261,15 +301,6 @@ export function ProductView({ academyId }: ProductViewProps) {
           }}
           dataOnboarding="page-products-add"
         />
-
-        {/* 수강권 유형 표기 변경 (학원별) */}
-        <div className="mb-4">
-          <TicketLabelEditBlock
-            academyId={academyId}
-            initialLabels={raw}
-            onSaved={refetch}
-          />
-        </div>
 
         {/* 검색 및 카테고리 필터 */}
         <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 p-4 space-y-4">
@@ -348,34 +379,85 @@ export function ProductView({ academyId }: ProductViewProps) {
                   className={`bg-white dark:bg-neutral-900 rounded-xl shadow-sm border overflow-hidden ${style.border}`}
                 >
                   {/* 아코디언 헤더 */}
-                  <button
-                    onClick={() => toggleSection(category)}
-                    className={`w-full p-4 flex items-center justify-between ${style.headerBg} transition-colors hover:opacity-90`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${style.iconBg}`}>
-                        {getCategoryIcon(category)}
-                      </div>
-                      <div className="text-left">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-gray-800 dark:text-white">
-                            {config.fullName}
-                          </h3>
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded ${config.badgeColor}`}>
-                            {categoryTickets.length}개
-                          </span>
+                  <div className={`p-4 flex items-center justify-between ${style.headerBg}`}>
+                    <button
+                      onClick={() => toggleSection(category)}
+                      className="flex-1 flex items-center justify-between min-w-0 text-left"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`p-2 rounded-lg flex-shrink-0 ${style.iconBg}`}>
+                          {getCategoryIcon(category)}
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {getCategoryDescription(category)}
-                        </p>
+                        <div className="text-left min-w-0">
+                          {editingCategory === category ? (
+                            <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="text"
+                                maxLength={TICKET_LABEL_MAX_LENGTH}
+                                value={editLabelValue}
+                                onChange={(e) => setEditLabelValue(e.target.value)}
+                                placeholder={DEFAULT_TICKET_LABELS[category]}
+                                className="w-full min-w-[120px] max-w-[200px] px-2 py-1 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-white text-sm font-bold"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') saveLabel();
+                                  if (e.key === 'Escape') cancelEditLabel();
+                                }}
+                                autoFocus
+                              />
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); saveLabel(); }}
+                                disabled={savingLabel}
+                                className="p-1.5 rounded-lg text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-50"
+                                title="저장"
+                              >
+                                <Check size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); cancelEditLabel(); }}
+                                className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-700"
+                                title="취소"
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-gray-800 dark:text-white">
+                                  {config.fullName}
+                                </h3>
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded flex-shrink-0 ${config.badgeColor}`}>
+                                  {categoryTickets.length}개
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                {getCategoryDescription(category)}
+                              </p>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    {isExpanded ? (
-                      <ChevronUp size={20} className="text-gray-400" />
-                    ) : (
-                      <ChevronDown size={20} className="text-gray-400" />
+                      {editingCategory !== category && (
+                        isExpanded ? (
+                          <ChevronUp size={20} className="text-gray-400 flex-shrink-0" />
+                        ) : (
+                          <ChevronDown size={20} className="text-gray-400 flex-shrink-0" />
+                        )
+                      )}
+                    </button>
+                    {editingCategory !== category && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); startEditLabel(category); }}
+                        className="flex-shrink-0 ml-2 p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700"
+                        title="표기 이름 수정"
+                      >
+                        <Pencil size={16} />
+                      </button>
                     )}
-                  </button>
+                  </div>
 
                   {/* 아코디언 컨텐츠 */}
                   {isExpanded && (
