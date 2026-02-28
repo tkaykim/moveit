@@ -6,27 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
+import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { updateSchedule } from '@/lib/db/schedules';
-
-async function assertAcademyAdmin(academyId: string, userId: string) {
-  const supabase = createServiceClient();
-  const { data: userData } = await (supabase as any)
-    .from('users')
-    .select('role')
-    .eq('id', userId)
-    .single();
-  const isSuperAdmin = userData?.role === 'SUPER_ADMIN';
-  if (isSuperAdmin) return;
-  const { data: roleData, error: roleError } = await (supabase as any)
-    .from('academy_user_roles')
-    .select('role')
-    .eq('academy_id', academyId)
-    .eq('user_id', userId)
-    .single();
-  if (roleError || !roleData || !['ACADEMY_OWNER', 'ACADEMY_MANAGER'].includes(roleData.role)) {
-    throw new Error('학원 관리자 권한이 필요합니다.');
-  }
-}
 
 export async function PATCH(
   request: NextRequest,

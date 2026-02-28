@@ -133,6 +133,7 @@ export default function SessionBookingPage() {
     bankDepositorName: string;
     ordererName?: string;
   } | null>(null);
+  const [bankCopyFeedback, setBankCopyFeedback] = useState(false);
 
   // 계좌이체 시: 비로그인 선택 모달 / 비회원 폼 / 입금자명 모달
   const [bankTransferAuthModalOpen, setBankTransferAuthModalOpen] = useState(false);
@@ -1565,49 +1566,144 @@ export default function SessionBookingPage() {
         </div>
       )}
 
-      {/* 입금자명 입력 모달 (계좌이체 신청 전) */}
-      {depositorModalOpen && pendingBankTransfer && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { setDepositorModalOpen(false); setPendingBankTransfer(null); setGuestOrderer(null); }} />
-          <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-xl w-full p-5">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-sm font-bold text-black dark:text-white mb-1">
-                  {language === 'ko' ? '입금자명' : 'Depositor name'}
-                </label>
-                {depositorModalPreFillLoading ? (
-                  <div className="py-2 flex items-center gap-2"><Loader2 className="animate-spin text-primary dark:text-[#CCFF00]" size={20} /><span className="text-sm text-neutral-500">...</span></div>
-                ) : (
-                  <input
-                    type="text"
-                    value={depositorName}
-                    onChange={(e) => setDepositorName(e.target.value)}
-                    placeholder={language === 'ko' ? '입금 시 사용할 이름' : 'Name for transfer'}
-                    className="w-full px-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm"
-                  />
-                )}
-              </div>
-              <div className="flex items-end gap-2 shrink-0">
-                <button
-                  onClick={() => { setDepositorModalOpen(false); setPendingBankTransfer(null); setGuestOrderer(null); }}
-                  className="py-2 px-4 rounded-xl border border-neutral-300 dark:border-neutral-600 text-sm"
-                >
-                  {language === 'ko' ? '취소' : 'Cancel'}
-                </button>
-                <button
-                  disabled={submitting || !depositorName.trim() || depositorModalPreFillLoading}
-                  onClick={() => {
-                    if (guestOrderer) {
-                      submitBankTransferOrder(depositorName, guestOrderer.phone || null, guestOrderer.email || null);
-                    } else {
-                      submitBankTransferOrder(depositorName);
-                    }
-                  }}
-                  className="py-2 px-5 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm disabled:opacity-50"
-                >
-                  {submitting ? <Loader2 size={18} className="animate-spin" /> : (language === 'ko' ? '신청하기' : 'Submit')}
-                </button>
-              </div>
+      {/* 입금자명 입력 + 입금 안내 드로어 (계좌이체: 아래에서 올라오는 패널) */}
+      {((depositorModalOpen && pendingBankTransfer) || bankTransferResult) && (
+        <div className="fixed inset-0 z-[60] flex flex-col justify-end">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => {
+              if (bankTransferResult) { setBankTransferResult(null); setBankCopyFeedback(false); }
+              else { setDepositorModalOpen(false); setPendingBankTransfer(null); setGuestOrderer(null); }
+            }}
+            aria-hidden
+          />
+          <div
+            className="relative bg-white dark:bg-neutral-900 rounded-t-2xl shadow-2xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+            role="dialog"
+            aria-label={language === 'ko' ? '입금 안내' : 'Transfer details'}
+          >
+            {/* 드로어 핸들 */}
+            <div className="shrink-0 flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full bg-neutral-300 dark:bg-neutral-600" />
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+              {bankTransferResult ? (
+                /* Phase 2: 신청 완료 — 입금 안내 + 한꺼번에 복사 */
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-bold text-black dark:text-white">
+                      {language === 'ko' ? '입금 안내' : 'Transfer details'}
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => { setBankTransferResult(null); setBankCopyFeedback(false); }}
+                      className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400"
+                      aria-label={language === 'ko' ? '닫기' : 'Close'}
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
+                    {language === 'ko'
+                      ? '아래 계좌로 입금해 주시면 학원에서 확인 후 예약이 확정됩니다.'
+                      : 'Transfer the amount to the account below. Your booking will be confirmed after the academy verifies.'}
+                  </p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 p-4 text-sm mb-4">
+                    <span className="text-neutral-500">{language === 'ko' ? '금액' : 'Amount'}</span>
+                    <span className="font-semibold">{bankTransferResult.amount.toLocaleString()}원</span>
+                    <span className="text-neutral-500">{language === 'ko' ? '은행' : 'Bank'}</span>
+                    <span>{bankTransferResult.bankName}</span>
+                    <span className="text-neutral-500">{language === 'ko' ? '계좌번호' : 'Account'}</span>
+                    <span className="font-mono break-all">{bankTransferResult.bankAccountNumber}</span>
+                    <span className="text-neutral-500">{language === 'ko' ? '예금주' : 'Holder'}</span>
+                    <span>{bankTransferResult.bankDepositorName}</span>
+                    {bankTransferResult.ordererName && (
+                      <>
+                        <span className="text-neutral-500">{language === 'ko' ? '입금자명' : 'Depositor'}</span>
+                        <span className="font-medium">{bankTransferResult.ordererName}</span>
+                      </>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const lines = [
+                        `${language === 'ko' ? '은행' : 'Bank'}: ${bankTransferResult.bankName}`,
+                        `${language === 'ko' ? '계좌번호' : 'Account'}: ${bankTransferResult.bankAccountNumber}`,
+                        `${language === 'ko' ? '예금주' : 'Holder'}: ${bankTransferResult.bankDepositorName}`,
+                      ];
+                      navigator.clipboard.writeText(lines.join('\n'));
+                      setBankCopyFeedback(true);
+                      setTimeout(() => setBankCopyFeedback(false), 2000);
+                    }}
+                    className="w-full py-3 rounded-xl border-2 border-primary dark:border-[#CCFF00] bg-primary/10 dark:bg-[#CCFF00]/10 text-black dark:text-white font-medium flex items-center justify-center gap-2 mb-3"
+                  >
+                    <Copy size={18} />
+                    {bankCopyFeedback
+                      ? (language === 'ko' ? '클립보드에 복사되었습니다' : 'Copied to clipboard')
+                      : (language === 'ko' ? '계좌번호 복사' : 'Copy account')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setBankTransferResult(null); setBankCopyFeedback(false); }}
+                    className="w-full py-3 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-medium"
+                  >
+                    {language === 'ko' ? '확인' : 'OK'}
+                  </button>
+                </>
+              ) : (
+                /* Phase 1: 입금자명 입력 + 입금 안내 문구 + 신청하기 */
+                <>
+                  <h3 className="text-lg font-bold text-black dark:text-white mb-2">
+                    {language === 'ko' ? '입금 안내' : 'Transfer details'}
+                  </h3>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
+                    {language === 'ko'
+                      ? '아래 계좌로 입금해 주시면 학원에서 확인 후 예약이 확정됩니다. 입금자명을 입력한 뒤 신청해 주세요.'
+                      : 'Transfer the amount to the account below. Your booking will be confirmed after the academy verifies. Enter the depositor name and submit.'}
+                  </p>
+                  <div className="mb-4">
+                    <label className="block text-sm font-bold text-black dark:text-white mb-1">
+                      {language === 'ko' ? '입금자명' : 'Depositor name'}
+                    </label>
+                    {depositorModalPreFillLoading ? (
+                      <div className="py-2 flex items-center gap-2">
+                        <Loader2 className="animate-spin text-primary dark:text-[#CCFF00]" size={20} />
+                        <span className="text-sm text-neutral-500">...</span>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        value={depositorName}
+                        onChange={(e) => setDepositorName(e.target.value)}
+                        placeholder={language === 'ko' ? '입금 시 사용할 이름' : 'Name for transfer'}
+                        className="w-full px-3 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm"
+                      />
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setDepositorModalOpen(false); setPendingBankTransfer(null); setGuestOrderer(null); }}
+                      className="flex-1 py-2.5 px-4 rounded-xl border border-neutral-300 dark:border-neutral-600 text-sm font-medium"
+                    >
+                      {language === 'ko' ? '취소' : 'Cancel'}
+                    </button>
+                    <button
+                      disabled={submitting || !depositorName.trim() || depositorModalPreFillLoading}
+                      onClick={() => {
+                        if (guestOrderer) {
+                          submitBankTransferOrder(depositorName, guestOrderer.phone || null, guestOrderer.email || null);
+                        } else {
+                          submitBankTransferOrder(depositorName);
+                        }
+                      }}
+                      className="flex-1 py-2.5 px-5 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {submitting ? <Loader2 size={18} className="animate-spin" /> : (language === 'ko' ? '신청하기' : 'Submit')}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1638,65 +1734,6 @@ export default function SessionBookingPage() {
           setIsTicketPurchaseModalOpen(false);
         }}
       />
-
-      {/* 계좌이체 신청 완료 모달 — 계좌 정보 표시 및 복사 */}
-      {bankTransferResult && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl max-w-xl w-full p-5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-black dark:text-white">
-                {language === 'ko' ? '입금 안내' : 'Transfer details'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setBankTransferResult(null)}
-                className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400"
-                aria-label="닫기"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-3">
-              {language === 'ko'
-                ? '아래 계좌로 입금해 주시면 학원에서 확인 후 예약이 확정됩니다.'
-                : 'Transfer the amount to the account below. Your booking will be confirmed after the academy verifies.'}
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 p-3 text-sm">
-              <span className="text-neutral-500">{language === 'ko' ? '금액' : 'Amount'}</span>
-              <span className="font-semibold">{bankTransferResult.amount.toLocaleString()}원</span>
-              <span className="text-neutral-500">{language === 'ko' ? '은행' : 'Bank'}</span>
-              <span>{bankTransferResult.bankName}</span>
-              <span className="text-neutral-500">{language === 'ko' ? '계좌번호' : 'Account'}</span>
-              <div className="flex items-center gap-1.5">
-                <span className="font-mono truncate">{bankTransferResult.bankAccountNumber}</span>
-                <button
-                  type="button"
-                  onClick={() => navigator.clipboard.writeText(bankTransferResult.bankAccountNumber)}
-                  className="shrink-0 p-1 rounded-lg bg-primary dark:bg-[#CCFF00] text-black hover:opacity-90"
-                  title={language === 'ko' ? '복사' : 'Copy'}
-                >
-                  <Copy size={14} />
-                </button>
-              </div>
-              <span className="text-neutral-500">{language === 'ko' ? '예금주' : 'Holder'}</span>
-              <span>{bankTransferResult.bankDepositorName}</span>
-              {bankTransferResult.ordererName && (
-                <>
-                  <span className="text-neutral-500">{language === 'ko' ? '입금자명' : 'Depositor'}</span>
-                  <span className="font-medium">{bankTransferResult.ordererName}</span>
-                </>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setBankTransferResult(null)}
-              className="w-full py-3 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-medium"
-            >
-              {language === 'ko' ? '확인' : 'OK'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* 수강권 결제 위젯 모달 (앱 내 결제 유지) — 토스 활성화 시에만 노출 */}
       {ENABLE_TOSS_PAYMENT && widgetOrder && (

@@ -1,11 +1,12 @@
 /**
  * GET /api/academy-admin/[academyId]/bank-transfer-orders
  * 계좌이체 주문 목록 (수동 입금확인 페이지용)
- * Query: page=1, limit=20, q=검색어(이름/연락처/이메일/주문명)
+ * Query: page=1, limit=20, q=검색어(이름/연락처/이메일/주문명), status=PENDING|CONFIRMED(미지정 시 전체)
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
+import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,26 +21,6 @@ const MAX_LIMIT = 100;
 /** ilike 패턴용 검색어 이스케이프 (% _ 제어) */
 function escapeIlike(q: string): string {
   return q.replace(/[%_\\]/g, '\\$&');
-}
-
-async function assertAcademyAdmin(academyId: string, userId: string) {
-  const supabase = createServiceClient();
-  const { data: userData } = await (supabase as any)
-    .from('users')
-    .select('role')
-    .eq('id', userId)
-    .single();
-  const isSuperAdmin = userData?.role === 'SUPER_ADMIN';
-  if (isSuperAdmin) return;
-  const { data: roleData, error: roleError } = await (supabase as any)
-    .from('academy_user_roles')
-    .select('role')
-    .eq('academy_id', academyId)
-    .eq('user_id', userId)
-    .single();
-  if (roleError || !roleData || !['ACADEMY_OWNER', 'ACADEMY_MANAGER'].includes(roleData.role)) {
-    throw new Error('학원 관리자 권한이 필요합니다.');
-  }
 }
 
 export async function GET(
@@ -57,6 +38,8 @@ export async function GET(
     const page = Math.max(1, parseInt(request.nextUrl.searchParams.get('page') || '1', 10) || 1);
     const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(request.nextUrl.searchParams.get('limit') || String(DEFAULT_LIMIT), 10) || DEFAULT_LIMIT));
     const q = (request.nextUrl.searchParams.get('q') || '').trim().replace(/,/g, '');
+    const statusParam = (request.nextUrl.searchParams.get('status') || '').toUpperCase();
+    const statusFilter = statusParam === 'PENDING' || statusParam === 'CONFIRMED' ? statusParam : null;
     const offset = (page - 1) * limit;
 
     const supabase = createServiceClient() as any;
@@ -67,6 +50,10 @@ export async function GET(
       .select(selectCols, { count: 'exact' })
       .eq('academy_id', academyId)
       .order('created_at', { ascending: false });
+
+    if (statusFilter) {
+      query = query.eq('status', statusFilter);
+    }
 
     if (q) {
       const pattern = `%${escapeIlike(q)}%`;

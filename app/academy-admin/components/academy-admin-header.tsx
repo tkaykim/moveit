@@ -25,6 +25,7 @@ const getTitle = (pathname: string | null, academyId: string): string => {
     [`/academy-admin/${academyId}/consultations`]: '상담 및 문의',
     [`/academy-admin/${academyId}/products`]: '수강권 및 상품 설정',
     [`/academy-admin/${academyId}/revenue`]: '매출 및 정산',
+    [`/academy-admin/${academyId}/deposit-confirm`]: '수동 입금확인',
     [`/academy-admin/${academyId}/settings`]: '환경설정',
   };
 

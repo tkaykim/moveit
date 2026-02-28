@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
+import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Landmark, RefreshCw, Loader2, CheckCircle, Clock, Ticket, CalendarCheck, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Table,
@@ -76,11 +77,13 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const [statusTab, setStatusTab] = useState<'PENDING' | 'CONFIRMED' | ''>('PENDING'); // 기본: 입금대기
+  const [academyName, setAcademyName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const loadPage = useCallback(
-    async (pageNum: number, q: string) => {
+    async (pageNum: number, q: string, status: 'PENDING' | 'CONFIRMED' | '') => {
       if (!academyId) {
         setOrders([]);
         setTotal(0);
@@ -92,6 +95,7 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
       try {
         const params = new URLSearchParams({ page: String(pageNum), limit: String(PAGE_SIZE) });
         if (q) params.set('q', q);
+        if (status) params.set('status', status);
         const res = await fetchWithAuth(
           `/api/academy-admin/${academyId}/bank-transfer-orders?${params.toString()}`
         );
@@ -118,16 +122,41 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
   );
 
   useEffect(() => {
-    loadPage(page, searchQuery);
-  }, [page, searchQuery, loadPage]);
+    loadPage(page, searchQuery, statusTab);
+  }, [page, searchQuery, statusTab, loadPage]);
 
   useEffect(() => {
     if (!academyId) return;
     setPage(1);
     setSearchQuery('');
     setSearchInput('');
-    loadPage(1, '');
+    loadPage(1, '', statusTab);
   }, [academyId, loadPage]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusTab]);
+
+  // 학원명 로드 (현재 어떤 학원인지 확인용)
+  const academyNameMounted = useRef(true);
+  useEffect(() => {
+    academyNameMounted.current = true;
+    if (!academyId) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    supabase
+      .from('academies')
+      .select('name_kr, name_en')
+      .eq('id', academyId)
+      .single()
+      .then(({ data }) => {
+        if (academyNameMounted.current && data) {
+          setAcademyName(data.name_kr || data.name_en || null);
+        }
+      })
+      .catch(() => {});
+    return () => { academyNameMounted.current = false; };
+  }, [academyId]);
 
   const handleSearch = useCallback(() => {
     setSearchQuery(searchInput.trim());
@@ -165,8 +194,8 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
   };
 
   const refreshCurrent = useCallback(() => {
-    loadPage(page, searchQuery);
-  }, [page, searchQuery, loadPage]);
+    loadPage(page, searchQuery, statusTab);
+  }, [page, searchQuery, statusTab, loadPage]);
 
   useEffect(() => {
     const handler = () => {
@@ -215,9 +244,58 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
           <Landmark className="text-primary dark:text-[#CCFF00]" size={24} />
           <h1 className="text-xl font-bold text-neutral-900 dark:text-white">수동 입금확인</h1>
         </div>
+        {academyName && (
+          <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            현재 학원: <span className="text-primary dark:text-[#CCFF00]">{academyName}</span>
+          </p>
+        )}
         <p className="text-sm text-neutral-500 dark:text-neutral-400">
           계좌이체로 신청한 주문을 확인한 뒤 입금 확인을 누르면 수강권이 발급되고, 수업 예약이 있으면 예약이 확정됩니다.
         </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <span className="text-sm text-neutral-500 dark:text-neutral-400">상태:</span>
+        <div className="flex rounded-lg border border-neutral-200 dark:border-neutral-700 p-0.5 bg-neutral-100 dark:bg-neutral-800">
+          <button
+            type="button"
+            onClick={() => setStatusTab('PENDING')}
+            className={cn(
+              'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+              statusTab === 'PENDING'
+                ? 'bg-amber-500 text-white dark:bg-amber-500 dark:text-black'
+                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+            )}
+          >
+            <Clock size={14} className="inline mr-1.5 align-middle" />
+            입금대기
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusTab('CONFIRMED')}
+            className={cn(
+              'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+              statusTab === 'CONFIRMED'
+                ? 'bg-green-600 text-white dark:bg-green-500 dark:text-black'
+                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+            )}
+          >
+            <CheckCircle size={14} className="inline mr-1.5 align-middle" />
+            입금완료
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusTab('')}
+            className={cn(
+              'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+              statusTab === ''
+                ? 'bg-neutral-600 text-white dark:bg-neutral-500 dark:text-black'
+                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+            )}
+          >
+            전체
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-6">
