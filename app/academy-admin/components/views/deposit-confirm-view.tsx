@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
-import { Landmark, RefreshCw, Loader2, CheckCircle, Clock, Ticket, CalendarCheck, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Landmark, RefreshCw, Loader2, CheckCircle, Clock, Ticket, CalendarCheck, Search, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { DepositConfirmModal } from './deposit-confirm-modal';
 
 interface BankTransferOrder {
   id: string;
@@ -81,7 +82,7 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
   const [statusTab, setStatusTab] = useState<'PENDING' | 'CONFIRMED' | ''>('PENDING'); // 기본: 입금대기 (계좌이체 신청 건이 여기서 먼저 보이도록)
   const [academyName, setAcademyName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [confirmModalOrder, setConfirmModalOrder] = useState<BankTransferOrder | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const loadPage = useCallback(
     async (pageNum: number, q: string, status: 'PENDING' | 'CONFIRMED' | '') => {
@@ -165,34 +166,65 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
     setPage(1);
   }, [searchInput]);
 
-  const handleConfirm = async (orderId: string) => {
-    setConfirmingId(orderId);
-    try {
-      const res = await fetchWithAuth(
-        `/api/academy-admin/${academyId}/bank-transfer-confirm`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId }),
-        }
-      );
-      const data = await res.json();
-      if (res.ok) {
-        setOrders((prev) =>
-          prev.map((o) =>
-            o.id === orderId
-              ? { ...o, status: 'CONFIRMED' as const, confirmed_at: new Date().toISOString() }
-              : o
-          )
-        );
-      } else {
-        alert(data.error || '입금 확인 처리에 실패했습니다.');
+  /** 확인완료 건을 입금대기로 되돌리기 */
+  const handleRevertToPending = (orderId: string) => {
+    if (!confirm('이 건을 입금대기 상태로 되돌리시겠습니까? 수강권·예약이 취소됩니다.')) return;
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? { ...o, status: 'PENDING' as const, confirmed_at: null }
+          : o
+      )
+    );
+    fetchWithAuth(
+      `/api/academy-admin/${academyId}/bank-transfer-revert`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
       }
-    } catch {
-      alert('요청 중 오류가 발생했습니다.');
-    } finally {
-      setConfirmingId(null);
-    }
+    )
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || '되돌리기에 실패했습니다. 목록을 새로고침해 주세요.');
+          refreshCurrent();
+        }
+      })
+      .catch(() => {
+        alert('요청 중 오류가 발생했습니다. 목록을 새로고침해 주세요.');
+        refreshCurrent();
+      });
+  };
+
+  /** 모달에서 확인 클릭 시: 즉시 UI 반영 후 API는 백그라운드에서 호출 */
+  const handleConfirmFromModal = (orderId: string) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? { ...o, status: 'CONFIRMED' as const, confirmed_at: new Date().toISOString() }
+          : o
+      )
+    );
+    setConfirmModalOrder(null);
+
+    fetchWithAuth(
+      `/api/academy-admin/${academyId}/bank-transfer-confirm`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      }
+    )
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || '입금 확인 처리에 실패했습니다. 목록을 새로고침해 주세요.');
+        }
+      })
+      .catch(() => {
+        alert('요청 중 오류가 발생했습니다. 목록을 새로고침해 주세요.');
+      });
   };
 
   const refreshCurrent = useCallback(() => {
@@ -446,20 +478,25 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
                         )}
                       </TableCell>
                       <TableCell className="py-3 text-center">
-                        {isPending && (
+                        {isPending ? (
                           <Button
                             size="sm"
                             variant="success"
-                            onClick={() => handleConfirm(order.id)}
-                            disabled={confirmingId !== null}
+                            onClick={() => setConfirmModalOrder(order)}
                             className="gap-1.5"
                           >
-                            {confirmingId === order.id ? (
-                              <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                              <CheckCircle size={14} />
-                            )}
+                            <CheckCircle size={14} />
                             입금확인
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRevertToPending(order.id)}
+                            className="gap-1.5"
+                          >
+                            <RotateCcw size={14} />
+                            입금대기로 되돌리기
                           </Button>
                         )}
                       </TableCell>
@@ -509,6 +546,14 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
             </div>
           )}
         </>
+      )}
+
+      {confirmModalOrder && (
+        <DepositConfirmModal
+          order={confirmModalOrder}
+          onConfirm={() => handleConfirmFromModal(confirmModalOrder.id)}
+          onCancel={() => setConfirmModalOrder(null)}
+        />
       )}
     </div>
   );
