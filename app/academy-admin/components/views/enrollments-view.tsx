@@ -938,7 +938,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                                 className="text-xs text-primary dark:text-[#CCFF00] hover:underline inline-flex items-center gap-0.5"
                               >
                                 <Landmark size={10} />
-                                수동 입금확인에서 확인
+                                입금확인하기
                               </Link>
                             )}
                           </div>
