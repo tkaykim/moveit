@@ -12,6 +12,10 @@ import { BannerCarousel } from '@/components/banner/banner-carousel';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { NotificationBadge } from '@/components/notifications/notification-badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 interface HomeViewProps {
   onNavigate: (view: ViewState, query?: string) => void;
@@ -435,13 +439,13 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           </div>
         </div>
         <form onSubmit={handleSearch} className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
-          <input 
-            type="text" 
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none z-10" size={18} />
+          <Input
+            type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={language === 'en' ? 'Search genre, instructor, academy' : '장르, 강사, 학원 검색'} 
-            className="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl py-3 pl-11 pr-4 text-sm text-black dark:text-white focus:border-neutral-400 dark:focus:border-[#CCFF00] outline-none transition-colors" 
+            placeholder={language === 'en' ? 'Search genre, instructor, academy' : '장르, 강사, 학원 검색'}
+            className="h-11 w-full pl-10 rounded-xl bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 focus-visible:ring-neutral-400 dark:focus-visible:ring-[#CCFF00]"
           />
         </form>
       </header>
@@ -461,56 +465,78 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
         </div>
       ) : null}
 
-      {/* 학원 찾기 버튼 */}
-      <div className="px-5 mt-6">
-        <div className="flex gap-3">
-          <button
+      {/* 학원 찾기 카드 */}
+      <section className="px-5 mt-6" aria-label={language === 'en' ? 'Find studios' : '학원 찾기'}>
+        <div className="grid grid-cols-2 gap-3">
+          <Card
+            role="button"
+            tabIndex={0}
             onClick={() => onNavigate('ACADEMY')}
-            className="flex-1 flex items-center gap-3 px-4 py-4 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/40 dark:to-blue-900/30 border border-blue-200/60 dark:border-blue-800/40 active:scale-[0.98] transition-all hover:shadow-md"
+            onKeyDown={(e) => e.key === 'Enter' && onNavigate('ACADEMY')}
+            className={cn(
+              "cursor-pointer overflow-hidden transition-all hover:shadow-md active:scale-[0.98]",
+              "border-neutral-200 dark:border-neutral-800",
+              "hover:border-blue-300 dark:hover:border-blue-700"
+            )}
           >
-            <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center flex-shrink-0">
-              <Navigation className="text-white" size={20} />
-            </div>
-            <div className="text-left">
-              <p className="text-[13px] font-bold text-blue-900 dark:text-blue-100">
-                {language === 'en' ? 'Nearby Studios' : '내 주변'}
-              </p>
-              <p className="text-[11px] text-blue-600/80 dark:text-blue-300/70">
-                {language === 'en' ? 'Find dance studios near you' : '댄스학원 찾기'}
-              </p>
-            </div>
-          </button>
-          <button
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-500 text-white">
+                <Navigation size={20} aria-hidden />
+              </div>
+              <div className="min-w-0 flex-1 text-left">
+                <p className="text-sm font-semibold text-neutral-900 dark:text-white truncate">
+                  {language === 'en' ? 'Nearby Studios' : '내 주변'}
+                </p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                  {language === 'en' ? 'Find dance studios near you' : '댄스학원 찾기'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card
+            role="button"
+            tabIndex={0}
             onClick={() => onNavigate('SEARCH_RESULTS', 'genre')}
-            className="flex-1 flex items-center gap-3 px-4 py-4 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/40 dark:to-purple-900/30 border border-purple-200/60 dark:border-purple-800/40 active:scale-[0.98] transition-all hover:shadow-md"
+            onKeyDown={(e) => e.key === 'Enter' && onNavigate('SEARCH_RESULTS', 'genre')}
+            className={cn(
+              "cursor-pointer overflow-hidden transition-all hover:shadow-md active:scale-[0.98]",
+              "border-neutral-200 dark:border-neutral-800",
+              "hover:border-violet-300 dark:hover:border-violet-700"
+            )}
           >
-            <div className="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center flex-shrink-0">
-              <LayoutGrid className="text-white" size={20} />
-            </div>
-            <div className="text-left">
-              <p className="text-[13px] font-bold text-purple-900 dark:text-purple-100">
-                {language === 'en' ? 'By Genre' : '장르별'}
-              </p>
-              <p className="text-[11px] text-purple-600/80 dark:text-purple-300/70">
-                {language === 'en' ? 'Browse by dance genre' : '댄스학원 찾기'}
-              </p>
-            </div>
-          </button>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-violet-500 text-white">
+                <LayoutGrid size={20} aria-hidden />
+              </div>
+              <div className="min-w-0 flex-1 text-left">
+                <p className="text-sm font-semibold text-neutral-900 dark:text-white truncate">
+                  {language === 'en' ? 'By Genre' : '장르별'}
+                </p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                  {language === 'en' ? 'Browse by dance genre' : '댄스학원 찾기'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </div>
+      </section>
 
       {/* HOT한 강사 */}
-      <div className="mt-8">
+      <section className="mt-8" aria-label={language === 'en' ? 'HOT Instructors' : 'HOT 강사'}>
         <div className="flex items-center justify-between px-5 mb-3">
           <div className="flex items-center gap-2">
-            <Flame className="text-red-500" size={20} />
-            <h2 className="text-lg font-bold text-black dark:text-white">{language === 'en' ? 'HOT Instructors' : 'HOT 강사'}</h2>
+            <Badge variant="destructive" className="gap-1.5 whitespace-nowrap font-semibold">
+              <Flame size={14} className="shrink-0" />
+              {language === 'en' ? 'HOT Instructors' : 'HOT 강사'}
+            </Badge>
           </div>
-          <button 
+          <button
+            type="button"
             onClick={() => onNavigate('DANCER')}
-            className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400"
+            className="inline-flex items-center gap-1 text-sm font-medium text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 transition-colors"
           >
-            {t('common.viewAll')} <ChevronRight size={14} />
+            {t('common.viewAll')}
+            <ChevronRight size={16} className="shrink-0" />
           </button>
         </div>
         {instructorsLoading ? (
@@ -556,7 +582,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             {language === 'en' ? 'No instructors yet' : '등록된 강사가 없습니다'}
           </div>
         )}
-      </div>
+      </section>
 
       {/* 최근 본 학원 */}
       {recentAcademies.length > 0 && (

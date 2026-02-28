@@ -323,7 +323,7 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
                         {order.amount.toLocaleString()}원
                       </TableCell>
                       <TableCell className="py-3">
-                        <CellChip text={order.orderer_name ?? undefined} maxWidth="max-w-[100px]" />
+                        <CellChip text={(order.orderer_name || order.user_name) ?? undefined} maxWidth="max-w-[100px]" />
                       </TableCell>
                       <TableCell className="py-3">
                         {isPending ? (
