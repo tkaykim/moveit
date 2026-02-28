@@ -296,18 +296,18 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
                         <CellChip text={contact} maxWidth="max-w-[140px]" />
                       </TableCell>
                       <TableCell className="py-3">
-                        <Badge variant={order.user_id ? 'info' : 'secondary'}>
+                        <Badge variant={order.user_id ? 'info' : 'secondary'} className="whitespace-nowrap">
                           {order.user_id ? '회원' : '비회원'}
                         </Badge>
                       </TableCell>
                       <TableCell className="py-3">
                         {hasBooking ? (
-                          <Badge variant="info" className="gap-1">
+                          <Badge variant="info" className="gap-1 whitespace-nowrap">
                             <CalendarCheck size={12} />
                             수강권+예약
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="gap-1">
+                          <Badge variant="secondary" className="gap-1 whitespace-nowrap">
                             <Ticket size={12} />
                             수강권만
                           </Badge>
@@ -327,12 +327,12 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
                       </TableCell>
                       <TableCell className="py-3">
                         {isPending ? (
-                          <Badge variant="warning" className="gap-1">
+                          <Badge variant="warning" className="gap-1 whitespace-nowrap">
                             <Clock size={12} />
                             입금대기
                           </Badge>
                         ) : (
-                          <Badge variant="success" className="gap-1">
+                          <Badge variant="success" className="gap-1 whitespace-nowrap">
                             <CheckCircle size={12} />
                             확인완료
                           </Badge>

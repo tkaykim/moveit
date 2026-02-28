@@ -926,7 +926,10 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <BookingStatusBadge status={enrollment.status || ''} />
+                          <BookingStatusBadge
+                            status={enrollment.status || ''}
+                            bankTransferOrderId={enrollment.bank_transfer_order_id}
+                          />
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                           {formatDate(enrollment.created_at)}
