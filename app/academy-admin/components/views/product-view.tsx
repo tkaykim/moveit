@@ -382,7 +382,7 @@ export function ProductView({ academyId }: ProductViewProps) {
                   <div className={`p-4 flex items-center justify-between ${style.headerBg}`}>
                     <button
                       onClick={() => toggleSection(category)}
-                      className="flex-1 flex items-center justify-between min-w-0 text-left"
+                      className="flex-1 flex items-center min-w-0 text-left"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className={`p-2 rounded-lg flex-shrink-0 ${style.iconBg}`}>
@@ -439,23 +439,30 @@ export function ProductView({ academyId }: ProductViewProps) {
                           )}
                         </div>
                       </div>
-                      {editingCategory !== category && (
-                        isExpanded ? (
-                          <ChevronUp size={20} className="text-gray-400 flex-shrink-0" />
-                        ) : (
-                          <ChevronDown size={20} className="text-gray-400 flex-shrink-0" />
-                        )
-                      )}
                     </button>
                     {editingCategory !== category && (
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); startEditLabel(category); }}
-                        className="flex-shrink-0 ml-2 p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700"
-                        title="표기 이름 수정"
-                      >
-                        <Pencil size={16} />
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); startEditLabel(category); }}
+                          className="flex-shrink-0 ml-2 p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700"
+                          title="표기 이름 수정"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleSection(category)}
+                          className="flex-shrink-0 ml-2 p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-700"
+                          title={isExpanded ? '접기' : '펼치기'}
+                        >
+                          {isExpanded ? (
+                            <ChevronUp size={20} className="text-gray-400" />
+                          ) : (
+                            <ChevronDown size={20} className="text-gray-400" />
+                          )}
+                        </button>
+                      </>
                     )}
                   </div>
 
