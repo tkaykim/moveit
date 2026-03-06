@@ -66,6 +66,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
     title: '',
     genre: '',
     difficulty_level: '',
+    card_color: '' as string,
     price: 30000,
     instructor_name: '', // 강사 이름 직접 입력
     hall_id: '',
@@ -380,6 +381,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
             title: popupData.title,
             genre: popupData.genre || null,
             difficulty_level: popupData.difficulty_level || null,
+            card_color: popupData.card_color?.trim() || null,
             class_type: 'popup',
             price: popupData.price,
             instructor_id: null, // 강사는 이름만 저장
@@ -415,6 +417,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
           .from('schedules')
           .insert({
             class_id: newClass.id,
+            card_color: popupData.card_color?.trim() || null,
             hall_id: popupData.hall_id || null,
             instructor_id: null,
             start_time: startDateTime.toISOString(),
@@ -438,6 +441,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
             title: popupData.title,
             genre: popupData.genre || null,
             difficulty_level: popupData.difficulty_level || null,
+            card_color: popupData.card_color?.trim() || null,
             class_type: 'workshop',
             price: popupData.price,
             instructor_id: null,
@@ -472,6 +476,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
           .from('schedules')
           .insert({
             class_id: newClass.id,
+            card_color: popupData.card_color?.trim() || null,
             hall_id: popupData.hall_id || null,
             instructor_id: null,
             start_time: startDateTime.toISOString(),
@@ -1081,6 +1086,34 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+
+        {/* 카드 색상 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">카드 색상</label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setPopupData({ ...popupData, card_color: '' })}
+              className={`px-2 py-1 rounded text-xs font-medium border ${!popupData.card_color ? 'ring-2 ring-blue-500 border-blue-500' : 'border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-800'}`}
+            >
+              기본(난이도별)
+            </button>
+            {CLASS_CARD_COLOR_KEYS.map((key) => {
+              const style = CLASS_CARD_COLORS[key];
+              const isSelected = popupData.card_color === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setPopupData({ ...popupData, card_color: key })}
+                  className={`px-2 py-1 rounded text-xs font-medium border ${style.bg} ${style.border} ${style.text} ${isSelected ? 'ring-2 ring-offset-1 ring-neutral-800 dark:ring-neutral-200' : ''}`}
+                >
+                  {CLASS_CARD_COLOR_LABELS[key]}
+                </button>
+              );
+            })}
           </div>
         </div>
 
