@@ -402,11 +402,6 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
             })}
           </div>
         </div>
-
-        {/* 범례: 수업별 지정 색상 */}
-        <div className="flex items-center justify-center pt-2">
-          <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{t('schedule.classColorByClass', '수업별 지정 색상')}</span>
-        </div>
       </div>
 
       {/* 날짜별 수업 리스트 - shadcn Sheet 하단 드로어 */}

@@ -140,7 +140,7 @@ interface AcademyDetailViewProps {
 export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetailViewProps) => {
   const router = useRouter();
   const [previewClass, setPreviewClass] = useState<(ClassInfo & { time?: string }) | null>(null);
-  const [scheduleViewMode, setScheduleViewMode] = useState<'week' | 'month'>('week');
+  const [scheduleViewMode, setScheduleViewMode] = useState<'week' | 'month'>('month');
   const [recentVideos, setRecentVideos] = useState<any[]>([]);
   const [videosLoading, setVideosLoading] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);

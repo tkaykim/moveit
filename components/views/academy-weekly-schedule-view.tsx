@@ -511,22 +511,6 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
           </>
         )}
       </div>
-
-      {/* 범례 */}
-      <div className="flex items-center justify-center gap-4 pt-2 border-t border-neutral-200 dark:border-neutral-800">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-          <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{t('schedule.levelBeginner')}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-          <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{t('schedule.levelIntermediate')}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-rose-500"></div>
-          <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{t('schedule.levelAdvanced')}</span>
-        </div>
-      </div>
     </div>
   );
 };
