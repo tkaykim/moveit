@@ -35,7 +35,7 @@ function transformSchedule(scheduleData: any): ClassInfo & { time?: string; star
 
   const time = scheduleData.start_time ? formatKSTTime(scheduleData.start_time) : '';
 
-  const colorStyle = getClassColor(classInfo?.card_color, classInfo?.difficulty_level);
+  const colorStyle = getClassColor(scheduleData.card_color ?? classInfo?.card_color, classInfo?.difficulty_level);
   return {
     id: classInfo?.id || scheduleData.class_id,
     schedule_id: scheduleData.id,
@@ -128,6 +128,7 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
         .select(`
           id,
           class_id,
+          card_color,
           hall_id,
           instructor_id,
           start_time,
@@ -376,7 +377,7 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
                       {/* 난이도별 도트 표시 */}
                       <div className="flex flex-wrap gap-0.5">
                         {daySchedules.slice(0, 4).map((schedule: any, idx: number) => {
-                          const color = getClassColor(schedule.classes?.card_color, schedule.classes?.difficulty_level);
+                          const color = getClassColor(schedule.card_color ?? schedule.classes?.card_color, schedule.classes?.difficulty_level);
                           return (
                             <div
                               key={idx}

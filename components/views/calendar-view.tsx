@@ -40,7 +40,7 @@ function transformSchedule(scheduleData: any): ClassInfo & { academy?: Academy; 
   const isFull = maxStudents > 0 && currentStudents >= maxStudents;
   const isAlmostFull = maxStudents > 0 && currentStudents >= maxStudents * 0.8;
   const status = isFull ? 'FULL' : isAlmostFull ? 'ALMOST_FULL' : 'AVAILABLE';
-  const colorStyle = getClassColor(classData.card_color, classData.difficulty_level);
+  const colorStyle = getClassColor(scheduleData.card_color ?? classData.card_color, classData.difficulty_level);
 
   // Academy 정보 생성
   const academyData = classData.academies;
@@ -170,6 +170,7 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
           .from('schedules')
           .select(`
             id,
+            card_color,
             start_time,
             end_time,
             max_students,

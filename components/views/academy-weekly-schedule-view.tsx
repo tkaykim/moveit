@@ -27,7 +27,7 @@ function transformSchedule(scheduleData: any): ClassInfo & { time?: string; star
   const hallName = scheduleData.halls?.name || classInfo?.halls?.name || '';
 
   const time = scheduleData.start_time ? formatKSTTime(scheduleData.start_time) : '';
-  const colorStyle = getClassColor(classInfo?.card_color, classInfo?.difficulty_level);
+  const colorStyle = getClassColor(scheduleData.card_color ?? classInfo?.card_color, classInfo?.difficulty_level);
 
   return {
     id: classInfo?.id || scheduleData.class_id,
@@ -185,6 +185,7 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
         .select(`
           id,
           class_id,
+          card_color,
           hall_id,
           instructor_id,
           start_time,

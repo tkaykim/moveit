@@ -1647,6 +1647,7 @@ export type Database = {
       }
       schedules: {
         Row: {
+          card_color: string | null
           class_id: string
           created_at: string | null
           current_students: number | null
@@ -1660,6 +1661,7 @@ export type Database = {
           start_time: string
         }
         Insert: {
+          card_color?: string | null
           class_id: string
           created_at?: string | null
           current_students?: number | null
@@ -1673,6 +1675,7 @@ export type Database = {
           start_time: string
         }
         Update: {
+          card_color?: string | null
           class_id?: string
           created_at?: string | null
           current_students?: number | null

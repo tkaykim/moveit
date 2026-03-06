@@ -8,6 +8,7 @@ import { FreeAccessConfig } from '@/types/database';
 import { ClassMasterModal } from '../class-masters/class-master-modal';
 import { TicketModal } from '../products/ticket-modal';
 import { useAcademyTicketLabels } from '../hooks/useAcademyTicketLabels';
+import { CLASS_CARD_COLOR_KEYS, CLASS_CARD_COLOR_LABELS, CLASS_CARD_COLORS } from '@/lib/constants/class-colors';
 
 interface RecurringScheduleModalProps {
   academyId: string;
@@ -46,6 +47,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
     class_id: '',
     hall_id: '',
     instructor_id: '',
+    card_color: '' as string,
     start_date: defaultDateStr,
     end_date: defaultEndDate,
     start_time: '18:00',
@@ -564,6 +566,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
             class_id: formData.class_id,
             hall_id: formData.hall_id || null,
             instructor_id: formData.instructor_id || selectedClass?.instructor_id || null,
+            card_color: formData.card_color?.trim() || null,
             start_time: startDateTime.toISOString(),
             end_time: endDateTime.toISOString(),
             max_students: formData.max_students,
@@ -955,6 +958,34 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
               value={formData.max_students}
               onChange={(e) => setFormData({ ...formData, max_students: parseInt(e.target.value) || 20 })}
             />
+          </div>
+
+          {/* 카드 색상 (생성될 세션에 적용, 미지정 시 클래스 색상 사용) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">카드 색상</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, card_color: '' })}
+                className={`px-2 py-1 rounded text-xs font-medium border ${!formData.card_color ? 'ring-2 ring-blue-500 border-blue-500' : 'border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-800'}`}
+              >
+                기본(클래스 색상)
+              </button>
+              {CLASS_CARD_COLOR_KEYS.map((key) => {
+                const style = CLASS_CARD_COLORS[key];
+                const isSelected = formData.card_color === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, card_color: key })}
+                    className={`px-2 py-1 rounded text-xs font-medium border ${style.bg} ${style.border} ${style.text} ${isSelected ? 'ring-2 ring-offset-1 ring-neutral-800 dark:ring-neutral-200' : ''}`}
+                  >
+                    {CLASS_CARD_COLOR_LABELS[key]}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* 미리보기 */}

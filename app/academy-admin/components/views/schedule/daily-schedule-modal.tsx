@@ -187,7 +187,7 @@ export function DailyScheduleModal({
               sessions.map((session) => {
                 const difficulty = session.classes?.difficulty_level || 'BEGINNER';
                 const isPopup = session.classes?.class_type === 'popup';
-                const color = getClassColor(session.classes?.card_color, session.classes?.difficulty_level);
+                const color = getClassColor(session.card_color ?? session.classes?.card_color, session.classes?.difficulty_level);
 
                 return (
                   <div

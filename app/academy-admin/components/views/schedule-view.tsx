@@ -173,8 +173,8 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
     return formatKSTTime(dateString);
   };
 
-  const getSessionColor = (session: { classes?: { card_color?: string | null; difficulty_level?: string | null } | null }) =>
-    getClassColor(session.classes?.card_color, session.classes?.difficulty_level);
+  const getSessionColor = (session: { card_color?: string | null; classes?: { card_color?: string | null; difficulty_level?: string | null } | null }) =>
+    getClassColor(session.card_color ?? session.classes?.card_color, session.classes?.difficulty_level);
 
   if (loading) {
     return (

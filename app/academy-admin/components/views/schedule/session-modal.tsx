@@ -8,6 +8,7 @@ import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { formatKSTTime, formatKSTDate } from '@/lib/utils/kst-time';
 import { AccessConfig } from '@/types/database';
 import { formatExclusiveClassText } from '@/lib/utils/exclusive-class';
+import { getClassColor, CLASS_CARD_COLOR_KEYS, CLASS_CARD_COLOR_LABELS, CLASS_CARD_COLORS } from '@/lib/constants/class-colors';
 
 interface SessionModalProps {
   session: any;
@@ -30,6 +31,7 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
     instructorId: session.instructor_id || '',
     hallId: session.hall_id || '',
     maxStudents: session.max_students || 20,
+    cardColor: (session.card_color ?? session.classes?.card_color) || '',
   });
   
   // 강사 및 홀 목록
@@ -77,6 +79,7 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
         instructorId: session.instructor_id || '',
         hallId: session.hall_id || '',
         maxStudents: session.max_students || 20,
+        cardColor: (session.card_color ?? session.classes?.card_color) || '',
       }));
     }
   }, [session]);
@@ -266,6 +269,8 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
       } else {
         updateData.hall_id = null;
       }
+
+      updateData.card_color = formData.cardColor?.trim() || null;
 
       const { error } = await supabase
         .from('schedules')
@@ -527,6 +532,34 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
                       onChange={(e) => setFormData(prev => ({ ...prev, maxStudents: parseInt(e.target.value) || 1 }))}
                       className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
+                  </div>
+
+                  {/* 카드 색상 (이 세션만 적용, 미지정 시 클래스 색상 사용) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">카드 색상</label>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, cardColor: '' }))}
+                        className={`px-2 py-1 rounded text-xs font-medium border transition-colors ${!formData.cardColor ? 'ring-2 ring-blue-500 border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-800'}`}
+                      >
+                        기본(클래스 색상)
+                      </button>
+                      {CLASS_CARD_COLOR_KEYS.map((key) => {
+                        const style = CLASS_CARD_COLORS[key];
+                        const isSelected = formData.cardColor === key;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, cardColor: key }))}
+                            className={`px-2 py-1 rounded text-xs font-medium border ${style.bg} ${style.border} ${style.text} ${isSelected ? 'ring-2 ring-offset-1 ring-neutral-800 dark:ring-neutral-200' : ''}`}
+                          >
+                            {CLASS_CARD_COLOR_LABELS[key]}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* 저장/취소 버튼 */}
