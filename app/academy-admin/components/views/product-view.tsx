@@ -17,7 +17,7 @@ interface ProductViewProps {
 type TicketCategoryFilter = 'all' | 'regular' | 'popup' | 'workshop';
 
 export function ProductView({ academyId }: ProductViewProps) {
-  const { labels, raw, refetch } = useAcademyTicketLabels(academyId);
+  const { labels, descriptions, raw, refetch } = useAcademyTicketLabels(academyId);
   const [tickets, setTickets] = useState<any[]>([]);
   const [discounts, setDiscounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,11 @@ export function ProductView({ academyId }: ProductViewProps) {
   const [deletingTicketId, setDeletingTicketId] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<'regular' | 'popup' | 'workshop' | null>(null);
   const [editLabelValue, setEditLabelValue] = useState('');
+  const [editDescriptionValue, setEditDescriptionValue] = useState('');
   const [savingLabel, setSavingLabel] = useState(false);
+
+  const categoryToDescriptionDbField = (category: 'regular' | 'popup' | 'workshop') =>
+    ({ regular: 'ticket_description_regular', popup: 'ticket_description_popup', workshop: 'ticket_description_workshop' } as const);
 
   useEffect(() => {
     loadData();
@@ -196,14 +200,22 @@ export function ProductView({ academyId }: ProductViewProps) {
     ({ regular: 'ticket_label_regular', popup: 'ticket_label_popup', workshop: 'ticket_label_workshop' } as const)[category];
 
   const startEditLabel = (category: 'regular' | 'popup' | 'workshop') => {
-    const val = raw?.[categoryToDbField(category)] ?? '';
-    setEditLabelValue(val ?? '');
+    setEditLabelValue(raw?.[categoryToDbField(category)] ?? '');
+    const savedDesc = raw
+      ? category === 'regular'
+        ? raw.ticket_description_regular
+        : category === 'popup'
+          ? raw.ticket_description_popup
+          : raw.ticket_description_workshop
+      : null;
+    setEditDescriptionValue(savedDesc ?? descriptions[category] ?? '');
     setEditingCategory(category);
   };
 
   const cancelEditLabel = () => {
     setEditingCategory(null);
     setEditLabelValue('');
+    setEditDescriptionValue('');
   };
 
   const saveLabel = async () => {
@@ -212,18 +224,26 @@ export function ProductView({ academyId }: ProductViewProps) {
     if (!supabase) return;
     setSavingLabel(true);
     try {
-      const field = categoryToDbField(editingCategory);
-      const value = editLabelValue.trim() || null;
+      const labelField = categoryToDbField(editingCategory);
+      const descField =
+        editingCategory === 'regular'
+          ? 'ticket_description_regular'
+          : editingCategory === 'popup'
+            ? 'ticket_description_popup'
+            : 'ticket_description_workshop';
+      const labelValue = editLabelValue.trim() || null;
+      const descValue = editDescriptionValue.trim() || null;
       const { error } = await (supabase as any)
         .from('academies')
-        .update({ [field]: value })
+        .update({ [labelField]: labelValue, [descField]: descValue })
         .eq('id', academyId);
       if (error) throw error;
       await refetch();
       setEditingCategory(null);
       setEditLabelValue('');
+      setEditDescriptionValue('');
     } catch (e: any) {
-      alert(e?.message || '표기 이름 저장에 실패했습니다.');
+      alert(e?.message || '저장에 실패했습니다.');
     } finally {
       setSavingLabel(false);
     }
@@ -253,15 +273,10 @@ export function ProductView({ academyId }: ProductViewProps) {
     }
   };
 
-  const getCategoryDescription = (category: 'regular' | 'popup' | 'workshop') => {
-    switch (category) {
-      case 'regular': return `${labels.regular}. 구매 시 시작일 선택, 기간 내 무제한 수강`;
-      case 'popup': return `${labels.popup}. 유효기간 내 미소진 시 잔여 수량 소멸`;
-      case 'workshop': return `${labels.workshop}. 해당 워크샵에서만 사용 가능`;
-    }
-  };
+  /** 카테고리 헤더/카드 설명 (학원별 커스텀 또는 기본) */
+  const getCategoryDescription = (category: 'regular' | 'popup' | 'workshop') => descriptions[category];
 
-  /** 수강권별 설명: DB 저장값 우선, 없으면 카테고리 기본 설명 */
+  /** 수강권별 설명: DB 저장값 우선, 없으면 카테고리 설명 */
   const getTicketDescription = (product: { description?: string | null }, category: 'regular' | 'popup' | 'workshop') =>
     product.description?.trim() || getCategoryDescription(category);
 
@@ -395,37 +410,45 @@ export function ProductView({ academyId }: ProductViewProps) {
                         </div>
                         <div className="text-left min-w-0">
                           {editingCategory === category ? (
-                            <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                type="text"
-                                maxLength={TICKET_LABEL_MAX_LENGTH}
-                                value={editLabelValue}
-                                onChange={(e) => setEditLabelValue(e.target.value)}
-                                placeholder={DEFAULT_TICKET_LABELS[category]}
-                                className="w-full min-w-[120px] max-w-[200px] px-2 py-1 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-white text-sm font-bold"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') saveLabel();
-                                  if (e.key === 'Escape') cancelEditLabel();
-                                }}
-                                autoFocus
+                            <div className="flex flex-col gap-2 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <input
+                                  type="text"
+                                  maxLength={TICKET_LABEL_MAX_LENGTH}
+                                  value={editLabelValue}
+                                  onChange={(e) => setEditLabelValue(e.target.value)}
+                                  placeholder={DEFAULT_TICKET_LABELS[category]}
+                                  className="flex-1 min-w-[120px] px-2 py-1 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-white text-sm font-bold"
+                                  onKeyDown={(e) => { if (e.key === 'Escape') cancelEditLabel(); }}
+                                  aria-label="표기 이름"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); saveLabel(); }}
+                                  disabled={savingLabel}
+                                  className="p-1.5 rounded-lg text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-50"
+                                  title="저장"
+                                >
+                                  <Check size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); cancelEditLabel(); }}
+                                  className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-700"
+                                  title="취소"
+                                >
+                                  <X size={16} />
+                                </button>
+                              </div>
+                              <textarea
+                                value={editDescriptionValue}
+                                onChange={(e) => setEditDescriptionValue(e.target.value)}
+                                placeholder="예: 구매 시 시작일 선택, 기간 내 무제한 수강"
+                                rows={2}
+                                className="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 resize-y"
+                                onKeyDown={(e) => { if (e.key === 'Escape') cancelEditLabel(); }}
+                                aria-label="카드 설명"
                               />
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); saveLabel(); }}
-                                disabled={savingLabel}
-                                className="p-1.5 rounded-lg text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-50"
-                                title="저장"
-                              >
-                                <Check size={16} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); cancelEditLabel(); }}
-                                className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-700"
-                                title="취소"
-                              >
-                                <X size={16} />
-                              </button>
                             </div>
                           ) : (
                             <>
@@ -451,7 +474,7 @@ export function ProductView({ academyId }: ProductViewProps) {
                           type="button"
                           onClick={(e) => { e.stopPropagation(); startEditLabel(category); }}
                           className="flex-shrink-0 ml-2 p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700"
-                          title="표기 이름 수정"
+                          title="표기 이름·설명 수정"
                         >
                           <Pencil size={16} />
                         </button>

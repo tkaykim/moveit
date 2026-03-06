@@ -165,6 +165,9 @@ export type Database = {
           other_url: string | null
           section_config: Json | null
           tags: string | null
+          ticket_description_popup: string | null
+          ticket_description_regular: string | null
+          ticket_description_workshop: string | null
           ticket_label_popup: string | null
           ticket_label_regular: string | null
           ticket_label_workshop: string | null
@@ -196,6 +199,9 @@ export type Database = {
           other_url?: string | null
           section_config?: Json | null
           tags?: string | null
+          ticket_description_popup?: string | null
+          ticket_description_regular?: string | null
+          ticket_description_workshop?: string | null
           ticket_label_popup?: string | null
           ticket_label_regular?: string | null
           ticket_label_workshop?: string | null
@@ -227,6 +233,9 @@ export type Database = {
           other_url?: string | null
           section_config?: Json | null
           tags?: string | null
+          ticket_description_popup?: string | null
+          ticket_description_regular?: string | null
+          ticket_description_workshop?: string | null
           ticket_label_popup?: string | null
           ticket_label_regular?: string | null
           ticket_label_workshop?: string | null
