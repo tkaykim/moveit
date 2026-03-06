@@ -161,6 +161,7 @@ export function ProductView({ academyId }: ProductViewProps) {
     const query = searchQuery.toLowerCase();
     return tickets.filter(ticket => 
       (ticket.name?.toLowerCase().includes(query)) ||
+      (ticket.description?.toLowerCase().includes(query)) ||
       (ticket.price?.toString().includes(query)) ||
       (ticket.ticket_type?.toLowerCase().includes(query)) ||
       (ticket.valid_days?.toString().includes(query)) ||
@@ -259,6 +260,10 @@ export function ProductView({ academyId }: ProductViewProps) {
       case 'workshop': return `${labels.workshop}. 해당 워크샵에서만 사용 가능`;
     }
   };
+
+  /** 수강권별 설명: DB 저장값 우선, 없으면 카테고리 기본 설명 */
+  const getTicketDescription = (product: { description?: string | null }, category: 'regular' | 'popup' | 'workshop') =>
+    product.description?.trim() || getCategoryDescription(category);
 
   const getCategoryCardStyle = (category: 'regular' | 'popup' | 'workshop') => {
     switch (category) {
@@ -513,6 +518,9 @@ export function ProductView({ academyId }: ProductViewProps) {
                                   </span>
                                 )}
                               </div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                {getTicketDescription(product, category)}
+                              </p>
                               {category === 'regular' && (
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                   {formatCurrency(product.price ?? 0)}
