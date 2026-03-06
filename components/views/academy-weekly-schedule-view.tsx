@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, MapPin, Clock, User } from 'lucide-react';
 import { ClassInfo } from '@/types';
 import { formatKSTTime, getKSTDateParts, getKSTDay, convertKSTInputToUTC } from '@/lib/utils/kst-time';
 import { useLocale } from '@/contexts/LocaleContext';
+import { getClassColor } from '@/lib/constants/class-colors';
 
 interface AcademyWeeklyScheduleViewProps {
   academyId: string;
@@ -13,15 +14,8 @@ interface AcademyWeeklyScheduleViewProps {
 
 const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
-// 난이도별 색상
-const LEVEL_COLORS: Record<string, { bg: string; border: string; text: string; dot: string }> = {
-  BEGINNER: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-300 dark:border-emerald-700', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
-  INTERMEDIATE: { bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-300 dark:border-amber-700', text: 'text-amber-700 dark:text-amber-400', dot: 'bg-amber-500' },
-  ADVANCED: { bg: 'bg-rose-50 dark:bg-rose-900/20', border: 'border-rose-300 dark:border-rose-700', text: 'text-rose-700 dark:text-rose-400', dot: 'bg-rose-500' },
-};
-
 // Schedule을 ClassInfo로 변환
-function transformSchedule(scheduleData: any): ClassInfo & { time?: string; startTime?: string; endTime?: string; hallName?: string } {
+function transformSchedule(scheduleData: any): ClassInfo & { time?: string; startTime?: string; endTime?: string; hallName?: string; card_color?: string; _colorStyle: ReturnType<typeof getClassColor> } {
   const classInfo = scheduleData.classes;
   const instructor = scheduleData.instructors?.name_kr || scheduleData.instructors?.name_en || classInfo?.instructors?.name_kr || classInfo?.instructors?.name_en || INSTRUCTOR_TBD;
   const genre = classInfo?.genre || '';
@@ -33,6 +27,7 @@ function transformSchedule(scheduleData: any): ClassInfo & { time?: string; star
   const hallName = scheduleData.halls?.name || classInfo?.halls?.name || '';
 
   const time = scheduleData.start_time ? formatKSTTime(scheduleData.start_time) : '';
+  const colorStyle = getClassColor(classInfo?.card_color, classInfo?.difficulty_level);
 
   return {
     id: classInfo?.id || scheduleData.class_id,
@@ -54,6 +49,8 @@ function transformSchedule(scheduleData: any): ClassInfo & { time?: string; star
     maxStudents,
     currentStudents,
     hallName,
+    card_color: classInfo?.card_color ?? undefined,
+    _colorStyle: colorStyle,
   };
 }
 
@@ -79,14 +76,6 @@ function groupSchedulesByDay(schedules: any[]) {
 
   return grid;
 }
-
-const getLevelColor = (level: string) => {
-  const upperLevel = level?.toUpperCase() || '';
-  if (upperLevel.includes('BEGINNER') || upperLevel.includes('초급')) return LEVEL_COLORS.BEGINNER;
-  if (upperLevel.includes('INTERMEDIATE') || upperLevel.includes('중급')) return LEVEL_COLORS.INTERMEDIATE;
-  if (upperLevel.includes('ADVANCED') || upperLevel.includes('고급')) return LEVEL_COLORS.ADVANCED;
-  return { bg: 'bg-neutral-100 dark:bg-neutral-800', border: 'border-neutral-300 dark:border-neutral-700', text: 'text-neutral-600 dark:text-neutral-400', dot: 'bg-neutral-400' };
-};
 
 const getLevelLabelKey = (level: string): 'schedule.levelBeginner' | 'schedule.levelIntermediate' | 'schedule.levelAdvanced' | null => {
   const upperLevel = level?.toUpperCase() || '';
@@ -208,6 +197,7 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
             title,
             genre,
             difficulty_level,
+            card_color,
             max_students,
             academy_id,
             is_active,
@@ -436,7 +426,7 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
                 {/* 해당 홀의 수업 목록 */}
                 <div className="space-y-2">
                   {schedulesByHall[hallName].map((classInfo, idx) => {
-                    const levelColor = getLevelColor(classInfo.level);
+                    const levelColor = (classInfo as any)._colorStyle ?? getClassColor((classInfo as any).card_color, classInfo.level);
                     const isFull = classInfo.status === 'FULL';
                     const endTimeStr = classInfo.endTime 
                       ? new Date(classInfo.endTime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })

@@ -19,6 +19,7 @@ import {
   getKSTNow,
   convertKSTInputToUTC
 } from '@/lib/utils/kst-time';
+import { getClassColor } from '@/lib/constants/class-colors';
 
 interface CalendarViewProps {
   onAcademyClick?: (academy: Academy) => void;
@@ -29,7 +30,7 @@ const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const DAY_NAMES = ["월", "화", "수", "목", "금", "토", "일"];
 
 // Schedule을 ClassInfo로 변환
-function transformSchedule(scheduleData: any): ClassInfo & { academy?: Academy; time?: string; endTimeFormatted?: string; startTime?: string; endTime?: string; maxStudents?: number; currentStudents?: number } {
+function transformSchedule(scheduleData: any): ClassInfo & { academy?: Academy; time?: string; endTimeFormatted?: string; startTime?: string; endTime?: string; maxStudents?: number; currentStudents?: number; _colorStyle: ReturnType<typeof getClassColor> } {
   const classData = scheduleData.classes || {};
   const instructor = scheduleData.instructors?.name_kr || scheduleData.instructors?.name_en || classData.instructors?.name_kr || '';
   const genre = classData.genre || 'ALL';
@@ -39,6 +40,7 @@ function transformSchedule(scheduleData: any): ClassInfo & { academy?: Academy; 
   const isFull = maxStudents > 0 && currentStudents >= maxStudents;
   const isAlmostFull = maxStudents > 0 && currentStudents >= maxStudents * 0.8;
   const status = isFull ? 'FULL' : isAlmostFull ? 'ALMOST_FULL' : 'AVAILABLE';
+  const colorStyle = getClassColor(classData.card_color, classData.difficulty_level);
 
   // Academy 정보 생성
   const academyData = classData.academies;
@@ -74,6 +76,7 @@ function transformSchedule(scheduleData: any): ClassInfo & { academy?: Academy; 
     endTime: scheduleData.end_time,
     maxStudents,
     currentStudents,
+    _colorStyle: colorStyle,
   };
 }
 
@@ -177,6 +180,7 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
               title,
               genre,
               difficulty_level,
+              card_color,
               class_type,
               poster_url,
               academies (
@@ -424,11 +428,12 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
               <h3 className="text-sm font-bold text-neutral-600 dark:text-neutral-400 px-2">{time}</h3>
               {classesByTime[time].map((classInfo) => {
                 const endTimeStr = (classInfo as any).endTimeFormatted;
+                const color = (classInfo as any)._colorStyle ?? getClassColor((classInfo as any).card_color, classInfo.level);
 
                 return (
                   <div
                     key={`${classInfo.schedule_id || classInfo.id}`}
-                    className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-transform"
+                    className={`${color.bg} ${color.border} border rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-transform`}
                     onClick={() => handleClassClick(classInfo)}
                   >
                     {/* 상단: 제목 + 난이도 + 상태 */}

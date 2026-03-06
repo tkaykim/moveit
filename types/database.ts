@@ -570,6 +570,7 @@ export type Database = {
           class_type: string | null
           created_at: string | null
           current_students: number | null
+          card_color: string | null
           description: string | null
           difficulty_level: string | null
           discount_config: Json | null
@@ -601,6 +602,7 @@ export type Database = {
           class_type?: string | null
           created_at?: string | null
           current_students?: number | null
+          card_color?: string | null
           description?: string | null
           difficulty_level?: string | null
           discount_config?: Json | null
@@ -632,6 +634,7 @@ export type Database = {
           class_type?: string | null
           created_at?: string | null
           current_students?: number | null
+          card_color?: string | null
           description?: string | null
           difficulty_level?: string | null
           discount_config?: Json | null

@@ -6,6 +6,7 @@ import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { formatKSTTime } from '@/lib/utils/kst-time';
 import { RecurringScheduleModal } from './recurring-schedule-modal';
 import { SessionModal } from './session-modal';
+import { getClassColor } from '@/lib/constants/class-colors';
 
 interface DailyScheduleModalProps {
   academyId: string;
@@ -19,12 +20,6 @@ const DIFFICULTY_LABELS: Record<string, string> = {
   BEGINNER: '초급',
   INTERMEDIATE: '중급',
   ADVANCED: '고급',
-};
-
-const DIFFICULTY_COLORS: Record<string, string> = {
-  BEGINNER: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  INTERMEDIATE: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  ADVANCED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
 export function DailyScheduleModal({ 
@@ -81,6 +76,7 @@ export function DailyScheduleModal({
             title,
             genre,
             difficulty_level,
+            card_color,
             class_type,
             price,
             poster_url
@@ -191,13 +187,14 @@ export function DailyScheduleModal({
               sessions.map((session) => {
                 const difficulty = session.classes?.difficulty_level || 'BEGINNER';
                 const isPopup = session.classes?.class_type === 'popup';
+                const color = getClassColor(session.classes?.card_color, session.classes?.difficulty_level);
 
                 return (
                   <div
                     key={session.id}
                     role="button"
                     tabIndex={0}
-                    className="bg-gray-50 dark:bg-neutral-800 rounded-xl p-4 hover:shadow-md transition-shadow cursor-pointer hover:bg-gray-100 dark:hover:bg-neutral-700"
+                    className={`${color.bg} ${color.border} border rounded-xl p-4 hover:shadow-md transition-shadow cursor-pointer`}
                     onClick={() => {
                       setSelectedSession(session);
                       setShowEditModal(true);
@@ -246,7 +243,7 @@ export function DailyScheduleModal({
                             <span>{session.current_students || 0}/{session.max_students || 0}</span>
                           </div>
                           {/* 난이도 */}
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${DIFFICULTY_COLORS[difficulty]}`}>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${color.bg} ${color.text} border ${color.border}`}>
                             {DIFFICULTY_LABELS[difficulty] || difficulty}
                           </span>
                           {/* 가격 (팝업인 경우) */}

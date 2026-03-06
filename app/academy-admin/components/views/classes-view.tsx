@@ -6,36 +6,13 @@ import { ClassModal } from './classes/class-modal';
 import { HallModal } from './classes/hall-modal';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { formatKSTTime } from '@/lib/utils/kst-time';
+import { getClassColor, CLASS_CARD_COLOR_KEYS, CLASS_CARD_COLOR_LABELS, CLASS_CARD_COLORS } from '@/lib/constants/class-colors';
 
 interface ClassesViewProps {
   academyId: string;
 }
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
-
-const DIFFICULTY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  BEGINNER: {
-    bg: 'bg-green-50 dark:bg-green-900/20',
-    text: 'text-green-700 dark:text-green-400',
-    border: 'border-green-200 dark:border-green-800',
-  },
-  INTERMEDIATE: {
-    bg: 'bg-yellow-50 dark:bg-yellow-900/20',
-    text: 'text-yellow-700 dark:text-yellow-400',
-    border: 'border-yellow-200 dark:border-yellow-800',
-  },
-  ADVANCED: {
-    bg: 'bg-red-50 dark:bg-red-900/20',
-    text: 'text-red-700 dark:text-red-400',
-    border: 'border-red-200 dark:border-red-800',
-  },
-};
-
-const DIFFICULTY_LABELS: Record<string, string> = {
-  BEGINNER: '초급',
-  INTERMEDIATE: '중급',
-  ADVANCED: '고급',
-};
 
 type ClassTypeFilter = 'all' | 'regular' | 'popup' | 'workshop';
 
@@ -186,10 +163,6 @@ export function ClassesView({ academyId }: ClassesViewProps) {
     return formatKSTTime(dateString);
   };
 
-  const getDifficultyColor = (difficulty: string) => {
-    return DIFFICULTY_COLORS[difficulty] || DIFFICULTY_COLORS.BEGINNER;
-  };
-
   const renderScheduleGrid = (hallId?: string) => {
     const filteredHalls = hallId ? halls.filter((h) => h.id === hallId) : halls;
     const showAllHalls = !hallId;
@@ -271,7 +244,7 @@ export function ClassesView({ academyId }: ClassesViewProps) {
                     </div>
                     <div className="space-y-1 overflow-y-auto max-h-[120px] sm:max-h-[130px]">
                       {dayClasses.map((classItem) => {
-                        const classDifficulty = getDifficultyColor(classItem.difficulty_level || 'BEGINNER');
+                        const classColor = getClassColor(classItem.card_color, classItem.difficulty_level);
                         const classType = classItem.class_type || 'regular';
                         const normalizedType = 
                           classType === 'regular' || classType === 'REGULAR' ? 'regular' :
@@ -288,13 +261,13 @@ export function ClassesView({ academyId }: ClassesViewProps) {
                         return (
                           <div
                             key={classItem.id || classItem.schedule_id}
-                            className={`${classDifficulty.bg} ${classDifficulty.border} p-1.5 sm:p-2 rounded border text-left hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden group flex items-center gap-1.5`}
+                            className={`${classColor.bg} ${classColor.border} p-1.5 sm:p-2 rounded border text-left hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden group flex items-center gap-1.5`}
                             onClick={() => {
                               setSelectedClass(classItem);
                               setShowClassModal(true);
                             }}
                           >
-                            <div className={`absolute top-0 left-0 w-1 h-full ${classDifficulty.text.replace('text-', 'bg-')}`}></div>
+                            <div className={`absolute top-0 left-0 w-1 h-full ${classColor.dot || classColor.text.replace('text-', 'bg-')}`} />
                             <span className={`text-[8px] sm:text-[9px] font-bold ${typeColor} px-1.5 py-0.5 rounded`}>
                               {typeLabel}
                             </span>
@@ -475,17 +448,15 @@ export function ClassesView({ academyId }: ClassesViewProps) {
             </div>
           </div>
 
-          {/* 난이도 범주 범례 - 하나만 표시 */}
-          <div className="flex items-center gap-3 mb-4 flex-wrap">
-            {['BEGINNER', 'INTERMEDIATE', 'ADVANCED'].map((difficulty) => {
-              const difficultyColor = getDifficultyColor(difficulty);
-              const difficultyLabel = DIFFICULTY_LABELS[difficulty];
+          {/* 수업 카드 색상 범례 */}
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
+            <span className="text-xs text-gray-500 dark:text-gray-400">수업별 색상:</span>
+            {CLASS_CARD_COLOR_KEYS.map((key) => {
+              const c = CLASS_CARD_COLORS[key];
               return (
-                <div key={difficulty} className={`${difficultyColor.bg} ${difficultyColor.border} border rounded-full px-3 py-1.5 inline-flex items-center gap-2`}>
-                  <div className={`w-2 h-2 rounded-full ${difficultyColor.text.replace('text-', 'bg-')}`}></div>
-                  <span className={`text-sm font-semibold ${difficultyColor.text}`}>
-                    {difficultyLabel}
-                  </span>
+                <div key={key} className={`${c.bg} ${c.border} border rounded-full px-2 py-0.5 inline-flex items-center gap-1`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${c.dot || c.text.replace('text-', 'bg-')}`} />
+                  <span className={`text-xs font-medium ${c.text}`}>{CLASS_CARD_COLOR_LABELS[key]}</span>
                 </div>
               );
             })}

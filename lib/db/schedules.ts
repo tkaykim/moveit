@@ -146,6 +146,7 @@ export async function getSchedulesByAcademy(
         title,
         genre,
         difficulty_level,
+        card_color,
         access_config,
         class_type
       ),

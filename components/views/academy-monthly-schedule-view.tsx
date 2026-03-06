@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/sheet';
 import { formatKSTTime, getKSTDateParts, convertKSTInputToUTC } from '@/lib/utils/kst-time';
 import { useLocale } from '@/contexts/LocaleContext';
+import { getClassColor } from '@/lib/constants/class-colors';
 
 interface AcademyMonthlyScheduleViewProps {
   academyId: string;
@@ -20,15 +21,8 @@ interface AcademyMonthlyScheduleViewProps {
 
 const INSTRUCTOR_TBD = '강사 미정';
 
-// 난이도별 색상
-const LEVEL_COLORS: Record<string, { bg: string; border: string; text: string; dot: string }> = {
-  BEGINNER: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-300 dark:border-emerald-700', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
-  INTERMEDIATE: { bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-300 dark:border-amber-700', text: 'text-amber-700 dark:text-amber-400', dot: 'bg-amber-500' },
-  ADVANCED: { bg: 'bg-rose-50 dark:bg-rose-900/20', border: 'border-rose-300 dark:border-rose-700', text: 'text-rose-700 dark:text-rose-400', dot: 'bg-rose-500' },
-};
-
 // Schedule을 ClassInfo로 변환
-function transformSchedule(scheduleData: any): ClassInfo & { time?: string; startTime?: string; endTime?: string; hallName?: string } {
+function transformSchedule(scheduleData: any): ClassInfo & { time?: string; startTime?: string; endTime?: string; hallName?: string; card_color?: string; _colorStyle: ReturnType<typeof getClassColor> } {
   const classInfo = scheduleData.classes;
   const instructor = scheduleData.instructors?.name_kr || scheduleData.instructors?.name_en || classInfo?.instructors?.name_kr || classInfo?.instructors?.name_en || INSTRUCTOR_TBD;
   const genre = classInfo?.genre || '';
@@ -41,6 +35,7 @@ function transformSchedule(scheduleData: any): ClassInfo & { time?: string; star
 
   const time = scheduleData.start_time ? formatKSTTime(scheduleData.start_time) : '';
 
+  const colorStyle = getClassColor(classInfo?.card_color, classInfo?.difficulty_level);
   return {
     id: classInfo?.id || scheduleData.class_id,
     schedule_id: scheduleData.id,
@@ -61,24 +56,18 @@ function transformSchedule(scheduleData: any): ClassInfo & { time?: string; star
     maxStudents,
     currentStudents,
     hallName,
+    card_color: classInfo?.card_color ?? undefined,
+    _colorStyle: colorStyle,
   };
 }
 
-const getLevelColor = (level: string) => {
-  const upperLevel = level?.toUpperCase() || '';
-  if (upperLevel.includes('BEGINNER') || upperLevel.includes('초급')) return LEVEL_COLORS.BEGINNER;
-  if (upperLevel.includes('INTERMEDIATE') || upperLevel.includes('중급')) return LEVEL_COLORS.INTERMEDIATE;
-  if (upperLevel.includes('ADVANCED') || upperLevel.includes('고급')) return LEVEL_COLORS.ADVANCED;
-  return { bg: 'bg-neutral-100 dark:bg-neutral-800', border: 'border-neutral-300 dark:border-neutral-700', text: 'text-neutral-600 dark:text-neutral-400', dot: 'bg-neutral-400' };
-};
-
-const getLevelLabelKey = (level: string): 'schedule.levelBeginner' | 'schedule.levelIntermediate' | 'schedule.levelAdvanced' | null => {
+function getLevelLabelKey(level: string): 'schedule.levelBeginner' | 'schedule.levelIntermediate' | 'schedule.levelAdvanced' | null {
   const upperLevel = level?.toUpperCase() || '';
   if (upperLevel.includes('BEGINNER') || upperLevel.includes('초급')) return 'schedule.levelBeginner';
   if (upperLevel.includes('INTERMEDIATE') || upperLevel.includes('중급')) return 'schedule.levelIntermediate';
   if (upperLevel.includes('ADVANCED') || upperLevel.includes('고급')) return 'schedule.levelAdvanced';
   return null;
-};
+}
 
 export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyMonthlyScheduleViewProps) => {
   const { t } = useLocale();
@@ -151,6 +140,7 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
             title,
             genre,
             difficulty_level,
+            card_color,
             max_students,
             academy_id,
             is_active,
@@ -386,11 +376,11 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
                       {/* 난이도별 도트 표시 */}
                       <div className="flex flex-wrap gap-0.5">
                         {daySchedules.slice(0, 4).map((schedule: any, idx: number) => {
-                          const levelColor = getLevelColor(schedule.classes?.difficulty_level || '');
+                          const color = getClassColor(schedule.classes?.card_color, schedule.classes?.difficulty_level);
                           return (
                             <div
                               key={idx}
-                              className={`w-2 h-2 rounded-full ${levelColor.dot}`}
+                              className={`w-2 h-2 rounded-full ${color.dot || color.text.replace('text-', 'bg-')}`}
                             />
                           );
                         })}
@@ -412,20 +402,9 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
           </div>
         </div>
 
-        {/* 범례 */}
-        <div className="flex items-center justify-center gap-4 pt-2">
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-            <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{t('schedule.levelBeginner')}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-            <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{t('schedule.levelIntermediate')}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-rose-500"></div>
-            <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{t('schedule.levelAdvanced')}</span>
-          </div>
+        {/* 범례: 수업별 지정 색상 */}
+        <div className="flex items-center justify-center pt-2">
+          <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{t('schedule.classColorByClass', '수업별 지정 색상')}</span>
         </div>
       </div>
 
@@ -461,7 +440,7 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
           {/* 수업 리스트 */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
             {selectedDateSchedules.map((classInfo, idx) => {
-              const levelColor = getLevelColor(classInfo.level);
+              const levelColor = (classInfo as any)._colorStyle ?? getClassColor((classInfo as any).card_color, classInfo.level);
               const isFull = classInfo.status === 'FULL';
               const endTimeStr = classInfo.endTime
                 ? new Date(classInfo.endTime).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })

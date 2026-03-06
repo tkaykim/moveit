@@ -8,30 +8,13 @@ import { SessionModal } from './schedule/session-modal';
 import { DailyScheduleModal } from './schedule/daily-schedule-modal';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { formatKSTTime } from '@/lib/utils/kst-time';
+import { getClassColor, CLASS_CARD_COLOR_KEYS, CLASS_CARD_COLOR_LABELS, CLASS_CARD_COLORS } from '@/lib/constants/class-colors';
 
 interface ScheduleViewProps {
   academyId: string;
 }
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
-
-const DIFFICULTY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  BEGINNER: {
-    bg: 'bg-green-50 dark:bg-green-900/20',
-    text: 'text-green-700 dark:text-green-400',
-    border: 'border-green-200 dark:border-green-800',
-  },
-  INTERMEDIATE: {
-    bg: 'bg-yellow-50 dark:bg-yellow-900/20',
-    text: 'text-yellow-700 dark:text-yellow-400',
-    border: 'border-yellow-200 dark:border-yellow-800',
-  },
-  ADVANCED: {
-    bg: 'bg-red-50 dark:bg-red-900/20',
-    text: 'text-red-700 dark:text-red-400',
-    border: 'border-red-200 dark:border-red-800',
-  },
-};
 
 export function ScheduleView({ academyId }: ScheduleViewProps) {
   const [sessions, setSessions] = useState<any[]>([]);
@@ -89,7 +72,7 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
       // 클래스 마스터 목록 (활성화되고 취소되지 않은 클래스만)
       const { data: classesData } = await supabase
         .from('classes')
-        .select('id, title, genre, difficulty_level, access_config, instructor_id, instructors(name_kr, name_en)')
+        .select('id, title, genre, difficulty_level, card_color, access_config, instructor_id, instructors(name_kr, name_en)')
         .eq('academy_id', academyId)
         .eq('is_canceled', false)
         .or('is_active.is.null,is_active.eq.true');
@@ -118,6 +101,7 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
               title,
               genre,
               difficulty_level,
+              card_color,
               access_config,
               class_type,
               poster_url
@@ -189,9 +173,8 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
     return formatKSTTime(dateString);
   };
 
-  const getDifficultyColor = (difficulty: string) => {
-    return DIFFICULTY_COLORS[difficulty] || DIFFICULTY_COLORS.BEGINNER;
-  };
+  const getSessionColor = (session: { classes?: { card_color?: string | null; difficulty_level?: string | null } | null }) =>
+    getClassColor(session.classes?.card_color, session.classes?.difficulty_level);
 
   if (loading) {
     return (
@@ -315,16 +298,15 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
                 </div>
               </div>
 
-              {/* 난이도 범례 */}
-              <div className="flex items-center gap-3 mb-4 flex-wrap">
-                {['BEGINNER', 'INTERMEDIATE', 'ADVANCED'].map((difficulty) => {
-                  const color = getDifficultyColor(difficulty);
+              {/* 수업 카드 색상 범례 (클래스 설정에서 지정) */}
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
+                <span className="text-xs text-gray-500 dark:text-gray-400">수업별 색상:</span>
+                {CLASS_CARD_COLOR_KEYS.map((key) => {
+                  const color = CLASS_CARD_COLORS[key];
                   return (
-                    <div key={difficulty} className={`${color.bg} ${color.border} border rounded-full px-3 py-1 inline-flex items-center gap-2`}>
-                      <div className={`w-2 h-2 rounded-full ${color.text.replace('text-', 'bg-')}`}></div>
-                      <span className={`text-sm font-semibold ${color.text}`}>
-                        {difficulty === 'BEGINNER' ? '초급' : difficulty === 'INTERMEDIATE' ? '중급' : '고급'}
-                      </span>
+                    <div key={key} className={`${color.bg} ${color.border} border rounded-full px-2 py-0.5 inline-flex items-center gap-1`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${color.dot || color.text.replace('text-', 'bg-')}`} />
+                      <span className={`text-xs font-medium ${color.text}`}>{CLASS_CARD_COLOR_LABELS[key]}</span>
                     </div>
                   );
                 })}
@@ -364,8 +346,7 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
                       </div>
                       <div className="space-y-1 overflow-y-auto max-h-[120px] sm:max-h-[130px]">
                         {daySessions.map((session) => {
-                          const difficulty = session.classes?.difficulty_level || 'BEGINNER';
-                          const color = getDifficultyColor(difficulty);
+                          const color = getSessionColor(session);
                           const hasAccessRestriction = session.classes?.access_config?.requiredGroup;
 
                           return (
@@ -378,7 +359,7 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
                                 setShowDailyModal(true);
                               }}
                             >
-                              <div className={`absolute top-0 left-0 w-1 h-full ${color.text.replace('text-', 'bg-')}`}></div>
+                              <div className={`absolute top-0 left-0 w-1 h-full ${(color as { dot?: string; text: string }).dot || color.text.replace('text-', 'bg-')}`} />
                               <div className="flex items-center gap-1">
                                 <span className="text-[9px] sm:text-xs font-bold text-gray-700 dark:text-gray-300">
                                   {formatTime(session.start_time)}

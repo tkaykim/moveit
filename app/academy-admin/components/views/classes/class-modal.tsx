@@ -10,6 +10,7 @@ import { uploadFile, deleteFile, extractFilePathFromUrl } from '@/lib/utils/stor
 import { convertUTCToKSTForInput, convertKSTInputToUTC, dateToKSTInput } from '@/lib/utils/kst-time';
 import { formatNumberInput, parseNumberFromString, formatNumberWithCommas } from '@/lib/utils/number-format';
 import { useAcademyTicketLabels } from '../hooks/useAcademyTicketLabels';
+import { CLASS_CARD_COLOR_KEYS, CLASS_CARD_COLOR_LABELS, CLASS_CARD_COLORS } from '@/lib/constants/class-colors';
 
 interface ClassModalProps {
   academyId: string;
@@ -34,6 +35,7 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
     song: '',
     genre: '',
     difficulty_level: '',
+    card_color: '' as string,
     class_type: 'regular',
     price: 0,
     description: '',
@@ -94,6 +96,7 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
         song: classData.song || '',
         genre: classData.genre?.split(',')[0]?.trim() || classData.genre || '',
         difficulty_level: classData.difficulty_level || '',
+        card_color: classData.card_color || '',
         instructor_name: '', // 나중에 로드
         class_type: (classData.class_type && ['regular', 'popup', 'workshop'].includes(classData.class_type)) 
           ? classData.class_type 
@@ -380,6 +383,7 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
         song: formData.song || null,
         genre: formData.genre || null,
         difficulty_level: formData.difficulty_level || null,
+        card_color: formData.card_color?.trim() || null,
         class_type: ['regular', 'popup', 'workshop'].includes(formData.class_type) 
           ? formData.class_type 
           : 'regular',
@@ -558,6 +562,7 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
         song: formData.song || null,
         genre: formData.genre || null,
         difficulty_level: formData.difficulty_level || null,
+        card_color: formData.card_color?.trim() || null,
         class_type: ['regular', 'popup', 'workshop'].includes(formData.class_type) 
           ? formData.class_type 
           : 'regular',
@@ -860,6 +865,43 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              카드 색상
+            </label>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">스케줄·캘린더에서 수업 카드에 표시될 색상입니다.</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, card_color: '' })}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  !formData.card_color
+                    ? 'ring-2 ring-offset-1 ring-blue-500 border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-neutral-700'
+                }`}
+              >
+                기본(난이도별)
+              </button>
+              {CLASS_CARD_COLOR_KEYS.map((key) => {
+                const style = CLASS_CARD_COLORS[key];
+                const isSelected = formData.card_color === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, card_color: key })}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${style.bg} ${style.border} ${style.text} ${
+                      isSelected ? 'ring-2 ring-offset-1 ring-neutral-800 dark:ring-neutral-200' : ''
+                    }`}
+                    title={CLASS_CARD_COLOR_LABELS[key]}
+                  >
+                    {CLASS_CARD_COLOR_LABELS[key]}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -1215,6 +1257,19 @@ export function ClassModal({ academyId, classData, defaultDate, defaultHallId, o
             </select>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">카드 색상</label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              <button type="button" onClick={() => setFormData({ ...formData, card_color: '' })} className={`px-2 py-1 rounded text-xs font-medium border ${!formData.card_color ? 'ring-2 ring-blue-500 border-blue-500' : 'border-gray-200 dark:border-neutral-600'}`}>기본</button>
+              {CLASS_CARD_COLOR_KEYS.map((key) => {
+                const style = CLASS_CARD_COLORS[key];
+                const isSelected = formData.card_color === key;
+                return (
+                  <button key={key} type="button" onClick={() => setFormData({ ...formData, card_color: key })} className={`px-2 py-1 rounded text-xs font-medium border ${style.bg} ${style.border} ${style.text} ${isSelected ? 'ring-2 ring-offset-1 ring-neutral-800 dark:ring-neutral-200' : ''}`}>{CLASS_CARD_COLOR_LABELS[key]}</button>
+                );
+              })}
+            </div>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

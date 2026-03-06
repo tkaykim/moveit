@@ -21,6 +21,7 @@ export async function getRecurringSchedules(academyId: string) {
         title,
         genre,
         difficulty_level,
+        card_color,
         access_config
       ),
       instructors (
