@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
+import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +33,7 @@ export async function POST(
 
     const { data: order, error: orderError } = await supabase
       .from('bank_transfer_orders')
-      .select('id, status, user_ticket_id, revenue_transaction_id, schedule_id')
+      .select('id, status, user_id, user_ticket_id, revenue_transaction_id, schedule_id')
       .eq('id', orderId)
       .eq('academy_id', academyId)
       .single();
@@ -47,6 +48,7 @@ export async function POST(
     const userTicketId = order.user_ticket_id;
     const revId = order.revenue_transaction_id;
     const scheduleId = order.schedule_id;
+    let linkedBookingId: string | null = null;
 
     // 1) 이 주문에 연결된 예약이 있으면 PENDING으로 되돌리고, 스케줄 인원 수 정리
     if (scheduleId) {
@@ -57,6 +59,7 @@ export async function POST(
         .maybeSingle();
 
       if (linkedBooking) {
+        linkedBookingId = linkedBooking.id;
         await supabase
           .from('bookings')
           .update({
@@ -104,6 +107,16 @@ export async function POST(
         revenue_transaction_id: null,
       })
       .eq('id', orderId);
+
+    // 활동 로그: 환불(입금 확인 되돌리기) — user_ticket은 이미 삭제됐으므로 payload에만 기록
+    insertEnrollmentActivityLog({
+      academy_id: academyId,
+      user_id: order.user_id ?? null,
+      booking_id: linkedBookingId,
+      action: 'REFUND',
+      payload: { order_id: orderId, reverted: true, user_ticket_id: userTicketId ?? undefined },
+      actor_user_id: user.id,
+    }, supabase).catch(() => {});
 
     return NextResponse.json({
       success: true,

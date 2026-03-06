@@ -8,6 +8,7 @@ import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { BookingStatusBadge } from '@/components/common/booking-status-badge';
 import { EnrollmentActionMenu } from './enrollments/enrollment-action-menu';
 import { AdminAddEnrollmentModal } from './enrollments/admin-add-enrollment-modal';
+import { ActivityLogSection } from './enrollments/activity-log-section';
 import { convertKSTInputToUTC } from '@/lib/utils/kst-time';
 
 interface EnrollmentsViewProps {
@@ -61,6 +62,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
   const [isAdminAddModalOpen, setIsAdminAddModalOpen] = useState(false);
   const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
   const [classSearchTerm, setClassSearchTerm] = useState('');
+  const [mainTab, setMainTab] = useState<'enrollments' | 'activity-log'>('enrollments');
   const classDropdownRef = useRef<HTMLDivElement>(null);
   const isFirstLoad = useRef(true);
 
@@ -458,35 +460,69 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setIsAdminAddModalOpen(true)}
-            className="px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-2 text-sm font-medium transition-colors"
-            data-onboarding="page-enrollments-add"
-          >
-            <UserPlus size={16} />
-            수기 추가
-          </button>
-          <button
-            onClick={loadEnrollments}
-            disabled={isRefreshing}
-            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors disabled:opacity-50"
-            title="새로고침"
-          >
-            <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
-          </button>
-          <button
-            onClick={() => {
-              alert('엑셀 다운로드 기능은 추후 구현 예정입니다.');
-            }}
-            className="px-4 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 flex items-center gap-2 text-sm font-medium transition-colors"
-          >
-            <Download size={16} />
-            다운로드
-          </button>
+          {mainTab === 'enrollments' && (
+            <>
+              <button
+                type="button"
+                onClick={() => setIsAdminAddModalOpen(true)}
+                className="px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-2 text-sm font-medium transition-colors"
+                data-onboarding="page-enrollments-add"
+              >
+                <UserPlus size={16} />
+                수기 추가
+              </button>
+              <button
+                onClick={loadEnrollments}
+                disabled={isRefreshing}
+                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors disabled:opacity-50"
+                title="새로고침"
+              >
+                <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
+              </button>
+              <button
+                onClick={() => {
+                  alert('엑셀 다운로드 기능은 추후 구현 예정입니다.');
+                }}
+                className="px-4 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 flex items-center gap-2 text-sm font-medium transition-colors"
+              >
+                <Download size={16} />
+                다운로드
+              </button>
+            </>
+          )}
         </div>
       </div>
 
+      {/* 예약 목록 | 활동로그 탭 */}
+      <div className="flex gap-2 border-b border-gray-200 dark:border-neutral-700 pb-2">
+        <button
+          type="button"
+          onClick={() => setMainTab('enrollments')}
+          className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
+            mainTab === 'enrollments'
+              ? 'bg-white dark:bg-neutral-900 text-primary dark:text-[#CCFF00] border border-b-0 border-gray-200 dark:border-neutral-700 -mb-0.5'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+          }`}
+        >
+          예약 목록
+        </button>
+        <button
+          type="button"
+          onClick={() => setMainTab('activity-log')}
+          className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
+            mainTab === 'activity-log'
+              ? 'bg-white dark:bg-neutral-900 text-primary dark:text-[#CCFF00] border border-b-0 border-gray-200 dark:border-neutral-700 -mb-0.5'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+          }`}
+        >
+          활동로그
+        </button>
+      </div>
+
+      {mainTab === 'activity-log' ? (
+        <ActivityLogSection academyId={academyId} />
+      ) : (
+        <>
       {/* 필터 영역 */}
       <div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-100 dark:border-neutral-800 shadow-sm">
         {/* 선택된 수업 요약 바 */}
@@ -1019,6 +1055,8 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
           </>
         )}
       </div>
+        </>
+      )}
 
       <AdminAddEnrollmentModal
         isOpen={isAdminAddModalOpen}

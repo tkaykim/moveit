@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getTicketById } from '@/lib/db/tickets';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
+import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { Database } from '@/types/database';
 import { sendNotification } from '@/lib/notifications';
@@ -401,6 +402,16 @@ export async function POST(request: Request) {
           .from('schedules')
           .update({ current_students: actualCount })
           .eq('id', order.schedule_id);
+        }
+        if (booking) {
+          insertEnrollmentActivityLog({
+            academy_id: order.academy_id,
+            user_id: user.id,
+            user_ticket_id: userTicket.id,
+            booking_id: booking.id,
+            action: 'ENROLL',
+            payload: { schedule_id: order.schedule_id, class_id: resolvedClassId, via: 'payment_confirm' },
+          }, supabase).catch(() => {});
         }
         }
       }

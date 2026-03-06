@@ -487,6 +487,7 @@ export type Database = {
           payment_status: string | null
           schedule_id: string | null
           status: string | null
+          updated_at: string | null
           user_id: string | null
           user_ticket_id: string | null
         }
@@ -503,6 +504,7 @@ export type Database = {
           payment_status?: string | null
           schedule_id?: string | null
           status?: string | null
+          updated_at?: string | null
           user_id?: string | null
           user_ticket_id?: string | null
         }
@@ -519,6 +521,7 @@ export type Database = {
           payment_status?: string | null
           schedule_id?: string | null
           status?: string | null
+          updated_at?: string | null
           user_id?: string | null
           user_ticket_id?: string | null
         }
@@ -556,6 +559,88 @@ export type Database = {
             columns: ["user_ticket_id"]
             isOneToOne: false
             referencedRelation: "user_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enrollment_activity_log: {
+        Row: {
+          id: string
+          academy_id: string
+          user_id: string | null
+          user_ticket_id: string | null
+          booking_id: string | null
+          extension_request_id: string | null
+          action: string
+          payload: Json | null
+          actor_user_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          academy_id: string
+          user_id?: string | null
+          user_ticket_id?: string | null
+          booking_id?: string | null
+          extension_request_id?: string | null
+          action: string
+          payload?: Json | null
+          actor_user_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          academy_id?: string
+          user_id?: string | null
+          user_ticket_id?: string | null
+          booking_id?: string | null
+          extension_request_id?: string | null
+          action?: string
+          payload?: Json | null
+          actor_user_id?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrollment_activity_log_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_activity_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_activity_log_user_ticket_id_fkey"
+            columns: ["user_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "user_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_activity_log_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_activity_log_extension_request_id_fkey"
+            columns: ["extension_request_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_extension_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_activity_log_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]

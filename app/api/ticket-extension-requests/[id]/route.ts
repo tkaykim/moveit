@@ -3,6 +3,7 @@ import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getSchedulesForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { sendNotification } from '@/lib/notifications';
+import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 
 /**
  * PATCH: 연장/일시정지 신청 승인 또는 거절 (관리자) - 쿠키 또는 Authorization Bearer
@@ -37,7 +38,7 @@ export async function PATCH(
 
     const { data: reqRow, error: fetchErr } = await supabase
       .from('ticket_extension_requests')
-      .select('*, user_tickets(id, user_id, expiry_date, ticket_id, tickets(ticket_type, name, academies(name_kr, name_en)))')
+      .select('*, user_tickets(id, user_id, expiry_date, ticket_id, tickets(ticket_type, name, academy_id, academies(name_kr, name_en)))')
       .eq('id', id)
       .single();
     if (fetchErr || !reqRow) {
@@ -107,6 +108,22 @@ export async function PATCH(
           const extendStartStr = extendStart.toISOString().slice(0, 10);
           await createBookingsForPeriodTicket(userId, reqRow.user_ticket_id, ticketId, extendStartStr, newExpiryStr);
         }
+      }
+    }
+
+    // 활동 로그: 연장/일시정지 승인
+    if (status === 'APPROVED') {
+      const academyId = (reqRow.user_tickets as any)?.tickets?.academy_id;
+      if (academyId) {
+        insertEnrollmentActivityLog({
+          academy_id: academyId,
+          user_id: reqRow.user_tickets?.user_id ?? null,
+          user_ticket_id: reqRow.user_ticket_id,
+          extension_request_id: id,
+          action: 'EXTENSION_APPROVED',
+          payload: { request_type: reqRow.request_type },
+          actor_user_id: adminUser.id,
+        }, supabase).catch(() => {});
       }
     }
 

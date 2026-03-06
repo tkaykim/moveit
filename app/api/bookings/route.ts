@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { consumeUserTicket, getAvailableUserTickets, updateUserTicket } from '@/lib/db/user-tickets';
+import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 import { Database } from '@/types/database';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { sendNotification } from '@/lib/notifications';
@@ -363,6 +364,20 @@ export async function POST(request: Request) {
         .update({ current_students: actualCount })
         .eq('id', scheduleId);
     }
+
+    // 활동 로그: 수강신청 (활동로그 탭용)
+    insertEnrollmentActivityLog({
+      academy_id: academyId,
+      user_id: user.id,
+      user_ticket_id: selectedUserTicketId || null,
+      booking_id: booking.id,
+      action: 'ENROLL',
+      payload: {
+        schedule_id: scheduleId ?? null,
+        class_id: resolvedClassId,
+        ...(selectedUserTicketId ? { ticket_used: true } : {}),
+      },
+    }).catch(() => {});
 
     // 푸시 알림 발송 (비동기, 실패해도 예약은 성공)
     if (user?.id && booking?.id) {

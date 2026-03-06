@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { sendNotification } from '@/lib/notifications';
+import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
+import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 
 /**
  * PATCH /api/bookings/[id]/status
@@ -39,10 +41,10 @@ export async function PATCH(
       );
     }
 
-    // 현재 예약 정보 조회
+    // 현재 예약 정보 조회 (활동 로그용 academy_id 포함)
     const { data: currentBooking, error: bookingError } = await (supabase as any)
       .from('bookings')
-      .select('*, schedule_id, status')
+      .select('*, schedule_id, status, classes(academy_id)')
       .eq('id', id)
       .single();
 
@@ -55,11 +57,14 @@ export async function PATCH(
 
     const oldStatus = currentBooking.status;
     const scheduleId = currentBooking.schedule_id;
+    const academyId = (currentBooking as any).classes?.academy_id;
+    const actorId = (await getAuthenticatedUser(request))?.id ?? null;
 
-    // 상태 변경
+    // 상태 변경 (updated_at으로 취소/변경 시각 기록)
+    const now = new Date().toISOString();
     const { data: updatedBooking, error: updateError } = await (supabase as any)
       .from('bookings')
-      .update({ status })
+      .update({ status, updated_at: now })
       .eq('id', id)
       .select()
       .single();
@@ -93,7 +98,33 @@ export async function PATCH(
           .from('user_tickets')
           .update(updateData)
           .eq('id', currentBooking.user_ticket_id);
+
+        // 활동 로그: 횟수 복구
+        if (academyId) {
+          insertEnrollmentActivityLog({
+            academy_id: academyId,
+            user_id: currentBooking.user_id,
+            user_ticket_id: currentBooking.user_ticket_id,
+            booking_id: id,
+            action: 'COUNT_RESTORE',
+            payload: { delta: 1, reason: 'booking_cancelled' },
+            actor_user_id: actorId,
+          }).catch(() => {});
+        }
       }
+    }
+
+    // 활동 로그: 예약 취소
+    if (academyId && status === 'CANCELLED') {
+      insertEnrollmentActivityLog({
+        academy_id: academyId,
+        user_id: currentBooking.user_id,
+        user_ticket_id: currentBooking.user_ticket_id ?? null,
+        booking_id: id,
+        action: 'CANCEL',
+        payload: { previous_status: oldStatus },
+        actor_user_id: actorId,
+      }).catch(() => {});
     }
 
     // schedules.current_students 업데이트
