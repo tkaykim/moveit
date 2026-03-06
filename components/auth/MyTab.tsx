@@ -22,9 +22,7 @@ export function MyTab({ isOpen, onClose, initialTab = 'login' }: MyTabProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [nameEn, setNameEn] = useState('');
   const [phone, setPhone] = useState('');
-  const [nickname, setNickname] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -67,8 +65,8 @@ export function MyTab({ isOpen, onClose, initialTab = 'login' }: MyTabProps) {
     setError(null);
     setLoading(true);
 
-    if (!email || !password || !name) {
-      setError('이메일, 비밀번호, 이름을 입력해주세요.');
+    if (!email || !password || !name || !phone?.trim()) {
+      setError('이메일, 비밀번호, 이름, 전화번호를 입력해주세요.');
       setLoading(false);
       return;
     }
@@ -85,7 +83,7 @@ export function MyTab({ isOpen, onClose, initialTab = 'login' }: MyTabProps) {
         setTimeout(() => resolve({ error: { message: '회원가입 요청 시간이 초과되었습니다. 다시 시도해주세요.' } }), 30000)
       );
       const result = await Promise.race([
-        signUp(email, password, name, nameEn || undefined, phone || undefined, nickname || undefined),
+        signUp(email, password, name, undefined, phone.trim(), undefined),
         timeoutPromise,
       ]);
 
@@ -96,9 +94,7 @@ export function MyTab({ isOpen, onClose, initialTab = 'login' }: MyTabProps) {
         setEmail('');
         setPassword('');
         setName('');
-        setNameEn('');
         setPhone('');
-        setNickname('');
         setIsLogin(true);
       }
     } catch (err: any) {
@@ -228,40 +224,15 @@ export function MyTab({ isOpen, onClose, initialTab = 'login' }: MyTabProps) {
 
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                영어 이름
-              </label>
-              <input
-                type="text"
-                value={nameEn}
-                onChange={(e) => setNameEn(e.target.value)}
-                className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="영어 이름을 입력하세요"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                닉네임
-              </label>
-              <input
-                type="text"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="닉네임을 입력하세요"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                전화번호
+                전화번호 *
               </label>
               <input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="전화번호를 입력하세요"
+                placeholder="전화번호를 입력하세요 (예: 010-0000-0000)"
+                required
               />
             </div>
 

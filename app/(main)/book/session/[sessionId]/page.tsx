@@ -981,22 +981,22 @@ export default function SessionBookingPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setAuthModalInitialTab('signup');
+                    setAuthModalInitialTab('login');
                     setIsAuthModalOpen(true);
                   }}
                   className="flex-1 py-3 rounded-xl bg-primary dark:bg-[#CCFF00] text-neutral-900 font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
                 >
-                  {t('sessionBooking.signupButton')}
+                  {t('sessionBooking.loginButton')}
                 </button>
                 <button
                   type="button"
                   onClick={() => {
-                    setAuthModalInitialTab('login');
+                    setAuthModalInitialTab('signup');
                     setIsAuthModalOpen(true);
                   }}
-                  className="flex-1 py-3 rounded-xl border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 font-semibold text-sm hover:bg-neutral-100 dark:hover:bg-neutral-600 transition-colors active:scale-[0.98]"
+                  className="flex-1 py-3 rounded-xl border-2 border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 font-semibold text-sm hover:bg-neutral-100 dark:hover:bg-neutral-600 transition-colors active:scale-[0.98]"
                 >
-                  {t('sessionBooking.loginButton')}
+                  {t('sessionBooking.signupButton')}
                 </button>
               </div>
             </div>
@@ -1335,7 +1335,7 @@ export default function SessionBookingPage() {
           <div className="flex justify-between items-center mb-4">
             <span className="text-sm text-neutral-500 dark:text-neutral-400">
               {paymentMethod === null
-                ? t('sessionBooking.selectPaymentMethod')
+                ? t('sessionBooking.paymentMethod')
                 : paymentMethod === 'ticket'
                 ? t('sessionBooking.ticketUse')
                 : paymentMethod === 'purchase'
@@ -1371,7 +1371,7 @@ export default function SessionBookingPage() {
                 </span>
               </>
             ) : paymentMethod === null ? (
-              t('sessionBooking.selectPaymentMethod')
+              t('sessionBooking.selectPaymentMethodPrompt')
             ) : paymentMethod === 'ticket' ? (
               t('sessionBooking.bookWithTicket')
             ) : paymentMethod === 'purchase' ? (
@@ -1389,25 +1389,27 @@ export default function SessionBookingPage() {
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowOnsiteWarning(false)} />
           <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-xl w-full p-5 animate-in zoom-in-95 duration-200">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0" aria-hidden>
                 <AlertTriangle size={24} className="text-amber-500" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <h3 className="text-lg font-bold text-black dark:text-white">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <h3 className="text-lg font-bold text-black dark:text-white" id="onsite-warning-title">
                     {t('sessionBooking.onsiteWarningTitle')}
                   </h3>
                   <button
                     onClick={() => setShowOnsiteWarning(false)}
                     className="p-1.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 rounded-lg"
+                    aria-label={language === 'ko' ? '닫기' : 'Close'}
                   >
                     <X size={18} />
                   </button>
                 </div>
-                <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
-                  1. {t('sessionBooking.onsiteWarningMessage1')} 2. {t('sessionBooking.onsiteWarningMessage2')}
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
+                <ol className="list-decimal list-inside text-sm text-neutral-600 dark:text-neutral-400 space-y-2 mb-5" aria-labelledby="onsite-warning-title">
+                  <li>{t('sessionBooking.onsiteWarningMessage1')}</li>
+                  <li>{t('sessionBooking.onsiteWarningMessage2')}</li>
+                </ol>
+                <div className="flex flex-col gap-3">
                   <button
                     onClick={() => {
                       setShowOnsiteWarning(false);
@@ -1419,9 +1421,9 @@ export default function SessionBookingPage() {
                         setIsAuthModalOpen(true);
                       }
                     }}
-                    className="py-2.5 px-4 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-xl text-sm transition-colors flex items-center gap-2"
+                    className="w-full py-3 px-4 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.99]"
                   >
-                    <Ticket size={16} />
+                    <Ticket size={16} className="shrink-0" />
                     {t('sessionBooking.onsiteWarningBuyTicket')}
                   </button>
                   <button
@@ -1429,7 +1431,7 @@ export default function SessionBookingPage() {
                       setPaymentMethod('onsite');
                       setShowOnsiteWarning(false);
                     }}
-                    className="py-2 text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 underline underline-offset-2"
+                    className="w-full py-2 text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 underline underline-offset-2"
                   >
                     {t('sessionBooking.onsiteWarningProceed')}
                   </button>
