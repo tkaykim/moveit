@@ -2,7 +2,7 @@
 
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import Image from 'next/image';
-import { ChevronLeft, Heart, X, MessageSquare, ExternalLink } from 'lucide-react';
+import { ChevronLeft, Heart, X, MessageSquare, ExternalLink, Instagram, Youtube } from 'lucide-react';
 import { ClassPreviewModal } from '@/components/modals/class-preview-modal';
 import { TicketPurchaseModal } from '@/components/modals/ticket-purchase-modal';
 import { ConsultationRequestModal } from '@/components/modals/consultation-request-modal';
@@ -401,6 +401,44 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
             )}
           </div>
         </div>
+        {/* 학원 소셜/채널 링크 (academy admin에서 등록한 것만 표시) */}
+        {(academy.instagram_handle?.trim() || academy.youtube_url?.trim() || academy.kakao_channel_url?.trim()) && (
+          <div className="px-5 py-4 flex flex-wrap gap-2 border-b border-neutral-100 dark:border-neutral-800">
+            {academy.instagram_handle?.trim() && (
+              <a
+                href={academy.instagram_handle.trim().startsWith('http') ? academy.instagram_handle.trim() : `https://www.instagram.com/${academy.instagram_handle.trim().replace(/^@/, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors text-sm font-medium"
+              >
+                <Instagram size={18} className="flex-shrink-0" />
+                Instagram
+              </a>
+            )}
+            {academy.youtube_url?.trim() && (
+              <a
+                href={academy.youtube_url.trim().startsWith('http') ? academy.youtube_url.trim() : `https://www.youtube.com/${academy.youtube_url.trim()}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors text-sm font-medium"
+              >
+                <Youtube size={18} className="flex-shrink-0" />
+                YouTube
+              </a>
+            )}
+            {academy.kakao_channel_url?.trim() && (
+              <a
+                href={academy.kakao_channel_url.trim().startsWith('http') ? academy.kakao_channel_url.trim() : `https://${academy.kakao_channel_url.trim()}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FEE500] dark:bg-[#FEE500] text-[#191919] hover:bg-[#FADA0A] dark:hover:bg-[#FADA0A] transition-colors text-sm font-medium"
+              >
+                <MessageSquare size={18} className="flex-shrink-0" />
+                카카오톡
+              </a>
+            )}
+          </div>
+        )}
         {/* 모든 섹션을 설정 순서대로 렌더링 (탭 없이 플랫) */}
         {visibleSections.map((section, sectionIndex) => {
           switch (section.id) {

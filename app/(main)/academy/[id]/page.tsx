@@ -63,6 +63,9 @@ export default function AcademyDetailPage() {
             address: data.address,
             section_config: data.section_config || null,
             introduction_html: data.introduction_html || null,
+            instagram_handle: data.instagram_handle ?? null,
+            youtube_url: data.youtube_url ?? null,
+            kakao_channel_url: data.kakao_channel_url ?? null,
           };
 
           setAcademy(transformedAcademy);

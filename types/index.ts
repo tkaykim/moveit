@@ -38,6 +38,10 @@ export interface Academy {
   academyId?: string; // 원본 학원 ID
   section_config?: SectionConfig | null; // 페이지 섹션 순서/표시 설정
   introduction_html?: string | null; // 리치 텍스트 학원 소개
+  /** academy admin에서 등록한 소셜/채널 링크 (비어있으면 미표시) */
+  instagram_handle?: string | null;
+  youtube_url?: string | null;
+  kakao_channel_url?: string | null;
 }
 
 // Dancer 타입: Instructor 기반
