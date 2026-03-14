@@ -393,7 +393,7 @@ export default function ClassesPage() {
               setEditingId(null);
               resetForm();
             }}
-            className="px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-2"
+            className="px-4 py-2 bg-primary text-black rounded-lg hover:opacity-90 flex items-center gap-2"
           >
             <Plus size={20} />
             {showForm ? '취소' : '클래스 추가'}
@@ -530,7 +530,7 @@ export default function ClassesPage() {
                         onClick={() => toggleGenre(genre)}
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                           isSelected
-                            ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                            ? 'bg-primary text-black'
                             : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700'
                         }`}
                       >
@@ -545,7 +545,7 @@ export default function ClassesPage() {
                     {formData.selectedGenres.map((genre) => (
                       <span
                         key={genre}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-primary/20 dark:bg-[#CCFF00]/20 text-primary dark:text-[#CCFF00] rounded-full text-sm"
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-primary/20/20 text-primary rounded-full text-sm"
                       >
                         {genre}
                         <button
@@ -789,7 +789,7 @@ export default function ClassesPage() {
 
             <button
               type="submit"
-              className="w-full px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-lg hover:opacity-90"
+              className="w-full px-4 py-2 bg-primary text-black font-bold rounded-lg hover:opacity-90"
             >
               {editingId ? '수정' : '등록'}
             </button>
@@ -921,7 +921,7 @@ export default function ClassesPage() {
                       onClick={() => router.push(`/admin/classes/${classItem.id}`)}
                     >
                       <td className="px-6 py-4 text-sm font-medium text-black dark:text-white">
-                        <span className="hover:text-primary dark:hover:text-[#CCFF00] hover:underline">
+                        <span className="hover:text-primary hover:underline">
                           {classItem.title}
                         </span>
                       </td>
@@ -955,7 +955,7 @@ export default function ClassesPage() {
                       <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => handleViewBookings(classItem)}
-                          className="flex items-center gap-1 text-primary dark:text-[#CCFF00] hover:opacity-80 text-sm"
+                          className="flex items-center gap-1 text-primary hover:opacity-80 text-sm"
                         >
                           <Users size={16} />
                           {bookingCount}
@@ -965,7 +965,7 @@ export default function ClassesPage() {
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => handleEdit(classItem)}
-                            className="text-primary dark:text-[#CCFF00] hover:opacity-80"
+                            className="text-primary hover:opacity-80"
                           >
                             <Edit size={18} />
                           </button>

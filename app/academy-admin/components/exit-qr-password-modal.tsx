@@ -115,7 +115,7 @@ export function ExitQrPasswordModal({
                 placeholder="비밀번호 입력"
                 autoComplete="current-password"
                 disabled={loading}
-                className="w-full pl-11 pr-4 py-3 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00] focus:border-transparent disabled:opacity-50"
+                className="w-full pl-11 pr-4 py-3 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
               />
             </div>
           </div>
@@ -136,7 +136,7 @@ export function ExitQrPasswordModal({
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-3 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>

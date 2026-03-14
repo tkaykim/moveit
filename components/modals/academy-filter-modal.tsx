@@ -92,7 +92,7 @@ export const AcademyFilterModal = ({
                   onClick={() => handleTagToggle(tag)}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                     selectedTags.includes(tag)
-                      ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                      ? 'bg-primary text-black'
                       : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700'
                   }`}
                 >
@@ -118,7 +118,7 @@ export const AcademyFilterModal = ({
                   onClick={() => setSelectedPriceRange({ min: range.min, max: range.max })}
                   className={`w-full px-4 py-3 rounded-xl text-left transition-all ${
                     isSelected
-                      ? 'bg-primary dark:bg-[#CCFF00] text-black font-medium'
+                      ? 'bg-primary text-black font-medium'
                       : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700'
                   }`}
                 >
@@ -141,7 +141,7 @@ export const AcademyFilterModal = ({
             onClick={handleApply}
             className={`flex-[2] font-black py-4 rounded-xl text-lg ${
               hasActiveFilters
-                ? 'bg-primary dark:bg-[#CCFF00] text-black shadow-[0_0_20px_rgba(204,255,0,0.3)]'
+                ? 'bg-primary text-primary-foreground shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)]'
                 : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-500'
             }`}
           >

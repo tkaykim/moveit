@@ -417,7 +417,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
               placeholder={language === 'en' ? 'Search academy, genre, address...' : '학원명, 장르, 주소 검색...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-10 py-3 bg-neutral-100 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 text-black dark:text-white placeholder-neutral-400 focus:outline-none focus:border-neutral-400 dark:focus:border-[#CCFF00] transition-colors"
+              className="w-full pl-11 pr-10 py-3 bg-neutral-100 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 text-black dark:text-white placeholder-neutral-400 focus:outline-none focus:border-neutral-400 transition-colors"
             />
             {searchQuery && (
               <button
@@ -457,7 +457,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
                         }}
                         className={`w-full text-left px-4 py-2 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 first:rounded-t-lg last:rounded-b-lg ${
                           sortOption === option.value 
-                            ? 'text-primary dark:text-[#CCFF00] font-medium' 
+                            ? 'text-primary font-medium' 
                             : 'text-black dark:text-white'
                         }`}
                       >
@@ -472,14 +472,14 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
               onClick={() => setIsFilterModalOpen(true)}
               className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm border transition-colors ${
                 activeFilterCount > 0
-                  ? 'bg-primary dark:bg-[#CCFF00] text-black border-primary dark:border-[#CCFF00]'
+                  ? 'bg-primary text-black border-primary'
                   : 'bg-neutral-100 dark:bg-neutral-900 text-black dark:text-white border-neutral-200 dark:border-neutral-800'
               }`}
             >
               <SlidersHorizontal size={14} />
               {language === 'en' ? 'Filter' : '필터'}
               {activeFilterCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 bg-white dark:bg-black text-primary dark:text-[#CCFF00] text-[10px] font-bold rounded-full">
+                <span className="ml-1 px-1.5 py-0.5 bg-white dark:bg-black text-primary text-[10px] font-bold rounded-full">
                   {activeFilterCount}
                 </span>
               )}
@@ -580,7 +580,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
                       </div>
                     )}
                     {academy.price ? (
-                      <span className="text-sm font-bold text-neutral-800 dark:text-[#CCFF00]">
+                      <span className="text-sm font-bold text-neutral-800">
                         {academy.price.toLocaleString()}원~
                       </span>
                     ) : pricesLoading ? (

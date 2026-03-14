@@ -75,7 +75,7 @@ export function NotificationList() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <div className="animate-spin w-6 h-6 border-2 border-primary dark:border-[#CCFF00] border-t-transparent rounded-full" />
+        <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
         <p className="text-sm text-neutral-500 mt-3">알림을 불러오는 중...</p>
       </div>
     );
@@ -100,7 +100,7 @@ export function NotificationList() {
         <div className="px-4 py-2 border-b border-neutral-100 dark:border-neutral-800">
           <button
             onClick={handleReadAll}
-            className="flex items-center gap-1.5 text-xs font-medium text-primary dark:text-[#CCFF00] active:opacity-70"
+            className="flex items-center gap-1.5 text-xs font-medium text-primary active:opacity-70"
           >
             <CheckCheck size={14} />
             모두 읽음 처리 ({unreadCount})
@@ -124,7 +124,7 @@ export function NotificationList() {
         <div className="py-4 text-center">
           <button
             onClick={handleLoadMore}
-            className="text-sm font-medium text-primary dark:text-[#CCFF00] active:opacity-70"
+            className="text-sm font-medium text-primary active:opacity-70"
           >
             더 보기
           </button>

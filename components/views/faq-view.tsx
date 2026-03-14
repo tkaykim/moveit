@@ -106,7 +106,7 @@ export const FAQView = ({ onBack }: FAQViewProps) => {
             onClick={() => setSelectedCategory(category)}
             className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
               selectedCategory === category
-                ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                ? 'bg-primary text-black'
                 : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400'
             }`}
           >
@@ -133,7 +133,7 @@ export const FAQView = ({ onBack }: FAQViewProps) => {
                 className="w-full p-4 text-left flex items-center justify-between active:scale-[0.98] transition-transform"
               >
                 <div className="flex items-start gap-3 flex-1">
-                  <HelpCircle className="text-primary dark:text-[#CCFF00] flex-shrink-0 mt-0.5" size={20} />
+                  <HelpCircle className="text-primary flex-shrink-0 mt-0.5" size={20} />
                   <span className="text-sm font-bold text-black dark:text-white flex-1">
                     {item.question}
                   </span>

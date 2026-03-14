@@ -250,7 +250,7 @@ export function TicketExtensionRequestModal({
               )}
               {extensionSummary.newExpiry && (
                 <p className="text-gray-600 dark:text-gray-400">
-                  연장 후 만료일: <span className="font-medium text-primary dark:text-[#CCFF00]">{formatDate(extensionSummary.newExpiry)}</span>
+                  연장 후 만료일: <span className="font-medium text-primary">{formatDate(extensionSummary.newExpiry)}</span>
                 </p>
               )}
               {!extensionSummary.currentExpiry && (
@@ -271,7 +271,7 @@ export function TicketExtensionRequestModal({
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-2.5 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-xl disabled:opacity-50"
+              className="flex-1 py-2.5 bg-primary text-black font-bold rounded-xl disabled:opacity-50"
             >
               {loading ? '신청 중...' : '신청하기'}
             </button>

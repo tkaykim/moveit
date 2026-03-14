@@ -171,7 +171,7 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
           <div className="p-6 space-y-6">
             {/* 프로필 사진 표시 */}
             <div className="flex justify-center">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px]">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-primary to-green-500 p-[2px]">
                 <div className="w-full h-full rounded-full bg-white dark:bg-neutral-900 flex items-center justify-center overflow-hidden">
                   {profileImageUrl ? (
                     <img src={profileImageUrl} alt={student.name || '학생'} className="w-full h-full object-cover" />

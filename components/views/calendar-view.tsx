@@ -374,7 +374,7 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
               onClick={() => setSelectedDay(isSelected ? null : day)}
               className={`flex-shrink-0 flex flex-col items-center gap-1 px-4 py-3 rounded-xl font-bold transition-all ${
                 isSelected
-                  ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                  ? 'bg-primary text-black'
                   : isToday
                   ? 'bg-neutral-200 dark:bg-neutral-800 text-black dark:text-white'
                   : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400'
@@ -383,7 +383,7 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
               <span className="text-xs">{DAY_NAMES[index]}</span>
               <span className="text-sm">{dayOfMonth}</span>
               {classCount > 0 && (
-                <span className={`text-[10px] ${isSelected ? 'text-black' : 'text-primary dark:text-[#CCFF00]'}`}>
+                <span className={`text-[10px] ${isSelected ? 'text-black' : 'text-primary'}`}>
                   {classCount}
                 </span>
               )}

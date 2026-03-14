@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 
 /**
  * POST /api/bookings/admin-add-guest
@@ -114,6 +115,19 @@ export async function POST(request: Request) {
       .from('schedules')
       .update({ current_students: currentStudents + 1 })
       .eq('id', scheduleId);
+
+    // 활동 로그: 관리자 게스트 수기 추가
+    insertEnrollmentActivityLog({
+      academy_id: academyId,
+      booking_id: booking.id,
+      action: 'ADMIN_ENROLL',
+      payload: {
+        schedule_id: scheduleId,
+        class_id: schedule.class_id,
+        guest_name: String(guestName).trim(),
+        guest_phone: String(guestPhone).trim(),
+      },
+    }, supabase).catch(() => {});
 
     return NextResponse.json({
       data: booking,

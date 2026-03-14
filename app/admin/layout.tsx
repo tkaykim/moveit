@@ -45,7 +45,7 @@ function LoadingOrTimeout({
           </>
         ) : (
           <>
-            <div className="w-8 h-8 border-2 border-neutral-300 dark:border-neutral-600 border-t-primary dark:border-t-[#CCFF00] rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-neutral-300 dark:border-neutral-600 border-t-primary rounded-full animate-spin" />
             <p className="text-sm text-neutral-500 dark:text-neutral-400">{message}</p>
           </>
         )}
@@ -185,7 +185,7 @@ export default function AdminLayout({
     }
     return (
       <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex flex-col items-center justify-center gap-4 px-4">
-        <div className="w-8 h-8 border-2 border-neutral-300 dark:border-neutral-600 border-t-primary dark:border-t-[#CCFF00] rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-neutral-300 dark:border-neutral-600 border-t-primary rounded-full animate-spin" />
         <p className="text-sm text-neutral-500 dark:text-neutral-400">권한 확인 중...</p>
         <button
           type="button"
@@ -231,7 +231,7 @@ export default function AdminLayout({
         <header className="hidden lg:flex h-14 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 items-center justify-end px-8 shadow-sm z-10 sticky top-0">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px]">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-green-500 p-[2px]">
                 <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center overflow-hidden">
                   {profile?.profile_image ? (
                     <img

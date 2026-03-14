@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
+import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 
 /**
  * POST: 사용자 연장/일시정지 신청 - 쿠키 또는 Authorization Bearer
@@ -94,6 +95,23 @@ export async function POST(request: Request) {
       console.error(insertError);
       return NextResponse.json({ error: '신청 저장에 실패했습니다.' }, { status: 500 });
     }
+
+    // 활동 로그: 연장/일시정지 신청
+    if (academyId) {
+      insertEnrollmentActivityLog({
+        academy_id: academyId,
+        user_id: authUser.id,
+        user_ticket_id: user_ticket_id,
+        extension_request_id: inserted?.id ?? null,
+        action: 'EXTENSION_REQUESTED',
+        payload: {
+          request_type,
+          days: request_type === 'EXTENSION' ? extension_days : pauseDays,
+          reason: reason?.trim(),
+        },
+      }, supabase).catch(() => {});
+    }
+
     return NextResponse.json({ data: inserted });
   } catch (e: any) {
     console.error(e);

@@ -310,7 +310,7 @@ export default function SupportPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={requestType === 'bug_report' ? '예: 스케줄 페이지에서 날짜 선택이 안 됩니다' : '예: 수강생 출석 통계 기능 추가 요청'}
-                className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00] focus:border-transparent outline-none transition-all text-sm"
+                className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-sm"
               />
             </div>
 
@@ -327,7 +327,7 @@ export default function SupportPage() {
                   onChange={(e) => setBugSituation(e.target.value)}
                   placeholder="예: 스케줄 관리 페이지에서 날짜를 클릭하면 아무 반응이 없습니다. 크롬 브라우저에서 발생합니다."
                   rows={4}
-                  className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00] focus:border-transparent outline-none transition-all text-sm resize-none"
+                  className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-sm resize-none"
                 />
               </div>
             )}
@@ -346,7 +346,7 @@ export default function SupportPage() {
                   ? '예: 달력에서 날짜를 선택하면 오류 메시지가 표시됩니다.'
                   : '예: 현재는 수강생 출석을 일일이 확인해야 합니다.'}
                 rows={4}
-                className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00] focus:border-transparent outline-none transition-all text-sm resize-none"
+                className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-sm resize-none"
               />
             </div>
 
@@ -364,7 +364,7 @@ export default function SupportPage() {
                   ? '예: 날짜를 클릭하면 해당 날짜의 스케줄이 정상적으로 표시되어야 합니다.'
                   : '예: 월간/주간 출석 통계를 한눈에 볼 수 있는 대시보드가 있으면 좋겠습니다.'}
                 rows={4}
-                className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00] focus:border-transparent outline-none transition-all text-sm resize-none"
+                className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-sm resize-none"
               />
             </div>
 
@@ -372,7 +372,7 @@ export default function SupportPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-3 bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black font-semibold rounded-xl hover:bg-neutral-800 dark:hover:bg-[#CCFF00]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm flex items-center justify-center gap-2"
+                className="w-full py-3 bg-neutral-900 text-white dark:text-black font-semibold rounded-xl hover:bg-neutral-800 dark:hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm flex items-center justify-center gap-2"
               >
                 {submitting ? (
                   <>
@@ -405,7 +405,7 @@ export default function SupportPage() {
         </div>
         <button
           onClick={() => setView('form')}
-          className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black font-semibold rounded-xl hover:bg-neutral-800 dark:hover:bg-[#CCFF00]/90 transition-all text-sm"
+          className="flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white dark:text-black font-semibold rounded-xl hover:bg-neutral-800 dark:hover:bg-primary/90 transition-all text-sm"
         >
           <Plus size={16} />
           새 요청

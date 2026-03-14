@@ -285,6 +285,16 @@ export async function POST(request: Request) {
       if (selectedUserTicketId) {
         try {
           await consumeUserTicket(selectedUserTicketId, resolvedClassId, 1);
+          // 활동 로그: 횟수 차감
+          if (academyId) {
+            insertEnrollmentActivityLog({
+              academy_id: academyId,
+              user_id: user.id,
+              user_ticket_id: selectedUserTicketId,
+              action: 'COUNT_DEDUCT',
+              payload: { delta: -1, class_id: resolvedClassId, schedule_id: scheduleId ?? null },
+            }).catch(() => {});
+          }
         } catch (ticketError: any) {
           console.error('Ticket usage error:', ticketError);
           return NextResponse.json(

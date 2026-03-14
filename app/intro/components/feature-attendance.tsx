@@ -29,14 +29,14 @@ export function FeatureAttendance() {
             <p className="text-[11px] text-neutral-500 dark:text-neutral-400">K-POP 정규반 (월/수)</p>
           </div>
           <div className="text-right">
-            <span className="text-xl font-bold text-[#CCFF00] text-shadow-sm">{presentCount}</span>
+            <span className="text-xl font-bold text-primary text-shadow-sm">{presentCount}</span>
             <span className="text-xs text-neutral-400 dark:text-neutral-500">/{totalCount}명</span>
           </div>
         </div>
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
           <div 
-            className="h-full bg-[#CCFF00] transition-all duration-500 ease-out"
+            className="h-full bg-primary transition-all duration-500 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -62,7 +62,7 @@ export function FeatureAttendance() {
                   </button>
                   <button 
                     onClick={() => handleCheck(student.id, 'present')}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 dark:text-neutral-500 hover:bg-[#CCFF00]/20 hover:text-[#CCFF00] transition-colors"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 dark:text-neutral-500 hover:bg-primary/20 hover:text-primary transition-colors"
                   >
                     <Check size={16} />
                   </button>
@@ -70,7 +70,7 @@ export function FeatureAttendance() {
               ) : (
                 <div className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
                   student.status === 'present' 
-                    ? 'bg-[#CCFF00]/20 text-[#aacc00]' 
+                    ? 'bg-primary/20 text-primary' 
                     : 'bg-red-100 dark:bg-red-900/30 text-red-500'
                 }`}>
                   {student.status === 'present' ? '출석' : '결석'}

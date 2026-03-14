@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getTicketById } from '@/lib/db/tickets';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
+import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { Database } from '@/types/database';
 import { sendNotification } from '@/lib/notifications';
@@ -164,6 +165,24 @@ export async function POST(request: Request) {
         { error: '수강권 구매에 실패했습니다.' },
         { status: 500 }
       );
+    }
+
+    // 활동 로그: 수강권 발급
+    if (ticket.academy_id) {
+      insertEnrollmentActivityLog({
+        academy_id: ticket.academy_id,
+        user_id: user.id,
+        user_ticket_id: userTicket.id,
+        action: 'TICKET_ISSUED',
+        payload: {
+          via: 'purchase',
+          ticket_name: ticket.name,
+          ticket_type: ticket.ticket_type,
+          remaining_count: remainingCount,
+          expiry_date: expiryDateStr,
+          price: finalPrice,
+        },
+      }).catch(() => {});
     }
 
     // 거래 기록 생성 (revenue_transactions) 및 학원 학생 등록

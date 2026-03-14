@@ -313,7 +313,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
               onClick={() => onNavigate?.('SETTINGS')}
               className="w-full flex items-center gap-4 hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-2xl p-2 -mx-2 transition-colors"
             >
-              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px]">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-primary to-green-500 p-[2px]">
                 <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center overflow-hidden">
                   {profileImage ? (
                     <img src={profileImage} alt={displayName} className="w-full h-full object-cover" />
@@ -354,8 +354,8 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
               className="w-full bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-sm border border-neutral-200 dark:border-neutral-800 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
             >
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-primary/20 dark:bg-[#CCFF00]/20 flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-primary dark:text-[#CCFF00]" />
+                <div className="w-12 h-12 rounded-xl bg-primary/20/20 flex items-center justify-center">
+                  <BookOpen className="w-6 h-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h2 className="text-base font-bold text-black dark:text-white">
@@ -378,7 +378,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
               <h2 className="text-base font-bold text-black dark:text-white">{t('my.myTickets')}</h2>
               <button
                 onClick={() => onNavigate?.('TICKETS')}
-                className="text-sm text-primary dark:text-[#CCFF00] font-medium flex items-center gap-1"
+                className="text-sm text-primary font-medium flex items-center gap-1"
               >
                 {t('common.viewAll')} <ChevronRight size={16} />
               </button>
@@ -400,7 +400,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                 </p>
                 <button
                   onClick={() => loadData()}
-                  className="inline-flex items-center gap-1.5 text-sm text-primary dark:text-[#CCFF00] font-medium"
+                  className="inline-flex items-center gap-1.5 text-sm text-primary font-medium"
                 >
                   <RefreshCw size={14} />
                   {language === 'en' ? 'Retry' : '다시 시도'}
@@ -448,14 +448,14 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-bold text-black dark:text-white">{t('my.myBookings')}</h2>
                   {totalUpcoming > 0 && (
-                    <span className="px-2 py-0.5 text-xs font-bold bg-primary/10 dark:bg-[#CCFF00]/20 text-primary dark:text-[#CCFF00] rounded-full">
+                    <span className="px-2 py-0.5 text-xs font-bold bg-primary/10/20 text-primary rounded-full">
                       {totalUpcoming}{language === 'ko' ? '건' : ''}
                     </span>
                   )}
                 </div>
                 <button
                   onClick={() => router.push('/my/bookings')}
-                  className="text-sm text-primary dark:text-[#CCFF00] font-medium flex items-center gap-1"
+                  className="text-sm text-primary font-medium flex items-center gap-1"
                 >
                   {t('common.viewAll')} <ChevronRight size={16} />
                 </button>
@@ -480,7 +480,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                   </p>
                   <button
                     onClick={() => loadData()}
-                    className="inline-flex items-center gap-1.5 text-sm text-primary dark:text-[#CCFF00] font-medium"
+                    className="inline-flex items-center gap-1.5 text-sm text-primary font-medium"
                   >
                     <RefreshCw size={14} />
                     {language === 'en' ? 'Retry' : '다시 시도'}
@@ -492,7 +492,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                   <p className="text-neutral-500 text-sm">{t('my.noBookings')}</p>
                   <button
                     onClick={() => router.push('/search')}
-                    className="mt-3 text-sm text-primary dark:text-[#CCFF00] font-medium"
+                    className="mt-3 text-sm text-primary font-medium"
                   >
                     {t('my.findClasses')}
                   </button>
@@ -502,10 +502,10 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                   {/* 다음 수업 */}
                   <div className="bg-neutral-50 dark:bg-neutral-800 rounded-xl p-4 border border-neutral-200 dark:border-neutral-700">
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-6 h-6 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center">
+                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
                         <Play size={12} className="text-white dark:text-black ml-0.5" />
                       </div>
-                      <span className="text-xs font-bold text-primary dark:text-[#CCFF00]">{t('my.nextClass')}</span>
+                      <span className="text-xs font-bold text-primary">{t('my.nextClass')}</span>
                     </div>
                     <div className="font-bold text-black dark:text-white text-lg mb-2">
                       {nextClass.className}
@@ -533,7 +533,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                           });
                           setIsQrModalOpen(true);
                         }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary dark:bg-[#CCFF00] text-white dark:text-black text-xs font-bold rounded-lg hover:opacity-90 transition-opacity flex-shrink-0"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white dark:text-black text-xs font-bold rounded-lg hover:opacity-90 transition-opacity flex-shrink-0"
                       >
                         <QrCode size={14} />
                         QR 출석
@@ -553,14 +553,14 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                             className={`
                               flex flex-col items-center py-2 rounded-lg transition-colors
                               ${day.isToday 
-                                ? 'bg-primary/10 dark:bg-[#CCFF00]/20 ring-2 ring-primary dark:ring-[#CCFF00]' 
+                                ? 'bg-primary/10/20 ring-2 ring-primary' 
                                 : 'bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700'
                               }
                             `}
                           >
                             <span className={`text-xs font-medium ${
                               day.isToday 
-                                ? 'text-primary dark:text-[#CCFF00]' 
+                                ? 'text-primary' 
                                 : 'text-neutral-500'
                             }`}>
                               {day.dayLabel}
@@ -568,7 +568,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                             <span className={`text-sm font-bold mt-0.5 ${
                               day.count > 0 
                                 ? day.isToday 
-                                  ? 'text-primary dark:text-[#CCFF00]'
+                                  ? 'text-primary'
                                   : 'text-black dark:text-white'
                                 : 'text-neutral-300 dark:text-neutral-600'
                             }`}>

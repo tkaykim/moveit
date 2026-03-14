@@ -284,7 +284,28 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
         console.log(`관리자 판매 - 학원 학생 자동 등록 완료: user_id=${selectedStudent.id}, academy_id=${academyId}`);
       }
 
-      // 4. 로그 생성
+      // 4. 활동 로그: 관리자 판매 수강권 발급
+      try {
+        await fetch(`/api/academy-admin/${academyId}/activity-log`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'TICKET_ISSUED',
+            user_id: selectedStudent.id,
+            user_ticket_id: userTicket.id,
+            payload: {
+              via: 'admin_sale',
+              ticket_name: selectedProduct.name,
+              ticket_type: isPeriodTicket ? 'PERIOD' : 'COUNT',
+              remaining_count: remainingCount,
+              expiry_date: expiryDate,
+              final_price: pricing.final,
+            },
+          }),
+        });
+      } catch {}
+
+      // 5. 로그 생성
       const newLog = {
         id: transaction.id,
         date: new Date().toISOString(),

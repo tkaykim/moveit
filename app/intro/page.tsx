@@ -64,22 +64,22 @@ export default function IntroPage() {
       <nav className={`sticky top-0 z-50 backdrop-blur border-b ${isLight ? 'bg-white/95 border-neutral-200' : 'bg-neutral-950/95 border-neutral-800'}`}>
         <div className="max-w-5xl mx-auto px-4 h-14 flex justify-between items-center">
           <div className="flex items-center cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <span className={`text-xl font-bold ${isLight ? 'text-neutral-900' : 'text-[#CCFF00]'}`}>MoveIt</span>
+            <span className={`text-xl font-bold ${isLight ? 'text-neutral-900' : 'text-primary'}`}>MoveIt</span>
             <span className="ml-2 text-xs text-neutral-500 hidden sm:inline">댄스학원 운영 관리</span>
           </div>
           <div className="hidden sm:flex items-center gap-4">
             <button
               type="button"
               onClick={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}
-              className={`p-2 rounded-lg transition-colors ${isLight ? 'text-neutral-500 hover:text-neutral-700' : 'text-neutral-400 hover:text-[#CCFF00]'}`}
+              className={`p-2 rounded-lg transition-colors ${isLight ? 'text-neutral-500 hover:text-neutral-700' : 'text-neutral-400 hover:text-primary'}`}
               aria-label={isLight ? '다크 모드로 전환' : '라이트 모드로 전환'}
             >
               {isLight ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
             </button>
-            <a href="#comparison" className={`text-sm hover:underline ${isLight ? 'text-neutral-600 hover:text-neutral-900' : 'text-neutral-400 hover:text-[#CCFF00]'}`}>비교</a>
-            <a href="#admin" className={`text-sm hover:underline ${isLight ? 'text-neutral-600 hover:text-neutral-900' : 'text-neutral-400 hover:text-[#CCFF00]'}`}>관리자</a>
-            <a href="#pricing" className={`text-sm hover:underline ${isLight ? 'text-neutral-600 hover:text-neutral-900' : 'text-neutral-400 hover:text-[#CCFF00]'}`}>요금제</a>
-            <a href="#contact" className={`text-sm font-semibold px-3 py-1.5 rounded-lg ${isLight ? 'text-white bg-neutral-900' : 'text-black bg-[#CCFF00]'}`}>도입 문의</a>
+            <a href="#comparison" className={`text-sm hover:underline ${isLight ? 'text-neutral-600 hover:text-neutral-900' : 'text-neutral-400 hover:text-primary'}`}>비교</a>
+            <a href="#admin" className={`text-sm hover:underline ${isLight ? 'text-neutral-600 hover:text-neutral-900' : 'text-neutral-400 hover:text-primary'}`}>관리자</a>
+            <a href="#pricing" className={`text-sm hover:underline ${isLight ? 'text-neutral-600 hover:text-neutral-900' : 'text-neutral-400 hover:text-primary'}`}>요금제</a>
+            <a href="#contact" className={`text-sm font-semibold px-3 py-1.5 rounded-lg ${isLight ? 'text-white bg-neutral-900' : 'text-black bg-primary'}`}>도입 문의</a>
           </div>
           <div className="flex sm:hidden items-center gap-1">
             <button
@@ -100,19 +100,19 @@ export default function IntroPage() {
             <a href="#comparison" onClick={closeMobileMenu} className={`block py-2.5 font-medium ${isLight ? 'text-neutral-900' : 'text-white'}`}>비교</a>
             <a href="#admin" onClick={closeMobileMenu} className={`block py-2.5 font-medium ${isLight ? 'text-neutral-900' : 'text-white'}`}>관리자</a>
             <a href="#pricing" onClick={closeMobileMenu} className={`block py-2.5 font-medium ${isLight ? 'text-neutral-900' : 'text-white'}`}>요금제</a>
-            <a href="#contact" onClick={closeMobileMenu} className={`block py-3 mt-4 text-center font-bold rounded-lg ${isLight ? 'bg-neutral-900 text-white' : 'bg-[#CCFF00] text-black'}`}>도입 문의</a>
+            <a href="#contact" onClick={closeMobileMenu} className={`block py-3 mt-4 text-center font-bold rounded-lg ${isLight ? 'bg-neutral-900 text-white' : 'bg-primary text-black'}`}>도입 문의</a>
           </div>
         )}
       </nav>
 
       {/* ═══════ Hero (포인트만, 가운데 정렬) ═══════ */}
       <section className={`py-8 sm:py-12 md:py-16 max-w-5xl mx-auto px-4 text-center ${isLight ? 'bg-white' : 'bg-transparent'}`}>
-        <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium mb-4 ${isLight ? 'bg-neutral-100 text-neutral-700' : 'bg-[#CCFF00]/15 text-[#CCFF00]'}`}>
+        <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium mb-4 ${isLight ? 'bg-neutral-100 text-neutral-700' : 'bg-primary/15 text-primary'}`}>
           현직 댄스학원 운영진이 직접 개발
         </div>
         <h1 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight leading-[1.15] mb-8 ${isLight ? 'text-neutral-900' : 'text-white'}`}>
           댄스학원 운영,<br className="sm:hidden" />
-          <span className={isLight ? 'text-emerald-700' : 'text-[#CCFF00]'}>이제 무빗으로</span> 확실하게
+          <span className={isLight ? 'text-emerald-700' : 'text-primary'}>이제 무빗으로</span> 확실하게
         </h1>
         <div className="flex flex-col gap-4 max-w-2xl mx-auto">
           <p className={`text-base sm:text-xl md:text-2xl font-bold leading-snug px-1 ${isLight ? 'text-neutral-800' : 'text-neutral-200'}`}>
@@ -146,7 +146,7 @@ export default function IntroPage() {
           <p className={`text-center text-sm sm:text-base mb-8 ${isLight ? 'text-neutral-600' : 'text-neutral-300'}`}>복잡한 운영 방식도 무빗 하나로 처리합니다.</p>
           <div className="grid grid-cols-3 gap-3 sm:gap-4">
             {[
-              { icon: Calendar, line1: '기간제 학원', line2: '(정규 클래스)', color: isLight ? 'text-neutral-900' : 'text-[#CCFF00]' },
+              { icon: Calendar, line1: '기간제 학원', line2: '(정규 클래스)', color: isLight ? 'text-neutral-900' : 'text-primary' },
               { icon: CreditCard, line1: '쿠폰제 학원', line2: '(팝업수업)', color: isLight ? 'text-pink-600' : 'text-pink-400' },
               { icon: Users, line1: '단일 워크샵', line2: null, color: isLight ? 'text-purple-600' : 'text-purple-400' },
             ].map(({ icon: Icon, line1, line2, color }) => (
@@ -228,7 +228,7 @@ export default function IntroPage() {
                         <p className={`text-[10px] ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>{cls.teacher} · {cls.students}</p>
                       </div>
                       <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
-                        cls.status === '수업중' ? (isLight ? 'bg-[#CCFF00]/20 text-[#aacc00]' : 'text-[#CCFF00]') : (isLight ? 'bg-neutral-100 text-neutral-500' : 'bg-neutral-800 text-neutral-400')
+                        cls.status === '수업중' ? (isLight ? 'bg-primary/20 text-primary' : 'text-primary') : (isLight ? 'bg-neutral-100 text-neutral-500' : 'bg-neutral-800 text-neutral-400')
                       }`}>{cls.status}</span>
                     </div>
                   ))}
@@ -243,8 +243,8 @@ export default function IntroPage() {
       <section id="admin" className={`py-10 md:py-14 ${isLight ? 'bg-white' : 'bg-transparent'}`}>
         <div className="max-w-5xl mx-auto px-4">
           <div className="flex justify-center mb-10 md:mb-12 px-2">
-            <div className={`inline-flex items-center justify-center gap-2 px-5 py-3.5 sm:px-6 sm:py-4 rounded-2xl border-2 border-[#CCFF00]/50 shadow-lg shadow-[#CCFF00]/10 animate-[intro-cta-pulse_2.5s_ease-in-out_infinite] text-center ${isLight ? 'bg-[#CCFF00]/15' : 'bg-[#CCFF00]/20 border-[#CCFF00]/60'}`}>
-              <span className={`text-base sm:text-lg md:text-2xl font-black tracking-tight ${isLight ? 'text-neutral-900' : 'text-[#CCFF00]'}`}>
+            <div className={`inline-flex items-center justify-center gap-2 px-5 py-3.5 sm:px-6 sm:py-4 rounded-2xl border-2 border-primary/50 shadow-lg shadow-primary/10 animate-[intro-cta-pulse_2.5s_ease-in-out_infinite] text-center ${isLight ? 'bg-primary/15' : 'bg-primary/20 border-primary/60'}`}>
+              <span className={`text-base sm:text-lg md:text-2xl font-black tracking-tight ${isLight ? 'text-neutral-900' : 'text-primary'}`}>
                 직접 클릭해보세요!
               </span>
             </div>
@@ -289,11 +289,11 @@ export default function IntroPage() {
           {/* Feature 4: 수강권 — 모바일에서는 글 먼저, md에서만 좌우 스왑 */}
           <div className="grid md:grid-cols-2 gap-6 md:gap-10 items-center mb-14 md:mb-16">
             <div className="text-center md:order-last">
-              <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-3 ${isLight ? 'bg-[#CCFF00]/20 text-[#aacc00]' : 'text-[#CCFF00]'}`}>수강권</span>
+              <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-3 ${isLight ? 'bg-primary/20 text-primary' : 'text-primary'}`}>수강권</span>
               <h3 className={`text-lg md:text-xl font-bold ${isLight ? 'text-neutral-900' : 'text-white'}`}>예약 시 자동 차감 · 실수 없음</h3>
             </div>
             <div className="relative md:order-first">
-              <div className={`absolute -inset-3 bg-gradient-to-tr rounded-3xl blur-2xl opacity-50 ${isLight ? 'from-[#CCFF00]/20 to-green-50' : 'from-[#CCFF00]/10 to-green-900/20'}`} />
+              <div className={`absolute -inset-3 bg-gradient-to-tr rounded-3xl blur-2xl opacity-50 ${isLight ? 'from-primary/20 to-green-50' : 'from-primary/10 to-green-900/20'}`} />
               <div className="relative"><FeatureTicket /></div>
             </div>
           </div>
@@ -340,8 +340,8 @@ export default function IntroPage() {
             { icon: Settings, title: '디테일 세팅', desc: '알림, 결제 연동, 학원 소개 등' },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className={`p-4 rounded-2xl border text-center ${isLight ? 'border-neutral-200 bg-white' : 'border-neutral-800 bg-neutral-900/50'}`}>
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 ${isLight ? 'bg-neutral-100' : 'bg-[#CCFF00]/15'}`}>
-                <Icon className={`w-6 h-6 ${isLight ? 'text-neutral-800' : 'text-[#CCFF00]'}`} />
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 ${isLight ? 'bg-neutral-100' : 'bg-primary/15'}`}>
+                <Icon className={`w-6 h-6 ${isLight ? 'text-neutral-800' : 'text-primary'}`} />
               </div>
               <h3 className="font-bold text-sm mb-1">{title}</h3>
               <p className={`text-[11px] leading-snug ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>{desc}</p>
@@ -366,20 +366,20 @@ export default function IntroPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={`block text-[11px] font-medium mb-1 ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>담당자</label>
-                <input type="text" placeholder="홍길동" className={`w-full px-3 py-2 rounded-lg border text-sm outline-none ${isLight ? 'border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-500' : 'border-neutral-600 bg-neutral-900 text-white placeholder:text-neutral-500 focus:border-[#CCFF00]/50'}`} />
+                <input type="text" placeholder="홍길동" className={`w-full px-3 py-2 rounded-lg border text-sm outline-none ${isLight ? 'border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-500' : 'border-neutral-600 bg-neutral-900 text-white placeholder:text-neutral-500 focus:border-primary/50'}`} />
               </div>
               <div>
                 <label className={`block text-[11px] font-medium mb-1 ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>연락처</label>
-                <input type="tel" placeholder="010-1234-5678" className={`w-full px-3 py-2 rounded-lg border text-sm outline-none ${isLight ? 'border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-500' : 'border-neutral-600 bg-neutral-900 text-white placeholder:text-neutral-500 focus:border-[#CCFF00]/50'}`} />
+                <input type="tel" placeholder="010-1234-5678" className={`w-full px-3 py-2 rounded-lg border text-sm outline-none ${isLight ? 'border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-500' : 'border-neutral-600 bg-neutral-900 text-white placeholder:text-neutral-500 focus:border-primary/50'}`} />
               </div>
             </div>
             <div>
               <label className={`block text-[11px] font-medium mb-1 ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>학원명</label>
-              <input type="text" placeholder="학원명" className={`w-full px-3 py-2 rounded-lg border text-sm outline-none ${isLight ? 'border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-500' : 'border-neutral-600 bg-neutral-900 text-white placeholder:text-neutral-500 focus:border-[#CCFF00]/50'}`} />
+              <input type="text" placeholder="학원명" className={`w-full px-3 py-2 rounded-lg border text-sm outline-none ${isLight ? 'border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-500' : 'border-neutral-600 bg-neutral-900 text-white placeholder:text-neutral-500 focus:border-primary/50'}`} />
             </div>
             <div>
               <label className={`block text-[11px] font-medium mb-1 ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>운영 형태</label>
-              <select className={`w-full px-3 py-2 rounded-lg border text-sm outline-none ${isLight ? 'border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-500' : 'border-neutral-600 bg-neutral-900 text-white placeholder:text-neutral-500 focus:border-[#CCFF00]/50'}`}>
+              <select className={`w-full px-3 py-2 rounded-lg border text-sm outline-none ${isLight ? 'border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-500' : 'border-neutral-600 bg-neutral-900 text-white placeholder:text-neutral-500 focus:border-primary/50'}`}>
                 <option value="">선택</option>
                 <option value="term">기간제</option>
                 <option value="coupon">쿠폰제</option>
@@ -389,9 +389,9 @@ export default function IntroPage() {
             </div>
             <div>
               <label className={`block text-[11px] font-medium mb-1 ${isLight ? 'text-neutral-500' : 'text-neutral-400'}`}>문의 내용</label>
-              <textarea rows={3} placeholder="궁금한 점을 적어주세요." className={`w-full px-3 py-2 rounded-lg border text-sm resize-none outline-none ${isLight ? 'border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-500' : 'border-neutral-600 bg-neutral-900 text-white placeholder:text-neutral-500 focus:border-[#CCFF00]/50'}`} />
+              <textarea rows={3} placeholder="궁금한 점을 적어주세요." className={`w-full px-3 py-2 rounded-lg border text-sm resize-none outline-none ${isLight ? 'border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-500' : 'border-neutral-600 bg-neutral-900 text-white placeholder:text-neutral-500 focus:border-primary/50'}`} />
             </div>
-            <button type="submit" className={`w-full py-2.5 rounded-xl font-bold text-sm ${isLight ? 'bg-neutral-900 text-white' : 'bg-[#CCFF00] text-black'}`}>상담 신청하기</button>
+            <button type="submit" className={`w-full py-2.5 rounded-xl font-bold text-sm ${isLight ? 'bg-neutral-900 text-white' : 'bg-primary text-black'}`}>상담 신청하기</button>
           </div>
         </div>
       </section>

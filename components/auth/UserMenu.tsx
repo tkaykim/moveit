@@ -47,7 +47,7 @@ export function UserMenu() {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
       >
-        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px]">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-green-500 p-[2px]">
           <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center overflow-hidden">
             {profileImage ? (
               <img

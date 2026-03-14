@@ -176,7 +176,7 @@ export function InstructorDashboardView() {
               onClick={() => setAcademyId('')}
               className={`px-3 py-1.5 rounded-full text-xs font-medium ${
                 !academyId
-                  ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                  ? 'bg-primary text-black'
                   : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'
               }`}
             >
@@ -189,7 +189,7 @@ export function InstructorDashboardView() {
                 onClick={() => setAcademyId(a.id)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium ${
                   academyId === a.id
-                    ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                    ? 'bg-primary text-black'
                     : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'
                 }`}
               >

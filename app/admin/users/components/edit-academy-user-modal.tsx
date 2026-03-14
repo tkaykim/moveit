@@ -114,7 +114,7 @@ export default function EditAcademyUserModal({
           <button
             onClick={onSave}
             disabled={editLoading}
-            className="px-4 py-2 text-sm font-medium bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium bg-primary text-black rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {editLoading ? '저장 중...' : '저장하기'}
           </button>

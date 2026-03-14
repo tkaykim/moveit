@@ -76,7 +76,7 @@ export const SettingsView = ({ onBack }: SettingsViewProps) => {
               displayName={userName}
             />
           ) : (
-            <div className="w-[88px] h-[88px] rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px]">
+            <div className="w-[88px] h-[88px] rounded-full bg-gradient-to-tr from-primary to-green-500 p-[2px]">
               <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center">
                 <User className="text-black dark:text-white" size={32} />
               </div>
@@ -143,7 +143,7 @@ export const SettingsView = ({ onBack }: SettingsViewProps) => {
               onClick={() => handleLanguageChange('ko')}
               className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-all ${
                 language === 'ko'
-                  ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                  ? 'bg-primary text-black'
                   : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
               }`}
             >
@@ -153,7 +153,7 @@ export const SettingsView = ({ onBack }: SettingsViewProps) => {
               onClick={() => handleLanguageChange('en')}
               className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-all ${
                 language === 'en'
-                  ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                  ? 'bg-primary text-black'
                   : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
               }`}
             >

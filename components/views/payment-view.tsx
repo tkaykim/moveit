@@ -154,7 +154,7 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
         </div>
         <div className="flex justify-between items-center text-sm">
           <span className="text-neutral-600 dark:text-neutral-400">결제 금액</span>
-          <span className="text-xl font-bold text-primary dark:text-[#CCFF00]">
+          <span className="text-xl font-bold text-primary">
             {classInfo?.price?.toLocaleString() || "35,000"}원
           </span>
         </div>
@@ -171,22 +171,22 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
               onClick={() => handlePaymentMethodSelect('card')}
               className={`w-full rounded-xl p-4 flex justify-between items-center border-2 transition-colors ${
                 paymentMethod === 'card'
-                  ? 'bg-neutral-200 dark:bg-neutral-800 border-primary dark:border-[#CCFF00]'
+                  ? 'bg-neutral-200 dark:bg-neutral-800 border-primary'
                   : 'bg-neutral-100 dark:bg-neutral-900 border-transparent hover:border-neutral-300 dark:hover:border-neutral-700'
               }`}
             >
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  paymentMethod === 'card' ? 'bg-primary/20 dark:bg-[#CCFF00]/20' : 'bg-neutral-200 dark:bg-neutral-800'
+                  paymentMethod === 'card' ? 'bg-primary/20/20' : 'bg-neutral-200 dark:bg-neutral-800'
                 }`}>
-                  <CreditCard className={paymentMethod === 'card' ? 'text-primary dark:text-[#CCFF00]' : 'text-neutral-500'} size={20} />
+                  <CreditCard className={paymentMethod === 'card' ? 'text-primary' : 'text-neutral-500'} size={20} />
                 </div>
                 <div className="text-left">
                   <div className="text-black dark:text-white font-bold">카드</div>
                 </div>
               </div>
               {paymentMethod === 'card' && (
-                <div className="w-5 h-5 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center">
+                <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
                   <CheckCircle size={14} className="text-black" />
                 </div>
               )}
@@ -195,22 +195,22 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
               onClick={() => handlePaymentMethodSelect('account')}
               className={`w-full rounded-xl p-4 flex justify-between items-center border-2 transition-colors ${
                 paymentMethod === 'account'
-                  ? 'bg-neutral-200 dark:bg-neutral-800 border-primary dark:border-[#CCFF00]'
+                  ? 'bg-neutral-200 dark:bg-neutral-800 border-primary'
                   : 'bg-neutral-100 dark:bg-neutral-900 border-transparent hover:border-neutral-300 dark:hover:border-neutral-700'
               }`}
             >
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  paymentMethod === 'account' ? 'bg-primary/20 dark:bg-[#CCFF00]/20' : 'bg-neutral-200 dark:bg-neutral-800'
+                  paymentMethod === 'account' ? 'bg-primary/20/20' : 'bg-neutral-200 dark:bg-neutral-800'
                 }`}>
-                  <Building2 className={paymentMethod === 'account' ? 'text-primary dark:text-[#CCFF00]' : 'text-neutral-500'} size={20} />
+                  <Building2 className={paymentMethod === 'account' ? 'text-primary' : 'text-neutral-500'} size={20} />
                 </div>
                 <div className="text-left">
                   <div className="text-black dark:text-white font-bold">계좌이체</div>
                 </div>
               </div>
               {paymentMethod === 'account' && (
-                <div className="w-5 h-5 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center">
+                <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
                   <CheckCircle size={14} className="text-black" />
                 </div>
               )}
@@ -226,15 +226,15 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
               onClick={() => handlePaymentMethodSelect('general_ticket')}
               className={`w-full rounded-xl p-4 flex justify-between items-center border-2 transition-colors ${
                 paymentMethod === 'general_ticket'
-                  ? 'bg-neutral-200 dark:bg-neutral-800 border-primary dark:border-[#CCFF00]'
+                  ? 'bg-neutral-200 dark:bg-neutral-800 border-primary'
                   : 'bg-neutral-100 dark:bg-neutral-900 border-transparent hover:border-neutral-300 dark:hover:border-neutral-700'
               }`}
             >
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  paymentMethod === 'general_ticket' ? 'bg-primary/20 dark:bg-[#CCFF00]/20' : 'bg-neutral-200 dark:bg-neutral-800'
+                  paymentMethod === 'general_ticket' ? 'bg-primary/20/20' : 'bg-neutral-200 dark:bg-neutral-800'
                 }`}>
-                  <Wallet className={paymentMethod === 'general_ticket' ? 'text-primary dark:text-[#CCFF00]' : 'text-neutral-500'} size={20} />
+                  <Wallet className={paymentMethod === 'general_ticket' ? 'text-primary' : 'text-neutral-500'} size={20} />
                 </div>
                 <div className="text-left">
                   <div className="text-black dark:text-white font-bold">{group.name}</div>
@@ -242,7 +242,7 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
                 </div>
               </div>
               {paymentMethod === 'general_ticket' && (
-                <div className="w-5 h-5 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center">
+                <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
                   <CheckCircle size={14} className="text-black" />
                 </div>
               )}
@@ -258,15 +258,15 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
               onClick={() => handlePaymentMethodSelect('academy_ticket')}
               className={`w-full rounded-xl p-4 flex justify-between items-center border-2 transition-colors ${
                 paymentMethod === 'academy_ticket'
-                  ? 'bg-neutral-200 dark:bg-neutral-800 border-primary dark:border-[#CCFF00]'
+                  ? 'bg-neutral-200 dark:bg-neutral-800 border-primary'
                   : 'bg-neutral-100 dark:bg-neutral-900 border-transparent hover:border-neutral-300 dark:hover:border-neutral-700'
               }`}
             >
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  paymentMethod === 'academy_ticket' ? 'bg-primary/20 dark:bg-[#CCFF00]/20' : 'bg-neutral-200 dark:bg-neutral-800'
+                  paymentMethod === 'academy_ticket' ? 'bg-primary/20/20' : 'bg-neutral-200 dark:bg-neutral-800'
                 }`}>
-                  <Wallet className={paymentMethod === 'academy_ticket' ? 'text-primary dark:text-[#CCFF00]' : 'text-neutral-500'} size={20} />
+                  <Wallet className={paymentMethod === 'academy_ticket' ? 'text-primary' : 'text-neutral-500'} size={20} />
                 </div>
                 <div className="text-left">
                   <div className="text-black dark:text-white font-bold">{group.name}</div>
@@ -274,7 +274,7 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
                 </div>
               </div>
               {paymentMethod === 'academy_ticket' && (
-                <div className="w-5 h-5 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center">
+                <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
                   <CheckCircle size={14} className="text-black" />
                 </div>
               )}
@@ -286,7 +286,7 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
       {/* 결제하기 버튼 */}
       <button 
         onClick={handlePayment}
-        className="w-full bg-primary dark:bg-[#CCFF00] text-black font-black py-4 rounded-xl text-lg shadow-[0_0_20px_rgba(204,255,0,0.3)] active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full bg-primary text-primary-foreground font-black py-4 rounded-xl text-lg shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={loading || ((paymentMethod === 'general_ticket' || paymentMethod === 'academy_ticket') && !selectedTicketId)}
       >
         {ENABLE_TOSS_PAYMENT && (paymentMethod === 'card' || paymentMethod === 'account')

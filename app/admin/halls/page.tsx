@@ -149,7 +149,7 @@ export default function HallsPage() {
                 capacity: 0,
               });
             }}
-            className="px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-2"
+            className="px-4 py-2 bg-primary text-black rounded-lg hover:opacity-90 flex items-center gap-2"
           >
             <Plus size={20} />
             {showForm ? '취소' : '강의실 추가'}
@@ -207,7 +207,7 @@ export default function HallsPage() {
             </div>
             <button
               type="submit"
-              className="w-full px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-lg hover:opacity-90"
+              className="w-full px-4 py-2 bg-primary text-black font-bold rounded-lg hover:opacity-90"
             >
               {editingId ? '수정' : '등록'}
             </button>
@@ -257,7 +257,7 @@ export default function HallsPage() {
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => handleEdit(hall)}
-                          className="text-primary dark:text-[#CCFF00] hover:opacity-80"
+                          className="text-primary hover:opacity-80"
                         >
                           <Edit size={18} />
                         </button>

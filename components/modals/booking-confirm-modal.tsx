@@ -260,7 +260,7 @@ export const BookingConfirmModal = ({
                       onClick={() => setSelectedTicketId(userTicket.id)}
                       className={`w-full p-4 rounded-xl border transition-all text-left ${
                         selectedTicketId === userTicket.id
-                          ? 'border-neutral-800 dark:border-[#CCFF00] bg-neutral-50 dark:bg-neutral-800'
+                          ? 'border-neutral-800 bg-neutral-50 dark:bg-neutral-800'
                           : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600'
                       }`}
                     >
@@ -310,7 +310,7 @@ export const BookingConfirmModal = ({
             <button
               onClick={handleBooking}
               disabled={booking || !selectedTicketId}
-              className="w-full py-3 bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black font-bold rounded-xl hover:bg-neutral-800 dark:hover:bg-[#b8e600] transition-colors disabled:opacity-50"
+              className="w-full py-3 bg-neutral-900 text-white dark:text-black font-bold rounded-xl hover:bg-neutral-800 hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
               {booking ? t('bookingConfirm.processing') : t('bookingConfirm.confirmBooking')}
             </button>

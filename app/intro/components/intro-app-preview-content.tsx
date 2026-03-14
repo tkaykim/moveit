@@ -10,7 +10,7 @@ export function IntroAppPreviewContent() {
       <header className="px-4 pt-6 pb-3 bg-white dark:bg-neutral-950">
         <div className="flex justify-between items-center mb-3">
           <h1 className="text-lg font-black italic tracking-tighter">
-            MOVE<span className="text-neutral-800 dark:text-[#CCFF00]">.</span>IT
+            MOVE<span className="text-neutral-800 dark:text-primary">.</span>IT
           </h1>
           <Bell className="text-neutral-500" size={20} />
         </div>
@@ -71,7 +71,7 @@ export function IntroAppPreviewContent() {
                   ))}
                 </div>
               </div>
-              <span className="text-xs font-bold text-neutral-800 dark:text-[#CCFF00] flex-shrink-0 self-center">
+              <span className="text-xs font-bold text-neutral-800 dark:text-primary flex-shrink-0 self-center">
                 {item.price}
               </span>
             </div>
@@ -96,7 +96,7 @@ export function IntroAppPreviewContent() {
       <div className="mt-4 px-4 text-center">
         <Link
           href="/intro/demo"
-          className="inline-flex items-center text-xs font-semibold text-[#CCFF00] dark:text-[#CCFF00] hover:underline"
+          className="inline-flex items-center text-xs font-semibold text-primary hover:underline"
         >
           전체 데모 체험하기 →
         </Link>

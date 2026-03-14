@@ -167,7 +167,7 @@ export const MyBookingsView = ({ onBack }: MyBookingsViewProps) => {
           </p>
           <button
             onClick={() => router.push("/my")}
-            className="text-primary dark:text-[#CCFF00] font-bold"
+            className="text-primary font-bold"
           >
             {language === "en" ? "Go to My Page" : "마이페이지로 이동"}
           </button>
@@ -199,7 +199,7 @@ export const MyBookingsView = ({ onBack }: MyBookingsViewProps) => {
           onClick={() => setFilter("UPCOMING")}
           className={`flex-1 py-2.5 rounded-xl text-sm font-bold ${
             filter === "UPCOMING"
-              ? "bg-primary dark:bg-[#CCFF00] text-black"
+              ? "bg-primary text-black"
               : "bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400"
           }`}
         >
@@ -209,7 +209,7 @@ export const MyBookingsView = ({ onBack }: MyBookingsViewProps) => {
           onClick={() => setFilter("PAST")}
           className={`flex-1 py-2.5 rounded-xl text-sm font-bold ${
             filter === "PAST"
-              ? "bg-primary dark:bg-[#CCFF00] text-black"
+              ? "bg-primary text-black"
               : "bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400"
           }`}
         >
@@ -247,7 +247,7 @@ export const MyBookingsView = ({ onBack }: MyBookingsViewProps) => {
           {filter === "UPCOMING" && (
             <button
               onClick={() => router.push("/search")}
-              className="text-primary dark:text-[#CCFF00] font-bold mt-2"
+              className="text-primary font-bold mt-2"
             >
               {language === "en" ? "Find classes" : "클래스 찾기"}
             </button>
@@ -266,7 +266,7 @@ export const MyBookingsView = ({ onBack }: MyBookingsViewProps) => {
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
                       isUpcoming
-                        ? "bg-primary dark:bg-[#CCFF00]"
+                        ? "bg-primary"
                         : "bg-neutral-200 dark:bg-neutral-700"
                     }`}
                   >
@@ -316,7 +316,7 @@ export const MyBookingsView = ({ onBack }: MyBookingsViewProps) => {
                           startTime: booking.startTime,
                         })
                       }
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-primary dark:bg-[#CCFF00] text-black text-xs font-bold rounded-lg hover:opacity-90 flex-shrink-0"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-black text-xs font-bold rounded-lg hover:opacity-90 flex-shrink-0"
                     >
                       <QrCode size={14} />
                       QR 출석

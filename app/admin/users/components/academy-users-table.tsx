@@ -104,7 +104,7 @@ export default function AcademyUsersTable({
                           {userRoles.length > 2 && !isExpanded && (
                             <button
                               onClick={() => setExpandedUserId(user.id)}
-                              className="text-xs text-primary dark:text-[#CCFF00] hover:underline"
+                              className="text-xs text-primary hover:underline"
                             >
                               +{userRoles.length - 2}개 더보기
                             </button>
@@ -112,7 +112,7 @@ export default function AcademyUsersTable({
                           {isExpanded && userRoles.length > 2 && (
                             <button
                               onClick={() => setExpandedUserId(null)}
-                              className="text-xs text-primary dark:text-[#CCFF00] hover:underline"
+                              className="text-xs text-primary hover:underline"
                             >
                               접기
                             </button>
@@ -126,7 +126,7 @@ export default function AcademyUsersTable({
                     <td className="px-6 py-4 whitespace-nowrap text-right">
                       <button
                         onClick={() => onEditUser(user)}
-                        className="p-1.5 text-neutral-600 dark:text-neutral-400 hover:text-primary dark:hover:text-[#CCFF00] transition-colors"
+                        className="p-1.5 text-neutral-600 dark:text-neutral-400 hover:text-primary transition-colors"
                         title="수정"
                       >
                         <Edit2 size={16} />

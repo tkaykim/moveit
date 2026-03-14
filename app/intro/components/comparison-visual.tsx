@@ -34,14 +34,14 @@ export function ComparisonVisual() {
         </div>
 
         {/* 무빗 카드 - 강조 */}
-        <div className="relative rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 overflow-hidden border-2 border-[#CCFF00]/40 bg-gradient-to-b from-[#CCFF00]/15 to-[#CCFF00]/5 shadow-[0_0_40px_-12px_rgba(204,255,0,0.35)] min-w-0">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[#CCFF00]/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          <p className="relative text-center text-[#CCFF00] text-xs sm:text-sm font-bold mb-3 sm:mb-5">무빗</p>
+        <div className="relative rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 overflow-hidden border-2 border-primary/40 bg-gradient-to-b from-primary/15 to-primary/5 shadow-[0_0_40px_-12px_rgba(var(--primary-rgb),0.35)] min-w-0">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <p className="relative text-center text-primary text-xs sm:text-sm font-bold mb-3 sm:mb-5">무빗</p>
           <div className="relative space-y-2 sm:space-y-4">
             {ROWS.map((row, idx) => (
               <div key={idx} className="flex items-start gap-2 sm:gap-3">
-                <span className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#CCFF00]/25 flex items-center justify-center">
-                  <Check size={12} className="text-[#CCFF00]" />
+                <span className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary/25 flex items-center justify-center">
+                  <Check size={12} className="text-primary" />
                 </span>
                 <div className="min-w-0">
                   <p className="text-neutral-400 text-[10px] sm:text-xs font-medium mb-0.5">{row.name}</p>

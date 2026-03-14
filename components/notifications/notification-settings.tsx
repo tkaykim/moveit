@@ -24,7 +24,7 @@ function ToggleSwitch({ checked, onChange, disabled }: {
       onClick={() => !disabled && onChange(!checked)}
       className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
         checked
-          ? 'bg-primary dark:bg-[#CCFF00]'
+          ? 'bg-primary'
           : 'bg-neutral-300 dark:bg-neutral-600'
       } ${disabled ? 'opacity-40' : ''}`}
     >
@@ -248,7 +248,7 @@ export function NotificationSettings({ onBack }: NotificationSettingsProps) {
           <h2 className="text-xl font-bold text-black dark:text-white">알림 설정</h2>
           <p className="text-xs text-neutral-500 mt-0.5">
             {enabledCount}/{SETTING_CATEGORIES.length}개 카테고리 활성
-            {saving && <span className="ml-2 text-primary dark:text-[#CCFF00]">저장 중...</span>}
+            {saving && <span className="ml-2 text-primary">저장 중...</span>}
           </p>
         </div>
       </div>
@@ -337,7 +337,7 @@ export function NotificationSettings({ onBack }: NotificationSettingsProps) {
                   onClick={() => updatePreference('reminder_minutes_before', option.value)}
                   className={`py-1.5 px-3.5 rounded-xl text-xs font-medium transition-all ${
                     prefs.reminder_minutes_before === option.value
-                      ? 'bg-primary dark:bg-[#CCFF00] text-black shadow-sm'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
                       : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
                   }`}
                 >
@@ -396,7 +396,7 @@ export function NotificationSettings({ onBack }: NotificationSettingsProps) {
                     {cat.subItems.map((sub, idx) => (
                       <div key={idx} className="flex items-start gap-2">
                         <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
-                          isEnabled && !disabled ? 'bg-primary dark:bg-[#CCFF00]' : 'bg-neutral-300 dark:bg-neutral-600'
+                          isEnabled && !disabled ? 'bg-primary' : 'bg-neutral-300 dark:bg-neutral-600'
                         }`} />
                         <div>
                           <p className={`text-xs font-medium ${

@@ -315,7 +315,7 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
               onClick={() => setClassTypeFilter('all')}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                 classTypeFilter === 'all'
-                  ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                  ? 'bg-primary text-black'
                   : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-700'
               }`}
             >

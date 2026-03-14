@@ -181,7 +181,7 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
               </span>
             )}
             {dancer.genre && (
-              <span className="bg-primary dark:bg-[#CCFF00] text-black text-[10px] font-bold px-2 py-1 rounded">
+              <span className="bg-primary text-black text-[10px] font-bold px-2 py-1 rounded">
                 {dancer.genre}
               </span>
             )}
@@ -279,7 +279,7 @@ export const DancerDetailView = ({ dancer, onBack }: DancerDetailViewProps) => {
                     </div>
                     <button 
                       onClick={handleBookSchedule}
-                      className="bg-primary dark:bg-[#CCFF00] text-black text-xs font-bold px-4 py-2 rounded-full hover:bg-primary/90 dark:hover:bg-[#b8e600] transition-colors"
+                      className="bg-primary text-black text-xs font-bold px-4 py-2 rounded-full hover:bg-primary/90 hover:bg-primary/90 transition-colors"
                     >
                       신청
                     </button>

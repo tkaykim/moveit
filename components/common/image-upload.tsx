@@ -151,7 +151,7 @@ export function ImageUpload({
           onClick={() => switchMode('file')}
           className={`px-4 py-2 text-sm font-medium transition-colors ${
             mode === 'file'
-              ? 'border-b-2 border-primary dark:border-[#CCFF00] text-primary dark:text-[#CCFF00]'
+              ? 'border-b-2 border-primary text-primary'
               : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
           }`}
         >
@@ -165,7 +165,7 @@ export function ImageUpload({
           onClick={() => switchMode('url')}
           className={`px-4 py-2 text-sm font-medium transition-colors ${
             mode === 'url'
-              ? 'border-b-2 border-primary dark:border-[#CCFF00] text-primary dark:text-[#CCFF00]'
+              ? 'border-b-2 border-primary text-primary'
               : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
           }`}
         >
@@ -217,7 +217,7 @@ export function ImageUpload({
           ) : (
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="w-full h-48 border-2 border-dashed border-neutral-300 dark:border-neutral-700 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary dark:hover:border-[#CCFF00] transition-colors bg-neutral-50 dark:bg-neutral-900"
+              className="w-full h-48 border-2 border-dashed border-neutral-300 dark:border-neutral-700 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors bg-neutral-50 dark:bg-neutral-900"
             >
               <ImageIcon className="text-neutral-400 dark:text-neutral-500 mb-2" size={48} />
               <p className="text-sm text-neutral-600 dark:text-neutral-400">

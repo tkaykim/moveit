@@ -246,7 +246,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
               onClick={() => setActiveTab('all')}
               className={`flex-1 py-4 text-sm font-bold transition-colors ${
                 activeTab === 'all'
-                  ? 'text-black dark:text-white border-b-2 border-primary dark:border-[#CCFF00]'
+                  ? 'text-black dark:text-white border-b-2 border-primary'
                   : 'text-neutral-500 dark:text-neutral-400'
               }`}
             >
@@ -256,7 +256,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
               onClick={() => setActiveTab('academy')}
               className={`flex-1 py-4 text-sm font-bold transition-colors ${
                 activeTab === 'academy'
-                  ? 'text-black dark:text-white border-b-2 border-primary dark:border-[#CCFF00]'
+                  ? 'text-black dark:text-white border-b-2 border-primary'
                   : 'text-neutral-500 dark:text-neutral-400'
               }`}
             >
@@ -267,7 +267,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
         
         {/* academyId가 있을 때 헤더 표시 */}
         {academyId && (
-          <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 bg-primary/5 dark:bg-[#CCFF00]/5">
+          <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 bg-primary/5/5">
             <div className="text-sm font-bold text-black dark:text-white mb-1">
               {t('ticketRecharge.academyTicketsFor', { name: academyName || selectedAcademy?.name_kr || selectedAcademy?.name_en || '' })}
             </div>
@@ -289,7 +289,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
                   placeholder={t('ticketRecharge.searchAcademy')}
-                  className="w-full pl-10 pr-4 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 text-black dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+                  className="w-full pl-10 pr-4 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 text-black dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 {searching && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -326,7 +326,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
 
               {/* 선택된 학원 */}
               {selectedAcademy && (
-                <div className="p-3 bg-primary/10 dark:bg-[#CCFF00]/10 rounded-xl flex items-center justify-between">
+                <div className="p-3 bg-primary/10/10 rounded-xl flex items-center justify-between">
                   <div>
                     <div className="font-bold text-black dark:text-white">
                       {selectedAcademy.name_kr || selectedAcademy.name_en || t('ticketRecharge.noName')}
@@ -388,13 +388,13 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
                       key={ticket.id}
                       className={`bg-neutral-100 dark:bg-neutral-800 rounded-2xl p-4 border ${
                         isPriority && isAvailableForClass
-                          ? 'border-primary dark:border-[#CCFF00] border-2 bg-primary/5 dark:bg-[#CCFF00]/5'
+                          ? 'border-primary border-2 bg-primary/5/5'
                           : 'border-neutral-200 dark:border-neutral-700'
                       }`}
                     >
                       {isPriority && isAvailableForClass && (
                         <div className="mb-2">
-                          <span className="text-xs font-bold px-2 py-1 bg-primary dark:bg-[#CCFF00] text-black rounded-full">
+                          <span className="text-xs font-bold px-2 py-1 bg-primary text-black rounded-full">
                             {t('ticketRecharge.availableForClass')}
                           </span>
                         </div>
@@ -402,7 +402,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <TicketIcon size={18} className="text-primary dark:text-[#CCFF00]" />
+                            <TicketIcon size={18} className="text-primary" />
                             <h3 className="font-bold text-black dark:text-white">{ticket.name}</h3>
                             {ticket.is_coupon && (
                               <span className="text-xs px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full">
@@ -420,7 +420,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-lg font-black text-primary dark:text-[#CCFF00]">
+                          <div className="text-lg font-black text-primary">
                             {ticket.price?.toLocaleString()}원
                           </div>
                         </div>
@@ -428,7 +428,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
                       <button
                         onClick={() => handlePurchase(ticket.id)}
                         disabled={purchasing === ticket.id}
-                        className="w-full bg-primary dark:bg-[#CCFF00] text-black font-bold py-3 rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2"
+                        className="w-full bg-primary text-black font-bold py-3 rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2"
                       >
                         {purchasing === ticket.id ? (
                           <>

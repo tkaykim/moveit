@@ -221,11 +221,11 @@ export function AcademyAdminHeader({ academyId, onMenuClick }: AcademyAdminHeade
             <input
               type="text"
               placeholder="학생, 강사 검색..."
-              className="pl-10 pr-4 py-2 bg-neutral-100 dark:bg-neutral-800 border-none rounded-full text-sm focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00] w-64 transition-all focus:w-80 text-neutral-900 dark:text-white placeholder-neutral-500 dark:placeholder-neutral-400"
+              className="pl-10 pr-4 py-2 bg-neutral-100 dark:bg-neutral-800 border-none rounded-full text-sm focus:ring-2 focus:ring-primary w-64 transition-all focus:w-80 text-neutral-900 dark:text-white placeholder-neutral-500 dark:placeholder-neutral-400"
             />
             <Search
               size={18}
-              className="absolute left-3.5 top-2.5 text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary dark:group-focus-within:text-[#CCFF00] transition-colors"
+              className="absolute left-3.5 top-2.5 text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary transition-colors"
             />
           </div>
           {mounted && (
@@ -245,7 +245,7 @@ export function AcademyAdminHeader({ academyId, onMenuClick }: AcademyAdminHeade
           {/* 데스크톱 로그인/로그아웃 */}
           {user ? (
             <div className="flex items-center gap-2 ml-2 pl-2 border-l border-neutral-200 dark:border-neutral-700">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[1.5px]">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-primary to-green-500 p-[1.5px]">
                 <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center overflow-hidden">
                   {profile?.profile_image ? (
                     <img

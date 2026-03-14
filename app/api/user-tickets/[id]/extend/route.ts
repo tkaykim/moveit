@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 
 /**
  * POST: 관리자 임의 연장
@@ -44,6 +45,21 @@ export async function POST(
       .update({ expiry_date: nextExpiry })
       .eq('id', userTicketId);
     if (updateErr) throw updateErr;
+
+    // 활동 로그: 관리자 임의 연장
+    const academyId = ut.tickets?.academy_id;
+    if (academyId) {
+      insertEnrollmentActivityLog({
+        academy_id: academyId,
+        user_ticket_id: userTicketId,
+        action: 'ADMIN_EXTEND',
+        payload: {
+          prev_expiry: ut.expiry_date,
+          new_expiry: nextExpiry,
+          extend_days: extend_days ?? null,
+        },
+      }, supabase).catch(() => {});
+    }
 
     return NextResponse.json({
       data: { user_ticket_id: userTicketId, expiry_date: nextExpiry },

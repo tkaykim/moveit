@@ -314,7 +314,7 @@ export function PushSendForm({ usersWithTokens, totalTokens, onSent }: PushSendF
   const tabCls = (active: boolean) =>
     `px-3 py-2 rounded-lg text-xs sm:text-sm font-medium border transition-all whitespace-nowrap ${
       active
-        ? 'bg-primary dark:bg-[#CCFF00] text-black border-primary dark:border-[#CCFF00]'
+        ? 'bg-primary text-black border-primary'
         : 'bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700 hover:border-neutral-400'
     }`;
 
@@ -352,7 +352,7 @@ export function PushSendForm({ usersWithTokens, totalTokens, onSent }: PushSendF
                     onClick={() => applyPreset(preset)}
                     className={`text-left p-2.5 rounded-xl border transition-all ${
                       isActive
-                        ? 'border-primary dark:border-[#CCFF00] bg-primary/5 dark:bg-[#CCFF00]/10 ring-1 ring-primary dark:ring-[#CCFF00]'
+                        ? 'border-primary bg-primary/5/10 ring-1 ring-primary'
                         : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500'
                     }`}
                   >
@@ -383,7 +383,7 @@ export function PushSendForm({ usersWithTokens, totalTokens, onSent }: PushSendF
               onChange={(e) => setTitle(e.target.value)}
               placeholder="알림 제목 (필수)"
               maxLength={100}
-              className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00] outline-none"
+              className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none"
             />
             <span className="text-xs text-neutral-400 float-right mt-0.5">{title.length}/100</span>
           </div>
@@ -397,7 +397,7 @@ export function PushSendForm({ usersWithTokens, totalTokens, onSent }: PushSendF
               placeholder="알림 내용을 입력하세요 (필수)"
               rows={4}
               maxLength={500}
-              className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00] outline-none resize-none"
+              className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none resize-none"
             />
             <span className="text-xs text-neutral-400 float-right mt-0.5">{message.length}/500</span>
           </div>
@@ -481,7 +481,7 @@ export function PushSendForm({ usersWithTokens, totalTokens, onSent }: PushSendF
                   onClick={() => toggleRole(role.value)}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                     selectedRoles.includes(role.value)
-                      ? 'bg-primary dark:bg-[#CCFF00] text-black border-transparent'
+                      ? 'bg-primary text-black border-transparent'
                       : 'bg-white dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-neutral-600'
                   }`}
                 >
@@ -528,7 +528,7 @@ export function PushSendForm({ usersWithTokens, totalTokens, onSent }: PushSendF
                 )}
               </div>
               {selectedUsers.length > 0 && (
-                <p className="text-xs text-primary dark:text-[#CCFF00]">{selectedUsers.length}명 선택됨</p>
+                <p className="text-xs text-primary">{selectedUsers.length}명 선택됨</p>
               )}
             </div>
           )}
@@ -638,7 +638,7 @@ export function PushSendForm({ usersWithTokens, totalTokens, onSent }: PushSendF
         <button
           onClick={handleSend}
           disabled={sending || !title.trim() || !message.trim()}
-          className="w-full py-3.5 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity text-sm"
+          className="w-full py-3.5 bg-primary text-black font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity text-sm"
         >
           {sending ? (
             <><Loader2 size={18} className="animate-spin" /> 발송 중...</>
@@ -670,7 +670,7 @@ function NotificationPreview({
       <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm overflow-hidden max-w-sm">
         {/* 상단 앱 이름 */}
         <div className="flex items-center gap-2 px-3 pt-3 pb-1">
-          <div className="w-4 h-4 rounded bg-primary dark:bg-[#CCFF00]" />
+          <div className="w-4 h-4 rounded bg-primary" />
           <span className="text-[10px] text-neutral-500 font-medium">MOVE.IT</span>
           <span className="text-[10px] text-neutral-400 ml-auto">지금</span>
         </div>

@@ -181,7 +181,7 @@ export const MyBookingsSection = ({ onAcademyClick, initialTab = 'upcoming', sec
             onClick={() => setActiveTab('upcoming')}
             className={`flex-1 py-3 text-sm font-bold transition-colors ${
               activeTab === 'upcoming'
-                ? 'bg-primary/10 dark:bg-[#CCFF00]/10 text-primary dark:text-[#CCFF00] border-b-2 border-primary dark:border-[#CCFF00]'
+                ? 'bg-primary/10/10 text-primary border-b-2 border-primary'
                 : 'text-neutral-500 dark:text-neutral-400'
             }`}
           >
@@ -191,7 +191,7 @@ export const MyBookingsSection = ({ onAcademyClick, initialTab = 'upcoming', sec
             onClick={() => setActiveTab('completed')}
             className={`flex-1 py-3 text-sm font-bold transition-colors ${
               activeTab === 'completed'
-                ? 'bg-primary/10 dark:bg-[#CCFF00]/10 text-primary dark:text-[#CCFF00] border-b-2 border-primary dark:border-[#CCFF00]'
+                ? 'bg-primary/10/10 text-primary border-b-2 border-primary'
                 : 'text-neutral-500 dark:text-neutral-400'
             }`}
           >

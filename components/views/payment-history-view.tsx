@@ -73,7 +73,7 @@ export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
 
   const getStatusIcon = (status: string) => {
     if (status === 'CONFIRMED' || status === 'COMPLETED') {
-      return <CheckCircle className="text-primary dark:text-[#CCFF00]" size={16} />;
+      return <CheckCircle className="text-primary" size={16} />;
     }
     if (status === 'CANCELLED') {
       return <XCircle className="text-red-500" size={16} />;
@@ -125,7 +125,7 @@ export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
           onClick={() => setFilter('ALL')}
           className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
             filter === 'ALL'
-              ? 'bg-primary dark:bg-[#CCFF00] text-black'
+              ? 'bg-primary text-black'
               : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400'
           }`}
         >
@@ -135,7 +135,7 @@ export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
           onClick={() => setFilter('PURCHASE')}
           className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
             filter === 'PURCHASE'
-              ? 'bg-primary dark:bg-[#CCFF00] text-black'
+              ? 'bg-primary text-black'
               : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400'
           }`}
         >
@@ -145,7 +145,7 @@ export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
           onClick={() => setFilter('BOOKING')}
           className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
             filter === 'BOOKING'
-              ? 'bg-primary dark:bg-[#CCFF00] text-black'
+              ? 'bg-primary text-black'
               : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400'
           }`}
         >
@@ -181,7 +181,7 @@ export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
                       {payment.title}
                     </h3>
                     {payment.type === 'BOOKING' && (
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-primary/10 dark:bg-[#CCFF00]/20 text-primary dark:text-[#CCFF00] font-bold">
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-primary/10/20 text-primary font-bold">
                         출석
                       </span>
                     )}

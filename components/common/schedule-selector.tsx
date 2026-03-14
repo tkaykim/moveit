@@ -201,7 +201,7 @@ export function ScheduleSelector({ value, onChange, className = '', academyId, d
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-left flex items-center justify-between hover:border-primary dark:hover:border-[#CCFF00] transition-colors"
+        className="w-full px-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-left flex items-center justify-between hover:border-primary transition-colors"
       >
         <span className="text-sm text-neutral-700 dark:text-neutral-300 truncate">
           {selectedSchedule ? formatScheduleLabel(selectedSchedule) : '수업 선택'}
@@ -222,7 +222,7 @@ export function ScheduleSelector({ value, onChange, className = '', academyId, d
                 placeholder="수업명, 강사명으로 검색..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-8 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-sm text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+                className="w-full pl-9 pr-8 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-sm text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary"
                 autoFocus
               />
               {searchTerm && (
@@ -248,7 +248,7 @@ export function ScheduleSelector({ value, onChange, className = '', academyId, d
                     setSearchTerm('');
                   }}
                   className={`w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors ${
-                    !value ? 'bg-primary/10 dark:bg-[#CCFF00]/10 font-medium' : 'text-neutral-700 dark:text-neutral-300'
+                    !value ? 'bg-primary/10/10 font-medium' : 'text-neutral-700 dark:text-neutral-300'
                   }`}
                 >
                   전체
@@ -266,7 +266,7 @@ export function ScheduleSelector({ value, onChange, className = '', academyId, d
                       }}
                       className={`w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors ${
                         value === schedule.id
-                          ? 'bg-primary/10 dark:bg-[#CCFF00]/10 font-medium'
+                          ? 'bg-primary/10/10 font-medium'
                           : 'text-neutral-700 dark:text-neutral-300'
                       }`}
                     >

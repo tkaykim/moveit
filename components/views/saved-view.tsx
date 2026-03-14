@@ -206,7 +206,7 @@ export const SavedView = ({ onNavigate }: SavedViewProps) => {
               <p className="text-neutral-500 dark:text-neutral-400 mb-4">찜한 학원이 없습니다.</p>
               <button
                 onClick={() => onNavigate?.('ACADEMY')}
-                className="px-6 py-2 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-lg hover:opacity-90 transition-opacity"
+                className="px-6 py-2 bg-primary text-black font-bold rounded-lg hover:opacity-90 transition-opacity"
               >
                 찜하러 가기
               </button>
@@ -231,7 +231,7 @@ export const SavedView = ({ onNavigate }: SavedViewProps) => {
                 </div>
                 <button 
                   onClick={() => handleToggleFavorite('academy', item.id)}
-                  className="text-primary dark:text-[#CCFF00] p-2 hover:opacity-80 transition-opacity"
+                  className="text-primary p-2 hover:opacity-80 transition-opacity"
                 >
                   <Heart fill="currentColor" size={18} />
                 </button>
@@ -245,7 +245,7 @@ export const SavedView = ({ onNavigate }: SavedViewProps) => {
               <p className="text-neutral-500 dark:text-neutral-400 mb-4">찜한 강사가 없습니다.</p>
               <button
                 onClick={() => onNavigate?.('DANCER')}
-                className="px-6 py-2 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-lg hover:opacity-90 transition-opacity"
+                className="px-6 py-2 bg-primary text-black font-bold rounded-lg hover:opacity-90 transition-opacity"
               >
                 찜하러 가기
               </button>
@@ -280,7 +280,7 @@ export const SavedView = ({ onNavigate }: SavedViewProps) => {
                 </div>
                 <button 
                   onClick={() => handleToggleFavorite('instructor', item.id)}
-                  className="text-primary dark:text-[#CCFF00] p-2 hover:opacity-80 transition-opacity"
+                  className="text-primary p-2 hover:opacity-80 transition-opacity"
                 >
                   <Heart fill="currentColor" size={18} />
                 </button>

@@ -77,7 +77,7 @@ export const SearchResultsView = ({ query, onBack, onAcademyClick, onDancerClick
               onClick={() => setActiveTab('all')}
               className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors ${
                 activeTab === 'all'
-                  ? 'border-primary dark:border-[#CCFF00] text-primary dark:text-[#CCFF00]'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-neutral-500 dark:text-neutral-400'
               }`}
             >
@@ -87,7 +87,7 @@ export const SearchResultsView = ({ query, onBack, onAcademyClick, onDancerClick
               onClick={() => setActiveTab('academies')}
               className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors ${
                 activeTab === 'academies'
-                  ? 'border-primary dark:border-[#CCFF00] text-primary dark:text-[#CCFF00]'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-neutral-500 dark:text-neutral-400'
               }`}
             >
@@ -97,7 +97,7 @@ export const SearchResultsView = ({ query, onBack, onAcademyClick, onDancerClick
               onClick={() => setActiveTab('instructors')}
               className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors ${
                 activeTab === 'instructors'
-                  ? 'border-primary dark:border-[#CCFF00] text-primary dark:text-[#CCFF00]'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-neutral-500 dark:text-neutral-400'
               }`}
             >
@@ -157,7 +157,7 @@ export const SearchResultsView = ({ query, onBack, onAcademyClick, onDancerClick
                           </div>
                         </div>
                         {academy.price && (
-                          <div className="text-sm font-bold text-neutral-800 dark:text-[#CCFF00]">
+                          <div className="text-sm font-bold text-neutral-800">
                             {academy.price.toLocaleString()}원~
                           </div>
                         )}
@@ -201,7 +201,7 @@ export const SearchResultsView = ({ query, onBack, onAcademyClick, onDancerClick
                       </div>
                       <div className="absolute bottom-4 left-4">
                         {dancer.crew && (
-                          <span className="text-[10px] bg-neutral-900 dark:bg-transparent text-white dark:text-[#CCFF00] font-bold border border-neutral-900 dark:border-[#CCFF00]/30 px-1.5 py-0.5 rounded mb-1 inline-block">
+                          <span className="text-[10px] bg-neutral-900 dark:bg-transparent text-white font-bold border border-neutral-900/30 px-1.5 py-0.5 rounded mb-1 inline-block">
                             {dancer.crew}
                           </span>
                         )}

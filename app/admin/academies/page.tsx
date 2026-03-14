@@ -590,7 +590,7 @@ export default function AcademiesPage() {
               setEditingData(null);
               setShowModal(true);
             }}
-            className="w-full sm:w-auto px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center justify-center gap-2 text-sm sm:text-base"
+            className="w-full sm:w-auto px-4 py-2 bg-primary text-black rounded-lg hover:opacity-90 flex items-center justify-center gap-2 text-sm sm:text-base"
           >
             <Plus size={20} />
             <span className="hidden sm:inline">학원 추가</span>
@@ -666,7 +666,7 @@ export default function AcademiesPage() {
                       <td className="px-6 py-4 text-sm font-medium text-black dark:text-white">
                         <button
                           onClick={() => router.push(`/academy-admin/${academy.id}`)}
-                          className="hover:text-primary dark:hover:text-[#CCFF00] hover:underline transition-colors text-left"
+                          className="hover:text-primary hover:underline transition-colors text-left"
                         >
                           {getDisplayName(academy)}
                         </button>
@@ -683,7 +683,7 @@ export default function AcademiesPage() {
                             {tags.map((tag) => (
                               <span
                                 key={tag}
-                                className="px-2 py-1 bg-neutral-200 dark:bg-[#CCFF00]/10 text-neutral-900 dark:text-[#CCFF00] rounded-full text-xs font-medium"
+                                className="px-2 py-1 bg-neutral-200/10 text-neutral-900 rounded-full text-xs font-medium"
                               >
                                 {tag}
                               </span>
@@ -725,7 +725,7 @@ export default function AcademiesPage() {
                             <button
                               onClick={() => handleUpdateImages(academy.id)}
                               disabled={updatingIds.has(academy.id)}
-                              className="flex-1 px-3 py-1.5 text-xs bg-primary dark:bg-[#CCFF00] text-black rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                              className="flex-1 px-3 py-1.5 text-xs bg-primary text-black rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                             >
                               {updatingIds.has(academy.id) ? '저장 중...' : '저장'}
                             </button>
@@ -743,7 +743,7 @@ export default function AcademiesPage() {
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => handleEdit(academy)}
-                            className="text-primary dark:text-[#CCFF00] hover:opacity-80"
+                            className="text-primary hover:opacity-80"
                           >
                             <Edit size={18} />
                           </button>
@@ -778,7 +778,7 @@ export default function AcademiesPage() {
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <button
                         onClick={() => router.push(`/academy-admin/${academy.id}`)}
-                        className="flex-1 text-left hover:text-primary dark:hover:text-[#CCFF00] hover:underline transition-colors"
+                        className="flex-1 text-left hover:text-primary hover:underline transition-colors"
                       >
                         <h3 className="font-semibold text-black dark:text-white text-base">
                           {getDisplayName(academy)}
@@ -787,7 +787,7 @@ export default function AcademiesPage() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleEdit(academy)}
-                          className="text-primary dark:text-[#CCFF00] hover:opacity-80 p-1"
+                          className="text-primary hover:opacity-80 p-1"
                           aria-label="수정"
                         >
                           <Edit size={18} />
@@ -833,7 +833,7 @@ export default function AcademiesPage() {
                             <button
                               onClick={() => handleUpdateImages(academy.id)}
                               disabled={updatingIds.has(academy.id)}
-                              className="flex-1 px-3 py-1.5 text-xs bg-primary dark:bg-[#CCFF00] text-black rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                              className="flex-1 px-3 py-1.5 text-xs bg-primary text-black rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                             >
                               {updatingIds.has(academy.id) ? '저장 중...' : '저장'}
                             </button>
@@ -865,7 +865,7 @@ export default function AcademiesPage() {
                             {tags.map((tag) => (
                               <span
                                 key={tag}
-                                className="px-2 py-1 bg-neutral-200 dark:bg-[#CCFF00]/10 text-neutral-900 dark:text-[#CCFF00] rounded-full text-xs font-medium"
+                                className="px-2 py-1 bg-neutral-200/10 text-neutral-900 rounded-full text-xs font-medium"
                               >
                                 {tag}
                               </span>

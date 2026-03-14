@@ -62,13 +62,13 @@ export function NotificationItem({ notification, onRead }: NotificationItemProps
       className={`w-full text-left p-4 flex gap-3 transition-colors active:scale-[0.98] ${
         notification.is_read
           ? 'bg-white dark:bg-neutral-950'
-          : 'bg-primary/5 dark:bg-[#CCFF00]/5'
+          : 'bg-primary/5 bg-primary/5'
       }`}
     >
       <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
         notification.is_read
           ? 'bg-neutral-100 dark:bg-neutral-800'
-          : 'bg-primary/10 dark:bg-[#CCFF00]/10'
+          : 'bg-primary/10 bg-primary/10'
       }`}>
         <Icon size={18} className={config.color} />
       </div>
@@ -77,7 +77,7 @@ export function NotificationItem({ notification, onRead }: NotificationItemProps
           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
             notification.is_read
               ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500'
-              : 'bg-primary/10 dark:bg-[#CCFF00]/10 text-primary dark:text-[#CCFF00]'
+              : 'bg-primary/10 bg-primary/10 text-primary '
           }`}>
             {config.label}
           </span>
@@ -85,11 +85,11 @@ export function NotificationItem({ notification, onRead }: NotificationItemProps
             {getRelativeTime(notification.created_at)}
           </span>
           {!notification.is_read && (
-            <span className="w-1.5 h-1.5 rounded-full bg-primary dark:bg-[#CCFF00] ml-auto flex-shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-primary  ml-auto flex-shrink-0" />
           )}
         </div>
         {/* 표시 규칙: 큰 제목 MOVE.IT, 작은 제목 학원명(특정 학원 발송 시), 나머지 내용 */}
-        <p className="text-[10px] font-bold text-primary dark:text-[#CCFF00] uppercase tracking-wide">
+        <p className="text-[10px] font-bold text-primary  uppercase tracking-wide">
           MOVE.IT
         </p>
         {notification.data?.academy_name && (

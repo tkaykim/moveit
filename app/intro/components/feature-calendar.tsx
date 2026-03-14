@@ -125,7 +125,7 @@ export function FeatureCalendar() {
                 onClick={() => { setSelectedDay(isSelected ? null : day); setSelectedClass(null); }}
                 className={`aspect-square rounded-lg flex flex-col items-center justify-center relative transition-all ${
                   isSelected
-                    ? 'bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black'
+                    ? 'bg-neutral-900 text-white dark:text-black'
                     : isToday
                       ? 'bg-neutral-100 dark:bg-neutral-800 font-bold'
                       : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50'
@@ -154,7 +154,7 @@ export function FeatureCalendar() {
             <button
               type="button"
               onClick={() => setShowAddForm(!showAddForm)}
-              className="flex items-center gap-1 text-[10px] font-bold text-[#aacc00] dark:text-[#CCFF00]"
+              className="flex items-center gap-1 text-[10px] font-bold text-primary"
             >
               <Plus size={12} /> 수업 추가
             </button>
@@ -198,7 +198,7 @@ export function FeatureCalendar() {
                 <button
                   type="button"
                   onClick={handleAddClass}
-                  className="flex-1 py-1.5 rounded-lg bg-[#CCFF00] text-neutral-900 text-xs font-bold"
+                  className="flex-1 py-1.5 rounded-lg bg-primary text-neutral-900 text-xs font-bold"
                 >
                   추가
                 </button>
@@ -215,7 +215,7 @@ export function FeatureCalendar() {
 
           {/* 수업 클릭 시 상세 + 예약하기 */}
           {selectedClass && !booked && (
-            <div className="mb-3 p-3 rounded-xl bg-[#CCFF00]/10 dark:bg-[#CCFF00]/5 border border-[#CCFF00]/20 space-y-3 animate-in fade-in duration-200">
+            <div className="mb-3 p-3 rounded-xl bg-primary/10/5 border border-primary/20 space-y-3 animate-in fade-in duration-200">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-neutral-900 dark:text-white">수업 정보</span>
                 <button type="button" onClick={() => setSelectedClass(null)} className="p-1 rounded hover:bg-black/5">
@@ -243,7 +243,7 @@ export function FeatureCalendar() {
               <button
                 type="button"
                 onClick={handleBook}
-                className="w-full py-2 rounded-lg bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black text-xs font-bold"
+                className="w-full py-2 rounded-lg bg-neutral-900 text-white dark:text-black text-xs font-bold"
               >
                 예약하기
               </button>

@@ -132,7 +132,7 @@ export function PullToRefresh({
         }`}>
           <RefreshCw
             size={18}
-            className={`${progress >= 1 ? 'text-primary dark:text-[#CCFF00]' : 'text-neutral-400'}`}
+            className={`${progress >= 1 ? 'text-primary' : 'text-neutral-400'}`}
             style={!isRefreshing ? { transform: `rotate(${rotation}deg)` } : undefined}
           />
         </div>

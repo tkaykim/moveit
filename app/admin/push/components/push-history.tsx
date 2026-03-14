@@ -159,7 +159,7 @@ export function PushHistory({ queue, loading }: PushHistoryProps) {
                       {hasUrl && (
                         <div className="flex items-center gap-1">
                           <span className="text-neutral-400">외부 URL: </span>
-                          <a href={data.url} target="_blank" rel="noopener noreferrer" className="text-primary dark:text-[#CCFF00] underline flex items-center gap-0.5">
+                          <a href={data.url} target="_blank" rel="noopener noreferrer" className="text-primary underline flex items-center gap-0.5">
                             {data.url.substring(0, 40)}{data.url.length > 40 ? '...' : ''} <ExternalLink size={10} />
                           </a>
                         </div>

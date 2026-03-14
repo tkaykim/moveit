@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { RefreshCw, Loader2, FileText } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { RefreshCw, Loader2, FileText, Ticket, MinusCircle, PlusCircle, Clock, ShieldCheck, UserPlus } from 'lucide-react';
 
 interface ActivityLogItem {
   id: string;
@@ -21,12 +22,30 @@ interface ActivityLogItem {
 
 const ACTION_FILTER_OPTIONS = [
   { value: '', label: '전체' },
+  { value: 'TICKET_ISSUED', label: '수강권 발급' },
   { value: 'ENROLL', label: '수강신청' },
   { value: 'CANCEL', label: '예약 취소' },
   { value: 'REFUND', label: '환불' },
-  { value: 'EXTENSION_APPROVED', label: '연장/일시정지 승인' },
+  { value: 'COUNT_DEDUCT', label: '횟수 차감' },
   { value: 'COUNT_RESTORE', label: '횟수 복구' },
+  { value: 'EXTENSION_REQUESTED', label: '연장/일시정지 신청' },
+  { value: 'EXTENSION_APPROVED', label: '연장/일시정지 승인' },
+  { value: 'ADMIN_EXTEND', label: '관리자 연장' },
+  { value: 'ADMIN_ENROLL', label: '관리자 수기 추가' },
 ];
+
+const ACTION_BADGE_STYLES: Record<string, { bg: string; text: string; icon: LucideIcon }> = {
+  TICKET_ISSUED: { bg: 'bg-emerald-100 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-300', icon: Ticket },
+  ENROLL: { bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-700 dark:text-blue-300', icon: PlusCircle },
+  CANCEL: { bg: 'bg-red-100 dark:bg-red-900/40', text: 'text-red-700 dark:text-red-300', icon: MinusCircle },
+  REFUND: { bg: 'bg-orange-100 dark:bg-orange-900/40', text: 'text-orange-700 dark:text-orange-300', icon: MinusCircle },
+  COUNT_DEDUCT: { bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-700 dark:text-amber-300', icon: MinusCircle },
+  COUNT_RESTORE: { bg: 'bg-teal-100 dark:bg-teal-900/40', text: 'text-teal-700 dark:text-teal-300', icon: PlusCircle },
+  EXTENSION_REQUESTED: { bg: 'bg-violet-100 dark:bg-violet-900/40', text: 'text-violet-700 dark:text-violet-300', icon: Clock },
+  EXTENSION_APPROVED: { bg: 'bg-indigo-100 dark:bg-indigo-900/40', text: 'text-indigo-700 dark:text-indigo-300', icon: ShieldCheck },
+  ADMIN_EXTEND: { bg: 'bg-cyan-100 dark:bg-cyan-900/40', text: 'text-cyan-700 dark:text-cyan-300', icon: Clock },
+  ADMIN_ENROLL: { bg: 'bg-pink-100 dark:bg-pink-900/40', text: 'text-pink-700 dark:text-pink-300', icon: UserPlus },
+};
 
 export function ActivityLogSection({ academyId }: { academyId: string }) {
   const [items, setItems] = useState<ActivityLogItem[]>([]);
@@ -67,7 +86,7 @@ export function ActivityLogSection({ academyId }: { academyId: string }) {
       <div className="p-4 border-b border-gray-100 dark:border-neutral-800 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <FileText size={18} className="text-gray-500 dark:text-gray-400" />
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">수강신청·취소·환불·연장·횟수 변동 이력</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">수강권·수강신청·취소·환불·연장·횟수 변동 이력</span>
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -124,7 +143,16 @@ export function ActivityLogSection({ academyId }: { academyId: string }) {
                     })}
                   </td>
                   <td className="py-2.5 px-4">
-                    <span className="font-medium text-gray-800 dark:text-gray-200">{row.action_label}</span>
+                    {(() => {
+                      const style = ACTION_BADGE_STYLES[row.action];
+                      const Icon = style?.icon;
+                      return (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${style?.bg ?? 'bg-gray-100 dark:bg-neutral-800'} ${style?.text ?? 'text-gray-700 dark:text-gray-300'}`}>
+                          {Icon && <Icon size={13} />}
+                          {row.action_label}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="py-2.5 px-4 text-gray-700 dark:text-gray-300">{row.user_name}</td>
                   <td className="py-2.5 px-4 text-gray-600 dark:text-gray-400">{row.actor_name ?? '-'}</td>

@@ -418,7 +418,7 @@ export function AdminExtensionCreateModal({
               )}
               {newExpiry && (
                 <p className="text-gray-600 dark:text-gray-400">
-                  처리 후 종료일: <span className="font-medium text-primary dark:text-[#CCFF00]">{formatDateLong(newExpiry)}</span>
+                  처리 후 종료일: <span className="font-medium text-primary">{formatDateLong(newExpiry)}</span>
                 </p>
               )}
               {!currentExpiry && (

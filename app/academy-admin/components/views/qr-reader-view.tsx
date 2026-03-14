@@ -349,8 +349,8 @@ export function QrReaderView({ academyId }: QrReaderViewProps) {
       <div className="flex-shrink-0 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-[#CCFF00]/20 flex items-center justify-center">
-              <QrCode size={24} className="text-primary dark:text-[#CCFF00]" />
+            <div className="w-10 h-10 rounded-xl bg-primary/10/20 flex items-center justify-center">
+              <QrCode size={24} className="text-primary" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-black dark:text-white">QR 출석 리더</h1>
@@ -405,7 +405,7 @@ export function QrReaderView({ academyId }: QrReaderViewProps) {
                   <p className="text-neutral-400 text-lg mb-6">카메라를 시작하여 QR 스캔을 준비하세요</p>
                   <button
                     onClick={startScanner}
-                    className="px-8 py-3 bg-primary dark:bg-[#CCFF00] text-white dark:text-black font-bold rounded-xl hover:opacity-90 transition-opacity text-lg"
+                    className="px-8 py-3 bg-primary text-white dark:text-black font-bold rounded-xl hover:opacity-90 transition-opacity text-lg"
                   >
                     스캔 시작
                   </button>
@@ -416,10 +416,10 @@ export function QrReaderView({ academyId }: QrReaderViewProps) {
             {scanning && !result && (
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                 <div className="w-60 h-60 border-2 border-white/50 rounded-2xl relative">
-                  <div className="absolute -top-0.5 -left-0.5 w-8 h-8 border-t-4 border-l-4 border-[#CCFF00] rounded-tl-lg" />
-                  <div className="absolute -top-0.5 -right-0.5 w-8 h-8 border-t-4 border-r-4 border-[#CCFF00] rounded-tr-lg" />
-                  <div className="absolute -bottom-0.5 -left-0.5 w-8 h-8 border-b-4 border-l-4 border-[#CCFF00] rounded-bl-lg" />
-                  <div className="absolute -bottom-0.5 -right-0.5 w-8 h-8 border-b-4 border-r-4 border-[#CCFF00] rounded-br-lg" />
+                  <div className="absolute -top-0.5 -left-0.5 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-lg" />
+                  <div className="absolute -top-0.5 -right-0.5 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg" />
+                  <div className="absolute -bottom-0.5 -left-0.5 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg" />
                 </div>
               </div>
             )}

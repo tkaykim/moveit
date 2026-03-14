@@ -166,7 +166,7 @@ export const QrModal = ({ isOpen, onClose, bookingId, bookingInfo }: QrModalProp
               <p className="text-sm text-red-400 mb-3">{error}</p>
               <button
                 onClick={fetchToken}
-                className="flex items-center gap-2 mx-auto text-sm text-[#CCFF00] font-medium hover:underline"
+                className="flex items-center gap-2 mx-auto text-sm text-primary font-medium hover:underline"
               >
                 <RefreshCw size={14} />
                 다시 시도

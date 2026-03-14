@@ -133,7 +133,7 @@ export const NoticesView = ({ onBack }: NoticesViewProps) => {
           onClick={() => setFilter('ALL')}
           className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
             filter === 'ALL'
-              ? 'bg-primary dark:bg-[#CCFF00] text-black'
+              ? 'bg-primary text-black'
               : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400'
           }`}
         >
@@ -143,7 +143,7 @@ export const NoticesView = ({ onBack }: NoticesViewProps) => {
           onClick={() => setFilter('NOTICE')}
           className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
             filter === 'NOTICE'
-              ? 'bg-primary dark:bg-[#CCFF00] text-black'
+              ? 'bg-primary text-black'
               : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400'
           }`}
         >
@@ -153,7 +153,7 @@ export const NoticesView = ({ onBack }: NoticesViewProps) => {
           onClick={() => setFilter('EVENT')}
           className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
             filter === 'EVENT'
-              ? 'bg-primary dark:bg-[#CCFF00] text-black'
+              ? 'bg-primary text-black'
               : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400'
           }`}
         >
@@ -175,19 +175,19 @@ export const NoticesView = ({ onBack }: NoticesViewProps) => {
               key={notice.id}
               className={`bg-white dark:bg-neutral-900 border rounded-2xl p-4 ${
                 notice.is_important
-                  ? 'border-primary dark:border-[#CCFF00] bg-primary/5 dark:bg-[#CCFF00]/5'
+                  ? 'border-primary bg-primary/5/5'
                   : 'border-neutral-200 dark:border-neutral-800'
               }`}
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Megaphone 
-                    className={notice.is_important ? 'text-primary dark:text-[#CCFF00]' : 'text-neutral-400'} 
+                    className={notice.is_important ? 'text-primary' : 'text-neutral-400'} 
                     size={18} 
                   />
                   <span className={`text-[10px] font-bold px-2 py-1 rounded ${
                     notice.type === 'EVENT'
-                      ? 'bg-primary/10 dark:bg-[#CCFF00]/10 text-primary dark:text-[#CCFF00]'
+                      ? 'bg-primary/10/10 text-primary'
                       : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'
                   }`}>
                     {notice.type === 'EVENT' ? '이벤트' : '공지'}
@@ -205,7 +205,7 @@ export const NoticesView = ({ onBack }: NoticesViewProps) => {
               </div>
               <h3 className={`text-base font-bold mb-2 ${
                 notice.is_important 
-                  ? 'text-primary dark:text-[#CCFF00]' 
+                  ? 'text-primary' 
                   : 'text-black dark:text-white'
               }`}>
                 {notice.title}

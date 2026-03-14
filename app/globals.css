@@ -4,10 +4,21 @@
 
 @layer base {
   :root {
-    --primary: #CCFF00;
+    --primary: #7AB2D3;
+    --primary-foreground: #ffffff;
+    --primary-rgb: 122, 178, 211;
+    --primary-muted: #DFF2EB;
+    --primary-accent: #B9E5E8;
     --app-safe-bottom: 0px;
     /* 상단: 상태바(알림/시계/배터리) 영역만큼 헤더가 내려가도록. Capacitor 앱에서 JS로 Android 폴백 설정 */
     --app-safe-top: env(safe-area-inset-top, 0px);
+  }
+
+  .dark {
+    --primary: #B9E5E8;
+    --primary-foreground: #0a0a0a;
+    --primary-rgb: 185, 229, 232;
+    --primary-muted: #4A628A;
   }
 
   /* Capacitor Android: 네이티브에서 시스템 바 패딩 처리하므로 CSS 추가 패딩 불필요 */
@@ -98,8 +109,8 @@
 
 /* 인트로 CTA 박스 펄스 (키프레임은 레이어 밖에) */
 @keyframes intro-cta-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(204, 255, 0, 0.35); transform: scale(1); }
-  50% { box-shadow: 0 0 20px 4px rgba(204, 255, 0, 0.2); transform: scale(1.02); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--primary-rgb), 0.35); transform: scale(1); }
+  50% { box-shadow: 0 0 20px 4px rgba(var(--primary-rgb), 0.2); transform: scale(1.02); }
 }
 
 /* TipTap 에디터 스타일 */

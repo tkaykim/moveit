@@ -392,7 +392,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
           </div>
           <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white dark:from-neutral-950 to-transparent" />
           <div className="absolute bottom-6 left-6">
-            <span className="bg-neutral-900 dark:bg-transparent text-white dark:text-[#CCFF00] text-xs font-bold border border-neutral-900 dark:border-[#CCFF00] px-2 py-0.5 rounded mb-2 inline-block">
+            <span className="bg-neutral-900 dark:bg-transparent text-white text-xs font-bold border border-neutral-900 px-2 py-0.5 rounded mb-2 inline-block">
               Premium Partner
             </span>
             <h1 className="text-3xl font-black text-black dark:text-white italic">{academy.name}</h1>
@@ -472,7 +472,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                   <button
                     type="button"
                     onClick={() => setShowConsultationModal(true)}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-primary dark:border-[#CCFF00] text-primary dark:text-[#CCFF00] font-bold text-sm"
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-primary text-primary font-bold text-sm"
                   >
                     <MessageSquare size={18} />
                     {t('academyDetail.requestConsultation')}
@@ -564,7 +564,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setShowTicketPurchaseModal(true)}
-                        className="px-3 py-1.5 text-xs font-bold bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black rounded-lg hover:bg-neutral-800 dark:hover:bg-[#b8e600] transition-colors"
+                        className="px-3 py-1.5 text-xs font-bold bg-neutral-900 text-white dark:text-black rounded-lg hover:bg-neutral-800 hover:bg-primary/90 transition-colors"
                       >
                         {t('academyDetail.buyTicket')}
                       </button>

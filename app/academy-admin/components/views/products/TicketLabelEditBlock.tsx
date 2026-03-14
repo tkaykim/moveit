@@ -118,7 +118,7 @@ export function TicketLabelEditBlock({
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="px-4 py-2 rounded-lg bg-gray-900 dark:bg-[#CCFF00] text-white dark:text-black text-sm font-medium disabled:opacity-50"
+              className="px-4 py-2 rounded-lg bg-gray-900 text-white dark:text-black text-sm font-medium disabled:opacity-50"
             >
               {saving ? '저장 중…' : '저장'}
             </button>

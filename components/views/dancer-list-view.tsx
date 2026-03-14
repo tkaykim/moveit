@@ -361,7 +361,7 @@ export const DancerListView = ({ onDancerClick }: DancerListViewProps) => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="강사명 검색"
-            className="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full py-2 pl-3 pr-3 text-sm text-black dark:text-white focus:border-primary dark:focus:border-[#CCFF00] outline-none"
+            className="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full py-2 pl-3 pr-3 text-sm text-black dark:text-white focus:border-primary outline-none"
           />
         </div>
 

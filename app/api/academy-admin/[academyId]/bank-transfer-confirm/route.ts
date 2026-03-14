@@ -9,6 +9,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { getTicketById } from '@/lib/db/tickets';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
+import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 import { Database } from '@/types/database';
 import { sendNotification } from '@/lib/notifications';
 
@@ -138,6 +139,23 @@ export async function POST(
       return NextResponse.json({ error: '수강권 발급에 실패했습니다.' }, { status: 500 });
     }
 
+    // 활동 로그: 수강권 발급 (계좌이체 입금확인)
+    insertEnrollmentActivityLog({
+      academy_id: academyId,
+      user_id: customerUserId,
+      user_ticket_id: userTicket.id,
+      action: 'TICKET_ISSUED',
+      payload: {
+        via: 'bank_transfer',
+        ticket_name: ticket.name,
+        ticket_type: ticket.ticket_type,
+        remaining_count: remainingCount,
+        expiry_date: expiryDateStr,
+        order_id: orderId,
+      },
+      actor_user_id: user.id,
+    }, supabase).catch(() => {});
+
     const ticketDisplayName = selectedOption ? `${ticket.name} ${optionCount}회권` : ticket.name;
     const { data: prevTx } = await supabase
       .from('revenue_transactions')
@@ -215,6 +233,15 @@ export async function POST(
         try {
           await consumeUserTicket(userTicket.id, resolvedClassId, 1);
           consumeOk = true;
+          // 활동 로그: 횟수 차감
+          insertEnrollmentActivityLog({
+            academy_id: academyId,
+            user_id: customerUserId,
+            user_ticket_id: userTicket.id,
+            action: 'COUNT_DEDUCT',
+            payload: { delta: -1, class_id: resolvedClassId, schedule_id: order.schedule_id, via: 'bank_transfer' },
+            actor_user_id: user.id,
+          }, supabase).catch(() => {});
         } catch (e: any) {
           console.error('Consume ticket for booking error:', e);
         }

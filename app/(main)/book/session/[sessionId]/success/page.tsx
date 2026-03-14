@@ -47,16 +47,16 @@ function SuccessContent() {
         <h3 className="font-bold text-black dark:text-white mb-3">📌 안내사항</h3>
         <ul className="space-y-2 text-sm text-neutral-600 dark:text-neutral-400">
           <li className="flex items-start gap-2">
-            <ArrowRight size={16} className="mt-0.5 text-primary dark:text-[#CCFF00] flex-shrink-0" />
+            <ArrowRight size={16} className="mt-0.5 text-primary flex-shrink-0" />
             <span>수업 10분 전까지 도착해주세요.</span>
           </li>
           <li className="flex items-start gap-2">
-            <ArrowRight size={16} className="mt-0.5 text-primary dark:text-[#CCFF00] flex-shrink-0" />
+            <ArrowRight size={16} className="mt-0.5 text-primary flex-shrink-0" />
             <span>편한 복장과 실내용 운동화를 준비해주세요.</span>
           </li>
           {type === 'guest' && (
             <li className="flex items-start gap-2">
-              <ArrowRight size={16} className="mt-0.5 text-primary dark:text-[#CCFF00] flex-shrink-0" />
+              <ArrowRight size={16} className="mt-0.5 text-primary flex-shrink-0" />
               <span>예약 취소는 학원에 직접 문의해주세요.</span>
             </li>
           )}
@@ -67,7 +67,7 @@ function SuccessContent() {
       <div className="w-full max-w-sm space-y-3">
         <button
           onClick={() => router.push('/home')}
-          className="w-full bg-primary dark:bg-[#CCFF00] text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
+          className="w-full bg-primary text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
           <Home size={20} />
           홈으로 이동

@@ -95,7 +95,7 @@ export default function IntroStartPage() {
           <button
             type="button"
             onClick={() => setAuthModalOpen(true)}
-            className="w-full py-3 rounded-xl font-bold bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black hover:opacity-90"
+            className="w-full py-3 rounded-xl font-bold bg-neutral-900 text-white dark:text-black hover:opacity-90"
           >
             로그인 / 회원가입
           </button>
@@ -142,7 +142,7 @@ export default function IntroStartPage() {
           <div className="text-center space-y-4">
             <Link
               href={setupAcademyUrl}
-              className="inline-block w-full py-3 px-6 rounded-xl font-bold bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black hover:opacity-90"
+              className="inline-block w-full py-3 px-6 rounded-xl font-bold bg-neutral-900 text-white dark:text-black hover:opacity-90"
             >
               내 학원 생성하기
             </Link>
@@ -181,7 +181,7 @@ export default function IntroStartPage() {
               type="button"
               onClick={handleGoToBilling}
               disabled={!selectedAcademyId}
-              className="w-full py-3 rounded-xl font-bold bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black hover:opacity-90 disabled:opacity-50"
+              className="w-full py-3 rounded-xl font-bold bg-neutral-900 text-white dark:text-black hover:opacity-90 disabled:opacity-50"
             >
               플랫폼 구독·결제 진행
             </button>

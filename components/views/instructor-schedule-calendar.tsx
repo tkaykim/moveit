@@ -127,7 +127,7 @@ export function InstructorScheduleCalendar({ academyId, onRefresh }: InstructorS
   if (loading) {
     return (
       <div className="py-12 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary dark:border-[#CCFF00] border-t-transparent" />
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
       </div>
     );
   }
@@ -152,7 +152,7 @@ export function InstructorScheduleCalendar({ academyId, onRefresh }: InstructorS
           <button
             type="button"
             onClick={goToday}
-            className="text-xs px-3 py-1.5 bg-primary/10 dark:bg-[#CCFF00]/10 text-primary dark:text-[#CCFF00] rounded-full font-medium"
+            className="text-xs px-3 py-1.5 bg-primary/10/10 text-primary rounded-full font-medium"
           >
             이번 달
           </button>
@@ -196,15 +196,15 @@ export function InstructorScheduleCalendar({ academyId, onRefresh }: InstructorS
                 onClick={() => handleDateClick(date)}
                 className={`min-h-[44px] p-1 text-sm border-b border-r border-neutral-100 dark:border-neutral-800 last:border-r-0 transition-colors ${
                   !isCurrentMonth ? 'text-neutral-300 dark:text-neutral-600 bg-neutral-50/50 dark:bg-neutral-950/50' : 'text-black dark:text-white'
-                } ${isToday ? 'ring-1 ring-primary dark:ring-[#CCFF00] ring-inset font-bold' : ''} ${
-                  hasSchedules ? 'bg-primary/5 dark:bg-[#CCFF00]/5 hover:bg-primary/10 dark:hover:bg-[#CCFF00]/10' : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50'
+                } ${isToday ? 'ring-1 ring-primary ring-inset font-bold' : ''} ${
+                  hasSchedules ? 'bg-primary/5/5 hover:bg-primary/10 hover:bg-primary/10' : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50'
                 }`}
               >
                 <span className={dayOfWeek === 0 ? 'text-rose-500' : dayOfWeek === 6 ? 'text-blue-500' : ''}>
                   {date.getDate()}
                 </span>
                 {hasSchedules && (
-                  <span className="block w-1 h-1 rounded-full bg-primary dark:bg-[#CCFF00] mx-auto mt-0.5" />
+                  <span className="block w-1 h-1 rounded-full bg-primary mx-auto mt-0.5" />
                 )}
               </button>
             );

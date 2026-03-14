@@ -11,7 +11,8 @@ const config: Config = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: "#CCFF00",
+          DEFAULT: "var(--primary)",
+          foreground: "var(--primary-foreground)",
         },
       },
       animation: {

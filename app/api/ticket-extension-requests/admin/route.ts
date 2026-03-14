@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getSchedulesForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
+import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 
 /**
  * POST: 관리자 직접 연장/일시정지 생성 및 즉시 승인 - 쿠키 또는 Authorization Bearer
@@ -124,6 +125,25 @@ export async function POST(request: Request) {
         await createBookingsForPeriodTicket(userId, user_ticket_id, ticketId, extendStartStr, newExpiryStr);
       }
     }
+
+    // 활동 로그: 관리자 연장/일시정지
+    insertEnrollmentActivityLog({
+      academy_id: academyId,
+      user_id: userTicket.user_id,
+      user_ticket_id: user_ticket_id,
+      extension_request_id: inserted?.id ?? null,
+      action: 'ADMIN_EXTEND',
+      payload: {
+        request_type,
+        days: request_type === 'EXTENSION' ? extension_days : pauseDays,
+        reason: reason?.trim(),
+        prev_expiry: userTicket.expiry_date,
+        new_expiry: userTicket.expiry_date && addDays > 0
+          ? new Date(new Date(userTicket.expiry_date).getTime() + addDays * 86400000).toISOString().slice(0, 10)
+          : null,
+      },
+      actor_user_id: adminUser.id,
+    }, supabase).catch(() => {});
 
     return NextResponse.json({ data: inserted });
   } catch (e: any) {

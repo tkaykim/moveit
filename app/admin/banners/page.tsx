@@ -226,7 +226,7 @@ export default function BannersPage() {
           </button>
           <button
             onClick={() => openModal()}
-            className="flex items-center gap-2 px-4 py-2 bg-primary dark:bg-[#CCFF00] text-white dark:text-black rounded-lg hover:opacity-90 transition-opacity"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white dark:text-black rounded-lg hover:opacity-90 transition-opacity"
           >
             <Plus size={18} />
             배너 추가
@@ -236,7 +236,7 @@ export default function BannersPage() {
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin w-8 h-8 border-4 border-primary dark:border-[#CCFF00] border-t-transparent rounded-full" />
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
       ) : banners.length === 0 ? (
         <div className="bg-white dark:bg-neutral-900 rounded-xl p-12 text-center border border-neutral-200 dark:border-neutral-800">
@@ -246,7 +246,7 @@ export default function BannersPage() {
           </p>
           <button
             onClick={() => openModal()}
-            className="px-4 py-2 bg-primary dark:bg-[#CCFF00] text-white dark:text-black rounded-lg hover:opacity-90 transition-opacity"
+            className="px-4 py-2 bg-primary text-white dark:text-black rounded-lg hover:opacity-90 transition-opacity"
           >
             첫 번째 배너 추가하기
           </button>
@@ -455,7 +455,7 @@ export default function BannersPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-primary dark:bg-[#CCFF00] text-white dark:text-black rounded-lg hover:opacity-90 transition-opacity"
+                  className="flex-1 px-4 py-2 bg-primary text-white dark:text-black rounded-lg hover:opacity-90 transition-opacity"
                 >
                   {editingBanner ? "수정" : "추가"}
                 </button>
@@ -490,7 +490,7 @@ export default function BannersPage() {
                   onClick={() => setSettings({ ...settings, is_auto_slide_enabled: !settings.is_auto_slide_enabled })}
                   className={`w-12 h-6 rounded-full transition-colors ${
                     settings.is_auto_slide_enabled
-                      ? "bg-primary dark:bg-[#CCFF00]"
+                      ? "bg-primary"
                       : "bg-neutral-300 dark:bg-neutral-700"
                   }`}
                 >
@@ -529,7 +529,7 @@ export default function BannersPage() {
                 </button>
                 <button
                   onClick={handleSaveSettings}
-                  className="flex-1 px-4 py-2 bg-primary dark:bg-[#CCFF00] text-white dark:text-black rounded-lg hover:opacity-90 transition-opacity"
+                  className="flex-1 px-4 py-2 bg-primary text-white dark:text-black rounded-lg hover:opacity-90 transition-opacity"
                 >
                   저장
                 </button>

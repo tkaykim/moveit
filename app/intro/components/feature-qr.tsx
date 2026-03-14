@@ -38,15 +38,15 @@ export function FeatureQr() {
       <div className="relative aspect-square max-h-[200px] bg-neutral-950 overflow-hidden flex items-center justify-center p-4">
         <div className="absolute inset-0 flex items-center justify-center p-4">
           {/* Scan Lines (중앙 정렬, 컨테이너 안에 완전히 수용) */}
-          <div className="relative w-[min(140px,65%)] aspect-square max-w-full border-2 border-[#CCFF00]/40 rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
-            <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-[#CCFF00] rounded-tl-lg z-10" />
-            <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-[#CCFF00] rounded-tr-lg z-10" />
-            <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-[#CCFF00] rounded-bl-lg z-10" />
-            <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-[#CCFF00] rounded-br-lg z-10" />
-            <QrCode className="text-[#CCFF00]/30 relative z-0 w-12 h-12 shrink-0" size={48} />
+          <div className="relative w-[min(140px,65%)] aspect-square max-w-full border-2 border-primary/40 rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
+            <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-primary rounded-tl-lg z-10" />
+            <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-primary rounded-tr-lg z-10" />
+            <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-primary rounded-bl-lg z-10" />
+            <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-primary rounded-br-lg z-10" />
+            <QrCode className="text-primary/30 relative z-0 w-12 h-12 shrink-0" size={48} />
             {scanning && (
               <div className="absolute inset-0 rounded-xl z-20 pointer-events-none flex items-start justify-center">
-                <div className="absolute left-0 right-0 h-1 bg-[#CCFF00] shadow-[0_0_8px_#CCFF00] animate-intro-scanline" style={{ top: 0 }} />
+                <div className="absolute left-0 right-0 h-1 bg-primary shadow-[0_0_8px_var(--primary)] animate-intro-scanline" style={{ top: 0 }} />
               </div>
             )}
           </div>
@@ -74,7 +74,7 @@ export function FeatureQr() {
               ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'
               : checkedIn.length >= DEMO_STUDENTS.length
                 ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-                : 'bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black hover:opacity-90 active:scale-[0.98]'
+                : 'bg-neutral-900 dark:bg-primary text-white dark:text-primary-foreground hover:opacity-90 active:scale-[0.98]'
           }`}
         >
           {scanning ? 'QR 스캔 중...' : checkedIn.length >= DEMO_STUDENTS.length ? '다시 체험하기' : 'QR 스캔 시뮬레이션'}

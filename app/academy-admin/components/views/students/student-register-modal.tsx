@@ -470,7 +470,7 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
                     onClick={() => toggleGenre(genre)}
                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                       formData.interested_genres.includes(genre)
-                        ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                        ? 'bg-primary text-black'
                         : 'bg-neutral-200 dark:bg-neutral-700 text-gray-700 dark:text-gray-300 hover:bg-neutral-300 dark:hover:bg-neutral-600'
                     }`}
                   >

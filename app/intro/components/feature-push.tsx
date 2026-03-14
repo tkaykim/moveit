@@ -90,10 +90,10 @@ export function FeaturePush() {
       <div className="p-4 border-b border-neutral-100 dark:border-neutral-800">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Bell className="w-4 h-4 text-neutral-900 dark:text-[#CCFF00]" />
+            <Bell className="w-4 h-4 text-neutral-900" />
             <h3 className="text-sm font-bold text-neutral-900 dark:text-white">스마트 알림</h3>
           </div>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#CCFF00]/20 text-[#aacc00] dark:text-[#CCFF00] font-bold">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary font-bold">
             자동 발송
           </span>
         </div>
@@ -146,7 +146,7 @@ export function FeaturePush() {
           className={`w-full py-2.5 rounded-xl font-bold text-sm transition-all ${
             isPlaying 
               ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'
-              : 'bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black hover:opacity-90 active:scale-[0.98]'
+              : 'bg-neutral-900 text-white dark:text-black hover:opacity-90 active:scale-[0.98]'
           }`}
         >
           {isPlaying ? '알림 발송 중...' : visibleCount > 0 ? '다시 체험하기' : '알림 발송 시뮬레이션'}

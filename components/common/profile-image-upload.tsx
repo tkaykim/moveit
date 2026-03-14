@@ -144,7 +144,7 @@ export function ProfileImageUpload({
       <div className="relative group">
         {/* 프로필 이미지 원형 */}
         <div
-          className="rounded-full overflow-hidden bg-gradient-to-tr from-primary dark:from-[#CCFF00] to-green-500 p-[2px]"
+          className="rounded-full overflow-hidden bg-gradient-to-tr from-primary to-green-500 p-[2px]"
           style={{ width: size, height: size }}
         >
           <div className="w-full h-full rounded-full bg-white dark:bg-neutral-900 flex items-center justify-center overflow-hidden">
@@ -169,7 +169,7 @@ export function ProfileImageUpload({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="absolute -bottom-0.5 -right-0.5 w-7 h-7 bg-primary dark:bg-[#CCFF00] rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-neutral-900 hover:scale-110 transition-transform disabled:opacity-50"
+            className="absolute -bottom-0.5 -right-0.5 w-7 h-7 bg-primary rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-neutral-900 hover:scale-110 transition-transform disabled:opacity-50"
           >
             <Camera size={14} className="text-white dark:text-black" />
           </button>

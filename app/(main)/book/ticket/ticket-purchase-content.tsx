@@ -69,7 +69,7 @@ export function TicketPurchaseContent({
           <span className="text-sm text-gray-600 dark:text-gray-400">{academyName}</span>
         </div>
         <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <Ticket size={24} className="text-primary dark:text-[#CCFF00]" />
+          <Ticket size={24} className="text-primary" />
           {ticket.name}
         </h1>
         <div className="text-2xl font-black text-gray-900 dark:text-white mb-4">
@@ -156,7 +156,7 @@ export function TicketPurchaseContent({
             type="button"
             onClick={handlePurchase}
             disabled={purchasing || (isPeriod && availableDates.length === 0) || (!user && !guestName.trim())}
-            className="w-full py-4 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-4 rounded-xl bg-primary text-black font-bold flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {purchasing ? <Loader2 size={20} className="animate-spin" /> : null}
             {purchasing ? t('ticketPurchase.paying') : user && !guestMode ? t('ticketPurchase.pay') : guestMode || guestName ? t('ticketPurchase.guestPay') : t('ticketPurchase.loginToPay')}

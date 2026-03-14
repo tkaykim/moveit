@@ -827,7 +827,7 @@ export default function SessionBookingPage() {
       {submitting && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/50 dark:bg-black/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4 min-w-[240px]">
-            <Loader2 size={40} className="text-primary dark:text-[#CCFF00] animate-spin" />
+            <Loader2 size={40} className="text-primary animate-spin" />
             <p className="text-base font-semibold text-black dark:text-white text-center">
               {paymentMethod === 'purchase' ? t('sessionBooking.processingPurchase') : paymentMethod === 'ticket' ? t('sessionBooking.processingTicket') : t('sessionBooking.processingGuest')}
             </p>
@@ -911,9 +911,9 @@ export default function SessionBookingPage() {
 
           {/* 종료된 수업일 때만: 다음 날짜 예약 유도 */}
           {isPast && session?.classes?.id && (
-            <div className="bg-primary/5 dark:bg-[#CCFF00]/5 border border-primary/30 dark:border-[#CCFF00]/30 rounded-xl p-4">
+            <div className="bg-primary/5/5 border border-primary/30/30 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
-                <CalendarDays className="text-primary dark:text-[#CCFF00] flex-shrink-0" size={20} />
+                <CalendarDays className="text-primary flex-shrink-0" size={20} />
                 <h4 className="font-bold text-black dark:text-white">{t('sessionBooking.otherDates')}</h4>
               </div>
               <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
@@ -937,7 +937,7 @@ export default function SessionBookingPage() {
                         className={`w-full flex items-center justify-between gap-3 rounded-xl p-3 text-left border-2 transition-colors ${
                           full
                             ? 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 opacity-60 cursor-not-allowed'
-                            : 'bg-white dark:bg-neutral-900 border-primary/40 dark:border-[#CCFF00]/40 hover:border-primary dark:hover:border-[#CCFF00] hover:bg-primary/5 dark:hover:bg-[#CCFF00]/5'
+                            : 'bg-white dark:bg-neutral-900 border-primary/40/40 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/5'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
@@ -953,7 +953,7 @@ export default function SessionBookingPage() {
                           </div>
                         </div>
                         {!full && (
-                          <ChevronRight size={18} className="text-primary dark:text-[#CCFF00] flex-shrink-0" />
+                          <ChevronRight size={18} className="text-primary flex-shrink-0" />
                         )}
                       </button>
                     );
@@ -984,7 +984,7 @@ export default function SessionBookingPage() {
                     setAuthModalInitialTab('login');
                     setIsAuthModalOpen(true);
                   }}
-                  className="flex-1 py-3 rounded-xl bg-primary dark:bg-[#CCFF00] text-neutral-900 font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
+                  className="flex-1 py-3 rounded-xl bg-primary text-neutral-900 font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
                 >
                   {t('sessionBooking.loginButton')}
                 </button>
@@ -1015,7 +1015,7 @@ export default function SessionBookingPage() {
                   disabled={userTickets.length === 0}
                   className={`w-full rounded-2xl p-4 flex justify-between items-center border transition-all duration-200 text-left shadow-sm ${
                     paymentMethod === 'ticket'
-                      ? 'border-primary dark:border-[#CCFF00] bg-primary/5 dark:bg-[#CCFF00]/5 ring-2 ring-primary/20 dark:ring-[#CCFF00]/20'
+                      ? 'border-primary bg-primary/5/5 ring-2 ring-primary/20/20'
                       : userTickets.length === 0
                       ? 'border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 opacity-60 cursor-not-allowed'
                       : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-600 active:scale-[0.99]'
@@ -1023,7 +1023,7 @@ export default function SessionBookingPage() {
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
-                      paymentMethod === 'ticket' ? 'bg-primary/15 dark:bg-[#CCFF00]/15 text-primary dark:text-[#CCFF00]' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
+                      paymentMethod === 'ticket' ? 'bg-primary/15/15 text-primary' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
                     }`}>
                       <Wallet size={22} strokeWidth={1.5} />
                     </div>
@@ -1035,7 +1035,7 @@ export default function SessionBookingPage() {
                     </div>
                   </div>
                   {paymentMethod === 'ticket' && userTickets.length > 0 && (
-                    <div className="w-6 h-6 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
                       <CheckCircle size={14} className="text-neutral-900" strokeWidth={2.5} />
                     </div>
                   )}
@@ -1051,13 +1051,13 @@ export default function SessionBookingPage() {
                   onClick={() => setPaymentMethod('purchase')}
                   className={`w-full rounded-2xl p-4 flex justify-between items-center border transition-all duration-200 text-left shadow-sm ${
                     paymentMethod === 'purchase'
-                      ? 'border-primary dark:border-[#CCFF00] bg-primary/5 dark:bg-[#CCFF00]/5 ring-2 ring-primary/20 dark:ring-[#CCFF00]/20'
+                      ? 'border-primary bg-primary/5/5 ring-2 ring-primary/20/20'
                       : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-600 active:scale-[0.99]'
                   }`}
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
-                      paymentMethod === 'purchase' ? 'bg-primary/15 dark:bg-[#CCFF00]/15 text-primary dark:text-[#CCFF00]' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
+                      paymentMethod === 'purchase' ? 'bg-primary/15/15 text-primary' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
                     }`}>
                       <CreditCard size={22} strokeWidth={1.5} />
                     </div>
@@ -1069,7 +1069,7 @@ export default function SessionBookingPage() {
                     </div>
                   </div>
                   {paymentMethod === 'purchase' && (
-                    <div className="w-6 h-6 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
                       <CheckCircle size={14} className="text-neutral-900" strokeWidth={2.5} />
                     </div>
                   )}
@@ -1081,13 +1081,13 @@ export default function SessionBookingPage() {
                 onClick={() => setShowOnsiteWarning(true)}
                 className={`w-full rounded-2xl p-4 flex justify-between items-center border transition-all duration-200 text-left shadow-sm ${
                   paymentMethod === 'onsite'
-                    ? 'border-primary dark:border-[#CCFF00] bg-primary/5 dark:bg-[#CCFF00]/5 ring-2 ring-primary/20 dark:ring-[#CCFF00]/20'
+                    ? 'border-primary bg-primary/5/5 ring-2 ring-primary/20/20'
                     : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-600 active:scale-[0.99]'
                 }`}
               >
                 <div className="flex items-center gap-4">
                   <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
-                    paymentMethod === 'onsite' ? 'bg-primary/15 dark:bg-[#CCFF00]/15 text-primary dark:text-[#CCFF00]' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
+                    paymentMethod === 'onsite' ? 'bg-primary/15/15 text-primary' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
                   }`}>
                     <Building2 size={22} strokeWidth={1.5} />
                   </div>
@@ -1097,7 +1097,7 @@ export default function SessionBookingPage() {
                   </div>
                 </div>
                 {paymentMethod === 'onsite' && (
-                  <div className="w-6 h-6 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
                     <CheckCircle size={14} className="text-neutral-900" strokeWidth={2.5} />
                   </div>
                 )}
@@ -1127,7 +1127,7 @@ export default function SessionBookingPage() {
                       onClick={() => setSelectedUserTicketId(ut.id)}
                       className={`w-full rounded-2xl p-4 flex justify-between items-center border transition-all duration-200 text-left shadow-sm ${
                         selected
-                          ? 'border-primary dark:border-[#CCFF00] bg-primary/5 dark:bg-[#CCFF00]/5 ring-2 ring-primary/20 dark:ring-[#CCFF00]/20'
+                          ? 'border-primary bg-primary/5/5 ring-2 ring-primary/20/20'
                           : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-600 active:scale-[0.99]'
                       }`}
                     >
@@ -1161,7 +1161,7 @@ export default function SessionBookingPage() {
                         </div>
                       </div>
                       {selected && (
-                        <div className="w-6 h-6 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center shrink-0">
+                        <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
                           <CheckCircle size={14} className="text-neutral-900" strokeWidth={2.5} />
                         </div>
                       )}
@@ -1201,7 +1201,7 @@ export default function SessionBookingPage() {
                           onClick={() => setSelectedPurchaseTicketId(selKey)}
                           className={`w-full rounded-2xl p-4 flex justify-between items-center border transition-all duration-200 text-left shadow-sm ${
                             selected
-                              ? 'border-primary dark:border-[#CCFF00] bg-primary/5 dark:bg-[#CCFF00]/5 ring-2 ring-primary/20 dark:ring-[#CCFF00]/20'
+                              ? 'border-primary bg-primary/5/5 ring-2 ring-primary/20/20'
                               : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-600 active:scale-[0.99]'
                           }`}
                         >
@@ -1227,7 +1227,7 @@ export default function SessionBookingPage() {
                             </div>
                           </div>
                           {selected && (
-                            <div className="w-6 h-6 rounded-full bg-primary dark:bg-[#CCFF00] flex items-center justify-center shrink-0">
+                            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
                               <CheckCircle size={14} className="text-neutral-900" strokeWidth={2.5} />
                             </div>
                           )}
@@ -1263,8 +1263,8 @@ export default function SessionBookingPage() {
                         </button>
                       </div>
                     ) : (
-                      <div className="rounded-xl py-3 px-4 bg-primary/10 dark:bg-[#CCFF00]/10 border border-primary/20 dark:border-[#CCFF00]/20 text-center">
-                        <span className="text-sm font-medium text-primary dark:text-[#CCFF00]">
+                      <div className="rounded-xl py-3 px-4 bg-primary/10/10 border border-primary/20/20 text-center">
+                        <span className="text-sm font-medium text-primary">
                           {t('sessionBooking.bankTransfer')} ({language === 'ko' ? '입금 확인 후 예약 확정' : 'Confirm after transfer'})
                         </span>
                       </div>
@@ -1282,7 +1282,7 @@ export default function SessionBookingPage() {
               {!user && (
                 <button
                   onClick={() => setIsAuthModalOpen(true)}
-                  className="text-xs text-primary dark:text-[#CCFF00] font-medium underline mb-2"
+                  className="text-xs text-primary font-medium underline mb-2"
                 >
                   {t('sessionBooking.login')}
                 </button>
@@ -1361,7 +1361,7 @@ export default function SessionBookingPage() {
               (paymentMethod === 'ticket' && !selectedUserTicketId) ||
               (paymentMethod === 'purchase' && !selectedPurchaseTicketId)
             }
-            className="w-full bg-primary dark:bg-[#CCFF00] text-neutral-900 font-semibold py-3.5 rounded-xl text-[15px] shadow-sm hover:opacity-95 active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full bg-primary text-neutral-900 font-semibold py-3.5 rounded-xl text-[15px] shadow-sm hover:opacity-95 active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {submitting ? (
               <>
@@ -1421,7 +1421,7 @@ export default function SessionBookingPage() {
                         setIsAuthModalOpen(true);
                       }
                     }}
-                    className="w-full py-3 px-4 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.99]"
+                    className="w-full py-3 px-4 bg-primary text-black font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.99]"
                   >
                     <Ticket size={16} className="shrink-0" />
                     {t('sessionBooking.onsiteWarningBuyTicket')}
@@ -1460,7 +1460,7 @@ export default function SessionBookingPage() {
                   setAuthModalInitialTab('login');
                   setIsAuthModalOpen(true);
                 }}
-                className="py-2.5 px-5 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm"
+                className="py-2.5 px-5 rounded-xl bg-primary text-black font-bold text-sm"
               >
                 {t('sessionBooking.loginButton')}
               </button>
@@ -1560,7 +1560,7 @@ export default function SessionBookingPage() {
                   setDepositorName(guestFormName.trim());
                   setDepositorModalOpen(true);
                 }}
-                className="py-2 px-5 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm"
+                className="py-2 px-5 rounded-xl bg-primary text-black font-bold text-sm"
               >
                 {language === 'ko' ? '다음' : 'Next'}
               </button>
@@ -1639,7 +1639,7 @@ export default function SessionBookingPage() {
                       setBankCopyFeedback(true);
                       setTimeout(() => setBankCopyFeedback(false), 2000);
                     }}
-                    className="w-full py-3 rounded-xl border-2 border-primary dark:border-[#CCFF00] bg-primary/10 dark:bg-[#CCFF00]/10 text-black dark:text-white font-medium flex items-center justify-center gap-2 mb-3"
+                    className="w-full py-3 rounded-xl border-2 border-primary bg-primary/10/10 text-black dark:text-white font-medium flex items-center justify-center gap-2 mb-3"
                   >
                     <Copy size={18} />
                     {bankCopyFeedback
@@ -1649,7 +1649,7 @@ export default function SessionBookingPage() {
                   <button
                     type="button"
                     onClick={closeBankTransferResultAndGoToMy}
-                    className="w-full py-3 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-medium"
+                    className="w-full py-3 rounded-xl bg-primary text-black font-medium"
                   >
                     {language === 'ko' ? '확인' : 'OK'}
                   </button>
@@ -1671,7 +1671,7 @@ export default function SessionBookingPage() {
                     </label>
                     {depositorModalPreFillLoading ? (
                       <div className="py-2 flex items-center gap-2">
-                        <Loader2 className="animate-spin text-primary dark:text-[#CCFF00]" size={20} />
+                        <Loader2 className="animate-spin text-primary" size={20} />
                         <span className="text-sm text-neutral-500">...</span>
                       </div>
                     ) : (
@@ -1701,7 +1701,7 @@ export default function SessionBookingPage() {
                           submitBankTransferOrder(depositorName);
                         }
                       }}
-                      className="flex-1 py-2.5 px-5 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="flex-1 py-2.5 px-5 rounded-xl bg-primary text-black font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       {submitting ? <Loader2 size={18} className="animate-spin" /> : (language === 'ko' ? '신청하기' : 'Submit')}
                     </button>
@@ -1717,8 +1717,8 @@ export default function SessionBookingPage() {
       {showBankTransferSuccessThenRedirect && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center animate-in zoom-in-95 duration-200">
-            <div className="w-14 h-14 rounded-full bg-primary/20 dark:bg-[#CCFF00]/20 flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="text-primary dark:text-[#CCFF00]" size={32} strokeWidth={2} />
+            <div className="w-14 h-14 rounded-full bg-primary/20/20 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="text-primary" size={32} strokeWidth={2} />
             </div>
             <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">
               {language === 'ko' ? '예약이 완료되었습니다' : 'Booking submitted'}
@@ -1745,7 +1745,7 @@ export default function SessionBookingPage() {
                       setAuthModalInitialTab('signup');
                       setIsAuthModalOpen(true);
                     }}
-                    className="flex-1 py-3 rounded-xl bg-primary dark:bg-[#CCFF00] text-neutral-900 font-semibold text-[15px] hover:opacity-95 active:scale-[0.99] transition-all"
+                    className="flex-1 py-3 rounded-xl bg-primary text-neutral-900 font-semibold text-[15px] hover:opacity-95 active:scale-[0.99] transition-all"
                   >
                     {language === 'ko' ? '회원가입' : 'Sign up'}
                   </button>
@@ -1782,7 +1782,7 @@ export default function SessionBookingPage() {
                   setBankTransferCompletedAsGuest(false);
                   router.push('/my');
                 }}
-                className="w-full py-3.5 rounded-xl bg-primary dark:bg-[#CCFF00] text-neutral-900 font-semibold text-[15px] hover:opacity-95 active:scale-[0.99] transition-all"
+                className="w-full py-3.5 rounded-xl bg-primary text-neutral-900 font-semibold text-[15px] hover:opacity-95 active:scale-[0.99] transition-all"
               >
                 {language === 'ko' ? '마이페이지로 이동' : 'Go to My Page'}
               </button>

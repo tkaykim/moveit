@@ -47,7 +47,7 @@ export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
             onClick={() => onTabChange(tab.id)}
             className={`flex flex-col items-center gap-1 transition-all duration-300 w-12 ${
               active 
-                ? 'text-primary dark:text-[#CCFF00] -translate-y-1' 
+                ? 'text-primary -translate-y-1' 
                 : 'text-neutral-500 dark:text-neutral-500'
             }`}
           >

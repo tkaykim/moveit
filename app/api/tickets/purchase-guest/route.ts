@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { getTicketById } from '@/lib/db/tickets';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
+import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 import { Database } from '@/types/database';
 
 /**
@@ -101,6 +102,24 @@ export async function POST(request: Request) {
     if (insertUtErr) {
       console.error(insertUtErr);
       return NextResponse.json({ error: '수강권 발급에 실패했습니다.' }, { status: 500 });
+    }
+
+    // 활동 로그: 수강권 발급 (비회원)
+    if (ticket.academy_id) {
+      insertEnrollmentActivityLog({
+        academy_id: ticket.academy_id,
+        user_id: guestUser.id,
+        user_ticket_id: userTicket.id,
+        action: 'TICKET_ISSUED',
+        payload: {
+          via: 'purchase_guest',
+          ticket_name: ticket.name,
+          ticket_type: ticket.ticket_type,
+          remaining_count: remainingCount,
+          expiry_date: userTicketData.expiry_date,
+          guest_name: String(guestName).trim(),
+        },
+      }, supabase).catch(() => {});
     }
 
     if (ticket.academy_id) {

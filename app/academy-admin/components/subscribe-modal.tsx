@@ -128,7 +128,7 @@ export function SubscribeModal({ academyId, isOpen, onClose, initialPlanId, init
                   onClick={() => setPlanId(opt.id)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium ${
                     planId === opt.id
-                      ? 'bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black'
+                      ? 'bg-neutral-900 text-white dark:text-black'
                       : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
                   }`}
                 >
@@ -150,7 +150,7 @@ export function SubscribeModal({ academyId, isOpen, onClose, initialPlanId, init
                   onClick={() => setCycle(opt.id)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium ${
                     cycle === opt.id
-                      ? 'bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black'
+                      ? 'bg-neutral-900 text-white dark:text-black'
                       : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
                   }`}
                 >
@@ -183,7 +183,7 @@ export function SubscribeModal({ academyId, isOpen, onClose, initialPlanId, init
             type="button"
             onClick={handleStartBilling}
             disabled={loading || !TOSS_CLIENT_KEY}
-            className="w-full py-3 rounded-xl font-bold bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black hover:opacity-90 disabled:opacity-50"
+            className="w-full py-3 rounded-xl font-bold bg-neutral-900 text-white dark:text-black hover:opacity-90 disabled:opacity-50"
           >
             {loading ? '연결 중…' : '카드 등록 및 구독하기'}
           </button>

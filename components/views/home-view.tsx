@@ -424,7 +424,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
       <header className="px-5 pt-8 pb-4 sticky top-0 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md z-30">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-black italic tracking-tighter">
-            MOVE<span className="text-neutral-800 dark:text-[#CCFF00]">.</span>IT
+            MOVE<span className="text-neutral-800">.</span>IT
           </h1>
           <div className="flex gap-3 items-center">
             <LanguageToggle />
@@ -445,7 +445,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={language === 'en' ? 'Search genre, instructor, academy' : '장르, 강사, 학원 검색'}
-            className="h-11 w-full pl-10 rounded-xl bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 focus-visible:ring-neutral-400 dark:focus-visible:ring-[#CCFF00]"
+            className="h-11 w-full pl-10 rounded-xl bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 focus-visible:ring-neutral-400"
           />
         </form>
       </header>
@@ -683,7 +683,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
                 </div>
                 {academy.price && (
                   <div className="flex-shrink-0 self-center">
-                    <span className="text-sm font-bold text-neutral-800 dark:text-[#CCFF00]">
+                    <span className="text-sm font-bold text-neutral-800">
                       {academy.price.toLocaleString()}원~
                     </span>
                   </div>

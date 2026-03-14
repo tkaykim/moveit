@@ -139,7 +139,7 @@ export function DashboardView({ academyId, showWelcomeBanner, onDismissWelcomeBa
       {!loadingSub && hasActiveSubscription && (
         <Link
           href={`/academy-admin/${academyId}/billing`}
-          className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4 text-gray-700 dark:text-gray-300 hover:border-primary dark:hover:border-[#CCFF00] transition-colors"
+          className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4 text-gray-700 dark:text-gray-300 hover:border-primary transition-colors"
         >
           <CreditCard className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           <span className="font-medium">구독/결제 관리</span>
@@ -161,13 +161,13 @@ export function DashboardView({ academyId, showWelcomeBanner, onDismissWelcomeBa
             <div key={button.href} data-onboarding={`page-dashboard-card-${idx}`}>
               <Link
                 href={button.href}
-                className="group block bg-white dark:bg-neutral-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 hover:shadow-lg hover:border-primary dark:hover:border-[#CCFF00] transition-all duration-200"
+                className="group block bg-white dark:bg-neutral-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-800 hover:shadow-lg hover:border-primary transition-all duration-200"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className={`p-3 rounded-lg ${button.color}`}>
                     <Icon className={`${button.iconColor} w-6 h-6`} />
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-primary dark:group-hover:text-[#CCFF00] transition-colors" />
+                  <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-primary dark:group-hover:text-primary transition-colors" />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
                   {button.label}

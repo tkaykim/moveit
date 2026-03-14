@@ -330,7 +330,7 @@ export function ConsultationRequestModal({
             <button
               type="submit"
               disabled={submitting || loading}
-              className="flex-1 py-2.5 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-xl disabled:opacity-50"
+              className="flex-1 py-2.5 bg-primary text-black font-bold rounded-xl disabled:opacity-50"
             >
               {submitting ? '접수 중...' : '신청하기'}
             </button>

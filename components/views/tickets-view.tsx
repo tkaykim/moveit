@@ -156,7 +156,7 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
     }
     
     return (
-      <span className="text-[10px] font-bold px-2 py-1 rounded bg-primary/10 dark:bg-[#CCFF00]/10 text-primary dark:text-[#CCFF00]">
+      <span className="text-[10px] font-bold px-2 py-1 rounded bg-primary/10/10 text-primary">
         사용가능
       </span>
     );
@@ -194,7 +194,7 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
           onClick={() => setFilter('ALL')}
           className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
             filter === 'ALL'
-              ? 'bg-primary dark:bg-[#CCFF00] text-black'
+              ? 'bg-primary text-black'
               : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400'
           }`}
         >
@@ -204,7 +204,7 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
           onClick={() => setFilter('ACTIVE')}
           className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
             filter === 'ACTIVE'
-              ? 'bg-primary dark:bg-[#CCFF00] text-black'
+              ? 'bg-primary text-black'
               : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400'
           }`}
         >
@@ -214,7 +214,7 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
           onClick={() => setFilter('EXPIRED')}
           className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
             filter === 'EXPIRED'
-              ? 'bg-primary dark:bg-[#CCFF00] text-black'
+              ? 'bg-primary text-black'
               : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400'
           }`}
         >
@@ -224,7 +224,7 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
           onClick={() => setFilter('USED')}
           className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
             filter === 'USED'
-              ? 'bg-primary dark:bg-[#CCFF00] text-black'
+              ? 'bg-primary text-black'
               : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400'
           }`}
         >
@@ -240,7 +240,7 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
           <p className="text-xs text-neutral-400 dark:text-neutral-500 mb-6">수강권을 구매하여 클래스를 예약해보세요</p>
           <button
             onClick={() => setIsRechargeModalOpen(true)}
-            className="mx-auto bg-primary dark:bg-[#CCFF00] text-black font-bold px-6 py-3 rounded-xl flex items-center gap-2 hover:opacity-90 transition-opacity"
+            className="mx-auto bg-primary text-black font-bold px-6 py-3 rounded-xl flex items-center gap-2 hover:opacity-90 transition-opacity"
           >
             <Plus size={20} />
             수강권 구매하기
@@ -265,7 +265,7 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
                         <div className="flex items-start justify-between mb-3 min-w-0">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <Ticket className="text-primary dark:text-[#CCFF00] flex-shrink-0" size={20} />
+                              <Ticket className="text-primary flex-shrink-0" size={20} />
                               <h3 className="text-base font-bold text-black dark:text-white break-words [word-break:keep-all] min-w-0">
                                 {ticket.ticket_name}
                               </h3>
@@ -327,7 +327,7 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-full max-w-[420px] px-5 z-40">
           <button
             onClick={() => setIsRechargeModalOpen(true)}
-            className="w-full bg-primary dark:bg-[#CCFF00] text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg hover:opacity-90 transition-opacity"
+            className="w-full bg-primary text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg hover:opacity-90 transition-opacity"
           >
             <Plus size={20} />
             수강권 추가 구매

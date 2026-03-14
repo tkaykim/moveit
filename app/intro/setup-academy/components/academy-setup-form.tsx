@@ -173,7 +173,7 @@ export function AcademySetupForm({ onSubmit, isSubmitting }: AcademySetupFormPro
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full py-3 rounded-xl font-bold bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black hover:opacity-90 disabled:opacity-50"
+        className="w-full py-3 rounded-xl font-bold bg-neutral-900 text-white dark:text-black hover:opacity-90 disabled:opacity-50"
       >
         {isSubmitting ? '생성 중…' : '학원 생성하기'}
       </button>

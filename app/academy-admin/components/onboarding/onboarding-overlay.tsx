@@ -159,7 +159,7 @@ export function OnboardingOverlay() {
           <div className="absolute bg-black/60 dark:bg-black/70" style={{ top: targetRect.top - padding, left: targetRect.right + padding, right: 0, bottom: 0 }} onClick={(e) => e.target === e.currentTarget && closeOnboarding()} />
           <div className="absolute left-0 right-0 bg-black/60 dark:bg-black/70" style={{ top: targetRect.bottom + padding, left: 0, right: 0, bottom: 0 }} onClick={(e) => e.target === e.currentTarget && closeOnboarding()} />
           <div
-            className="absolute rounded-lg ring-2 ring-primary dark:ring-[#CCFF00] ring-offset-2 ring-offset-white dark:ring-offset-neutral-900 pointer-events-none"
+            className="absolute rounded-lg ring-2 ring-primary ring-offset-2 ring-offset-white dark:ring-offset-neutral-900 pointer-events-none"
             style={{
               left: targetRect.left - padding,
               top: targetRect.top - padding,
@@ -197,7 +197,7 @@ export function OnboardingOverlay() {
             {body}
           </p>
           {showActionHint && (
-            <p className="mt-3 text-sm font-medium text-primary dark:text-[#CCFF00] flex items-center gap-2">
+            <p className="mt-3 text-sm font-medium text-primary flex items-center gap-2">
               <span aria-hidden>👉</span>
               하이라이트된 버튼(또는 영역)을 직접 눌러 보세요.
             </p>
@@ -222,7 +222,7 @@ export function OnboardingOverlay() {
             <button
               type="button"
               onClick={onPrimary}
-              className="px-4 py-2 rounded-lg bg-primary dark:bg-[#CCFF00] text-black font-medium text-sm hover:opacity-90"
+              className="px-4 py-2 rounded-lg bg-primary text-black font-medium text-sm hover:opacity-90"
             >
               {nextLabel}
             </button>

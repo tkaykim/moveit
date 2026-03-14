@@ -152,14 +152,14 @@ export default function AcademyMultiSelect({
                     }}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors border-b border-neutral-100 dark:border-neutral-700 last:border-b-0 ${
                       selected
-                        ? 'bg-primary/10 dark:bg-[#CCFF00]/10'
+                        ? 'bg-primary/10/10'
                         : 'hover:bg-neutral-50 dark:hover:bg-neutral-700'
                     }`}
                   >
                     <div
                       className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                         selected
-                          ? 'border-primary dark:border-[#CCFF00] bg-primary dark:bg-[#CCFF00]'
+                          ? 'border-primary bg-primary'
                           : 'border-neutral-300 dark:border-neutral-600'
                       }`}
                     >

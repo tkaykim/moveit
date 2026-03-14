@@ -210,6 +210,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '수강권 발급에 실패했습니다.' }, { status: 500 });
     }
 
+    // 활동 로그: 수강권 발급 (토스 결제)
+    insertEnrollmentActivityLog({
+      academy_id: order.academy_id,
+      user_id: user.id,
+      user_ticket_id: userTicket.id,
+      action: 'TICKET_ISSUED',
+      payload: {
+        via: 'toss_payment',
+        ticket_name: ticket.name,
+        ticket_type: ticket.ticket_type,
+        remaining_count: remainingCount,
+        expiry_date: expiryDateStr,
+        order_id: orderId,
+      },
+    }, supabase).catch(() => {});
+
     // 동시 요청: 다른 요청이 이미 revenue를 생성했으면 방금 만든 user_ticket 롤백 후 기존 결과 반환
     const { data: existingRev2 } = await (supabase as any)
       .from('revenue_transactions')
@@ -371,6 +387,14 @@ export async function POST(request: Request) {
         try {
           await consumeUserTicket(userTicket.id, resolvedClassId, 1);
           consumeOk = true;
+          // 활동 로그: 횟수 차감
+          insertEnrollmentActivityLog({
+            academy_id: order.academy_id,
+            user_id: user.id,
+            user_ticket_id: userTicket.id,
+            action: 'COUNT_DEDUCT',
+            payload: { delta: -1, class_id: resolvedClassId, schedule_id: order.schedule_id, via: 'payment_confirm' },
+          }, supabase).catch(() => {});
         } catch (e: any) {
           console.error('Consume ticket for booking error:', e);
         }

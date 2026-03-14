@@ -628,7 +628,7 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
                       onClose();
                       router.push(`/academy-admin/${academyId}/enrollments?schedule_id=${session.id}`);
                     }}
-                    className="px-3 py-1.5 text-xs bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-1.5 font-medium"
+                    className="px-3 py-1.5 text-xs bg-primary text-black rounded-lg hover:opacity-90 flex items-center gap-1.5 font-medium"
                     title="신청자 관리하기"
                   >
                     <UserCog size={14} />

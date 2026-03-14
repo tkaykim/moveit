@@ -323,7 +323,7 @@ export const TicketPurchaseModal = ({
               onClick={() => { setActiveTab('ticket'); setSelectedTicket(null); }}
               className={`flex-1 py-3 text-sm font-bold transition-colors ${
                 activeTab === 'ticket'
-                  ? 'text-black dark:text-white border-b-2 border-neutral-800 dark:border-[#CCFF00]'
+                  ? 'text-black dark:text-white border-b-2 border-neutral-800'
                   : 'text-neutral-500 hover:text-black dark:hover:text-white'
               }`}
             >
@@ -334,7 +334,7 @@ export const TicketPurchaseModal = ({
               onClick={() => { setActiveTab('coupon'); setSelectedTicket(null); }}
               className={`flex-1 py-3 text-sm font-bold transition-colors ${
                 activeTab === 'coupon'
-                  ? 'text-black dark:text-white border-b-2 border-neutral-800 dark:border-[#CCFF00]'
+                  ? 'text-black dark:text-white border-b-2 border-neutral-800'
                   : 'text-neutral-500 hover:text-black dark:hover:text-white'
               }`}
             >
@@ -353,7 +353,7 @@ export const TicketPurchaseModal = ({
                   {language === 'ko' ? '입금자명' : 'Depositor name'}
                 </label>
                 {depositorStepLoading ? (
-                  <div className="py-2 flex items-center gap-2"><Loader2 className="animate-spin text-primary dark:text-[#CCFF00]" size={20} /><span className="text-sm text-neutral-500">...</span></div>
+                  <div className="py-2 flex items-center gap-2"><Loader2 className="animate-spin text-primary" size={20} /><span className="text-sm text-neutral-500">...</span></div>
                 ) : (
                   <input
                     type="text"
@@ -376,7 +376,7 @@ export const TicketPurchaseModal = ({
                   type="button"
                   disabled={purchasing || !depositorName.trim() || depositorStepLoading}
                   onClick={handleDepositorSubmit}
-                  className="py-2 px-5 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-bold text-sm disabled:opacity-50"
+                  className="py-2 px-5 rounded-xl bg-primary text-black font-bold text-sm disabled:opacity-50"
                 >
                   {purchasing ? <Loader2 size={18} className="animate-spin" /> : (language === 'ko' ? '신청하기' : 'Submit')}
                 </button>
@@ -398,7 +398,7 @@ export const TicketPurchaseModal = ({
                   <button
                     type="button"
                     onClick={() => navigator.clipboard.writeText(bankTransferResult.bankAccountNumber)}
-                    className="shrink-0 p-1 rounded-lg bg-primary dark:bg-[#CCFF00] text-black hover:opacity-90"
+                    className="shrink-0 p-1 rounded-lg bg-primary text-black hover:opacity-90"
                     title={language === 'ko' ? '복사' : 'Copy'}
                   >
                     <Copy size={14} />
@@ -416,7 +416,7 @@ export const TicketPurchaseModal = ({
               <button
                 type="button"
                 onClick={handleClose}
-                className="w-full py-3 rounded-xl bg-primary dark:bg-[#CCFF00] text-black font-medium"
+                className="w-full py-3 rounded-xl bg-primary text-black font-medium"
               >
                 {language === 'ko' ? '확인' : 'OK'}
               </button>
@@ -456,7 +456,7 @@ export const TicketPurchaseModal = ({
                     onClick={() => setSelectedTicket(ticket)}
                     className={`w-full p-4 rounded-xl border transition-all text-left ${
                       selectedTicket?.id === ticket.id
-                        ? 'border-neutral-800 dark:border-[#CCFF00] bg-neutral-50 dark:bg-neutral-800'
+                        ? 'border-neutral-800 bg-neutral-50 dark:bg-neutral-800'
                         : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600'
                     }`}
                   >
@@ -538,7 +538,7 @@ export const TicketPurchaseModal = ({
                       onClick={() => setSelectedDiscount(null)}
                       className={`w-full p-3 rounded-lg border text-left text-sm ${
                         !selectedDiscount
-                          ? 'border-neutral-800 dark:border-[#CCFF00] bg-white dark:bg-neutral-900'
+                          ? 'border-neutral-800 bg-white dark:bg-neutral-900'
                           : 'border-neutral-200 dark:border-neutral-700'
                       }`}
                     >
@@ -550,7 +550,7 @@ export const TicketPurchaseModal = ({
                         onClick={() => setSelectedDiscount(discount)}
                         className={`w-full p-3 rounded-lg border text-left ${
                           selectedDiscount?.id === discount.id
-                            ? 'border-neutral-800 dark:border-[#CCFF00] bg-white dark:bg-neutral-900'
+                            ? 'border-neutral-800 bg-white dark:bg-neutral-900'
                             : 'border-neutral-200 dark:border-neutral-700'
                         }`}
                       >
@@ -603,7 +603,7 @@ export const TicketPurchaseModal = ({
             <button
               onClick={handlePurchase}
               disabled={purchasing}
-              className="w-full py-3 bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black font-bold rounded-xl hover:bg-neutral-800 dark:hover:bg-[#b8e600] transition-colors disabled:opacity-50"
+              className="w-full py-3 bg-neutral-900 text-white dark:text-black font-bold rounded-xl hover:bg-neutral-800 hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
               {purchasing ? t('ticketModal.processing') : t('ticketModal.purchaseButton', { type: activeTab === 'ticket' ? t('ticketModal.purchaseButtonTicket') : t('ticketModal.purchaseButtonCoupon') })}
             </button>

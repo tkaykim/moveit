@@ -479,7 +479,7 @@ export function AcademyFormModal({
                         {formData.tags.map((tag) => (
                           <span
                             key={tag}
-                            className="inline-flex items-center gap-1 px-3 py-1 bg-primary/20 dark:bg-[#CCFF00]/20 text-primary dark:text-[#CCFF00] rounded-full text-sm"
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-primary/20/20 text-primary rounded-full text-sm"
                           >
                             {tag}
                             <button
@@ -599,7 +599,7 @@ export function AcademyFormModal({
                 <button
                   type="button"
                   onClick={handleAddImage}
-                  className="px-3 py-1.5 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-2 text-sm"
+                  className="px-3 py-1.5 bg-primary text-black rounded-lg hover:opacity-90 flex items-center gap-2 text-sm"
                 >
                   <Plus size={16} />
                   이미지 추가
@@ -656,7 +656,7 @@ export function AcademyFormModal({
                 <button
                   type="button"
                   onClick={handleAddHall}
-                  className="px-3 py-1.5 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-2 text-sm"
+                  className="px-3 py-1.5 bg-primary text-black rounded-lg hover:opacity-90 flex items-center gap-2 text-sm"
                 >
                   <Plus size={16} />
                   홀 추가
@@ -737,7 +737,7 @@ export function AcademyFormModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-lg hover:opacity-90 disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-primary text-black font-bold rounded-lg hover:opacity-90 disabled:opacity-50"
             >
               {isSubmitting ? '저장 중...' : isEditing ? '수정' : '등록'}
             </button>

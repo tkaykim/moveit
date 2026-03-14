@@ -244,7 +244,7 @@ export default function SchedulesPage() {
               });
               setHalls([]);
             }}
-            className="px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-2"
+            className="px-4 py-2 bg-primary text-black rounded-lg hover:opacity-90 flex items-center gap-2"
           >
             <Plus size={20} />
             {showForm ? '취소' : '시간표 추가'}
@@ -418,7 +418,7 @@ export default function SchedulesPage() {
             </div>
             <button
               type="submit"
-              className="w-full px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-lg hover:opacity-90"
+              className="w-full px-4 py-2 bg-primary text-black font-bold rounded-lg hover:opacity-90"
             >
               {editingId ? '수정' : '등록'}
             </button>
@@ -521,7 +521,7 @@ export default function SchedulesPage() {
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => router.push(`/admin/enrollments?schedule_id=${schedule.id}`)}
-                            className="px-3 py-1.5 text-xs bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-1.5 font-medium"
+                            className="px-3 py-1.5 text-xs bg-primary text-black rounded-lg hover:opacity-90 flex items-center gap-1.5 font-medium"
                             title="신청자 관리하기"
                           >
                             <Users size={14} />
@@ -529,7 +529,7 @@ export default function SchedulesPage() {
                           </button>
                           <button
                             onClick={() => handleEdit(schedule)}
-                            className="text-primary dark:text-[#CCFF00] hover:opacity-80"
+                            className="text-primary hover:opacity-80"
                             title="수정"
                           >
                             <Edit size={18} />

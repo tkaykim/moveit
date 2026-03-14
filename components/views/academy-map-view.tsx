@@ -408,7 +408,7 @@ export function AcademyMapView({ onAcademyClick }: AcademyMapViewProps) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-neutral-300 dark:border-neutral-600 border-t-primary dark:border-t-[#CCFF00] rounded-full" />
+        <div className="animate-spin w-8 h-8 border-4 border-neutral-300 dark:border-neutral-600 border-t-primary rounded-full" />
       </div>
     );
   }
@@ -443,7 +443,7 @@ export function AcademyMapView({ onAcademyClick }: AcademyMapViewProps) {
             }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-9 py-2.5 bg-neutral-100 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 text-black dark:text-white placeholder-neutral-400 focus:outline-none focus:border-neutral-400 dark:focus:border-[#CCFF00] text-sm transition-colors"
+            className="w-full pl-10 pr-9 py-2.5 bg-neutral-100 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 text-black dark:text-white placeholder-neutral-400 focus:outline-none focus:border-neutral-400 text-sm transition-colors"
           />
           {searchQuery && (
             <button
@@ -460,7 +460,7 @@ export function AcademyMapView({ onAcademyClick }: AcademyMapViewProps) {
             type="button"
             onClick={goToMyLocation}
             disabled={locationLoading}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-primary dark:bg-[#CCFF00] text-black border border-primary dark:border-[#CCFF00] disabled:opacity-60"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-primary text-black border border-primary disabled:opacity-60"
           >
             <Navigation size={16} />
             {locationLoading
@@ -517,7 +517,7 @@ export function AcademyMapView({ onAcademyClick }: AcademyMapViewProps) {
                       }}
                       className={`w-full text-left px-4 py-2 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 first:rounded-t-lg last:rounded-b-lg ${
                         sortOption === opt.value
-                          ? "text-primary dark:text-[#CCFF00] font-medium"
+                          ? "text-primary font-medium"
                           : "text-black dark:text-white"
                       }`}
                     >
@@ -533,14 +533,14 @@ export function AcademyMapView({ onAcademyClick }: AcademyMapViewProps) {
             onClick={() => setIsFilterModalOpen(true)}
             className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm border transition-colors ${
               activeFilterCount > 0
-                ? "bg-primary dark:bg-[#CCFF00] text-black border-primary dark:border-[#CCFF00]"
+                ? "bg-primary text-black border-primary"
                 : "bg-neutral-100 dark:bg-neutral-900 text-black dark:text-white border-neutral-200 dark:border-neutral-800"
             }`}
           >
             <SlidersHorizontal size={14} />
             {language === "en" ? "Filter" : "필터"}
             {activeFilterCount > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 bg-white dark:bg-black text-primary dark:text-[#CCFF00] text-[10px] font-bold rounded-full">
+              <span className="ml-1 px-1.5 py-0.5 bg-white dark:bg-black text-primary text-[10px] font-bold rounded-full">
                 {activeFilterCount}
               </span>
             )}
@@ -606,7 +606,7 @@ export function AcademyMapView({ onAcademyClick }: AcademyMapViewProps) {
               <button
                 type="button"
                 onClick={() => setDrawerExpanded(false)}
-                className="flex items-center gap-1 text-xs text-primary dark:text-[#CCFF00] font-medium"
+                className="flex items-center gap-1 text-xs text-primary font-medium"
               >
                 <MapIcon size={14} />
                 {language === "en" ? "Map" : "지도"}
@@ -658,7 +658,7 @@ export function AcademyMapView({ onAcademyClick }: AcademyMapViewProps) {
                       )}
                       <div className="flex items-center gap-2 mt-1">
                         {academy.price && (
-                          <span className="text-xs text-primary dark:text-[#CCFF00] font-semibold">
+                          <span className="text-xs text-primary font-semibold">
                             {academy.price.toLocaleString()}원~
                           </span>
                         )}
@@ -709,7 +709,7 @@ export function AcademyMapView({ onAcademyClick }: AcademyMapViewProps) {
                 )}
                 <div className="flex items-center gap-2 mt-2">
                   {selectedAcademy.price && (
-                    <span className="text-sm font-semibold text-primary dark:text-[#CCFF00]">
+                    <span className="text-sm font-semibold text-primary">
                       {selectedAcademy.price.toLocaleString()}원~
                     </span>
                   )}
@@ -775,7 +775,7 @@ export function AcademyMapView({ onAcademyClick }: AcademyMapViewProps) {
               <button
                 type="button"
                 onClick={() => onAcademyClick(selectedAcademy)}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary dark:bg-[#CCFF00] text-black text-sm font-bold"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-black text-sm font-bold"
               >
                 {language === "en" ? "Details" : "상세보기"}
                 <ChevronRight size={16} />
@@ -824,7 +824,7 @@ export function AcademyMapView({ onAcademyClick }: AcademyMapViewProps) {
                         {academy.name}
                       </h4>
                       {academy.price && (
-                        <p className="text-xs text-primary dark:text-[#CCFF00] font-medium mt-0.5">
+                        <p className="text-xs text-primary font-medium mt-0.5">
                           {academy.price.toLocaleString()}원~
                         </p>
                       )}

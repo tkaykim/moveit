@@ -315,7 +315,7 @@ export default function InstructorsPage() {
                 profileImageUrl: null,
               });
             }}
-            className="px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-2"
+            className="px-4 py-2 bg-primary text-black rounded-lg hover:opacity-90 flex items-center gap-2"
           >
             <Plus size={20} />
             {showForm ? '취소' : '강사 추가'}
@@ -409,7 +409,7 @@ export default function InstructorsPage() {
                         onClick={() => toggleGenre(genre)}
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                           isSelected
-                            ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                            ? 'bg-primary text-black'
                             : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700'
                         }`}
                       >
@@ -424,7 +424,7 @@ export default function InstructorsPage() {
                     {formData.selectedGenres.map((genre) => (
                       <span
                         key={genre}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-primary/20 dark:bg-[#CCFF00]/20 text-primary dark:text-[#CCFF00] rounded-full text-sm"
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-primary/20/20 text-primary rounded-full text-sm"
                       >
                         {genre}
                         <button
@@ -442,7 +442,7 @@ export default function InstructorsPage() {
             </div>
             <button
               type="submit"
-              className="w-full px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black font-bold rounded-lg hover:opacity-90"
+              className="w-full px-4 py-2 bg-primary text-black font-bold rounded-lg hover:opacity-90"
             >
               {editingId ? '수정' : '등록'}
             </button>
@@ -499,7 +499,7 @@ export default function InstructorsPage() {
                             {genres.map((genre) => (
                               <span
                                 key={genre}
-                                className="px-2 py-1 bg-primary/10 dark:bg-[#CCFF00]/10 text-primary dark:text-[#CCFF00] rounded-full text-xs font-medium"
+                                className="px-2 py-1 bg-primary/10/10 text-primary rounded-full text-xs font-medium"
                               >
                                 {genre}
                               </span>
@@ -525,7 +525,7 @@ export default function InstructorsPage() {
                             <button
                               onClick={() => handleUpdateProfileImage(instructor.id)}
                               disabled={updatingIds.has(instructor.id)}
-                              className="flex-1 px-3 py-1.5 text-xs bg-primary dark:bg-[#CCFF00] text-black rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                              className="flex-1 px-3 py-1.5 text-xs bg-primary text-black rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                             >
                               {updatingIds.has(instructor.id) ? '저장 중...' : '저장'}
                             </button>
@@ -543,7 +543,7 @@ export default function InstructorsPage() {
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => handleEdit(instructor)}
-                            className="text-primary dark:text-[#CCFF00] hover:opacity-80"
+                            className="text-primary hover:opacity-80"
                           >
                             <Edit size={18} />
                           </button>

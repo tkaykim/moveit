@@ -275,7 +275,7 @@ export default function UsersPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary dark:border-[#CCFF00]" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
@@ -293,7 +293,7 @@ export default function UsersPage() {
         {activeTab === 'academy' && (
           <button
             onClick={() => setShowAssignModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 transition-opacity font-medium"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-black rounded-lg hover:opacity-90 transition-opacity font-medium"
           >
             <Plus size={18} />
             학원 역할 할당
@@ -307,7 +307,7 @@ export default function UsersPage() {
           onClick={() => { setActiveTab('general'); setSearchQuery(''); }}
           className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'general'
-              ? 'border-primary dark:border-[#CCFF00] text-primary dark:text-[#CCFF00]'
+              ? 'border-primary text-primary'
               : 'border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300'
           }`}
         >
@@ -321,7 +321,7 @@ export default function UsersPage() {
           onClick={() => { setActiveTab('academy'); setSearchQuery(''); }}
           className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'academy'
-              ? 'border-primary dark:border-[#CCFF00] text-primary dark:text-[#CCFF00]'
+              ? 'border-primary text-primary'
               : 'border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300'
           }`}
         >
@@ -346,7 +346,7 @@ export default function UsersPage() {
             }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
       </div>

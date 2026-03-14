@@ -213,7 +213,7 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
                     />
                     <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                       <div className="w-16 h-16 rounded-full bg-white/90 dark:bg-black/80 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                        <Play size={28} className="text-primary dark:text-[#CCFF00] ml-1" fill="currentColor" />
+                        <Play size={28} className="text-primary ml-1" fill="currentColor" />
                       </div>
                     </div>
                     <div className="absolute bottom-3 left-3 bg-black/70 text-white text-xs px-2 py-1 rounded">
@@ -225,8 +225,8 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
                     onClick={() => setShowVideo(true)}
                     className="w-full h-full flex items-center justify-center group"
                   >
-                    <div className="w-16 h-16 rounded-full bg-primary/10 dark:bg-[#CCFF00]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Play size={28} className="text-primary dark:text-[#CCFF00] ml-1" />
+                    <div className="w-16 h-16 rounded-full bg-primary/10/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Play size={28} className="text-primary ml-1" />
                     </div>
                   </button>
                 ) : null}
@@ -268,7 +268,7 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
                 </div>
                 
                 {/* 시간 정보 */}
-                <div className="flex items-center gap-2 text-sm text-primary dark:text-[#CCFF00]">
+                <div className="flex items-center gap-2 text-sm text-primary">
                   <Clock size={14} />
                   <span className="font-medium">
                     {classInfo.time}
@@ -311,7 +311,7 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
                 {instructorSpecialties && (
                   <div className="flex flex-wrap gap-1 mb-2">
                     {instructorSpecialties.split(',').map((specialty: string, idx: number) => (
-                      <span key={idx} className="text-[10px] px-2 py-0.5 bg-primary/10 dark:bg-[#CCFF00]/10 text-primary dark:text-[#CCFF00] rounded-full">
+                      <span key={idx} className="text-[10px] px-2 py-0.5 bg-primary/10/10 text-primary rounded-full">
                         {specialty.trim()}
                       </span>
                     ))}
@@ -374,7 +374,7 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
                 className={`flex-[2] font-black py-4 rounded-xl text-lg transition-all ${
                   isFull 
                     ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 cursor-not-allowed' 
-                    : 'bg-primary dark:bg-[#CCFF00] text-white dark:text-black shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95'
+                    : 'bg-primary text-white dark:text-black shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95'
                 }`}
               >
                 {isFull ? '예약 마감' : '예약하기'}

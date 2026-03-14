@@ -278,7 +278,7 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary dark:border-[#CCFF00] border-t-transparent"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
       </div>
     );
   }
@@ -298,7 +298,7 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
             <span className="text-base font-bold text-black dark:text-white">{t('schedule.monthYear', { year: String(year), month: String(month + 1) })}</span>
             <button
               onClick={goToToday}
-              className="text-xs px-3 py-1.5 bg-primary/10 dark:bg-[#CCFF00]/10 text-primary dark:text-[#CCFF00] rounded-full font-medium hover:bg-primary/20 dark:hover:bg-[#CCFF00]/20 transition-colors"
+              className="text-xs px-3 py-1.5 bg-primary/10/10 text-primary rounded-full font-medium hover:bg-primary/20 dark:hover:bg-primary/20 transition-colors"
             >
               {t('schedule.thisMonth')}
             </button>
@@ -352,13 +352,13 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
                         ? 'bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer'
                         : 'bg-white dark:bg-neutral-900'
                       : 'bg-neutral-50 dark:bg-neutral-950'
-                  } ${isToday ? 'ring-2 ring-inset ring-primary dark:ring-[#CCFF00]' : ''}`}
+                  } ${isToday ? 'ring-2 ring-inset ring-primary' : ''}`}
                 >
                   {/* 날짜 숫자 */}
                   <div
                     className={`text-xs font-bold mb-1 w-6 h-6 flex items-center justify-center rounded-full ${
                       isToday
-                        ? 'bg-primary dark:bg-[#CCFF00] text-white dark:text-black'
+                        ? 'bg-primary text-white dark:text-black'
                         : isCurrentMonth
                           ? isSunday
                             ? 'text-rose-500'
@@ -392,7 +392,7 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
                         )}
                       </div>
                       {/* 수업 개수 */}
-                      <div className="text-[10px] text-primary dark:text-[#CCFF00] font-medium">
+                      <div className="text-[10px] text-primary font-medium">
                         {t('schedule.classesCount', { count: String(daySchedules.length) })}
                       </div>
                     </div>

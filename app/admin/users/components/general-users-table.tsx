@@ -88,7 +88,7 @@ export default function GeneralUsersTable({
                         </select>
                         <button
                           onClick={() => onRoleChange(user.id, selectedRole)}
-                          className="px-3 py-1 text-sm bg-primary dark:bg-[#CCFF00] text-black rounded hover:opacity-90"
+                          className="px-3 py-1 text-sm bg-primary text-black rounded hover:opacity-90"
                         >
                           저장
                         </button>
@@ -112,7 +112,7 @@ export default function GeneralUsersTable({
                     {editingUserId !== user.id && (
                       <button
                         onClick={() => onEditStart(user.id, user.role)}
-                        className="p-1.5 text-neutral-600 dark:text-neutral-400 hover:text-primary dark:hover:text-[#CCFF00] transition-colors"
+                        className="p-1.5 text-neutral-600 dark:text-neutral-400 hover:text-primary transition-colors"
                         title="역할 변경"
                       >
                         <Edit2 size={16} />

@@ -275,12 +275,12 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
     <div className="w-full">
       <div className="flex flex-col gap-1 mb-6">
         <div className="flex items-center gap-2">
-          <Landmark className="text-primary dark:text-[#CCFF00]" size={24} />
+          <Landmark className="text-primary" size={24} />
           <h1 className="text-xl font-bold text-neutral-900 dark:text-white">수동 입금확인</h1>
         </div>
         {academyName && (
           <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-            현재 학원: <span className="text-primary dark:text-[#CCFF00]">{academyName}</span>
+            현재 학원: <span className="text-primary">{academyName}</span>
           </p>
         )}
         <p className="text-sm text-neutral-500 dark:text-neutral-400">
@@ -374,7 +374,7 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
 
       {loading && orders.length === 0 ? (
         <div className="flex items-center justify-center py-16 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
-          <Loader2 className="animate-spin text-primary dark:text-[#CCFF00]" size={32} />
+          <Loader2 className="animate-spin text-primary" size={32} />
         </div>
       ) : orders.length === 0 ? (
         <div className="text-center py-16 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 text-neutral-500 dark:text-neutral-400">
@@ -526,7 +526,7 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
                   size="sm"
                   onClick={() => setPage(p)}
                   disabled={loading}
-                  className={cn(page === p && 'bg-primary dark:bg-[#CCFF00] text-black hover:bg-primary/90 dark:hover:bg-[#CCFF00]/90')}
+                  className={cn(page === p && 'bg-primary text-black hover:bg-primary/90 dark:hover:bg-primary/90')}
                 >
                   {p}
                 </Button>

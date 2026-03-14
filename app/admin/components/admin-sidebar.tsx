@@ -135,7 +135,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       >
       <div className="p-6 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
         <Link href="/admin" className="flex items-center gap-2" onClick={handleLinkClick}>
-          <div className="w-8 h-8 bg-primary dark:bg-[#CCFF00] rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <Building2 className="text-black w-5 h-5" />
           </div>
           <span className="text-lg font-bold text-black dark:text-white">
@@ -166,7 +166,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                   onClick={() => toggleMenu(item.title)}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                     isParentActiveState
-                      ? 'bg-neutral-200 dark:bg-[#CCFF00]/10 text-neutral-900 dark:text-[#CCFF00] font-semibold'
+                      ? 'bg-neutral-200/10 text-neutral-900 font-semibold'
                       : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
                   }`}
                 >
@@ -193,7 +193,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                           onClick={handleLinkClick}
                           className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
                             active
-                              ? 'bg-neutral-200 dark:bg-[#CCFF00] text-neutral-900 dark:text-black font-semibold'
+                              ? 'bg-neutral-200 text-neutral-900 dark:text-black font-semibold'
                               : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
                           }`}
                         >
@@ -216,7 +216,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
               onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                 active
-                  ? 'bg-neutral-200 dark:bg-[#CCFF00] text-neutral-900 dark:text-black font-semibold'
+                  ? 'bg-neutral-200 text-neutral-900 dark:text-black font-semibold'
                   : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
               }`}
             >

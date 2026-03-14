@@ -295,14 +295,14 @@ export default function AdminSupportRequestsPage() {
                   onChange={(e) => setEditNote(e.target.value)}
                   placeholder="처리 현황 또는 안내사항을 작성해주세요..."
                   rows={3}
-                  className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00] focus:border-transparent outline-none transition-all text-sm resize-none"
+                  className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-sm resize-none"
                 />
               </div>
 
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="w-full py-2.5 bg-neutral-900 dark:bg-[#CCFF00] text-white dark:text-black font-semibold rounded-xl hover:bg-neutral-800 dark:hover:bg-[#CCFF00]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-neutral-900 text-white dark:text-black font-semibold rounded-xl hover:bg-neutral-800 dark:hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm flex items-center justify-center gap-2"
               >
                 {saving ? (
                   <>
@@ -366,7 +366,7 @@ export default function AdminSupportRequestsPage() {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value as any)}
-            className="px-3 py-1.5 text-xs rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+            className="px-3 py-1.5 text-xs rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="all">전체 유형</option>
             <option value="bug_report">버그 신고</option>
@@ -375,7 +375,7 @@ export default function AdminSupportRequestsPage() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as any)}
-            className="px-3 py-1.5 text-xs rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+            className="px-3 py-1.5 text-xs rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="all">전체 상태</option>
             <option value="pending">접수대기중</option>

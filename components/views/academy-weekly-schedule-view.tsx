@@ -331,7 +331,7 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary dark:border-[#CCFF00] border-t-transparent"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
       </div>
     );
   }
@@ -350,7 +350,7 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
           <span className="text-sm font-bold text-black dark:text-white">{getMonthDisplay()}</span>
           <button
             onClick={goToToday}
-            className="text-xs px-3 py-1.5 bg-primary/10 dark:bg-[#CCFF00]/10 text-primary dark:text-[#CCFF00] rounded-full font-medium hover:bg-primary/20 dark:hover:bg-[#CCFF00]/20 transition-colors"
+            className="text-xs px-3 py-1.5 bg-primary/10/10 text-primary rounded-full font-medium hover:bg-primary/20 dark:hover:bg-primary/20 transition-colors"
           >
             {t('schedule.today')}
           </button>
@@ -382,16 +382,16 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
               onClick={() => setSelectedDayIndex(index)}
               className={`flex-shrink-0 flex flex-col items-center py-2 px-4 rounded-xl transition-all ${
                 isSelected
-                  ? 'bg-primary dark:bg-[#CCFF00] text-white dark:text-black shadow-lg'
+                  ? 'bg-primary text-white dark:text-black shadow-lg'
                   : isToday
-                    ? 'bg-primary/20 dark:bg-[#CCFF00]/20 text-primary dark:text-[#CCFF00]'
+                    ? 'bg-primary/20/20 text-primary'
                     : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
               }`}
             >
               <span className="text-[10px] font-medium opacity-80">{dayLabels[index]}</span>
               <span className="text-lg font-bold">{dayDate}</span>
               {hasClasses && !isSelected && (
-                <div className="w-1.5 h-1.5 rounded-full bg-primary dark:bg-[#CCFF00] mt-0.5"></div>
+                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></div>
               )}
               {isSelected && hasClasses && (
                 <div className="w-1.5 h-1.5 rounded-full bg-white dark:bg-black mt-0.5"></div>

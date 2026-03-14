@@ -43,13 +43,13 @@ const SidebarItem = ({ icon: Icon, label, href, active, onClick }: SidebarItemPr
     onClick={onClick}
     className={`flex items-center gap-3 px-4 py-2.5 lg:py-3 cursor-pointer transition-all duration-200 rounded-lg mx-2 mb-0.5 ${
       active
-        ? 'bg-neutral-200 dark:bg-[#CCFF00]/10 text-neutral-900 dark:text-[#CCFF00] font-semibold shadow-sm'
+        ? 'bg-neutral-200/10 text-neutral-900 font-semibold shadow-sm'
         : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
     }`}
   >
     <Icon
       size={20}
-      className={active ? 'text-neutral-900 dark:text-[#CCFF00]' : 'text-neutral-400 dark:text-neutral-500'}
+      className={active ? 'text-neutral-900' : 'text-neutral-400 dark:text-neutral-500'}
     />
     <span className="text-sm">{label}</span>
   </Link>
@@ -172,11 +172,11 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
         <div className="px-6 py-3 lg:py-4 border-b border-neutral-200 dark:border-neutral-800 relative flex-shrink-0">
           <Link href={`/academy-admin/${academyId}`} className="flex flex-col gap-1.5 lg:gap-2" onClick={handleLinkClick}>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary dark:bg-[#CCFF00] rounded-lg flex items-center justify-center text-black font-bold italic">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-black font-bold italic">
                 M
               </div>
               <h1 className="text-xl font-extrabold tracking-tight text-black dark:text-white italic">
-                MOVE <span className="text-primary dark:text-[#CCFF00]">IT</span>
+                MOVE <span className="text-primary">IT</span>
               </h1>
             </div>
             {academyName && (

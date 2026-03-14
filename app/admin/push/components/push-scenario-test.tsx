@@ -802,7 +802,7 @@ export function PushScenarioTest({ usersWithTokens, onSent }: PushScenarioTestPr
                 <p className="text-[10px] font-medium text-neutral-400 uppercase">푸시 알림 미리보기</p>
                 <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm overflow-hidden max-w-sm">
                   <div className="flex items-center gap-2 px-3 pt-3 pb-1">
-                    <div className="w-4 h-4 rounded bg-primary dark:bg-[#CCFF00]" />
+                    <div className="w-4 h-4 rounded bg-primary" />
                     <span className="text-[10px] text-neutral-500 font-medium">MOVE.IT</span>
                     <span className="text-[10px] text-neutral-400 ml-auto">지금</span>
                   </div>

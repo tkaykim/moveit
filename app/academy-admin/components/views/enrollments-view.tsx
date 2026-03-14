@@ -24,7 +24,7 @@ type EnrollmentWithRelations = any & {
 type StatusFilter = 'ALL' | 'CONFIRMED' | 'PENDING' | 'CANCELLED' | 'COMPLETED';
 
 const STATUS_TABS: { value: StatusFilter; label: string; color: string }[] = [
-  { value: 'ALL', label: '전체', color: 'bg-primary dark:bg-[#CCFF00] text-black' },
+  { value: 'ALL', label: '전체', color: 'bg-primary text-black' },
   { value: 'CONFIRMED', label: '확정', color: 'bg-green-600 text-white' },
   { value: 'PENDING', label: '대기', color: 'bg-yellow-500 text-white' },
   { value: 'COMPLETED', label: '출석완료', color: 'bg-blue-600 text-white' },
@@ -465,7 +465,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
               <button
                 type="button"
                 onClick={() => setIsAdminAddModalOpen(true)}
-                className="px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 flex items-center gap-2 text-sm font-medium transition-colors"
+                className="px-4 py-2 bg-primary text-black rounded-lg hover:opacity-90 flex items-center gap-2 text-sm font-medium transition-colors"
                 data-onboarding="page-enrollments-add"
               >
                 <UserPlus size={16} />
@@ -500,7 +500,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
           onClick={() => setMainTab('enrollments')}
           className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
             mainTab === 'enrollments'
-              ? 'bg-white dark:bg-neutral-900 text-primary dark:text-[#CCFF00] border border-b-0 border-gray-200 dark:border-neutral-700 -mb-0.5'
+              ? 'bg-white dark:bg-neutral-900 text-primary border border-b-0 border-gray-200 dark:border-neutral-700 -mb-0.5'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
           }`}
         >
@@ -511,7 +511,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
           onClick={() => setMainTab('activity-log')}
           className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
             mainTab === 'activity-log'
-              ? 'bg-white dark:bg-neutral-900 text-primary dark:text-[#CCFF00] border border-b-0 border-gray-200 dark:border-neutral-700 -mb-0.5'
+              ? 'bg-white dark:bg-neutral-900 text-primary border border-b-0 border-gray-200 dark:border-neutral-700 -mb-0.5'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
           }`}
         >
@@ -527,7 +527,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
       <div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-100 dark:border-neutral-800 shadow-sm">
         {/* 선택된 수업 요약 바 */}
         {scheduleSummary && (
-          <div className="px-4 py-3 bg-gradient-to-r from-primary/5 to-transparent dark:from-[#CCFF00]/5 border-b border-gray-100 dark:border-neutral-800">
+          <div className="px-4 py-3 bg-gradient-to-r from-primary/5 to-transparent/5 border-b border-gray-100 dark:border-neutral-800">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-4">
                 <div>
@@ -628,7 +628,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                     setSearchTerm(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+                  className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
             </div>
@@ -653,7 +653,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                       router.push(`/academy-admin/${academyId}/enrollments`);
                     }
                   }}
-                  className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+                  className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
             </div>
@@ -668,7 +668,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                     setIsClassDropdownOpen(!isClassDropdownOpen);
                     setClassSearchTerm('');
                   }}
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-left flex items-center justify-between hover:border-primary dark:hover:border-[#CCFF00] transition-colors"
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-left flex items-center justify-between hover:border-primary transition-colors"
                 >
                   <span className="text-sm text-gray-900 dark:text-white truncate">
                     {selectedClassId
@@ -692,7 +692,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                           placeholder="수업명 검색..."
                           value={classSearchTerm}
                           onChange={(e) => setClassSearchTerm(e.target.value)}
-                          className="w-full pl-8 pr-7 py-1.5 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+                          className="w-full pl-8 pr-7 py-1.5 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                           autoFocus
                         />
                         {classSearchTerm && (
@@ -721,7 +721,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                           router.push(`/academy-admin/${academyId}/enrollments${queryString ? `?${queryString}` : ''}`);
                         }}
                         className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors ${
-                          !selectedClassId ? 'bg-primary/10 dark:bg-[#CCFF00]/10 font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'
+                          !selectedClassId ? 'bg-primary/10/10 font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'
                         }`}
                       >
                         전체 수업
@@ -756,7 +756,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                             }}
                             className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors ${
                               selectedClassId === c.id
-                                ? 'bg-primary/10 dark:bg-[#CCFF00]/10 font-medium text-gray-900 dark:text-white'
+                                ? 'bg-primary/10/10 font-medium text-gray-900 dark:text-white'
                                 : 'text-gray-700 dark:text-gray-300'
                             }`}
                           >
@@ -790,7 +790,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
         {isRefreshing && !initialLoading && (
           <div className="absolute inset-0 bg-white/60 dark:bg-neutral-900/60 z-10 flex items-center justify-center">
             <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border border-gray-200 dark:border-neutral-700">
-              <Loader2 size={16} className="animate-spin text-primary dark:text-[#CCFF00]" />
+              <Loader2 size={16} className="animate-spin text-primary" />
               <span className="text-sm text-gray-600 dark:text-gray-300">불러오는 중...</span>
             </div>
           </div>
@@ -798,7 +798,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
 
         {initialLoading ? (
           <div className="p-16 text-center">
-            <div className="inline-block w-8 h-8 border-2 border-gray-300 border-t-primary dark:border-neutral-600 dark:border-t-[#CCFF00] rounded-full animate-spin mb-4" />
+            <div className="inline-block w-8 h-8 border-2 border-gray-300 border-t-primary dark:border-neutral-600 rounded-full animate-spin mb-4" />
             <p className="text-gray-500 dark:text-gray-400">로딩 중...</p>
           </div>
         ) : enrollments.length === 0 ? (
@@ -810,7 +810,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
             {hasFilters && (
               <button
                 onClick={clearFilters}
-                className="text-sm text-primary dark:text-[#CCFF00] hover:underline"
+                className="text-sm text-primary hover:underline"
               >
                 필터 초기화
               </button>
@@ -971,7 +971,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                             {enrollment.status === 'PENDING' && enrollment.bank_transfer_order_id && (
                               <Link
                                 href={`/academy-admin/${academyId}/deposit-confirm`}
-                                className="text-xs text-primary dark:text-[#CCFF00] hover:underline inline-flex items-center gap-0.5"
+                                className="text-xs text-primary hover:underline inline-flex items-center gap-0.5"
                               >
                                 <Landmark size={10} />
                                 입금확인하기

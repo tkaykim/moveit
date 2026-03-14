@@ -92,7 +92,7 @@ export default function AssignModal({
                   value={assignSearchQuery}
                   onChange={(e) => setAssignSearchQuery(e.target.value)}
                   onFocus={() => assignSearchQuery.length >= 1 && setShowUserDropdown(true)}
-                  className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+                  className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 {showUserDropdown && userSearchResults.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
@@ -141,7 +141,7 @@ export default function AssignModal({
           <button
             onClick={onAssign}
             disabled={!assignUserId || academySelections.length === 0 || assignLoading}
-            className="px-4 py-2 text-sm font-medium bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium bg-primary text-black rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {assignLoading ? '할당 중...' : '할당하기'}
           </button>

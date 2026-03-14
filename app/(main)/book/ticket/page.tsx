@@ -120,7 +120,7 @@ export default function TicketPurchaseLinkPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-neutral-950">
-        <Loader2 className="animate-spin text-primary dark:text-[#CCFF00]" size={32} />
+        <Loader2 className="animate-spin text-primary" size={32} />
       </div>
     );
   }

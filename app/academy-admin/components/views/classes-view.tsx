@@ -376,7 +376,7 @@ export function ClassesView({ academyId }: ClassesViewProps) {
               onClick={() => setClassTypeFilter('all')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 classTypeFilter === 'all'
-                  ? 'bg-primary dark:bg-[#CCFF00] text-black'
+                  ? 'bg-primary text-black'
                   : 'bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700'
               }`}
             >

@@ -185,7 +185,7 @@ export default function ClassDetailPage() {
         <div className="text-neutral-500 dark:text-neutral-400 mb-4">클래스를 찾을 수 없습니다.</div>
         <button
           onClick={() => router.push('/admin/classes')}
-          className="px-4 py-2 bg-primary dark:bg-[#CCFF00] text-black rounded-lg hover:opacity-90"
+          className="px-4 py-2 bg-primary text-black rounded-lg hover:opacity-90"
         >
           목록으로 돌아가기
         </button>

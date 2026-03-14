@@ -228,7 +228,7 @@ export function AdminAddEnrollmentModal({
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value)}
                   placeholder="이름"
-                  className="w-full px-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div>
@@ -238,7 +238,7 @@ export function AdminAddEnrollmentModal({
                   value={guestPhone}
                   onChange={(e) => setGuestPhone(e.target.value)}
                   placeholder="연락처"
-                  className="w-full px-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div>
@@ -248,7 +248,7 @@ export function AdminAddEnrollmentModal({
                   value={adminNote}
                   onChange={(e) => setAdminNote(e.target.value)}
                   placeholder="수기 추가 사유"
-                  className="w-full px-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
             </div>
@@ -264,7 +264,7 @@ export function AdminAddEnrollmentModal({
                     placeholder="이름·연락처로 검색"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-[#CCFF00]"
+                    className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
                 <div className="mt-2 border border-gray-200 dark:border-neutral-700 rounded-lg max-h-48 overflow-y-auto">
@@ -292,7 +292,7 @@ export function AdminAddEnrollmentModal({
                 </div>
               </>
             ) : (
-              <div className="flex items-center justify-between py-2.5 px-3 bg-primary/10 dark:bg-[#CCFF00]/10 rounded-lg border border-primary/20 dark:border-[#CCFF00]/20">
+              <div className="flex items-center justify-between py-2.5 px-3 bg-primary/10/10 rounded-lg border border-primary/20/20">
                 <div>
                   <div className="font-medium text-gray-900 dark:text-white">
                     {selectedStudent.name || selectedStudent.nickname || '-'}
@@ -325,7 +325,7 @@ export function AdminAddEnrollmentModal({
             type="button"
             onClick={handleSubmit}
             disabled={submitting || !canSubmit}
-            className="flex-1 px-4 py-2.5 bg-primary dark:bg-[#CCFF00] text-black rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+            className="flex-1 px-4 py-2.5 bg-primary text-black rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
           >
             {submitting ? <Loader2 size={18} className="animate-spin" /> : <UserPlus size={18} />}
             추가하기

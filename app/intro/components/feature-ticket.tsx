@@ -21,7 +21,7 @@ export function FeatureTicket() {
 
   return (
     <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-sm relative">
-      <div className="p-4 bg-neutral-900 text-white dark:bg-[#CCFF00] dark:text-black">
+      <div className="p-4 bg-neutral-900 text-white dark:text-black">
         <div className="flex justify-between items-start">
           <div>
             <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-white/20 dark:bg-black/10 mb-2">
@@ -54,7 +54,7 @@ export function FeatureTicket() {
           className={`w-full py-2.5 rounded-xl font-bold text-sm transition-all ${
             isBooking 
               ? 'bg-neutral-100 text-neutral-400 dark:bg-neutral-800'
-              : 'bg-neutral-900 text-white dark:bg-[#CCFF00] dark:text-black hover:opacity-90 active:scale-[0.98]'
+              : 'bg-neutral-900 text-white dark:text-black hover:opacity-90 active:scale-[0.98]'
           }`}
         >
           {isBooking ? '처리중...' : '1회 차감하고 예약하기'}

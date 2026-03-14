@@ -9,7 +9,11 @@ export type EnrollmentActivityAction =
   | 'REFUND'
   | 'EXTENSION_APPROVED'
   | 'COUNT_DEDUCT'
-  | 'COUNT_RESTORE';
+  | 'COUNT_RESTORE'
+  | 'TICKET_ISSUED'
+  | 'EXTENSION_REQUESTED'
+  | 'ADMIN_EXTEND'
+  | 'ADMIN_ENROLL';
 
 export interface InsertEnrollmentActivityLogParams {
   academy_id: string;
