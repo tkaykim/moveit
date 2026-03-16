@@ -19,7 +19,7 @@ function transformSchedule(scheduleData: any): ClassInfo & { time?: string; star
   const classInfo = scheduleData.classes;
   const instructor = scheduleData.instructors?.name_kr || scheduleData.instructors?.name_en || classInfo?.instructors?.name_kr || classInfo?.instructors?.name_en || INSTRUCTOR_TBD;
   const genre = classInfo?.genre || '';
-  const level = classInfo?.difficulty_level || 'All Level';
+  const level = classInfo?.difficulty_level || '';
   const maxStudents = scheduleData.max_students || classInfo?.max_students || 0;
   const currentStudents = scheduleData.current_students || 0;
   const isFull = maxStudents > 0 && currentStudents >= maxStudents;
@@ -77,8 +77,9 @@ function groupSchedulesByDay(schedules: any[]) {
   return grid;
 }
 
-const getLevelLabelKey = (level: string): 'schedule.levelBeginner' | 'schedule.levelIntermediate' | 'schedule.levelAdvanced' | null => {
+const getLevelLabelKey = (level: string): 'schedule.levelBeginner' | 'schedule.levelIntermediate' | 'schedule.levelAdvanced' | 'schedule.levelAll' | null => {
   const upperLevel = level?.toUpperCase() || '';
+  if (upperLevel === 'ALL' || upperLevel === 'ALL LEVEL') return 'schedule.levelAll';
   if (upperLevel.includes('BEGINNER') || upperLevel.includes('초급')) return 'schedule.levelBeginner';
   if (upperLevel.includes('INTERMEDIATE') || upperLevel.includes('중급')) return 'schedule.levelIntermediate';
   if (upperLevel.includes('ADVANCED') || upperLevel.includes('고급')) return 'schedule.levelAdvanced';
@@ -492,9 +493,11 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
                           
                           {/* 난이도 & 상태 */}
                           <div className="flex-shrink-0 flex flex-col items-end gap-1">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${levelColor.text} bg-white/50 dark:bg-black/20`}>
-                              {getLevelLabelKey(classInfo.level) ? t(getLevelLabelKey(classInfo.level)!) : 'All'}
-                            </span>
+                            {classInfo.level && getLevelLabelKey(classInfo.level) && (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${levelColor.text} bg-white/50 dark:bg-black/20`}>
+                                {t(getLevelLabelKey(classInfo.level)!)}
+                              </span>
+                            )}
                             {isFull && (
                               <span className="text-[10px] font-bold text-rose-500 dark:text-rose-400">
                                 {t('schedule.full')}

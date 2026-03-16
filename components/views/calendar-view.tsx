@@ -34,7 +34,7 @@ function transformSchedule(scheduleData: any): ClassInfo & { academy?: Academy; 
   const classData = scheduleData.classes || {};
   const instructor = scheduleData.instructors?.name_kr || scheduleData.instructors?.name_en || classData.instructors?.name_kr || '';
   const genre = classData.genre || 'ALL';
-  const level = classData.difficulty_level || 'All Level';
+  const level = classData.difficulty_level || '';
   const maxStudents = scheduleData.max_students || classData.max_students || 0;
   const currentStudents = scheduleData.current_students || 0;
   const isFull = maxStudents > 0 && currentStudents >= maxStudents;
@@ -442,7 +442,7 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
                       <h4 className="text-base font-bold text-black dark:text-white leading-tight truncate">
                         {classInfo.class_title || `${classInfo.genre} 클래스`}
                       </h4>
-                      <LevelBadge level={classInfo.level} />
+                      {classInfo.level && <LevelBadge level={classInfo.level} />}
                       <div className="flex-1" />
                       {classInfo.status === 'FULL' ? (
                         <span className="flex-shrink-0 text-[10px] font-bold px-2 py-1 rounded bg-red-500/10 text-red-500 dark:text-red-400">

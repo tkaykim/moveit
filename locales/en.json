@@ -155,6 +155,7 @@
   "schedule.levelBeginner": "Beginner",
   "schedule.levelIntermediate": "Intermediate",
   "schedule.levelAdvanced": "Advanced",
+  "schedule.levelAll": "ALL",
   "schedule.dayMon": "Mon",
   "schedule.dayTue": "Tue",
   "schedule.dayWed": "Wed",

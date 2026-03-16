@@ -7,11 +7,13 @@ import { getSupabaseClient } from '@/lib/utils/supabase-client';
 interface InstructorModalProps {
   academyId?: string;
   instructor?: any;
+  initialMode?: 'view' | 'edit';
   onClose: () => void;
+  onDelete?: () => void;
 }
 
-export function InstructorModal({ academyId, instructor, onClose }: InstructorModalProps) {
-  const [isEditing, setIsEditing] = useState(!instructor); // 신규 등록이면 바로 편집 모드
+export function InstructorModal({ academyId, instructor, initialMode = 'view', onClose, onDelete }: InstructorModalProps) {
+  const [isEditing, setIsEditing] = useState(!instructor || initialMode === 'edit');
   const [formData, setFormData] = useState({
     name_kr: '',
     name_en: '',
@@ -28,6 +30,12 @@ export function InstructorModal({ academyId, instructor, onClose }: InstructorMo
   const [searchResults, setSearchResults] = useState<{ id: string; email: string | null; name: string | null }[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    if (instructor) {
+      setIsEditing(initialMode === 'edit');
+    }
+  }, [instructor, initialMode]);
 
   useEffect(() => {
     if (instructor) {
@@ -425,6 +433,18 @@ export function InstructorModal({ academyId, instructor, onClose }: InstructorMo
               >
                 취소
               </button>
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onDelete();
+                    onClose();
+                  }}
+                  className="flex-1 px-4 py-2 border border-red-300 dark:border-red-700 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                >
+                  삭제
+                </button>
+              )}
               <button
                 type="submit"
                 disabled={loading}
@@ -558,6 +578,17 @@ export function InstructorModal({ academyId, instructor, onClose }: InstructorMo
               >
                 수정
               </button>
+              {onDelete && (
+                <button
+                  onClick={() => {
+                    onDelete();
+                    onClose();
+                  }}
+                  className="flex-1 px-4 py-2 border border-red-300 dark:border-red-700 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                >
+                  삭제
+                </button>
+              )}
               <button
                 onClick={onClose}
                 className="flex-1 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"

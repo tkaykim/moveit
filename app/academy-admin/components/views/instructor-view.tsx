@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { SectionHeader } from '../common/section-header';
 import { StatusBadge } from '../common/status-badge';
 import { InstructorModal } from './instructors/instructor-modal';
@@ -17,6 +18,7 @@ export function InstructorView({ academyId }: InstructorViewProps) {
   const [showModal, setShowModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [selectedInstructor, setSelectedInstructor] = useState<any>(null);
+  const [modalInitialMode, setModalInitialMode] = useState<'view' | 'edit'>('view');
 
   useEffect(() => {
     loadInstructors();
@@ -107,6 +109,35 @@ export function InstructorView({ academyId }: InstructorViewProps) {
     }
   };
 
+  const handleDelete = async (instructor: any) => {
+    const confirmed = window.confirm(
+      `"${instructor.name_kr || instructor.name_en || '강사'}"를 삭제하시겠습니까?\n\n이 학원에서의 강사 연결이 해제되고, 강사 정보가 삭제됩니다.`
+    );
+    if (!confirmed) return;
+
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    try {
+      await supabase
+        .from('academy_instructors')
+        .delete()
+        .eq('academy_id', academyId)
+        .eq('instructor_id', instructor.id);
+
+      await supabase
+        .from('instructors')
+        .delete()
+        .eq('id', instructor.id);
+
+      alert('강사가 삭제되었습니다.');
+      loadInstructors();
+    } catch (error: any) {
+      console.error('Error deleting instructor:', error);
+      alert(`강사 삭제에 실패했습니다: ${error.message}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -175,19 +206,42 @@ export function InstructorView({ academyId }: InstructorViewProps) {
                   </div>
                 </div>
 
-                <div className="mt-6 flex gap-2">
-                  <button
-                    onClick={() => {
-                      setSelectedInstructor(instructor);
-                      setShowModal(true);
-                    }}
-                    className="flex-1 py-2 border dark:border-neutral-700 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-neutral-800 text-gray-700 dark:text-gray-300 transition-colors"
-                  >
-                    상세 프로필
-                  </button>
-                  <button className="flex-1 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors">
-                    정산 명세서
-                  </button>
+                <div className="mt-6 space-y-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedInstructor(instructor);
+                        setModalInitialMode('view');
+                        setShowModal(true);
+                      }}
+                      className="flex-1 py-2 border dark:border-neutral-700 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-neutral-800 text-gray-700 dark:text-gray-300 transition-colors"
+                    >
+                      상세 프로필
+                    </button>
+                    <button className="flex-1 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors">
+                      정산 명세서
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedInstructor(instructor);
+                        setModalInitialMode('edit');
+                        setShowModal(true);
+                      }}
+                      className="flex-1 py-2 border border-yellow-300 dark:border-yellow-700 rounded-lg text-sm hover:bg-yellow-50 dark:hover:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Pencil size={14} />
+                      수정
+                    </button>
+                    <button
+                      onClick={() => handleDelete(instructor)}
+                      className="flex-1 py-2 border border-red-300 dark:border-red-700 rounded-lg text-sm hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Trash2 size={14} />
+                      삭제
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
@@ -199,11 +253,14 @@ export function InstructorView({ academyId }: InstructorViewProps) {
         <InstructorModal
           academyId={academyId}
           instructor={selectedInstructor}
+          initialMode={modalInitialMode}
           onClose={() => {
             setShowModal(false);
             setSelectedInstructor(null);
+            setModalInitialMode('view');
             loadInstructors();
           }}
+          onDelete={selectedInstructor ? () => handleDelete(selectedInstructor) : undefined}
         />
       )}
 

@@ -17,6 +17,7 @@ interface DailyScheduleModalProps {
 }
 
 const DIFFICULTY_LABELS: Record<string, string> = {
+  ALL: 'ALL',
   BEGINNER: '초급',
   INTERMEDIATE: '중급',
   ADVANCED: '고급',
@@ -185,7 +186,7 @@ export function DailyScheduleModal({
               </div>
             ) : (
               sessions.map((session) => {
-                const difficulty = session.classes?.difficulty_level || 'BEGINNER';
+                const difficulty = session.classes?.difficulty_level || '';
                 const isPopup = session.classes?.class_type === 'popup';
                 const color = getClassColor(session.card_color ?? session.classes?.card_color, session.classes?.difficulty_level);
 
@@ -243,9 +244,11 @@ export function DailyScheduleModal({
                             <span>{session.current_students || 0}/{session.max_students || 0}</span>
                           </div>
                           {/* 난이도 */}
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${color.bg} ${color.text} border ${color.border}`}>
-                            {DIFFICULTY_LABELS[difficulty] || difficulty}
-                          </span>
+                          {difficulty && (
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${color.bg} ${color.text} border ${color.border}`}>
+                              {DIFFICULTY_LABELS[difficulty] || difficulty}
+                            </span>
+                          )}
                           {/* 가격 (팝업인 경우) */}
                           {isPopup && session.classes?.price && (
                             <span className="text-amber-600 dark:text-amber-400 font-medium">

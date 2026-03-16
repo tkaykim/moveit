@@ -24,7 +24,7 @@ interface LinkedTicket {
 }
 
 const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)', 'heels', 'kpop', 'house', '기타'];
-const DIFFICULTY_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
+const DIFFICULTY_LEVELS = ['ALL', 'BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
 const CLASS_TYPES = [
   { value: 'regular', label: 'Regular (정규)' },
   { value: 'popup', label: 'Popup (팝업)' },
@@ -784,7 +784,7 @@ export function ClassMasterModal({ academyId, classData, ticketLabels, onClose }
               <option value="">선택 안함</option>
               {DIFFICULTY_LEVELS.map((level) => (
                 <option key={level} value={level}>
-                  {level === 'BEGINNER' ? '초급' : level === 'INTERMEDIATE' ? '중급' : '고급'}
+                  {level === 'ALL' ? 'ALL' : level === 'BEGINNER' ? '초급' : level === 'INTERMEDIATE' ? '중급' : '고급'}
                 </option>
               ))}
             </select>
@@ -1155,7 +1155,9 @@ export function ClassMasterModal({ academyId, classData, ticketLabels, onClose }
               >
                 <option value="">선택 안함</option>
                 {DIFFICULTY_LEVELS.map((level) => (
-                  <option key={level} value={level}>{level}</option>
+                  <option key={level} value={level}>
+                    {level === 'ALL' ? 'ALL' : level === 'BEGINNER' ? '초급' : level === 'INTERMEDIATE' ? '중급' : '고급'}
+                  </option>
                 ))}
               </select>
             </div>

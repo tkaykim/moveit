@@ -505,12 +505,12 @@ export default function ClassesPage() {
                 onChange={(e) => setFormData({ ...formData, difficulty_level: e.target.value })}
                 className="w-full px-4 py-2 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white"
               >
-                <option value="">선택</option>
+                <option value="">선택 안함</option>
+                <option value="ALL">ALL</option>
                 <option value="Beginner">Beginner</option>
                 <option value="Intermediate">Intermediate</option>
                 <option value="Advanced">Advanced</option>
                 <option value="Master">Master</option>
-                <option value="All Level">All Level</option>
               </select>
             </div>
 

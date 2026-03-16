@@ -89,7 +89,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
   const [loadingInstructors, setLoadingInstructors] = useState(true);
 
   const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)', 'heels', 'kpop', 'house', '기타'];
-  const DIFFICULTY_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
+  const DIFFICULTY_LEVELS = ['ALL', 'BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
 
   // 강사 목록 로드
   useEffect(() => {
@@ -1082,7 +1082,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
               <option value="">선택 안함</option>
               {DIFFICULTY_LEVELS.map((level) => (
                 <option key={level} value={level}>
-                  {level === 'BEGINNER' ? '초급' : level === 'INTERMEDIATE' ? '중급' : '고급'}
+                  {level === 'ALL' ? 'ALL' : level === 'BEGINNER' ? '초급' : level === 'INTERMEDIATE' ? '중급' : '고급'}
                 </option>
               ))}
             </select>

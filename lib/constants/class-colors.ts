@@ -97,6 +97,7 @@ const DIFFICULTY_TO_COLOR_KEY: Record<string, ClassCardColorKey> = {
   BEGINNER: 'green',
   INTERMEDIATE: 'yellow',
   ADVANCED: 'red',
+  ALL: 'blue',
 };
 
 const DEFAULT_COLOR: ClassColorStyle = CLASS_CARD_COLORS.green;

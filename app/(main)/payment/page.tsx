@@ -66,7 +66,7 @@ function PaymentContent() {
           if (!classError && classData) {
             const instructor = classData.instructors?.name_kr || classData.instructors?.name_en || '강사 정보 없음';
             const genre = classData.genre || 'ALL';
-            const level = classData.difficulty_level || 'All Level';
+            const level = classData.difficulty_level || '';
             
             setClassInfo({
               id: classData.id,
