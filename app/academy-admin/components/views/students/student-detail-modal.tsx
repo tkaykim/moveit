@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, User } from 'lucide-react';
+import { X, User, Settings2 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { normalizePhone, formatPhoneDisplay, parsePhoneInput } from '@/lib/utils/phone';
 import { ProfileImageUpload } from '@/components/common/profile-image-upload';
 import { useAcademyTicketLabels } from '../hooks/useAcademyTicketLabels';
+import { TicketAdjustModal } from './ticket-adjust-modal';
 
 interface StudentDetailModalProps {
   student: any;
@@ -24,9 +25,12 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
   });
   const [loading, setLoading] = useState(false);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [adjustTicket, setAdjustTicket] = useState<any>(null);
+  const [studentData, setStudentData] = useState<any>(student);
 
   useEffect(() => {
     if (student) {
+      setStudentData(student);
       setFormData({
         name: student.name || '',
         nickname: student.nickname || '',
@@ -36,6 +40,26 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
       setProfileImageUrl(student.profile_image || null);
     }
   }, [student]);
+
+  const reloadTickets = async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase || !student) return;
+    try {
+      const { data } = await supabase
+        .from('user_tickets')
+        .select(`
+          id, remaining_count, expiry_date, start_date, status,
+          tickets ( id, name, ticket_type, total_count, ticket_category, access_group )
+        `)
+        .eq('user_id', student.id)
+        .order('created_at', { ascending: false });
+      if (data) {
+        setStudentData((prev: any) => ({ ...prev, user_tickets: data }));
+      }
+    } catch (e) {
+      console.error('Error reloading tickets:', e);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,8 +239,8 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
             <div>
               <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">보유 수강권</h4>
               <div className="space-y-3">
-                {student.user_tickets && student.user_tickets.length > 0 ? (
-                  student.user_tickets.map((ticket: any) => {
+                {studentData.user_tickets && studentData.user_tickets.length > 0 ? (
+                  studentData.user_tickets.map((ticket: any) => {
                     const ticketType = ticket.tickets?.ticket_type;
                     const cat = ticket.tickets?.ticket_category || ticket.tickets?.access_group;
                     const categoryLabel =
@@ -224,8 +248,8 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
                         ? (cat === 'workshop' ? labels.workshop : labels.popup)
                         : labels.regular;
                     const isPeriod = ticketType === 'PERIOD';
+                    const isCountTicket = ticketType === 'COUNT';
                     
-                    // 실제 상태 계산 (DB가 ACTIVE지만 실제 만료/소진인 경우)
                     const today = new Date().toISOString().split('T')[0];
                     let effectiveStatus = ticket.status || 'ACTIVE';
                     if (effectiveStatus === 'ACTIVE') {
@@ -243,7 +267,6 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
                     };
                     const statusInfo = statusConfig[effectiveStatus] || { label: effectiveStatus, color: 'bg-gray-200 dark:bg-gray-700 text-gray-600' };
                     
-                    // 만료 임박 (7일 이내)
                     let isExpiringSoon = false;
                     if (effectiveStatus === 'ACTIVE' && ticket.expiry_date) {
                       const daysLeft = Math.ceil((new Date(ticket.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
@@ -270,6 +293,19 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
                             <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${statusInfo.color}`}>
                               {statusInfo.label}
                             </span>
+                            {isCountTicket && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setAdjustTicket(ticket);
+                                }}
+                                className="ml-1 p-1 rounded hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                title="횟수 조정"
+                              >
+                                <Settings2 size={14} />
+                              </button>
+                            )}
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-gray-600 dark:text-gray-400">
@@ -317,6 +353,19 @@ export function StudentDetailModal({ student, academyId, onClose }: StudentDetai
           </div>
         )}
       </div>
+
+      {adjustTicket && (
+        <TicketAdjustModal
+          ticket={adjustTicket}
+          studentName={studentData.name || studentData.nickname || '학생'}
+          academyId={academyId}
+          onClose={() => setAdjustTicket(null)}
+          onSuccess={() => {
+            setAdjustTicket(null);
+            reloadTickets();
+          }}
+        />
+      )}
     </div>
   );
 }
