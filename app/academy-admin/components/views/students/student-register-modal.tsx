@@ -7,7 +7,7 @@ import { normalizePhone, formatPhoneDisplay, parsePhoneInput } from '@/lib/utils
 import { ProfileImageUpload } from '@/components/common/profile-image-upload';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
 
-const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)', 'heels', 'kpop', 'house', '기타'] as const;
+const GENRES = ['Choreography(코레오그래피)', 'Hiphop(힙합)', 'Locking(락킹)', 'Waacking(왁킹)', 'Popping(팝핑)', 'Krump(크럼프)', 'Voguing(보깅)', 'Breaking(브레이킹)', 'Afro Dance(아프로댄스)', 'DanceHall(댄스홀)', 'Tutting(터팅)', 'Girlish(걸리시)', 'Heels(힐스)', 'Kpop(케이팝)', 'House(하우스)', '기타'] as const;
 
 const REFERRAL_SOURCES = [
   { value: 'INSTAGRAM', label: '인스타그램' },
@@ -73,28 +73,27 @@ export function StudentRegisterModal({ academyId, onClose }: StudentRegisterModa
     try {
       let userId: string;
 
-      // 1. 기존 사용자 확인: 전화번호 기준. DB에 하이픈 있음/없음 혼재하므로 숫자·하이픈 형식 둘 다 조회.
+      // 1. 기존 사용자 확인: 전화번호 → 이메일 순서로 검색 (DB 트리거가 전화번호를 자동 정규화)
       const phoneForDb = normalizePhone(formData.phone);
-      const phoneFormatted = formatPhoneDisplay(phoneForDb);
       let existingUser = null;
 
-      const { data: byDigits } = await supabase
+      const { data: byPhone } = await supabase
         .from('users')
         .select('id, name, nickname, email, phone')
         .eq('phone', phoneForDb)
         .maybeSingle();
-      if (byDigits) {
-        existingUser = byDigits;
-      } else {
-        const { data: byFormatted } = await supabase
-          .from('users')
-          .select('id, name, nickname, email, phone')
-          .eq('phone', phoneFormatted)
-          .maybeSingle();
-        if (byFormatted) existingUser = byFormatted;
+      if (byPhone) {
+        existingUser = byPhone;
       }
 
-      // 중복 체크는 연락처(전화번호)만 함. 이메일/이름/닉네임은 부수 정보.
+      if (!existingUser && formData.email?.trim()) {
+        const { data: byEmail } = await supabase
+          .from('users')
+          .select('id, name, nickname, email, phone')
+          .ilike('email', formData.email.trim())
+          .maybeSingle();
+        if (byEmail) existingUser = byEmail;
+      }
 
       // 2. 기존 사용자가 있는 경우
       if (existingUser) {

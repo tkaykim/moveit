@@ -284,7 +284,7 @@ export async function POST(request: Request) {
       // 수강권 차감 (카드결제 데모인 경우에도 수강권 차감)
       if (selectedUserTicketId) {
         try {
-          await consumeUserTicket(selectedUserTicketId, resolvedClassId, 1);
+          const consumedTicket = await consumeUserTicket(selectedUserTicketId, resolvedClassId, 1);
           // 활동 로그: 횟수 차감
           if (academyId) {
             insertEnrollmentActivityLog({
@@ -294,6 +294,17 @@ export async function POST(request: Request) {
               action: 'COUNT_DEDUCT',
               payload: { delta: -1, class_id: resolvedClassId, schedule_id: scheduleId ?? null },
             }).catch(() => {});
+
+            // 활동 로그: 수강권 소진 (remaining_count가 0이 되었을 때)
+            if (consumedTicket && consumedTicket.remaining_count === 0 && consumedTicket.status === 'USED') {
+              insertEnrollmentActivityLog({
+                academy_id: academyId,
+                user_id: user.id,
+                user_ticket_id: selectedUserTicketId,
+                action: 'TICKET_EXHAUSTED',
+                payload: { class_id: resolvedClassId },
+              }).catch(() => {});
+            }
           }
         } catch (ticketError: any) {
           console.error('Ticket usage error:', ticketError);

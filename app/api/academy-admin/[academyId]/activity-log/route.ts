@@ -27,6 +27,8 @@ const ACTION_LABELS: Record<string, string> = {
   EXTENSION_REQUESTED: '연장/일시정지 신청',
   ADMIN_EXTEND: '관리자 연장',
   ADMIN_ENROLL: '관리자 수기 추가',
+  ATTENDANCE_CHECKED: '출석 체크',
+  TICKET_EXHAUSTED: '수강권 소진',
 };
 
 export async function GET(

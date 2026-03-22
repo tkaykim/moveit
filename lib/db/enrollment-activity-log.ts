@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 import type { Database, Json } from '@/types/database';
 
 type SupabaseClientAny = any;
@@ -13,7 +13,9 @@ export type EnrollmentActivityAction =
   | 'TICKET_ISSUED'
   | 'EXTENSION_REQUESTED'
   | 'ADMIN_EXTEND'
-  | 'ADMIN_ENROLL';
+  | 'ADMIN_ENROLL'
+  | 'ATTENDANCE_CHECKED'
+  | 'TICKET_EXHAUSTED';
 
 export interface InsertEnrollmentActivityLogParams {
   academy_id: string;
@@ -29,12 +31,13 @@ export interface InsertEnrollmentActivityLogParams {
 /**
  * 수강신청/취소/환불/연장/횟수 변동 등 활동 로그 기록 (활동로그 탭용)
  * 실패해도 비즈니스 로직에는 영향 주지 않도록 에러는 로깅만 함.
+ * RLS 정책 우회를 위해 service client를 기본으로 사용.
  */
 export async function insertEnrollmentActivityLog(
   params: InsertEnrollmentActivityLogParams,
   client?: SupabaseClientAny
 ): Promise<void> {
-  const supabase = (client || (await createClient())) as any;
+  const supabase = (client || createServiceClient()) as any;
   const row: Database['public']['Tables']['enrollment_activity_log']['Insert'] = {
     academy_id: params.academy_id,
     user_id: params.user_id ?? null,

@@ -117,27 +117,45 @@ export function TicketPurchaseContent({
           {(guestMode || (!user && !guestMode)) && !user && (
             <div className="mb-4 p-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 space-y-3">
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('ticketPurchase.guestInfo')}</p>
-              <input
-                type="text"
-                placeholder={t('ticketPurchase.nameRequired')}
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-              />
-              <input
-                type="tel"
-                placeholder={t('ticketPurchase.contact')}
-                value={guestPhone}
-                onChange={(e) => setGuestPhone(e.target.value)}
-                className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-              />
-              <input
-                type="email"
-                placeholder={t('ticketPurchase.email')}
-                value={guestEmail}
-                onChange={(e) => setGuestEmail(e.target.value)}
-                className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
-              />
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  {language === 'ko' ? '이름' : 'Name'} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder={t('ticketPurchase.nameRequired')}
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  {language === 'ko' ? '연락처' : 'Phone'} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  placeholder={t('ticketPurchase.contact')}
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                  className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  {language === 'ko' ? '이메일' : 'Email'} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  placeholder={t('ticketPurchase.email')}
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                  className="w-full px-3 py-2 border dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-white"
+                />
+              </div>
+              <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                {language === 'ko' ? '* 연락처 또는 이메일 중 하나는 필수입니다.' : '* Phone or email is required.'}
+              </p>
               {guestMode && (
                 <button
                   type="button"
@@ -155,7 +173,7 @@ export function TicketPurchaseContent({
           <button
             type="button"
             onClick={handlePurchase}
-            disabled={purchasing || (isPeriod && availableDates.length === 0) || (!user && !guestName.trim())}
+            disabled={purchasing || (isPeriod && availableDates.length === 0) || (!user && !guestName.trim()) || (!user && !guestPhone.trim() && !guestEmail.trim())}
             className="w-full py-4 rounded-xl bg-primary text-black font-bold flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {purchasing ? <Loader2 size={20} className="animate-spin" /> : null}

@@ -7,7 +7,7 @@ import { Instructor } from '@/lib/supabase/types';
 import { ImageUpload } from '@/components/common/image-upload';
 import { uploadFile, deleteFile, extractFilePathFromUrl } from '@/lib/utils/storage';
 
-const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)', 'heels', 'kpop', 'house', '기타'] as const;
+const GENRES = ['Choreography(코레오그래피)', 'Hiphop(힙합)', 'Locking(락킹)', 'Waacking(왁킹)', 'Popping(팝핑)', 'Krump(크럼프)', 'Voguing(보깅)', 'Breaking(브레이킹)', 'Afro Dance(아프로댄스)', 'DanceHall(댄스홀)', 'Tutting(터팅)', 'Girlish(걸리시)', 'Heels(힐스)', 'Kpop(케이팝)', 'House(하우스)', '기타'] as const;
 
 export default function InstructorsPage() {
   const [instructors, setInstructors] = useState<Instructor[]>([]);

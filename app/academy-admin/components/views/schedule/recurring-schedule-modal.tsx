@@ -39,7 +39,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
   const [classSearchQuery, setClassSearchQuery] = useState('');
   const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
   const [showClassMasterModal, setShowClassMasterModal] = useState(false);
-  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [showTicketModal, setShowTicketModal] = useState(false); // 워크샵에서 사용 가능
   const classDropdownRef = useRef<HTMLDivElement>(null);
   
   // 정규 수업용 폼 데이터
@@ -57,9 +57,8 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
     max_students: 20,
   });
   
-  // 정규 수업용 수강권 선택 상태
-  const [regularSelectedTicketIds, setRegularSelectedTicketIds] = useState<string[]>([]);
-  const [regularLinkedTicketIds, setRegularLinkedTicketIds] = useState<string[]>([]); // 기존 연결된 수강권
+  // 정규 수업용 연결된 수강권 (읽기 전용 표시용)
+  const [regularLinkedTickets, setRegularLinkedTickets] = useState<any[]>([]);
 
   // 팝업/워크샵용 폼 데이터
   const [popupData, setPopupData] = useState({
@@ -88,7 +87,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [loadingInstructors, setLoadingInstructors] = useState(true);
 
-  const GENRES = ['Choreo', 'hiphop', 'locking', 'waacking', 'popping', 'krump', 'voguing', 'breaking(bboying)', 'heels', 'kpop', 'house', '기타'];
+  const GENRES = ['Choreography(코레오그래피)', 'Hiphop(힙합)', 'Locking(락킹)', 'Waacking(왁킹)', 'Popping(팝핑)', 'Krump(크럼프)', 'Voguing(보깅)', 'Breaking(브레이킹)', 'Afro Dance(아프로댄스)', 'DanceHall(댄스홀)', 'Tutting(터팅)', 'Girlish(걸리시)', 'Heels(힐스)', 'Kpop(케이팝)', 'House(하우스)', '기타'];
   const DIFFICULTY_LEVELS = ['ALL', 'BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
 
   // 강사 목록 로드
@@ -96,14 +95,14 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
     loadInstructors();
   }, [academyId]);
 
-  // 수강권 목록 로드 (정규 수업 및 워크샵용)
+  // 수강권 목록 로드 (워크샵용)
   useEffect(() => {
-    if (type === 'workshop' || type === 'regular') {
+    if (type === 'workshop') {
       loadTickets();
     }
   }, [type, academyId]);
 
-  // 클래스 선택 시 기존 연결된 수강권 로드
+  // 클래스 선택 시 연결된 수강권 로드 (읽기 전용 표시용)
   useEffect(() => {
     if (formData.class_id && type === 'regular') {
       loadLinkedTickets(formData.class_id);
@@ -173,7 +172,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
     }
   }, [academyId]);
 
-  // 클래스에 연결된 수강권 로드
+  // 클래스에 연결된 수강권 로드 (읽기 전용 표시용)
   const loadLinkedTickets = async (classId: string) => {
     const supabase = getSupabaseClient();
     if (!supabase) return;
@@ -181,7 +180,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
     try {
       const { data, error } = await supabase
         .from('ticket_classes')
-        .select('ticket_id')
+        .select('ticket_id, tickets(id, name, ticket_type, price, is_general, valid_days, total_count)')
         .eq('class_id', classId);
 
       if (error) {
@@ -190,12 +189,12 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
       }
 
       if (data && data.length > 0) {
-        const linkedIds = data.map((item: any) => item.ticket_id);
-        setRegularLinkedTicketIds(linkedIds);
-        setRegularSelectedTicketIds(linkedIds);
+        const tickets = data
+          .map((item: any) => item.tickets)
+          .filter(Boolean);
+        setRegularLinkedTickets(tickets);
       } else {
-        setRegularLinkedTicketIds([]);
-        setRegularSelectedTicketIds([]);
+        setRegularLinkedTickets([]);
       }
     } catch (error) {
       console.error('Error loading linked tickets:', error);
@@ -219,24 +218,6 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
     const instructorName = (cls.instructors?.name_kr || cls.instructors?.name_en || '').toLowerCase();
     return title.includes(query) || instructorName.includes(query);
   });
-
-  // 정규 수업용 수강권 토글
-  const toggleRegularTicket = (ticketId: string) => {
-    setRegularSelectedTicketIds(prev =>
-      prev.includes(ticketId)
-        ? prev.filter(id => id !== ticketId)
-        : [...prev, ticketId]
-    );
-  };
-
-  // 정규 수업용 전체 수강권 선택/해제
-  const handleSelectAllRegularTickets = () => {
-    if (regularSelectedTicketIds.length === availableTickets.length) {
-      setRegularSelectedTicketIds([]);
-    } else {
-      setRegularSelectedTicketIds(availableTickets.map(t => t.id));
-    }
-  };
 
   // 클래스 선택 핸들러
   const handleSelectClass = (cls: any) => {
@@ -587,39 +568,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
 
         if (sessionsError) throw sessionsError;
 
-        // 수강권 연결 업데이트 (선택된 수강권이 기존과 다른 경우)
-        const hasChanges = 
-          regularSelectedTicketIds.length !== regularLinkedTicketIds.length ||
-          !regularSelectedTicketIds.every(id => regularLinkedTicketIds.includes(id));
-
-        if (hasChanges) {
-          // 기존 연결 삭제
-          await supabase
-            .from('ticket_classes')
-            .delete()
-            .eq('class_id', formData.class_id);
-
-          // 새 연결 저장
-          if (regularSelectedTicketIds.length > 0) {
-            const linkData = regularSelectedTicketIds.map(ticketId => ({
-              ticket_id: ticketId,
-              class_id: formData.class_id,
-            }));
-
-            const { error: linkError } = await supabase
-              .from('ticket_classes')
-              .insert(linkData);
-
-            if (linkError) {
-              console.error('Error linking tickets:', linkError);
-            }
-          }
-        }
-
-        const ticketMessage = regularSelectedTicketIds.length > 0
-          ? `\n${regularSelectedTicketIds.length}개의 수강권이 연결되었습니다.`
-          : '';
-        alert(`스케줄 ${dates.length}건이 생성되었습니다!${ticketMessage}`);
+        alert(`스케줄 ${dates.length}건이 생성되었습니다!`);
       }
 
       onClose();
@@ -830,8 +779,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
                     onClick={() => {
                       setFormData({ ...formData, class_id: '' });
                       setClassSearchQuery('');
-                      setRegularSelectedTicketIds([]);
-                      setRegularLinkedTicketIds([]);
+                      setRegularLinkedTickets([]);
                     }}
                     className="text-blue-400 hover:text-blue-600"
                   >
@@ -1196,196 +1144,100 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
   // Step 3: 수강 설정
   const renderStep3 = () => {
     if (type === 'regular') {
-      // 정규 수업 - 수강권 선택 UI 추가
+      const sessionCount = generateSessionDates(
+        new Date(formData.start_date),
+        new Date(formData.end_date),
+        formData.days_of_week,
+        formData.interval_weeks
+      ).length;
+
       return (
         <div className="space-y-6">
           <div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">수강권 설정</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">이 수업을 수강할 수 있는 수강권을 선택해주세요.</p>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">스케줄 확인</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">생성할 스케줄 정보를 확인해주세요.</p>
           </div>
 
           {/* 스케줄 요약 */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
-            <div className="flex items-center gap-3 mb-3">
-              <Repeat className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-xl border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-3 mb-4">
+              <Repeat className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               <div>
-                <p className="font-bold text-gray-900 dark:text-white text-sm">
+                <p className="font-bold text-gray-900 dark:text-white">
                   {selectedClass?.title || '클래스 선택됨'}
                 </p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   {selectedClass?.instructors?.name_kr || selectedClass?.instructors?.name_en || '강사 미지정'}
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-400">
-              <div>기간: {formData.start_date} ~ {formData.end_date}</div>
-              <div>요일: {formData.days_of_week.map(d => DAY_NAMES_KR[d]).join(', ')}</div>
-              <div>시간: {formData.start_time} ~ {formData.end_time}</div>
-              <div className="font-bold text-blue-600 dark:text-blue-400">
-                스케줄 {generateSessionDates(
-                  new Date(formData.start_date),
-                  new Date(formData.end_date),
-                  formData.days_of_week,
-                  formData.interval_weeks
-                ).length}건
-              </div>
+            <div className="grid grid-cols-2 gap-3 text-sm text-gray-600 dark:text-gray-400">
+              <div><span className="text-gray-500">기간:</span> {formData.start_date} ~ {formData.end_date}</div>
+              <div><span className="text-gray-500">요일:</span> {formData.days_of_week.map(d => DAY_NAMES_KR[d]).join(', ')}</div>
+              <div><span className="text-gray-500">시간:</span> {formData.start_time} ~ {formData.end_time}</div>
+              <div><span className="text-gray-500">최대 인원:</span> {formData.max_students}명</div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
+              <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                총 {sessionCount}건의 스케줄 생성
+              </p>
             </div>
           </div>
 
-          {/* 수강권 선택 */}
+          {/* 연결된 수강권 표시 (읽기 전용) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-              <Ticket size={16} /> 이 수업을 수강할 수 있는 수강권
+              <Ticket size={16} /> 수강 가능한 수강권 (클래스에 설정됨)
             </label>
 
-            {loadingTickets ? (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                <p>수강권 목록을 불러오는 중...</p>
-              </div>
-            ) : availableTickets.length === 0 ? (
-              <div className="space-y-3">
-                <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-6 text-center">
-                  <Ticket size={32} className="mx-auto mb-3 text-amber-600 dark:text-amber-400" />
-                  <p className="text-sm font-medium text-amber-700 dark:text-amber-400 mb-1">
-                    등록된 수강권이 없습니다
-                  </p>
-                  <p className="text-xs text-amber-600 dark:text-amber-500">
-                    아래 버튼을 눌러 새 수강권을 만들어주세요.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowTicketModal(true)}
-                  className="w-full py-3 border-2 border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-600 dark:text-blue-400 text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/30 flex items-center justify-center gap-2 transition-all"
-                >
-                  <Plus size={18} /> 새 수강권 만들기
-                </button>
+            {regularLinkedTickets.length > 0 ? (
+              <div className="space-y-2">
+                {regularLinkedTickets.map((ticket) => (
+                  <div
+                    key={ticket.id}
+                    className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl"
+                  >
+                    <CheckSquare size={18} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 dark:text-white truncate text-sm">
+                        {ticket.name}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {ticket.is_general && (
+                          <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-xs">
+                            전체 이용
+                          </span>
+                        )}
+                        {ticket.ticket_type === 'PERIOD' && ticket.valid_days && (
+                          <span className="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs">
+                            {ticket.valid_days}일
+                          </span>
+                        )}
+                        {ticket.ticket_type === 'COUNT' && ticket.total_count && (
+                          <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded text-xs">
+                            {ticket.total_count}회
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
-              <div className="space-y-3">
-                {/* 전체 선택 */}
-                <div
-                  onClick={handleSelectAllRegularTickets}
-                  className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl cursor-pointer hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-900/30 dark:hover:to-blue-800/30 transition-all"
-                >
-                  {regularSelectedTicketIds.length === availableTickets.length ? (
-                    <CheckSquare size={24} className="text-blue-600 dark:text-blue-400 shrink-0" />
-                  ) : regularSelectedTicketIds.length > 0 ? (
-                    <div className="w-6 h-6 border-2 border-blue-600 dark:border-blue-400 bg-blue-600 dark:bg-blue-500 rounded flex items-center justify-center">
-                      <div className="w-3 h-0.5 bg-white" />
-                    </div>
-                  ) : (
-                    <Square size={24} className="text-gray-400 shrink-0" />
-                  )}
-                  <div className="flex-1">
-                    <span className="font-semibold text-gray-900 dark:text-white block">
-                      전체 선택
-                    </span>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
-                      모든 수강권을 선택/해제합니다
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-lg font-bold text-blue-600 dark:text-blue-400 block">
-                      {regularSelectedTicketIds.length} / {availableTickets.length}
-                    </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">선택됨</span>
-                  </div>
-                </div>
-
-                {/* 수강권 목록 */}
-                <div className="grid gap-2 max-h-48 overflow-y-auto pr-2">
-                  {availableTickets.map((ticket) => {
-                    const isSelected = regularSelectedTicketIds.includes(ticket.id);
-                    return (
-                      <div
-                        key={ticket.id}
-                        onClick={() => toggleRegularTicket(ticket.id)}
-                        className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all ${
-                          isSelected
-                            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-400 dark:border-blue-600'
-                            : 'bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-700 hover:border-blue-300 dark:hover:border-blue-700'
-                        }`}
-                      >
-                        {isSelected ? (
-                          <CheckSquare size={20} className="text-blue-600 dark:text-blue-400 shrink-0" />
-                        ) : (
-                          <Square size={20} className="text-gray-400 shrink-0" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-gray-900 dark:text-white truncate text-sm">
-                            {ticket.name}
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {ticket.is_general && (
-                              <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-xs">
-                                전체 이용
-                              </span>
-                            )}
-                            {ticket.ticket_type === 'PERIOD' && ticket.valid_days && (
-                              <span className="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs">
-                                {ticket.valid_days}일
-                              </span>
-                            )}
-                            {ticket.ticket_type === 'COUNT' && ticket.total_count && (
-                              <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded text-xs">
-                                {ticket.total_count}회
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* 새 수강권 만들기 */}
-                <button
-                  type="button"
-                  onClick={() => setShowTicketModal(true)}
-                  className="w-full py-3 border-2 border-gray-300 dark:border-neutral-700 border-dashed rounded-xl text-gray-500 dark:text-gray-400 text-sm hover:bg-gray-50 dark:hover:bg-neutral-800 hover:border-blue-400 dark:hover:border-blue-600 flex items-center justify-center gap-2 transition-all"
-                >
-                  <Plus size={18} /> 새 수강권 만들기
-                </button>
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-center">
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  이 클래스에 연결된 수강권이 없습니다.
+                </p>
+                <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+                  클래스 설정에서 수강권을 연결해주세요.
+                </p>
               </div>
             )}
-          </div>
 
-          {/* 선택 상태 요약 */}
-          {availableTickets.length > 0 && (
-            <div className={`p-4 rounded-xl border-2 ${
-              regularSelectedTicketIds.length > 0
-                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-                : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
-            }`}>
-              {regularSelectedTicketIds.length > 0 ? (
-                <div className="flex items-start gap-2">
-                  <CheckSquare size={18} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-blue-700 dark:text-blue-400">
-                      {regularSelectedTicketIds.length}개의 수강권이 선택되었습니다
-                    </p>
-                    <p className="text-xs text-blue-600 dark:text-blue-500 mt-1">
-                      선택한 수강권으로 이 수업을 수강할 수 있습니다.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-start gap-2">
-                  <Square size={18} className="text-amber-400 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                      수강권이 선택되지 않았습니다
-                    </p>
-                    <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
-                      수강권을 선택하지 않으면 이 수업은 어떤 수강권으로도 수강할 수 없습니다.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              수강권은 클래스 설정에서 관리할 수 있습니다.
+            </p>
+          </div>
         </div>
       );
     }

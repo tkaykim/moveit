@@ -385,7 +385,7 @@ export async function POST(request: Request) {
         const { consumeUserTicket } = await import('@/lib/db/user-tickets');
         let consumeOk = false;
         try {
-          await consumeUserTicket(userTicket.id, resolvedClassId, 1);
+          const consumedTicket = await consumeUserTicket(userTicket.id, resolvedClassId, 1);
           consumeOk = true;
           // 활동 로그: 횟수 차감
           insertEnrollmentActivityLog({
@@ -395,6 +395,17 @@ export async function POST(request: Request) {
             action: 'COUNT_DEDUCT',
             payload: { delta: -1, class_id: resolvedClassId, schedule_id: order.schedule_id, via: 'payment_confirm' },
           }, supabase).catch(() => {});
+
+          // 활동 로그: 수강권 소진
+          if (consumedTicket && consumedTicket.remaining_count === 0 && consumedTicket.status === 'USED') {
+            insertEnrollmentActivityLog({
+              academy_id: order.academy_id,
+              user_id: user.id,
+              user_ticket_id: userTicket.id,
+              action: 'TICKET_EXHAUSTED',
+              payload: { class_id: resolvedClassId, via: 'payment_confirm' },
+            }, supabase).catch(() => {});
+          }
         } catch (e: any) {
           console.error('Consume ticket for booking error:', e);
         }

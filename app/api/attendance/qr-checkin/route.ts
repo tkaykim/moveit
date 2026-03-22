@@ -1,6 +1,7 @@
 import { verifyQrToken, verifyQrTokenSignature } from '@/lib/qr-token';
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
+import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 
 /**
  * POST /api/attendance/qr-checkin
@@ -130,6 +131,19 @@ export async function POST(request: Request) {
           .update({ current_students: totalCount })
           .eq('id', booking.schedule_id);
       }
+    }
+
+    // 활동 로그: QR 출석 체크
+    const qrAcademyId = booking.classes?.academy_id;
+    if (qrAcademyId) {
+      insertEnrollmentActivityLog({
+        academy_id: qrAcademyId,
+        user_id: booking.user_id,
+        booking_id: bookingId,
+        action: 'ATTENDANCE_CHECKED',
+        payload: { via: 'qr' },
+        actor_user_id: authUser.id,
+      }).catch(() => {});
     }
 
     // 사용자 이름 결정

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { RefreshCw, Loader2, FileText, Ticket, MinusCircle, PlusCircle, Clock, ShieldCheck, UserPlus } from 'lucide-react';
+import { RefreshCw, Loader2, FileText, Ticket, MinusCircle, PlusCircle, Clock, ShieldCheck, UserPlus, CheckCircle, XCircle } from 'lucide-react';
 
 interface ActivityLogItem {
   id: string;
@@ -32,6 +32,8 @@ const ACTION_FILTER_OPTIONS = [
   { value: 'EXTENSION_APPROVED', label: '연장/일시정지 승인' },
   { value: 'ADMIN_EXTEND', label: '관리자 연장' },
   { value: 'ADMIN_ENROLL', label: '관리자 수기 추가' },
+  { value: 'ATTENDANCE_CHECKED', label: '출석 체크' },
+  { value: 'TICKET_EXHAUSTED', label: '수강권 소진' },
 ];
 
 const ACTION_BADGE_STYLES: Record<string, { bg: string; text: string; icon: LucideIcon }> = {
@@ -45,6 +47,8 @@ const ACTION_BADGE_STYLES: Record<string, { bg: string; text: string; icon: Luci
   EXTENSION_APPROVED: { bg: 'bg-indigo-100 dark:bg-indigo-900/40', text: 'text-indigo-700 dark:text-indigo-300', icon: ShieldCheck },
   ADMIN_EXTEND: { bg: 'bg-cyan-100 dark:bg-cyan-900/40', text: 'text-cyan-700 dark:text-cyan-300', icon: Clock },
   ADMIN_ENROLL: { bg: 'bg-pink-100 dark:bg-pink-900/40', text: 'text-pink-700 dark:text-pink-300', icon: UserPlus },
+  ATTENDANCE_CHECKED: { bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-700 dark:text-green-300', icon: CheckCircle },
+  TICKET_EXHAUSTED: { bg: 'bg-gray-100 dark:bg-gray-700/40', text: 'text-gray-700 dark:text-gray-300', icon: XCircle },
 };
 
 export function ActivityLogSection({ academyId }: { academyId: string }) {
@@ -53,6 +57,8 @@ export function ActivityLogSection({ academyId }: { academyId: string }) {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [actionFilter, setActionFilter] = useState('');
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillDone, setBackfillDone] = useState(false);
   const limit = 30;
 
   const load = async () => {
@@ -71,6 +77,21 @@ export function ActivityLogSection({ academyId }: { academyId: string }) {
       setTotal(0);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const runBackfill = async () => {
+    setBackfilling(true);
+    try {
+      const res = await fetch(`/api/academy-admin/${academyId}/activity-log-backfill`, { method: 'POST' });
+      if (!res.ok) throw new Error('백필 실패');
+      setBackfillDone(true);
+      await load();
+    } catch (e) {
+      console.error(e);
+      alert('과거 로그 복구에 실패했습니다.');
+    } finally {
+      setBackfilling(false);
     }
   };
 
@@ -98,6 +119,17 @@ export function ActivityLogSection({ academyId }: { academyId: string }) {
               <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>
             ))}
           </select>
+          {!backfillDone && (
+            <button
+              type="button"
+              onClick={runBackfill}
+              disabled={backfilling || loading}
+              className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-neutral-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-neutral-800 disabled:opacity-50"
+              title="기존 출석/결제/취소 기록에서 누락된 활동 로그를 복구합니다"
+            >
+              {backfilling ? '복구 중…' : '과거 로그 복구'}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => load()}
@@ -156,10 +188,28 @@ export function ActivityLogSection({ academyId }: { academyId: string }) {
                   </td>
                   <td className="py-2.5 px-4 text-gray-700 dark:text-gray-300">{row.user_name}</td>
                   <td className="py-2.5 px-4 text-gray-600 dark:text-gray-400">{row.actor_name ?? '-'}</td>
-                  <td className="py-2.5 px-4 text-gray-500 dark:text-gray-500 text-xs max-w-[200px] truncate" title={JSON.stringify(row.payload || {})}>
-                    {row.payload && Object.keys(row.payload).length > 0
-                      ? JSON.stringify(row.payload).slice(0, 60) + (JSON.stringify(row.payload).length > 60 ? '…' : '')
-                      : '-'}
+                  <td className="py-2.5 px-4 text-gray-500 dark:text-gray-500 text-xs max-w-[240px] truncate" title={JSON.stringify(row.payload || {})}>
+                    {(() => {
+                      const p = row.payload;
+                      if (!p || Object.keys(p).length === 0) return '-';
+                      const parts: string[] = [];
+                      if (p.ticket_name) parts.push(String(p.ticket_name));
+                      if (p.via === 'qr') parts.push('QR 출석');
+                      else if (p.via === 'manual') parts.push('수동 처리');
+                      else if (p.via === 'toss_payment') parts.push('토스 결제');
+                      else if (p.via === 'bank_transfer') parts.push('계좌이체');
+                      else if (p.via === 'purchase') parts.push('결제');
+                      else if (p.via === 'purchase_guest') parts.push('비회원 구매');
+                      else if (p.via === 'backfill') parts.push('과거 기록 복구');
+                      if (p.guest_name) parts.push(`게스트: ${p.guest_name}`);
+                      if (p.remaining_count != null) parts.push(`잔여 ${p.remaining_count}회`);
+                      if (p.delta) parts.push(`${Number(p.delta) > 0 ? '+' : ''}${p.delta}회`);
+                      if (p.reason) parts.push(String(p.reason));
+                      if (p.days) parts.push(`${p.days}일`);
+                      if (p.expiry_date) parts.push(`만료: ${p.expiry_date}`);
+                      if (parts.length > 0) return parts.join(' · ');
+                      return JSON.stringify(p).slice(0, 60) + (JSON.stringify(p).length > 60 ? '…' : '');
+                    })()}
                   </td>
                 </tr>
               ))}

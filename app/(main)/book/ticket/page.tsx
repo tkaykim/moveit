@@ -68,6 +68,10 @@ export default function TicketPurchaseLinkPage() {
         alert('이름을 입력해주세요.');
         return;
       }
+      if (!guestPhone.trim() && !guestEmail.trim()) {
+        alert('연락처 또는 이메일 중 하나를 입력해주세요.');
+        return;
+      }
       setPurchasing(true);
       try {
         const body: any = {

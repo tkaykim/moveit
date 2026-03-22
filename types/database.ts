@@ -479,6 +479,7 @@ export type Database = {
           bank_transfer_order_id: string | null
           class_id: string | null
           created_at: string | null
+          guest_email: string | null
           guest_name: string | null
           guest_phone: string | null
           hall_id: string | null
@@ -496,6 +497,7 @@ export type Database = {
           bank_transfer_order_id?: string | null
           class_id?: string | null
           created_at?: string | null
+          guest_email?: string | null
           guest_name?: string | null
           guest_phone?: string | null
           hall_id?: string | null
@@ -513,6 +515,7 @@ export type Database = {
           bank_transfer_order_id?: string | null
           class_id?: string | null
           created_at?: string | null
+          guest_email?: string | null
           guest_name?: string | null
           guest_phone?: string | null
           hall_id?: string | null
@@ -2213,6 +2216,7 @@ export type Database = {
           fcm_token: string | null
           gender: string | null
           id: string
+          is_guest: boolean
           name: string | null
           name_en: string | null
           nationality: string | null
@@ -2230,6 +2234,7 @@ export type Database = {
           fcm_token?: string | null
           gender?: string | null
           id?: string
+          is_guest?: boolean
           name?: string | null
           name_en?: string | null
           nationality?: string | null
@@ -2247,6 +2252,7 @@ export type Database = {
           fcm_token?: string | null
           gender?: string | null
           id?: string
+          is_guest?: boolean
           name?: string | null
           name_en?: string | null
           nationality?: string | null
@@ -2481,6 +2487,7 @@ export type Database = {
           fcm_token: string | null
           gender: string | null
           id: string
+          is_guest: boolean
           name: string | null
           name_en: string | null
           nationality: string | null
@@ -2496,6 +2503,17 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      signup_with_guest_merge: {
+        Args: {
+          p_auth_id: string
+          p_email: string
+          p_name: string
+          p_name_en?: string | null
+          p_phone?: string | null
+          p_nickname?: string | null
+        }
+        Returns: undefined
       }
     }
     Enums: {

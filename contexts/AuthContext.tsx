@@ -228,18 +228,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: { message: '회원가입에 실패했습니다.' } };
       }
 
-      const userData: Database['public']['Tables']['users']['Insert'] = {
-        id: authData.user.id,
-        email: email,
-        name: name,
-        name_en: nameEn || null,
-        phone: phone || null,
-        nickname: nickname || null,
-        role: 'USER',
-      };
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert([userData] as any);
+      const { error: profileError } = await (supabase as any).rpc('signup_with_guest_merge', {
+        p_auth_id: authData.user.id,
+        p_email: email,
+        p_name: name,
+        p_name_en: nameEn || null,
+        p_phone: phone || null,
+        p_nickname: nickname || null,
+      });
 
       if (profileError) {
         console.error('Profile creation error:', profileError);

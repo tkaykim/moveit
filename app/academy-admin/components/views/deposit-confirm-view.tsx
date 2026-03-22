@@ -18,6 +18,8 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { DepositConfirmModal } from './deposit-confirm-modal';
 
+let _requestSeq = 0;
+
 interface BankTransferOrder {
   id: string;
   user_id: string | null;
@@ -84,6 +86,8 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
   const [loading, setLoading] = useState(true);
   const [confirmModalOrder, setConfirmModalOrder] = useState<BankTransferOrder | null>(null);
   const [listError, setListError] = useState<string | null>(null);
+  const requestSeqRef = useRef(0);
+
   const loadPage = useCallback(
     async (pageNum: number, q: string, status: 'PENDING' | 'CONFIRMED' | '') => {
       if (!academyId) {
@@ -92,6 +96,8 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
         setLoading(false);
         return;
       }
+      const seq = ++_requestSeq;
+      requestSeqRef.current = seq;
       setLoading(true);
       setListError(null);
       try {
@@ -101,7 +107,9 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
         const res = await fetchWithAuth(
           `/api/academy-admin/${academyId}/bank-transfer-orders?${params.toString()}`
         );
+        if (requestSeqRef.current !== seq) return;
         const json = await res.json();
+        if (requestSeqRef.current !== seq) return;
         if (res.ok) {
           const data = Array.isArray(json.data) ? json.data : [];
           const totalVal = typeof json.total === 'number' ? json.total : 0;
@@ -113,11 +121,14 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
           setListError(json?.error || `목록을 불러올 수 없습니다. (${res.status})`);
         }
       } catch (e: unknown) {
+        if (requestSeqRef.current !== seq) return;
         setOrders([]);
         setTotal(0);
         setListError(e instanceof Error ? e.message : '목록을 불러오는 중 오류가 발생했습니다.');
       } finally {
-        setLoading(false);
+        if (requestSeqRef.current === seq) {
+          setLoading(false);
+        }
       }
     },
     [academyId]
@@ -127,13 +138,15 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
     loadPage(page, searchQuery, statusTab);
   }, [page, searchQuery, statusTab, loadPage]);
 
+  const prevAcademyIdRef = useRef(academyId);
   useEffect(() => {
     if (!academyId) return;
+    if (prevAcademyIdRef.current === academyId) return;
+    prevAcademyIdRef.current = academyId;
     setPage(1);
     setSearchQuery('');
     setSearchInput('');
-    loadPage(1, '', statusTab);
-  }, [academyId, loadPage]);
+  }, [academyId]);
 
   useEffect(() => {
     setPage(1);
@@ -188,8 +201,8 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
         const data = await res.json();
         if (!res.ok) {
           alert(data.error || '되돌리기에 실패했습니다. 목록을 새로고침해 주세요.');
-          refreshCurrent();
         }
+        refreshCurrent();
       })
       .catch(() => {
         alert('요청 중 오류가 발생했습니다. 목록을 새로고침해 주세요.');
@@ -197,7 +210,7 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
       });
   };
 
-  /** 모달에서 확인 클릭 시: 즉시 UI 반영 후 API는 백그라운드에서 호출 */
+  /** 모달에서 확인 클릭 시: 즉시 UI 반영 후 API 호출, 완료 시 목록 리로드 */
   const handleConfirmFromModal = (orderId: string) => {
     setOrders((prev) =>
       prev.map((o) =>
@@ -221,9 +234,11 @@ export function DepositConfirmView({ academyId }: DepositConfirmViewProps) {
         if (!res.ok) {
           alert(data.error || '입금 확인 처리에 실패했습니다. 목록을 새로고침해 주세요.');
         }
+        refreshCurrent();
       })
       .catch(() => {
         alert('요청 중 오류가 발생했습니다. 목록을 새로고침해 주세요.');
+        refreshCurrent();
       });
   };
 

@@ -258,7 +258,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
 
       if (searchTerm) {
         const search = searchTerm.toLowerCase();
-        query = query.or(`users.name.ilike.%${search}%,users.email.ilike.%${search}%,users.phone.ilike.%${search}%,guest_name.ilike.%${search}%,guest_phone.ilike.%${search}%,schedules.classes.title.ilike.%${search}%`);
+        query = query.or(`users.name.ilike.%${search}%,users.email.ilike.%${search}%,users.phone.ilike.%${search}%,guest_name.ilike.%${search}%,guest_phone.ilike.%${search}%,guest_email.ilike.%${search}%,schedules.classes.title.ilike.%${search}%`);
       }
 
       query = query.order('created_at', { ascending: false });
@@ -852,13 +852,14 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                     const classData = schedule?.classes;
                     const instructor = schedule?.instructors;
 
-                    // 4-C: 관리자 수기 추가 = 게스트, 비로그인 신청 = 비회원
                     const isAdminAdded = enrollment.is_admin_added === true;
-                    const isNonMember = !user && (enrollment.guest_name || enrollment.guest_phone);
+                    const isNonMember = !user && (enrollment.guest_name || enrollment.guest_phone || enrollment.guest_email);
                     const isGuest = isAdminAdded;
                     const showAsNonMember = isNonMember && !isAdminAdded;
-                    const displayName = user?.name || enrollment.guest_name || '-';
-                    const displayPhone = user?.phone || enrollment.guest_phone || '-';
+                    const displayName = user?.name || enrollment.guest_name || '(이름 없음)';
+                    const displayPhone = user?.phone || enrollment.guest_phone || '';
+                    const displayEmail = user?.email || enrollment.guest_email || '';
+                    const displayContact = displayPhone || displayEmail || '(연락처 없음)';
 
                     const rowNumber = (currentPage - 1) * itemsPerPage + index + 1;
 
@@ -889,7 +890,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                                 )}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {displayPhone}
+                                {displayContact}
                               </div>
                             </div>
                           </div>

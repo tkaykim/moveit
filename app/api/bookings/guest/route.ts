@@ -7,13 +7,15 @@ import { NextResponse } from 'next/server';
  * Body: {
  *   scheduleId: string,
  *   guestName: string,
- *   guestPhone: string,
+ *   guestPhone?: string,
+ *   guestEmail?: string,
  * }
+ * guestPhone 또는 guestEmail 중 하나는 필수
  */
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
-    const { scheduleId, guestName, guestPhone } = await request.json();
+    const { scheduleId, guestName, guestPhone, guestEmail } = await request.json();
 
     // 필수 값 검증
     if (!scheduleId) {
@@ -30,9 +32,12 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!guestPhone || !guestPhone.trim()) {
+    const phone = guestPhone ? String(guestPhone).trim() : '';
+    const email = guestEmail ? String(guestEmail).trim() : '';
+
+    if (!phone && !email) {
       return NextResponse.json(
-        { error: '연락처를 입력해주세요.' },
+        { error: '연락처 또는 이메일을 입력해주세요.' },
         { status: 400 }
       );
     }
@@ -88,20 +93,38 @@ export async function POST(request: Request) {
       );
     }
 
-    // 중복 예약 확인 (같은 연락처로 같은 세션 예약)
-    const { data: existingBooking } = await (supabase as any)
-      .from('bookings')
-      .select('id')
-      .eq('schedule_id', scheduleId)
-      .eq('guest_phone', guestPhone.trim())
-      .not('status', 'eq', 'CANCELLED')
-      .maybeSingle();
+    // 중복 예약 확인 (같은 연락처 또는 이메일로 같은 세션 예약)
+    if (phone) {
+      const { data: existingByPhone } = await (supabase as any)
+        .from('bookings')
+        .select('id')
+        .eq('schedule_id', scheduleId)
+        .eq('guest_phone', phone)
+        .not('status', 'eq', 'CANCELLED')
+        .maybeSingle();
 
-    if (existingBooking) {
-      return NextResponse.json(
-        { error: '이미 예약된 수업입니다. 동일한 연락처로 중복 예약할 수 없습니다.' },
-        { status: 400 }
-      );
+      if (existingByPhone) {
+        return NextResponse.json(
+          { error: '이미 예약된 수업입니다. 동일한 연락처로 중복 예약할 수 없습니다.' },
+          { status: 400 }
+        );
+      }
+    }
+    if (email) {
+      const { data: existingByEmail } = await (supabase as any)
+        .from('bookings')
+        .select('id')
+        .eq('schedule_id', scheduleId)
+        .eq('guest_email', email)
+        .not('status', 'eq', 'CANCELLED')
+        .maybeSingle();
+
+      if (existingByEmail) {
+        return NextResponse.json(
+          { error: '이미 예약된 수업입니다. 동일한 이메일로 중복 예약할 수 없습니다.' },
+          { status: 400 }
+        );
+      }
     }
 
     // 예약 생성
@@ -110,11 +133,12 @@ export async function POST(request: Request) {
       .insert({
         schedule_id: scheduleId,
         class_id: schedule.class_id,
-        user_id: null,  // 게스트이므로 null
+        user_id: null,
         user_ticket_id: null,
         guest_name: guestName.trim(),
-        guest_phone: guestPhone.trim(),
-        status: 'PENDING',  // 현장 결제 대기
+        guest_phone: phone || null,
+        guest_email: email || null,
+        status: 'PENDING',
         payment_status: 'PENDING',
       })
       .select()

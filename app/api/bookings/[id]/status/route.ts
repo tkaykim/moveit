@@ -189,6 +189,19 @@ export async function PATCH(
         .catch((err: any) => console.error('[cancel-notification]', err));
     }
 
+    // 활동 로그: 출석 체크
+    if (academyId && status === 'COMPLETED' && oldStatus === 'CONFIRMED') {
+      insertEnrollmentActivityLog({
+        academy_id: academyId,
+        user_id: currentBooking.user_id,
+        user_ticket_id: currentBooking.user_ticket_id ?? null,
+        booking_id: id,
+        action: 'ATTENDANCE_CHECKED',
+        payload: { via: 'manual' },
+        actor_user_id: actorId,
+      }).catch(() => {});
+    }
+
     // 출석 완료 알림 발송 (비동기)
     if (status === 'COMPLETED' && oldStatus === 'CONFIRMED' && updatedBooking?.user_id) {
       // 예약 상세 정보 조회 (학원명, 수업명, 시간 포함)

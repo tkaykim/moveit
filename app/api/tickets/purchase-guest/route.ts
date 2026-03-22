@@ -24,6 +24,13 @@ export async function POST(request: Request) {
     const phone = guestPhone ? String(guestPhone).trim() : null;
     const email = guestEmail ? String(guestEmail).trim() : null;
 
+    if (!phone && !email) {
+      return NextResponse.json(
+        { error: '연락처 또는 이메일 중 하나는 필수입니다.' },
+        { status: 400 }
+      );
+    }
+
     const ticket = await getTicketById(ticketId);
     if (!ticket) {
       return NextResponse.json({ error: '수강권을 찾을 수 없습니다.' }, { status: 404 });
@@ -61,6 +68,7 @@ export async function POST(request: Request) {
           name: String(guestName).trim(),
           phone: phone || null,
           email: email || null,
+          is_guest: true,
         })
         .select('id')
         .single();

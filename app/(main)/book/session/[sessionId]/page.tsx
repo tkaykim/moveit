@@ -116,6 +116,7 @@ export default function SessionBookingPage() {
   // 현장 결제 (게스트)
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
 
   // 모달 (비로그인 시 회원가입/로그인 유도용 초기 탭)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -739,8 +740,8 @@ export default function SessionBookingPage() {
       setError(t('sessionBooking.nameError'));
       return;
     }
-    if (!guestPhone.trim()) {
-      setError(t('sessionBooking.contactError'));
+    if (!guestPhone.trim() && !guestEmail.trim()) {
+      setError(language === 'ko' ? '연락처 또는 이메일 중 하나를 입력해주세요.' : 'Please enter a phone number or email.');
       return;
     }
 
@@ -754,7 +755,8 @@ export default function SessionBookingPage() {
         body: JSON.stringify({
           scheduleId: sessionId,
           guestName: guestName.trim(),
-          guestPhone: guestPhone.trim(),
+          guestPhone: guestPhone.trim() || undefined,
+          guestEmail: guestEmail.trim() || undefined,
         }),
       });
 
@@ -1313,6 +1315,23 @@ export default function SessionBookingPage() {
                   className="w-full px-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-black dark:text-white placeholder-neutral-400"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-2">
+                  {language === 'ko' ? '이메일' : 'Email'} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                  placeholder="email@example.com"
+                  className="w-full px-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-black dark:text-white placeholder-neutral-400"
+                />
+              </div>
+
+              <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
+                {language === 'ko' ? '* 연락처 또는 이메일 중 하나는 필수입니다.' : '* Phone or email is required.'}
+              </p>
 
               <div className="text-xs text-neutral-500 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 rounded-lg">
                 {t('sessionBooking.onSiteNote')}
