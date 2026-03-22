@@ -1,8 +1,18 @@
 'use client';
 
 interface DepositConfirmModalProps {
-  /** 입금확인 대상 주문 (입금자명·금액 표시용) */
-  order: { id: string; amount: number; depositor_name?: string | null; orderer_name?: string | null; user_name?: string | null };
+  /** 입금확인 대상 주문 (입금자명·금액·상품·연락처 표시용) */
+  order: {
+    id: string;
+    amount: number;
+    depositor_name?: string | null;
+    orderer_name?: string | null;
+    user_name?: string | null;
+    user_phone?: string | null;
+    user_email?: string | null;
+    order_name?: string | null;
+    tickets?: { name?: string } | null;
+  };
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -27,11 +37,27 @@ export function DepositConfirmModal({ order, onConfirm, onCancel }: DepositConfi
             입금 확인이 되었나요?
           </h3>
         </div>
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-3">
           <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-neutral-800">
             <span className="text-slate-500 dark:text-slate-400">입금자명</span>
             <span className="font-bold text-slate-800 dark:text-white">{depositorLabel}</span>
           </div>
+          {(order.user_phone || order.user_email) && (
+            <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-neutral-800">
+              <span className="text-slate-500 dark:text-slate-400">연락처</span>
+              <span className="text-sm text-slate-700 dark:text-slate-300 text-right max-w-[60%] truncate">
+                {[order.user_phone, order.user_email].filter(Boolean).join(' / ')}
+              </span>
+            </div>
+          )}
+          {(order.tickets?.name || order.order_name) && (
+            <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-neutral-800">
+              <span className="text-slate-500 dark:text-slate-400">상품</span>
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300 text-right max-w-[60%] truncate">
+                {order.tickets?.name || order.order_name}
+              </span>
+            </div>
+          )}
           <div className="flex justify-between items-center pt-2">
             <span className="text-slate-500 dark:text-slate-400">금액</span>
             <span className="text-xl font-bold text-slate-800 dark:text-white">

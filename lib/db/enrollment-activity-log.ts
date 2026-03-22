@@ -15,7 +15,8 @@ export type EnrollmentActivityAction =
   | 'ADMIN_EXTEND'
   | 'ADMIN_ENROLL'
   | 'ATTENDANCE_CHECKED'
-  | 'TICKET_EXHAUSTED';
+  | 'TICKET_EXHAUSTED'
+  | 'TICKET_EXPIRED';
 
 export interface InsertEnrollmentActivityLogParams {
   academy_id: string;

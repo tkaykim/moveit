@@ -61,6 +61,8 @@ export async function POST(
           confirmed_by: user.id,
         })
         .eq('id', orderId);
+
+      let confirmedBookingId: string | null = null;
       if (order.schedule_id) {
         const { data: pendingBooking } = await supabase
           .from('bookings')
@@ -68,6 +70,7 @@ export async function POST(
           .eq('bank_transfer_order_id', orderId)
           .maybeSingle();
         if (pendingBooking) {
+          confirmedBookingId = pendingBooking.id;
           await supabase
             .from('bookings')
             .update({ status: 'CONFIRMED', payment_status: 'COMPLETED' })
@@ -84,6 +87,27 @@ export async function POST(
             .eq('id', order.schedule_id);
         }
       }
+
+      // 비회원 입금확인 활동 로그
+      const guestTicket = await getTicketById(order.ticket_id);
+      insertEnrollmentActivityLog({
+        academy_id: academyId,
+        user_id: null,
+        booking_id: confirmedBookingId,
+        action: 'ENROLL',
+        payload: {
+          via: 'bank_transfer_guest_confirm',
+          guest_name: order.orderer_name || null,
+          guest_phone: order.orderer_phone || null,
+          guest_email: order.orderer_email || null,
+          ticket_name: guestTicket?.name || order.order_name || null,
+          amount: order.amount,
+          order_id: orderId,
+          schedule_id: order.schedule_id || null,
+        },
+        actor_user_id: user.id,
+      }, supabase).catch(() => {});
+
       return NextResponse.json({
         success: true,
         data: null,

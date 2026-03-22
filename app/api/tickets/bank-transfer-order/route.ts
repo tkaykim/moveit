@@ -238,8 +238,8 @@ export async function POST(request: Request) {
         };
         if (!userId) {
           bookingInsert.guest_name = ordererName;
-          bookingInsert.guest_phone = ordererPhone ?? '';
-          if (ordererEmail) bookingInsert.guest_email = ordererEmail;
+          bookingInsert.guest_phone = ordererPhone || null;
+          bookingInsert.guest_email = ordererEmail || null;
         }
         const { error: bookErr } = await (supabase as any)
           .from('bookings')

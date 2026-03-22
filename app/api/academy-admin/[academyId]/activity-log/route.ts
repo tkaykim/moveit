@@ -29,6 +29,7 @@ const ACTION_LABELS: Record<string, string> = {
   ADMIN_ENROLL: '관리자 수기 추가',
   ATTENDANCE_CHECKED: '출석 체크',
   TICKET_EXHAUSTED: '수강권 소진',
+  TICKET_EXPIRED: '수강권 만료',
 };
 
 export async function GET(
@@ -84,12 +85,21 @@ export async function GET(
       }
     }
 
-    const items = list.map((r: any) => ({
-      ...r,
-      action_label: ACTION_LABELS[r.action] || r.action,
-      user_name: r.user_id ? (profiles[r.user_id]?.name_kr || profiles[r.user_id]?.name_en || profiles[r.user_id]?.email || '-') : '-',
-      actor_name: r.actor_user_id ? (profiles[r.actor_user_id]?.name_kr || profiles[r.actor_user_id]?.name_en || '-') : null,
-    }));
+    const items = list.map((r: any) => {
+      let userName = '-';
+      if (r.user_id) {
+        const p = profiles[r.user_id];
+        userName = p?.name_kr || p?.name_en || p?.email || '-';
+      } else if (r.payload?.guest_name) {
+        userName = `${r.payload.guest_name} (비회원)`;
+      }
+      return {
+        ...r,
+        action_label: ACTION_LABELS[r.action] || r.action,
+        user_name: userName,
+        actor_name: r.actor_user_id ? (profiles[r.actor_user_id]?.name_kr || profiles[r.actor_user_id]?.name_en || '-') : null,
+      };
+    });
 
     return NextResponse.json({
       data: items,

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 
 /**
  * POST /api/bookings/guest
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
         current_students, 
         start_time, 
         is_canceled,
+        hall_id,
         classes (
           academy_id,
           price
@@ -133,6 +135,7 @@ export async function POST(request: Request) {
       .insert({
         schedule_id: scheduleId,
         class_id: schedule.class_id,
+        hall_id: schedule.hall_id ?? null,
         user_id: null,
         user_ticket_id: null,
         guest_name: guestName.trim(),
@@ -160,7 +163,25 @@ export async function POST(request: Request) {
 
     if (updateError) {
       console.error('Update students count error:', updateError);
-      // 예약은 생성되었으므로 에러를 무시하고 진행
+    }
+
+    // 활동 로그: 비회원 수강신청
+    const academyId = schedule.classes?.academy_id;
+    if (academyId) {
+      insertEnrollmentActivityLog({
+        academy_id: academyId,
+        user_id: null,
+        booking_id: booking.id,
+        action: 'ENROLL',
+        payload: {
+          via: 'guest_onsite',
+          guest_name: guestName.trim(),
+          guest_phone: phone || null,
+          guest_email: email || null,
+          schedule_id: scheduleId,
+          class_id: schedule.class_id,
+        },
+      }, supabase as any).catch(() => {});
     }
 
     return NextResponse.json({

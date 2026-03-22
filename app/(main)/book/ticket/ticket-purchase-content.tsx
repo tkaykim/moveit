@@ -131,7 +131,7 @@ export function TicketPurchaseContent({
               </div>
               <div>
                 <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                  {language === 'ko' ? '연락처' : 'Phone'} <span className="text-red-500">*</span>
+                  {language === 'ko' ? '연락처' : 'Phone'}
                 </label>
                 <input
                   type="tel"
@@ -143,7 +143,7 @@ export function TicketPurchaseContent({
               </div>
               <div>
                 <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                  {language === 'ko' ? '이메일' : 'Email'} <span className="text-red-500">*</span>
+                  {language === 'ko' ? '이메일' : 'Email'}
                 </label>
                 <input
                   type="email"

@@ -5,6 +5,7 @@
  * Phase 1: guest_phone/guest_email 기준 (user_id IS NULL인 bookings)
  * Phase 2: bank_transfer_orders 매핑
  * Phase 3: purchase-guest가 생성한 게스트 유저 병합 (users 테이블에 있지만 본인이 아닌 유저)
+ * Phase 4: CONFIRMED 계좌이체 주문 중 수강권 미발급 건 소급 발급
  *
  * 전화번호는 숫자만 추출해 비교 (010-1234-5678 vs 01012345678 동일 처리).
  * 중복 호출해도 safe (이미 매핑된 행은 조건 불일치로 무시).
@@ -12,6 +13,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
+import { getTicketById } from '@/lib/db/tickets';
 
 function normalizePhone(value: string | null | undefined): string {
   if (value == null || typeof value !== 'string') return '';
@@ -142,6 +144,154 @@ async function mergeGuestUsers(
   return mergedCount;
 }
 
+/**
+ * Phase 4: 비회원 시 계좌이체 입금확인이 먼저 처리된 경우,
+ * 회원가입 후 매핑된 주문에 대해 수강권을 소급 발급.
+ * (비회원 입금확인 시에는 user_id 없어 수강권 발급 불가 → 회원 전환 후 발급)
+ */
+async function issueTicketsForConfirmedOrders(
+  supabase: any,
+  userId: string
+): Promise<number> {
+  const { data: unissuedOrders } = await supabase
+    .from('bank_transfer_orders')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('status', 'CONFIRMED')
+    .is('user_ticket_id', null);
+
+  if (!unissuedOrders || unissuedOrders.length === 0) return 0;
+
+  let issuedCount = 0;
+
+  for (const order of unissuedOrders) {
+    try {
+      const ticket = await getTicketById(order.ticket_id);
+      if (!ticket) continue;
+
+      const countOpts = (ticket.count_options as { count?: number; price?: number; valid_days?: number | null }[] | null) || [];
+      const hasCountOptions = countOpts.length > 0 && (ticket.ticket_category === 'popup' || ticket.access_group === 'popup');
+      const optIndex = order.count_option_index ?? 0;
+      const selectedOption = hasCountOptions && countOpts[optIndex] ? countOpts[optIndex] : null;
+      const optionCount = selectedOption ? (selectedOption.count ?? 1) : (ticket.total_count ?? 1);
+      const optionValidDays = selectedOption?.valid_days ?? ticket.valid_days ?? null;
+      const isPeriodTicket = ticket.ticket_type === 'PERIOD';
+      const remainingCount = isPeriodTicket ? null : optionCount;
+
+      const startDate = new Date();
+      let expiryDateStr: string | null;
+      if (optionValidDays != null && optionValidDays > 0) {
+        const exp = new Date(startDate);
+        exp.setDate(exp.getDate() + optionValidDays);
+        expiryDateStr = exp.toISOString().split('T')[0];
+      } else if (optionValidDays === null) {
+        expiryDateStr = null;
+      } else {
+        const exp = new Date(startDate);
+        exp.setFullYear(exp.getFullYear() + 1);
+        expiryDateStr = exp.toISOString().split('T')[0];
+      }
+
+      const { data: userTicket, error: utError } = await supabase
+        .from('user_tickets')
+        .insert({
+          user_id: userId,
+          ticket_id: order.ticket_id,
+          remaining_count: remainingCount,
+          start_date: startDate.toISOString().split('T')[0],
+          expiry_date: expiryDateStr,
+          status: 'ACTIVE',
+        })
+        .select()
+        .single();
+
+      if (utError || !userTicket) {
+        console.error('[link-guest-bookings] user_ticket insert error:', utError);
+        continue;
+      }
+
+      const ticketDisplayName = selectedOption ? `${ticket.name} ${optionCount}회권` : ticket.name;
+      const purchaseQuantity = isPeriodTicket ? 1 : optionCount;
+      const { data: revRow } = await supabase
+        .from('revenue_transactions')
+        .insert({
+          academy_id: order.academy_id,
+          user_id: userId,
+          ticket_id: order.ticket_id,
+          user_ticket_id: userTicket.id,
+          discount_id: order.discount_id || null,
+          original_price: order.amount,
+          discount_amount: 0,
+          final_price: order.amount,
+          payment_method: 'BANK_TRANSFER',
+          payment_status: 'COMPLETED',
+          registration_type: 'NEW',
+          quantity: purchaseQuantity,
+          valid_days: optionValidDays,
+          ticket_name: ticketDisplayName,
+          ticket_type_snapshot: ticket.ticket_type,
+          transaction_date: new Date().toISOString().split('T')[0],
+        })
+        .select('id')
+        .single();
+
+      if (order.academy_id) {
+        const { data: existingStudent } = await supabase
+          .from('academy_students')
+          .select('id')
+          .eq('academy_id', order.academy_id)
+          .eq('user_id', userId)
+          .maybeSingle();
+        if (!existingStudent) {
+          await supabase
+            .from('academy_students')
+            .insert({ academy_id: order.academy_id, user_id: userId });
+        }
+      }
+
+      if (order.schedule_id) {
+        const { data: existingBooking } = await supabase
+          .from('bookings')
+          .select('id, user_ticket_id')
+          .eq('bank_transfer_order_id', order.id)
+          .maybeSingle();
+
+        if (existingBooking && !existingBooking.user_ticket_id) {
+          await supabase
+            .from('bookings')
+            .update({ user_ticket_id: userTicket.id })
+            .eq('id', existingBooking.id);
+
+          if (!isPeriodTicket && remainingCount !== null && remainingCount > 0) {
+            const newRemaining = remainingCount - 1;
+            const ticketUpdate: Record<string, unknown> = { remaining_count: newRemaining };
+            if (newRemaining === 0) ticketUpdate.status = 'USED';
+            await supabase
+              .from('user_tickets')
+              .update(ticketUpdate)
+              .eq('id', userTicket.id);
+          }
+        }
+      }
+
+      await supabase
+        .from('bank_transfer_orders')
+        .update({
+          user_ticket_id: userTicket.id,
+          revenue_transaction_id: revRow?.id || null,
+        })
+        .eq('id', order.id);
+
+      issuedCount++;
+      console.log(`[link-guest-bookings] 소급 수강권 발급 완료: order=${order.id}, userTicket=${userTicket.id}`);
+    } catch (e) {
+      console.error('[link-guest-bookings] issue ticket error for order:', order.id, e);
+    }
+  }
+
+  return issuedCount;
+}
+
 export async function POST(request: Request) {
   try {
     const user = await getAuthenticatedUser(request);
@@ -249,7 +399,15 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ linked: linkedBookingIds.size, merged: mergedCount });
+    // 5) CONFIRMED 계좌이체 주문 중 수강권 미발급 건 소급 발급
+    let retroIssuedCount = 0;
+    try {
+      retroIssuedCount = await issueTicketsForConfirmedOrders(supabase, user.id);
+    } catch (e) {
+      console.error('[link-guest-bookings] retroactive ticket issue error:', e);
+    }
+
+    return NextResponse.json({ linked: linkedBookingIds.size, merged: mergedCount, retroIssued: retroIssuedCount });
   } catch (e: any) {
     console.error('[link-guest-bookings] error:', e);
     return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });

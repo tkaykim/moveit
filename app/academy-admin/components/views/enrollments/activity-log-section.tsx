@@ -34,6 +34,7 @@ const ACTION_FILTER_OPTIONS = [
   { value: 'ADMIN_ENROLL', label: '관리자 수기 추가' },
   { value: 'ATTENDANCE_CHECKED', label: '출석 체크' },
   { value: 'TICKET_EXHAUSTED', label: '수강권 소진' },
+  { value: 'TICKET_EXPIRED', label: '수강권 만료' },
 ];
 
 const ACTION_BADGE_STYLES: Record<string, { bg: string; text: string; icon: LucideIcon }> = {
@@ -49,6 +50,7 @@ const ACTION_BADGE_STYLES: Record<string, { bg: string; text: string; icon: Luci
   ADMIN_ENROLL: { bg: 'bg-pink-100 dark:bg-pink-900/40', text: 'text-pink-700 dark:text-pink-300', icon: UserPlus },
   ATTENDANCE_CHECKED: { bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-700 dark:text-green-300', icon: CheckCircle },
   TICKET_EXHAUSTED: { bg: 'bg-gray-100 dark:bg-gray-700/40', text: 'text-gray-700 dark:text-gray-300', icon: XCircle },
+  TICKET_EXPIRED: { bg: 'bg-neutral-100 dark:bg-neutral-700/40', text: 'text-neutral-700 dark:text-neutral-300', icon: Clock },
 };
 
 export function ActivityLogSection({ academyId }: { academyId: string }) {

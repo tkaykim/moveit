@@ -131,6 +131,10 @@ export async function POST(request: Request) {
     }
 
     if (ticket.academy_id) {
+      const ticketDisplayName = ticket.name || '수강권';
+      const purchaseQuantity = isPeriodTicket ? 1 : remainingCount;
+      const transactionDate = new Date().toISOString().split('T')[0];
+
       await supabase.from('revenue_transactions').insert({
         academy_id: ticket.academy_id,
         user_id: guestUser.id,
@@ -141,6 +145,12 @@ export async function POST(request: Request) {
         final_price: ticket.price ?? 0,
         payment_method: 'CARD_DEMO',
         payment_status: 'COMPLETED',
+        registration_type: 'NEW',
+        quantity: purchaseQuantity,
+        valid_days: ticket.valid_days ?? null,
+        ticket_name: ticketDisplayName,
+        ticket_type_snapshot: ticket.ticket_type,
+        transaction_date: transactionDate,
       });
 
       // 학원 학생으로 자동 등록 (중복 방지: 이미 등록된 경우 무시)
