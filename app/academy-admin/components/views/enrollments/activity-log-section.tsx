@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { RefreshCw, Loader2, FileText, Ticket, MinusCircle, PlusCircle, Clock, ShieldCheck, UserPlus, CheckCircle, XCircle, Search } from 'lucide-react';
+import { getSupabaseClient } from '@/lib/utils/supabase-client';
 
 interface ActivityLogItem {
   id: string;
@@ -97,13 +98,23 @@ export function ActivityLogSection({ academyId }: { academyId: string }) {
     return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
   }, [searchTerm]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(limit) });
       if (actionFilter) params.set('action', actionFilter);
       if (debouncedSearch) params.set('search', debouncedSearch);
-      const res = await fetch(`/api/academy-admin/${academyId}/activity-log?${params}`);
+
+      const headers: Record<string, string> = {};
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+      }
+
+      const res = await fetch(`/api/academy-admin/${academyId}/activity-log?${params}`, { headers });
       if (!res.ok) throw new Error('조회 실패');
       const json = await res.json();
       setItems(json.data || []);
@@ -115,12 +126,21 @@ export function ActivityLogSection({ academyId }: { academyId: string }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [academyId, page, limit, actionFilter, debouncedSearch]);
 
-  const runBackfill = async () => {
+  const runBackfill = useCallback(async () => {
     setBackfilling(true);
     try {
-      const res = await fetch(`/api/academy-admin/${academyId}/activity-log-backfill`, { method: 'POST' });
+      const headers: Record<string, string> = {};
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+      }
+
+      const res = await fetch(`/api/academy-admin/${academyId}/activity-log-backfill`, { method: 'POST', headers });
       if (!res.ok) throw new Error('백필 실패');
       setBackfillDone(true);
       await load();
@@ -130,12 +150,11 @@ export function ActivityLogSection({ academyId }: { academyId: string }) {
     } finally {
       setBackfilling(false);
     }
-  };
+  }, [academyId, load]);
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [academyId, page, actionFilter, debouncedSearch]);
+  }, [load]);
 
   const totalPages = Math.ceil(total / limit);
 
