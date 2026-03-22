@@ -1,9 +1,9 @@
 /**
  * GET /api/academy-admin/[academyId]/activity-log
- * 수강신청/취소/환불/연장 등 활동 로그 목록 (활동로그 탭용)
+ * 활동 로그 목록 (검색, 필터, 페이지네이션 지원)
  *
  * POST /api/academy-admin/[academyId]/activity-log
- * 클라이언트 사이드(관리자 판매 등)에서 활동 로그 기록 요청
+ * 클라이언트에서 활동 로그 기록 요청
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
@@ -47,9 +47,20 @@ export async function GET(
     const page = Math.max(1, parseInt(request.nextUrl.searchParams.get('page') || '1', 10));
     const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(request.nextUrl.searchParams.get('limit') || String(DEFAULT_LIMIT), 10)));
     const actionFilter = request.nextUrl.searchParams.get('action') || '';
+    const search = (request.nextUrl.searchParams.get('search') || '').trim();
     const offset = (page - 1) * limit;
 
     const supabase = createServiceClient() as any;
+
+    let matchedUserIds: string[] | null = null;
+
+    if (search) {
+      const { data: matchedUsers } = await supabase
+        .from('users')
+        .select('id')
+        .or(`name.ilike.%${search}%,nickname.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`);
+      matchedUserIds = (matchedUsers || []).map((u: any) => u.id);
+    }
 
     let query = supabase
       .from('enrollment_activity_log')
@@ -59,6 +70,14 @@ export async function GET(
 
     if (actionFilter && Object.keys(ACTION_LABELS).includes(actionFilter)) {
       query = query.eq('action', actionFilter);
+    }
+
+    if (search) {
+      const orFilters = [`note.ilike.%${search}%`];
+      if (matchedUserIds && matchedUserIds.length > 0) {
+        orFilters.push(`user_id.in.(${matchedUserIds.join(',')})`);
+      }
+      query = query.or(orFilters.join(','));
     }
 
     const { data: rows, error, count } = await query.range(offset, offset + limit - 1);
@@ -74,22 +93,22 @@ export async function GET(
     const actorIds = [...new Set(list.map((r: any) => r.actor_user_id).filter(Boolean))];
     const allIds = [...new Set([...userIds, ...actorIds])];
 
-    let profiles: Record<string, { name_kr?: string; name_en?: string; email?: string }> = {};
+    let userMap: Record<string, { name?: string; nickname?: string; email?: string }> = {};
     if (allIds.length > 0) {
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('id, name_kr, name_en, email')
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('id, name, nickname, email')
         .in('id', allIds);
-      if (profilesData) {
-        profiles = Object.fromEntries(profilesData.map((p: any) => [p.id, p]));
+      if (usersData) {
+        userMap = Object.fromEntries(usersData.map((u: any) => [u.id, u]));
       }
     }
 
     const items = list.map((r: any) => {
       let userName = '-';
       if (r.user_id) {
-        const p = profiles[r.user_id];
-        userName = p?.name_kr || p?.name_en || p?.email || '-';
+        const u = userMap[r.user_id];
+        userName = u?.name || u?.nickname || u?.email || '-';
       } else if (r.payload?.guest_name) {
         userName = `${r.payload.guest_name} (비회원)`;
       }
@@ -97,7 +116,9 @@ export async function GET(
         ...r,
         action_label: ACTION_LABELS[r.action] || r.action,
         user_name: userName,
-        actor_name: r.actor_user_id ? (profiles[r.actor_user_id]?.name_kr || profiles[r.actor_user_id]?.name_en || '-') : null,
+        actor_name: r.actor_user_id
+          ? (userMap[r.actor_user_id]?.name || userMap[r.actor_user_id]?.nickname || '-')
+          : null,
       };
     });
 
@@ -132,7 +153,7 @@ export async function POST(
     await assertAcademyAdmin(academyId, user.id);
 
     const body = await request.json();
-    const { action, user_id, user_ticket_id, booking_id, extension_request_id, payload } = body;
+    const { action, user_id, user_ticket_id, booking_id, extension_request_id, payload, note } = body;
 
     if (!action || !ALLOWED_CLIENT_ACTIONS.includes(action)) {
       return NextResponse.json({ error: '허용되지 않은 액션입니다.' }, { status: 400 });
@@ -148,6 +169,7 @@ export async function POST(
         extension_request_id: extension_request_id ?? null,
         action,
         payload: payload ?? null,
+        note: note ?? null,
         actor_user_id: user.id,
       },
       supabase

@@ -26,6 +26,7 @@ export interface InsertEnrollmentActivityLogParams {
   extension_request_id?: string | null;
   action: EnrollmentActivityAction;
   payload?: Record<string, unknown> | null;
+  note?: string | null;
   actor_user_id?: string | null;
 }
 
@@ -47,6 +48,7 @@ export async function insertEnrollmentActivityLog(
     extension_request_id: params.extension_request_id ?? null,
     action: params.action,
     payload: (params.payload ?? null) as Json | null,
+    note: params.note ?? null,
     actor_user_id: params.actor_user_id ?? null,
   };
   const { error } = await supabase.from('enrollment_activity_log').insert(row);

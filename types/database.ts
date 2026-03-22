@@ -576,6 +576,7 @@ export type Database = {
           extension_request_id: string | null
           action: string
           payload: Json | null
+          note: string | null
           actor_user_id: string | null
           created_at: string
         }
@@ -588,6 +589,7 @@ export type Database = {
           extension_request_id?: string | null
           action: string
           payload?: Json | null
+          note?: string | null
           actor_user_id?: string | null
           created_at?: string
         }
@@ -600,6 +602,7 @@ export type Database = {
           extension_request_id?: string | null
           action?: string
           payload?: Json | null
+          note?: string | null
           actor_user_id?: string | null
           created_at?: string
         }
