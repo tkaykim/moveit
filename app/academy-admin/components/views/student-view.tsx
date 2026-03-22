@@ -33,14 +33,6 @@ interface Student {
       access_group?: string | null;
     };
   }>;
-  bookings?: Array<{
-    id: string;
-    created_at: string;
-    classes: {
-      id: string;
-      title: string;
-    } | null;
-  }>;
 }
 
 const ITEMS_PER_PAGE_OPTIONS = [30, 50, 100];
@@ -59,8 +51,6 @@ export function StudentView({ academyId }: StudentViewProps) {
   const [itemsPerPage, setItemsPerPage] = useState(30);
   const [totalCount, setTotalCount] = useState(0);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
-  const userIdsCache = useRef<string[]>([]);
-  const ticketIdsCache = useRef<string[]>([]);
 
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -72,161 +62,29 @@ export function StudentView({ academyId }: StudentViewProps) {
   }, [searchTerm]);
 
   useEffect(() => {
-    loadUserIds();
-  }, [academyId]);
+    loadStudents();
+  }, [academyId, currentPage, itemsPerPage, debouncedSearch]);
 
-  useEffect(() => {
-    if (userIdsCache.current.length > 0) {
-      loadStudentPage();
-    }
-  }, [currentPage, itemsPerPage, debouncedSearch]);
-
-  const loadUserIds = async () => {
+  const loadStudents = async () => {
     const supabase = getSupabaseClient();
     if (!supabase) { setLoading(false); return; }
 
-    try {
-      let userIds: string[] = [];
-
-      const { data: academyStudents, error: academyStudentsError } = await supabase
-        .from('academy_students')
-        .select('user_id')
-        .eq('academy_id', academyId);
-
-      if (academyStudentsError) {
-        if (academyStudentsError.code === '42P01') {
-          console.warn('academy_students 테이블이 없습니다. 기존 방식으로 조회합니다.');
-          const { data: tickets } = await supabase
-            .from('tickets')
-            .select('id')
-            .eq('academy_id', academyId);
-
-          const ticketIds = tickets?.map((t: any) => t.id) || [];
-          if (ticketIds.length === 0) {
-            setStudents([]);
-            setTotalCount(0);
-            setLoading(false);
-            return;
-          }
-
-          const { data: userTickets } = await supabase
-            .from('user_tickets')
-            .select('user_id')
-            .in('ticket_id', ticketIds);
-
-          userIds = [...new Set((userTickets?.map((ut: any) => ut.user_id) || []) as string[])];
-        } else {
-          throw academyStudentsError;
-        }
-      } else {
-        userIds = academyStudents?.map((as: any) => as.user_id) || [];
-      }
-
-      const { data: tickets } = await supabase
-        .from('tickets')
-        .select('id')
-        .eq('academy_id', academyId);
-      ticketIdsCache.current = tickets?.map((t: any) => t.id) || [];
-
-      userIdsCache.current = userIds;
-
-      if (userIds.length === 0) {
-        setStudents([]);
-        setTotalCount(0);
-        setLoading(false);
-        return;
-      }
-
-      await loadStudentPage();
-    } catch (error) {
-      console.error('Error loading student ids:', error);
-      setLoading(false);
-    }
-  };
-
-  const loadStudentPage = async () => {
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
-
-    const userIds = userIdsCache.current;
-    if (userIds.length === 0) {
-      setStudents([]);
-      setTotalCount(0);
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     try {
-      let countQuery = supabase
-        .from('users')
-        .select('id', { count: 'exact', head: true })
-        .in('id', userIds);
+      const offset = (currentPage - 1) * itemsPerPage;
 
-      if (debouncedSearch) {
-        countQuery = countQuery.or(
-          `name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%,nickname.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`
-        );
-      }
-
-      const { count } = await countQuery;
-      setTotalCount(count || 0);
-
-      const from = (currentPage - 1) * itemsPerPage;
-      const to = from + itemsPerPage - 1;
-
-      let query = supabase
-        .from('users')
-        .select(`
-          *,
-          user_tickets (
-            id,
-            remaining_count,
-            expiry_date,
-            status,
-            tickets (
-              id,
-              name,
-              ticket_type,
-              ticket_category,
-              access_group
-            )
-          ),
-          bookings (
-            id,
-            status,
-            created_at,
-            classes (
-              id,
-              title
-            )
-          )
-        `)
-        .in('id', userIds);
-
-      if (debouncedSearch) {
-        query = query.or(
-          `name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%,nickname.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`
-        );
-      }
-
-      const { data, error } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to);
+      const { data, error } = await supabase.rpc('get_academy_students_paginated', {
+        p_academy_id: academyId,
+        p_search: debouncedSearch || null,
+        p_offset: offset,
+        p_limit: itemsPerPage,
+      });
 
       if (error) throw error;
 
-      const ticketIds = ticketIdsCache.current;
-      const filteredData = (data || []).map((student: any) => {
-        if (student.user_tickets && ticketIds.length > 0) {
-          student.user_tickets = student.user_tickets.filter((ut: any) =>
-            ut.tickets && ticketIds.includes(ut.tickets.id)
-          );
-        }
-        return student;
-      });
-
-      setStudents(filteredData);
+      const result = data as { total_count: number; students: Student[] };
+      setTotalCount(result.total_count);
+      setStudents(result.students || []);
     } catch (error) {
       console.error('Error loading students:', error);
     } finally {
@@ -236,7 +94,7 @@ export function StudentView({ academyId }: StudentViewProps) {
 
   const reloadAll = useCallback(() => {
     setCurrentPage(1);
-    loadUserIds();
+    loadStudents();
   }, [academyId]);
 
   const getStudentStatus = (student: Student): string => {
@@ -516,7 +374,7 @@ export function StudentView({ academyId }: StudentViewProps) {
           onClose={() => {
             setShowDetailModal(false);
             setSelectedStudent(null);
-            loadStudentPage();
+            loadStudents();
           }}
         />
       )}
