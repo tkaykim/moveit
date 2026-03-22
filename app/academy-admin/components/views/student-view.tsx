@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Search, Filter, Download, MoreHorizontal, Plus, User } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Search, Filter, Download, User } from 'lucide-react';
 import { SectionHeader } from '../common/section-header';
 import { StatusBadge } from '../common/status-badge';
 import { StudentRegisterModal } from './students/student-register-modal';
 import { StudentDetailModal } from './students/student-detail-modal';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
-import { formatPhoneDisplay, normalizePhone } from '@/lib/utils/phone';
+import { formatPhoneDisplay } from '@/lib/utils/phone';
 
 interface StudentViewProps {
   academyId: string;
@@ -43,51 +43,68 @@ interface Student {
   }>;
 }
 
+const ITEMS_PER_PAGE_OPTIONS = [30, 50, 100];
+
 export function StudentView({ academyId }: StudentViewProps) {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | '수강중' | '만료예정' | '휴면'>('ALL');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(30);
+  const [totalCount, setTotalCount] = useState(0);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const userIdsCache = useRef<string[]>([]);
+  const ticketIdsCache = useRef<string[]>([]);
 
   useEffect(() => {
-    loadStudents();
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 300);
+    return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
+  }, [searchTerm]);
+
+  useEffect(() => {
+    loadUserIds();
   }, [academyId]);
 
-  const loadStudents = async () => {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      setLoading(false);
-      return;
+  useEffect(() => {
+    if (userIdsCache.current.length > 0) {
+      loadStudentPage();
     }
+  }, [currentPage, itemsPerPage, debouncedSearch]);
+
+  const loadUserIds = async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase) { setLoading(false); return; }
 
     try {
       let userIds: string[] = [];
 
-      // academy_students 테이블을 통해 해당 학원의 학생들 조회
       const { data: academyStudents, error: academyStudentsError } = await supabase
         .from('academy_students')
         .select('user_id')
         .eq('academy_id', academyId);
 
-      // academy_students 테이블이 없을 수 있으므로, 에러가 발생하면 기존 방식으로 fallback
       if (academyStudentsError) {
         if (academyStudentsError.code === '42P01') {
-          // 테이블이 없으면 기존 방식으로 조회 (user_tickets를 통한 조회)
           console.warn('academy_students 테이블이 없습니다. 기존 방식으로 조회합니다.');
-          
           const { data: tickets } = await supabase
             .from('tickets')
             .select('id')
             .eq('academy_id', academyId);
 
           const ticketIds = tickets?.map((t: any) => t.id) || [];
-
           if (ticketIds.length === 0) {
             setStudents([]);
+            setTotalCount(0);
             setLoading(false);
             return;
           }
@@ -105,19 +122,58 @@ export function StudentView({ academyId }: StudentViewProps) {
         userIds = academyStudents?.map((as: any) => as.user_id) || [];
       }
 
-      if (userIds.length === 0) {
-        setStudents([]);
-        setLoading(false);
-        return;
-      }
-
-      // 해당 학원의 수강권 정보도 함께 조회
       const { data: tickets } = await supabase
         .from('tickets')
         .select('id')
         .eq('academy_id', academyId);
+      ticketIdsCache.current = tickets?.map((t: any) => t.id) || [];
 
-      const ticketIds = tickets?.map((t: any) => t.id) || [];
+      userIdsCache.current = userIds;
+
+      if (userIds.length === 0) {
+        setStudents([]);
+        setTotalCount(0);
+        setLoading(false);
+        return;
+      }
+
+      await loadStudentPage();
+    } catch (error) {
+      console.error('Error loading student ids:', error);
+      setLoading(false);
+    }
+  };
+
+  const loadStudentPage = async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    const userIds = userIdsCache.current;
+    if (userIds.length === 0) {
+      setStudents([]);
+      setTotalCount(0);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let countQuery = supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .in('id', userIds);
+
+      if (debouncedSearch) {
+        countQuery = countQuery.or(
+          `name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%,nickname.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`
+        );
+      }
+
+      const { count } = await countQuery;
+      setTotalCount(count || 0);
+
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
 
       let query = supabase
         .from('users')
@@ -148,18 +204,22 @@ export function StudentView({ academyId }: StudentViewProps) {
         `)
         .in('id', userIds);
 
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,nickname.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
+      if (debouncedSearch) {
+        query = query.or(
+          `name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%,nickname.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`
+        );
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
 
-      // 클라이언트 측에서 해당 학원의 수강권만 필터링
+      const ticketIds = ticketIdsCache.current;
       const filteredData = (data || []).map((student: any) => {
         if (student.user_tickets && ticketIds.length > 0) {
-          student.user_tickets = student.user_tickets.filter((ut: any) => 
+          student.user_tickets = student.user_tickets.filter((ut: any) =>
             ut.tickets && ticketIds.includes(ut.tickets.id)
           );
         }
@@ -173,6 +233,11 @@ export function StudentView({ academyId }: StudentViewProps) {
       setLoading(false);
     }
   };
+
+  const reloadAll = useCallback(() => {
+    setCurrentPage(1);
+    loadUserIds();
+  }, [academyId]);
 
   const getStudentStatus = (student: Student): string => {
     const tickets = student.user_tickets || [];
@@ -210,16 +275,6 @@ export function StudentView({ academyId }: StudentViewProps) {
   };
 
   const filteredStudents = students.filter((student) => {
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase().trim();
-      const termDigits = normalizePhone(searchTerm);
-      const matchesSearch =
-        student.name?.toLowerCase().includes(term) ||
-        (student.phone && (student.phone.includes(term) || normalizePhone(student.phone).includes(termDigits))) ||
-        student.nickname?.toLowerCase().includes(term) ||
-        (student.email?.toLowerCase().includes(term));
-      if (!matchesSearch) return false;
-    }
     if (statusFilter !== 'ALL') {
       const status = getStudentStatus(student);
       if (status !== statusFilter) return false;
@@ -227,7 +282,11 @@ export function StudentView({ academyId }: StudentViewProps) {
     return true;
   });
 
-  if (loading) {
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+
+  const isInitialLoad = loading && students.length === 0 && totalCount === 0;
+
+  if (isInitialLoad) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-gray-500 dark:text-gray-400">로딩 중...</div>
@@ -305,7 +364,12 @@ export function StudentView({ academyId }: StudentViewProps) {
           </div>
 
           {/* 테이블 형태 (모바일/데스크톱 공통) */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto relative">
+            {loading && (
+              <div className="absolute inset-0 bg-white/60 dark:bg-neutral-900/60 z-10 flex items-center justify-center">
+                <div className="text-sm text-gray-500 dark:text-gray-400">로딩 중...</div>
+              </div>
+            )}
             <table className="w-full text-sm text-left">
               <thead className="bg-gray-50 dark:bg-neutral-800 text-gray-500 dark:text-gray-400 font-medium">
                 <tr>
@@ -379,11 +443,59 @@ export function StudentView({ academyId }: StudentViewProps) {
               </tbody>
             </table>
           </div>
-          {filteredStudents.length > 0 && (
-            <div className="p-4 border-t dark:border-neutral-800 bg-gray-50 dark:bg-neutral-800 text-center text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-700 cursor-pointer transition-colors">
-              더 보기 ({filteredStudents.length} / {students.length})
+          <div className="p-3 sm:p-4 border-t dark:border-neutral-800 bg-gray-50 dark:bg-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <span>페이지당</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="px-2 py-1 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded text-sm text-gray-700 dark:text-gray-300"
+              >
+                {ITEMS_PER_PAGE_OPTIONS.map((n) => (
+                  <option key={n} value={n}>{n}명</option>
+                ))}
+              </select>
+              <span className="text-xs">
+                (전체 {totalCount}명{statusFilter !== 'ALL' ? ` · ${statusFilter} ${filteredStudents.length}명` : ''})
+              </span>
             </div>
-          )}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1 || loading}
+                className="w-8 h-8 flex items-center justify-center text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                «
+              </button>
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1 || loading}
+                className="w-8 h-8 flex items-center justify-center text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                ‹
+              </button>
+              <span className="px-3 py-1 text-sm text-gray-900 dark:text-white font-medium">
+                {currentPage} / {totalPages || 1}
+              </span>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages || loading}
+                className="w-8 h-8 flex items-center justify-center text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                ›
+              </button>
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage >= totalPages || loading}
+                className="w-8 h-8 flex items-center justify-center text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                »
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -392,7 +504,7 @@ export function StudentView({ academyId }: StudentViewProps) {
           academyId={academyId}
           onClose={() => {
             setShowRegisterModal(false);
-            loadStudents();
+            reloadAll();
           }}
         />
       )}
@@ -404,7 +516,7 @@ export function StudentView({ academyId }: StudentViewProps) {
           onClose={() => {
             setShowDetailModal(false);
             setSelectedStudent(null);
-            loadStudents();
+            loadStudentPage();
           }}
         />
       )}
