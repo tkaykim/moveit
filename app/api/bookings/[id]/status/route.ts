@@ -68,11 +68,10 @@ export async function PATCH(
     const academyId = (currentBooking as any).classes?.academy_id;
     const actorId = (await getAuthenticatedUser(request))?.id ?? null;
 
-    // 상태 변경 (updated_at으로 취소/변경 시각 기록)
-    const now = new Date().toISOString();
+    // 상태 변경
     const { error: updateError } = await (supabase as any)
       .from('bookings')
-      .update({ status, updated_at: now })
+      .update({ status })
       .eq('id', id);
 
     if (updateError) {
