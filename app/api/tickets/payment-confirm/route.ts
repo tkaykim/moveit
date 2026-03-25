@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getTicketById } from '@/lib/db/tickets';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
-import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
+import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
+import { createServiceClient } from '@/lib/supabase/server';
 import { Database } from '@/types/database';
 import { sendNotification } from '@/lib/notifications';
 import { getTossPaymentMethodCode } from '@/lib/toss/payment-method';
@@ -24,10 +25,7 @@ const NO_CACHE_HEADERS = {
  */
 export async function POST(request: Request) {
   try {
-    const user = await getAuthenticatedUser(request);
-    if (!user) {
-      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
-    }
+    const authUser = await getAuthenticatedUser(request);
 
     const body = await request.json();
     const { paymentKey, orderId, amount: requestAmount } = body;
@@ -40,14 +38,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '유효하지 않은 결제 금액입니다.' }, { status: 400 });
     }
 
-    const supabase = await getAuthenticatedSupabase(request);
+    const supabase = createServiceClient() as any;
 
-    const { data: order, error: orderError } = await (supabase as any)
+    // 로그인 사용자: user_id 매칭, 비회원: orderId만으로 조회
+    let orderQuery = supabase
       .from('user_ticket_payment_orders')
       .select('*')
-      .eq('order_id', orderId)
-      .eq('user_id', user.id)
-      .single();
+      .eq('order_id', orderId);
+    if (authUser) {
+      orderQuery = orderQuery.eq('user_id', authUser.id);
+    }
+    const { data: order, error: orderError } = await orderQuery.single();
 
     if (orderError || !order) {
       return NextResponse.json({ error: '주문을 찾을 수 없습니다.' }, { status: 404 });
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
         .from('revenue_transactions')
         .select('user_ticket_id')
         .eq('toss_order_id', orderId)
-        .eq('user_id', user.id)
+        .eq('user_id', order.user_id)
         .maybeSingle();
       if (existingRev?.user_ticket_id) {
         const { data: existingUt } = await (supabase as any)
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
       .from('revenue_transactions')
       .select('user_ticket_id')
       .eq('toss_order_id', orderId)
-      .eq('user_id', user.id)
+      .eq('user_id', order.user_id)
       .maybeSingle();
     if (existingRev?.user_ticket_id) {
       const { data: existingUt } = await (supabase as any)
@@ -191,7 +192,7 @@ export async function POST(request: Request) {
     }
 
     const userTicketData: Database['public']['Tables']['user_tickets']['Insert'] = {
-      user_id: user.id,
+      user_id: order.user_id,
       ticket_id: order.ticket_id,
       remaining_count: remainingCount,
       start_date: startDate.toISOString().split('T')[0],
@@ -213,7 +214,7 @@ export async function POST(request: Request) {
     // 활동 로그: 수강권 발급 (토스 결제)
     insertEnrollmentActivityLog({
       academy_id: order.academy_id,
-      user_id: user.id,
+      user_id: order.user_id,
       user_ticket_id: userTicket.id,
       action: 'TICKET_ISSUED',
       payload: {
@@ -231,7 +232,7 @@ export async function POST(request: Request) {
       .from('revenue_transactions')
       .select('user_ticket_id')
       .eq('toss_order_id', orderId)
-      .eq('user_id', user.id)
+      .eq('user_id', order.user_id)
       .maybeSingle();
     if (existingRev2?.user_ticket_id && existingRev2.user_ticket_id !== userTicket.id) {
       await (supabase as any).from('user_tickets').delete().eq('id', userTicket.id);
@@ -269,7 +270,7 @@ export async function POST(request: Request) {
       .from('revenue_transactions')
       .select('id')
       .eq('academy_id', order.academy_id)
-      .eq('user_id', user.id)
+      .eq('user_id', order.user_id)
       .eq('payment_status', 'COMPLETED')
       .limit(1);
     const registrationType = prevTx?.length ? 'RE_REGISTRATION' : 'NEW';
@@ -280,7 +281,7 @@ export async function POST(request: Request) {
       .from('revenue_transactions')
       .insert({
         academy_id: order.academy_id,
-        user_id: user.id,
+        user_id: order.user_id,
         ticket_id: order.ticket_id,
         user_ticket_id: userTicket.id,
         discount_id: order.discount_id || null,
@@ -306,7 +307,7 @@ export async function POST(request: Request) {
           .from('revenue_transactions')
           .select('user_ticket_id')
           .eq('toss_order_id', orderId)
-          .eq('user_id', user.id)
+          .eq('user_id', order.user_id)
           .maybeSingle();
         if (existingRev3?.user_ticket_id) {
           await (supabase as any).from('user_tickets').delete().eq('id', userTicket.id);
@@ -348,19 +349,19 @@ export async function POST(request: Request) {
       .from('academy_students')
       .select('id')
       .eq('academy_id', order.academy_id)
-      .eq('user_id', user.id)
+      .eq('user_id', order.user_id)
       .single();
     if (!existingStudent) {
       await (supabase as any)
         .from('academy_students')
-        .insert({ academy_id: order.academy_id, user_id: user.id });
+        .insert({ academy_id: order.academy_id, user_id: order.user_id });
     }
 
     let autoBookingResult = { created: 0, skipped: 0 };
     if (isPeriodTicket) {
       try {
         autoBookingResult = await createBookingsForPeriodTicket(
-          user.id,
+          order.user_id,
           userTicket.id,
           order.ticket_id,
           userTicketData.start_date!,
@@ -390,7 +391,7 @@ export async function POST(request: Request) {
           // 활동 로그: 횟수 차감
           insertEnrollmentActivityLog({
             academy_id: order.academy_id,
-            user_id: user.id,
+            user_id: order.user_id,
             user_ticket_id: userTicket.id,
             action: 'COUNT_DEDUCT',
             payload: { delta: -1, class_id: resolvedClassId, schedule_id: order.schedule_id, via: 'payment_confirm' },
@@ -400,7 +401,7 @@ export async function POST(request: Request) {
           if (consumedTicket && consumedTicket.remaining_count === 0 && consumedTicket.status === 'USED') {
             insertEnrollmentActivityLog({
               academy_id: order.academy_id,
-              user_id: user.id,
+              user_id: order.user_id,
               user_ticket_id: userTicket.id,
               action: 'TICKET_EXHAUSTED',
               payload: { class_id: resolvedClassId, via: 'payment_confirm' },
@@ -413,7 +414,7 @@ export async function POST(request: Request) {
           // 수강권 차감 실패 시 예약 생성하지 않음 (결제는 완료됨, 사용자는 마이페이지에서 직접 예약 가능)
         } else {
         const bookingData: Database['public']['Tables']['bookings']['Insert'] = {
-          user_id: user.id,
+          user_id: order.user_id,
           class_id: resolvedClassId,
           schedule_id: order.schedule_id,
           user_ticket_id: userTicket.id,
@@ -441,7 +442,7 @@ export async function POST(request: Request) {
         if (booking) {
           insertEnrollmentActivityLog({
             academy_id: order.academy_id,
-            user_id: user.id,
+            user_id: order.user_id,
             user_ticket_id: userTicket.id,
             booking_id: booking.id,
             action: 'ENROLL',
@@ -464,7 +465,7 @@ export async function POST(request: Request) {
     const productType = ticket.is_coupon ? '쿠폰' : '수강권';
     const academyName = ticket.academies?.name_kr || ticket.academies?.name_en || '학원';
     sendNotification({
-      user_id: user.id,
+      user_id: order.user_id,
       type: 'ticket_purchased',
       title: `${productType} 구매 완료`,
       body: `${academyName} ${ticket.name || productType}을(를) 구매하셨습니다.`,

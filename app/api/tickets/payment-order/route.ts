@@ -1,22 +1,73 @@
 import { NextResponse } from 'next/server';
 import { getTicketById } from '@/lib/db/tickets';
-import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
+import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
+import { createServiceClient } from '@/lib/supabase/server';
 
 /**
  * 수강권 결제용 주문 생성 (Toss Payments 결제창 연동)
- * Body: { ticketId, scheduleId?, countOptionIndex?, discountId? }
- * Returns: { orderId, amount, orderName } → 클라이언트에서 requestPayment(orderId, amount, orderName) 호출
+ * Body: { ticketId, scheduleId?, countOptionIndex?, discountId?, guestName?, guestPhone?, guestEmail? }
+ * - 로그인 사용자: 기존 방식
+ * - 비회원: guestName 필수, guestPhone 또는 guestEmail 필수. 게스트 users 생성 후 주문.
+ * Returns: { orderId, amount, orderName }
  */
 export async function POST(request: Request) {
   try {
     const user = await getAuthenticatedUser(request);
-    if (!user) {
-      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
-    }
-
-    const supabase = await getAuthenticatedSupabase(request);
+    const supabase = createServiceClient() as any;
     const body = await request.json();
-    const { ticketId, scheduleId, countOptionIndex, discountId } = body;
+    const { ticketId, scheduleId, countOptionIndex, discountId, guestName, guestPhone, guestEmail } = body;
+
+    let userId: string | null = null;
+
+    if (user) {
+      userId = user.id;
+    } else {
+      const name = guestName != null ? String(guestName).trim() : '';
+      const phone = guestPhone != null ? String(guestPhone).trim() : '';
+      const email = guestEmail != null ? String(guestEmail).trim() : '';
+      if (!name) {
+        return NextResponse.json({ error: '이름을 입력해 주세요.' }, { status: 400 });
+      }
+      if (!phone && !email) {
+        return NextResponse.json({ error: '연락처 또는 이메일 중 하나는 필수입니다.' }, { status: 400 });
+      }
+
+      let guestUser: { id: string } | null = null;
+      if (email) {
+        const { data: existing } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', email)
+          .limit(1)
+          .single();
+        if (existing) guestUser = existing;
+      }
+      if (!guestUser && phone) {
+        const { data: existing } = await supabase
+          .from('users')
+          .select('id')
+          .eq('phone', phone)
+          .limit(1)
+          .single();
+        if (existing) guestUser = existing;
+      }
+      if (!guestUser) {
+        const { data: inserted, error: insertUserErr } = await supabase
+          .from('users')
+          .insert({ name, phone: phone || null, email: email || null, is_guest: true })
+          .select('id')
+          .single();
+        if (insertUserErr) {
+          console.error('Guest user creation error:', insertUserErr);
+          return NextResponse.json({ error: '게스트 정보 생성에 실패했습니다.' }, { status: 500 });
+        }
+        guestUser = inserted;
+      }
+      if (!guestUser) {
+        return NextResponse.json({ error: '게스트 계정을 확인할 수 없습니다.' }, { status: 500 });
+      }
+      userId = guestUser.id;
+    }
 
     if (!ticketId) {
       return NextResponse.json({ error: 'ticketId가 필요합니다.' }, { status: 400 });
@@ -50,7 +101,7 @@ export async function POST(request: Request) {
 
     let discountAmount = 0;
     if (discountId) {
-      const { data: discountData, error: discountError } = await (supabase as any)
+      const { data: discountData, error: discountError } = await supabase
         .from('discounts')
         .select('*')
         .eq('id', discountId)
@@ -84,7 +135,7 @@ export async function POST(request: Request) {
 
     let classIdForOrder: string | null = null;
     if (scheduleId) {
-      const { data: scheduleRow, error: scheduleErr } = await (supabase as any)
+      const { data: scheduleRow, error: scheduleErr } = await supabase
         .from('schedules')
         .select('id, class_id, is_canceled, start_time, classes(academy_id)')
         .eq('id', scheduleId)
@@ -112,11 +163,11 @@ export async function POST(request: Request) {
       ? `${ticket.name} ${selectedOption.count ?? 1}회권`
       : (ticket.name || '수강권');
 
-    const { error: insertError } = await (supabase as any)
+    const { error: insertError } = await supabase
       .from('user_ticket_payment_orders')
       .insert({
         order_id: orderId,
-        user_id: user.id,
+        user_id: userId,
         type: 'TICKET_PURCHASE',
         ticket_id: ticketId,
         academy_id: academyId,

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { sendNotification } from '@/lib/notifications';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
@@ -22,7 +22,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     const body = await request.json();
     const { status, updateScheduleCount = true, restoreTicket = false } = body;
 

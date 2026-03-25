@@ -159,6 +159,13 @@ export default function SessionBookingPage() {
   const [guestFormPhone, setGuestFormPhone] = useState('');
   const [guestFormEmail, setGuestFormEmail] = useState('');
 
+  // 비회원 카드결제 보류 정보
+  const [pendingCardPayment, setPendingCardPayment] = useState<{
+    ticketId: string;
+    scheduleId: string;
+    countOptionIndex?: number;
+  } | null>(null);
+
   // 결제 위젯 모달 (수강권 구매 후 예약 — 앱 내 결제 유지)
   const [widgetModalOpen, setWidgetModalOpen] = useState(false);
   const [widgetOrder, setWidgetOrder] = useState<{
@@ -609,6 +616,7 @@ export default function SessionBookingPage() {
         ...(typeof selectedPurchaseTicket.countOptionIndex === 'number' && { countOptionIndex: selectedPurchaseTicket.countOptionIndex }),
       };
       setPendingBankTransfer(payload);
+      setPendingCardPayment(null);
       if (!user) {
         setBankTransferAuthModalOpen(true);
         return;
@@ -629,6 +637,19 @@ export default function SessionBookingPage() {
       } finally {
         setDepositorModalPreFillLoading(false);
       }
+      return;
+    }
+
+    // 비회원 카드결제: 게스트 정보 수집 후 진행
+    if (useTossPayment && !user) {
+      const payload = {
+        ticketId: selectedPurchaseTicket.id,
+        scheduleId: sessionId,
+        ...(typeof selectedPurchaseTicket.countOptionIndex === 'number' && { countOptionIndex: selectedPurchaseTicket.countOptionIndex }),
+      };
+      setPendingCardPayment(payload);
+      setPendingBankTransfer(null);
+      setBankTransferAuthModalOpen(true);
       return;
     }
 
@@ -727,6 +748,60 @@ export default function SessionBookingPage() {
       }
 
       router.push(`/book/session/${sessionId}/success?type=purchase`);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // 비회원 카드결제 진행 (게스트 정보 수집 후)
+  const proceedWithGuestCardPayment = async (guest: { name: string; phone: string; email: string }) => {
+    if (!pendingCardPayment) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      const orderRes = await fetch('/api/tickets/payment-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketId: pendingCardPayment.ticketId,
+          scheduleId: pendingCardPayment.scheduleId,
+          ...(typeof pendingCardPayment.countOptionIndex === 'number' && { countOptionIndex: pendingCardPayment.countOptionIndex }),
+          guestName: guest.name,
+          guestPhone: guest.phone || undefined,
+          guestEmail: guest.email || undefined,
+        }),
+      });
+      if (!orderRes.ok) {
+        const data = await orderRes.json();
+        throw new Error(data.error || t('sessionBooking.purchaseFailed'));
+      }
+      const { orderId, amount, orderName } = await orderRes.json();
+
+      const origin = window.location.origin;
+      const successUrl = `${origin}/payment/ticket/success?returnTo=session&sessionId=${sessionId}`;
+      const failUrl = `${origin}/payment/ticket/fail?sessionId=${sessionId}`;
+      const customerKey = `guest_${orderId}`;
+
+      const digits = guest.phone?.replace(/\D/g, '');
+      let customerMobilePhone: string | undefined;
+      if (digits && digits.length >= 8 && digits.length <= 15) {
+        customerMobilePhone = digits;
+      }
+
+      setWidgetOrder({
+        orderId,
+        amount,
+        orderName,
+        successUrl,
+        failUrl,
+        customerKey,
+        customerMobilePhone,
+      });
+      setWidgetModalOpen(true);
+      setPendingCardPayment(null);
+      setGuestOrderer(null);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -970,14 +1045,14 @@ export default function SessionBookingPage() {
       {/* 예약 폼 */}
       {canBook && (
         <div className="space-y-6">
-          {/* 비로그인: 수강권 선택·결제를 위해 회원가입/로그인 유도 (메인 CTA) */}
+          {/* 비로그인: 회원 로그인 유도 안내 (비회원도 구매·예약 가능) */}
           {!user && (
             <div className="rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/80 p-5 shadow-sm">
               <p className="text-[15px] font-semibold text-neutral-900 dark:text-white mb-1">
-                {t('sessionBooking.loginOrSignupForTicket')}
+                {language === 'ko' ? '회원이시라면 로그인해 주세요' : 'Log in if you have an account'}
               </p>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
-                {t('sessionBooking.loginOrSignupBenefit')}
+                {language === 'ko' ? '비회원도 아래에서 수강권을 구매하고 예약할 수 있습니다.' : 'Guests can also purchase tickets and book below.'}
               </p>
               <div className="flex gap-3">
                 <button
@@ -1048,7 +1123,7 @@ export default function SessionBookingPage() {
               )}
 
               {/* 2. 수강권 구매 후 예약 */}
-              {user && purchasableTickets.length > 0 && (
+              {purchasableTickets.length > 0 && (
                 <button
                   onClick={() => setPaymentMethod('purchase')}
                   className={`w-full rounded-2xl p-4 flex justify-between items-center border transition-all duration-200 text-left shadow-sm ${
@@ -1570,14 +1645,21 @@ export default function SessionBookingPage() {
                     setError(language === 'ko' ? '연락처 또는 이메일 중 하나를 입력해 주세요.' : 'Enter phone or email.');
                     return;
                   }
-                  setGuestOrderer({
+                  const guest = {
                     name: guestFormName.trim(),
                     phone: guestFormPhone.trim(),
                     email: guestFormEmail.trim(),
-                  });
+                  };
                   setBankTransferGuestFormOpen(false);
-                  setDepositorName(guestFormName.trim());
-                  setDepositorModalOpen(true);
+
+                  if (pendingCardPayment) {
+                    setGuestOrderer(guest);
+                    proceedWithGuestCardPayment(guest);
+                  } else {
+                    setGuestOrderer(guest);
+                    setDepositorName(guestFormName.trim());
+                    setDepositorModalOpen(true);
+                  }
                 }}
                 className="py-2 px-5 rounded-xl bg-primary text-black font-bold text-sm"
               >

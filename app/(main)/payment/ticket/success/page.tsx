@@ -71,12 +71,22 @@ function TicketPaymentSuccessContent() {
 
     (async () => {
       try {
-        const res = await fetchWithAuth('/api/tickets/payment-confirm', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paymentKey, orderId, amount: amountNum }),
-          cache: 'no-store',
-        });
+        let res: Response;
+        try {
+          res = await fetchWithAuth('/api/tickets/payment-confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentKey, orderId, amount: amountNum }),
+            cache: 'no-store',
+          });
+        } catch {
+          res = await fetch('/api/tickets/payment-confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentKey, orderId, amount: amountNum }),
+            cache: 'no-store',
+          });
+        }
         const data = await res.json();
 
         if (!mountedRef.current) return;
