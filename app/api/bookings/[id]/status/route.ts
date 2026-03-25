@@ -16,13 +16,21 @@ import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
  * 기간권(PERIOD)은 remaining_count가 null이므로 복원 없음.
  * 횟수권(COUNT) 취소 시 restoreTicket === true 이면 해당 user_ticket의 remaining_count 1 증가.
  */
+
+async function getSupabaseForAdmin(request: Request) {
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return createServiceClient();
+  }
+  return await createClient();
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const supabase = createServiceClient();
+    const supabase = await getSupabaseForAdmin(request);
     const body = await request.json();
     const { status, updateScheduleCount = true, restoreTicket = false } = body;
 
@@ -62,20 +70,25 @@ export async function PATCH(
 
     // 상태 변경 (updated_at으로 취소/변경 시각 기록)
     const now = new Date().toISOString();
-    const { data: updatedBooking, error: updateError } = await (supabase as any)
+    const { error: updateError } = await (supabase as any)
       .from('bookings')
       .update({ status, updated_at: now })
-      .eq('id', id)
-      .select()
-      .single();
+      .eq('id', id);
 
     if (updateError) {
       console.error('Booking update error:', updateError);
       return NextResponse.json(
-        { error: '예약 상태 변경에 실패했습니다.' },
+        { error: '예약 상태 변경에 실패했습니다.', detail: updateError.message, code: updateError.code },
         { status: 500 }
       );
     }
+
+    // 업데이트된 예약 조회
+    const { data: updatedBooking } = await (supabase as any)
+      .from('bookings')
+      .select()
+      .eq('id', id)
+      .single();
 
     // 취소 시 쿠폰제(COUNT) 수강권 횟수 반환
     if (status === 'CANCELLED' && restoreTicket && currentBooking.user_ticket_id) {

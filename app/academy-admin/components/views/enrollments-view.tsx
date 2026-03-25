@@ -374,8 +374,9 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || '상태 변경에 실패했습니다.');
+        const errBody = await response.json();
+        const detail = errBody.detail ? ` (${errBody.detail})` : '';
+        throw new Error((errBody.error || '상태 변경에 실패했습니다.') + detail);
       }
 
       const statusMessages: Record<string, string> = {
