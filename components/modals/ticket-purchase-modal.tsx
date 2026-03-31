@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
-import { X, Ticket, Calendar, Hash, Check, Tag, Gift, Copy, Loader2 } from 'lucide-react';
+import { X, Ticket, Calendar, Hash, Check, Tag, Gift, Copy, Loader2, LogIn, UserPlus, UserX } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { useLocale } from '@/contexts/LocaleContext';
 import { ENABLE_TOSS_PAYMENT } from '@/lib/constants/payment';
 import { useAuth } from '@/contexts/AuthContext';
+import { MyTab } from '@/components/auth/MyTab';
+import { TicketTossPaymentModal } from '@/components/modals/ticket-toss-payment-modal';
 
 interface TicketInfo {
   id: string;
@@ -17,7 +19,7 @@ interface TicketInfo {
   total_count?: number;
   valid_days?: number;
   is_general: boolean;
-  is_coupon: boolean; // true: 쿠폰(1회 수강권), false: 정규 수강권
+  is_coupon: boolean;
 }
 
 interface DiscountInfo {
@@ -36,7 +38,6 @@ interface TicketPurchaseModalProps {
   academyId: string;
   academyName?: string;
   onPurchaseComplete?: () => void;
-  /** 계좌이체 시 비로그인일 때 로그인 모달 열기 (선택) */
   onRequireAuth?: () => void;
 }
 
@@ -46,20 +47,18 @@ export const TicketPurchaseModal = ({
   academyId,
   academyName,
   onPurchaseComplete,
-  onRequireAuth,
 }: TicketPurchaseModalProps) => {
   const { t, language } = useLocale();
   const { user } = useAuth();
+
+  // --- 기존 상태 ---
   const [tickets, setTickets] = useState<TicketInfo[]>([]);
   const [discounts, setDiscounts] = useState<DiscountInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState<TicketInfo | null>(null);
   const [selectedDiscount, setSelectedDiscount] = useState<DiscountInfo | null>(null);
   const [activeTab, setActiveTab] = useState<'ticket' | 'coupon'>('ticket');
-  const [startDate, setStartDate] = useState<string>(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  });
+  const [startDate, setStartDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [purchasing, setPurchasing] = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   const [bankTransferResult, setBankTransferResult] = useState<{
@@ -75,6 +74,29 @@ export const TicketPurchaseModal = ({
   const [depositorName, setDepositorName] = useState('');
   const [depositorStepLoading, setDepositorStepLoading] = useState(false);
 
+  // --- 비회원(게스트) 인증 플로우 ---
+  const [showAuthChoice, setShowAuthChoice] = useState(false);
+  const [showGuestForm, setShowGuestForm] = useState(false);
+  const [guestName, setGuestName] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
+  const [guestInfo, setGuestInfo] = useState<{ name: string; phone: string; email: string } | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalInitialTab, setAuthModalInitialTab] = useState<'login' | 'signup'>('login');
+
+  // --- 토스 결제 위젯 ---
+  const [purchasePaymentType, setPurchasePaymentType] = useState<'card' | 'account'>('card');
+  const [widgetModalOpen, setWidgetModalOpen] = useState(false);
+  const [widgetOrder, setWidgetOrder] = useState<{
+    orderId: string;
+    amount: number;
+    orderName: string;
+    successUrl: string;
+    failUrl: string;
+    customerKey: string;
+    customerMobilePhone?: string;
+  } | null>(null);
+
   useEffect(() => {
     if (isOpen && academyId) {
       loadTickets();
@@ -86,7 +108,6 @@ export const TicketPurchaseModal = ({
     try {
       const supabase = getSupabaseClient();
       if (!supabase) return;
-
       const now = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
         .from('discounts')
@@ -95,7 +116,6 @@ export const TicketPurchaseModal = ({
         .eq('is_active', true)
         .or(`valid_from.is.null,valid_from.lte.${now}`)
         .or(`valid_until.is.null,valid_until.gte.${now}`);
-
       if (error) throw error;
       setDiscounts(data || []);
     } catch (error) {
@@ -108,7 +128,6 @@ export const TicketPurchaseModal = ({
       setLoading(true);
       const supabase = getSupabaseClient();
       if (!supabase) return;
-
       const { data, error } = await supabase
         .from('tickets')
         .select('*')
@@ -116,7 +135,6 @@ export const TicketPurchaseModal = ({
         .eq('is_on_sale', true)
         .or('is_public.eq.true,is_public.is.null')
         .order('price', { ascending: true });
-
       if (error) throw error;
       setTickets(data || []);
     } catch (error) {
@@ -126,7 +144,6 @@ export const TicketPurchaseModal = ({
     }
   };
 
-  // 할인 금액 계산
   const calculateDiscount = (ticket: TicketInfo, discount: DiscountInfo | null): number => {
     if (!discount) return 0;
     if (discount.discount_type === 'PERCENT') {
@@ -135,26 +152,108 @@ export const TicketPurchaseModal = ({
     return Math.min(discount.discount_value, ticket.price);
   };
 
-  const discountAmount = selectedTicket && selectedDiscount 
-    ? calculateDiscount(selectedTicket, selectedDiscount) 
+  const discountAmount = selectedTicket && selectedDiscount
+    ? calculateDiscount(selectedTicket, selectedDiscount)
     : 0;
   const finalPrice = selectedTicket ? selectedTicket.price - discountAmount : 0;
 
-  // 수강권(is_coupon=false)과 쿠폰(is_coupon=true) 분리
   const regularTickets = tickets.filter(t => !t.is_coupon);
   const couponTickets = tickets.filter(t => t.is_coupon);
   const displayTickets = activeTab === 'ticket' ? regularTickets : couponTickets;
 
+  // ─── 구매 메인 핸들러 ───
   const handlePurchase = async () => {
     if (!selectedTicket) return;
 
-    if (!ENABLE_TOSS_PAYMENT) {
-      if (!user) {
-        if (onRequireAuth) onRequireAuth();
-        else alert(language === 'ko' ? '로그인이 필요합니다.' : 'Please log in.');
-        return;
+    // 비회원이고 게스트 정보가 아직 없으면 인증 선택 단계로
+    if (!user && !guestInfo) {
+      setShowAuthChoice(true);
+      return;
+    }
+
+    if (ENABLE_TOSS_PAYMENT) {
+      if (purchasePaymentType === 'card') {
+        await handleTossCardPayment();
+      } else {
+        await startDepositorStep();
       }
-      setShowDepositorStep(true);
+    } else {
+      await startDepositorStep();
+    }
+  };
+
+  // ─── 토스 카드결제 ───
+  const handleTossCardPayment = async () => {
+    if (!selectedTicket) return;
+    setPurchasing(true);
+    try {
+      const body: Record<string, unknown> = {
+        ticketId: selectedTicket.id,
+        discountId: selectedDiscount?.id || undefined,
+      };
+
+      if (guestInfo) {
+        body.guestName = guestInfo.name;
+        body.guestPhone = guestInfo.phone || undefined;
+        body.guestEmail = guestInfo.email || undefined;
+      }
+
+      const orderRes = user
+        ? await fetchWithAuth('/api/tickets/payment-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          })
+        : await fetch('/api/tickets/payment-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+
+      if (!orderRes.ok) {
+        const data = await orderRes.json();
+        throw new Error(data.error || language === 'ko' ? '주문 생성에 실패했습니다.' : 'Failed to create order.');
+      }
+
+      const { orderId, amount, orderName } = await orderRes.json();
+      const origin = window.location.origin;
+      const successUrl = `${origin}/payment/ticket/success`;
+      const failUrl = `${origin}/payment/ticket/fail`;
+      const customerKey = user?.id ?? `guest_${orderId}`;
+
+      let customerMobilePhone: string | undefined;
+      if (user?.id) {
+        try {
+          const profileRes = await fetchWithAuth('/api/auth/profile');
+          if (profileRes.ok) {
+            const data = await profileRes.json();
+            const raw = data?.profile?.phone;
+            if (typeof raw === 'string' && raw.trim()) {
+              const digits = raw.replace(/\D/g, '');
+              if (digits.length >= 8 && digits.length <= 15) customerMobilePhone = digits;
+            }
+          }
+        } catch { /* ignore */ }
+      } else if (guestInfo?.phone) {
+        const digits = guestInfo.phone.replace(/\D/g, '');
+        if (digits.length >= 8 && digits.length <= 15) customerMobilePhone = digits;
+      }
+
+      setWidgetOrder({ orderId, amount, orderName, successUrl, failUrl, customerKey, customerMobilePhone });
+      setWidgetModalOpen(true);
+    } catch (error: any) {
+      console.error('Error creating payment order:', error);
+      alert(error.message || (language === 'ko' ? '결제 처리에 실패했습니다.' : 'Payment processing failed.'));
+    } finally {
+      setPurchasing(false);
+    }
+  };
+
+  // ─── 입금자명 단계 진입 ───
+  const startDepositorStep = async () => {
+    setShowDepositorStep(true);
+
+    if (user) {
       setDepositorStepLoading(true);
       try {
         const profileRes = await fetchWithAuth('/api/auth/profile');
@@ -170,71 +269,46 @@ export const TicketPurchaseModal = ({
       } finally {
         setDepositorStepLoading(false);
       }
-      return;
-    }
-
-    try {
-      setPurchasing(true);
-
-      const response = await fetchWithAuth('/api/tickets/purchase', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ticketId: selectedTicket.id,
-          startDate: startDate,
-          discountId: selectedDiscount?.id,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || '구매에 실패했습니다.');
-      }
-
-      setPurchaseSuccess(true);
-      
-      setTimeout(() => {
-        onPurchaseComplete?.();
-        handleClose();
-      }, 2000);
-    } catch (error: any) {
-      console.error('Error purchasing ticket:', error);
-      alert(error.message || t('ticketModal.purchaseFailed'));
-    } finally {
-      setPurchasing(false);
+    } else if (guestInfo) {
+      setDepositorName(guestInfo.name);
+      setDepositorStepLoading(false);
     }
   };
 
-  const handleClose = () => {
-    setSelectedTicket(null);
-    setSelectedDiscount(null);
-    setPurchaseSuccess(false);
-    setBankTransferResult(null);
-    setShowDepositorStep(false);
-    setDepositorName('');
-    setActiveTab('ticket');
-    onClose();
-  };
-
+  // ─── 입금자명 제출 (계좌이체) ───
   const handleDepositorSubmit = async () => {
     if (!selectedTicket || !depositorName.trim()) return;
     setPurchasing(true);
     try {
-      const response = await fetchWithAuth('/api/tickets/bank-transfer-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ticketId: selectedTicket.id,
-          discountId: selectedDiscount?.id ?? undefined,
-          ordererName: depositorName.trim(),
-        }),
-      });
+      const body: Record<string, unknown> = {
+        ticketId: selectedTicket.id,
+        discountId: selectedDiscount?.id ?? undefined,
+        depositorName: depositorName.trim(),
+      };
+
+      if (guestInfo) {
+        body.ordererName = guestInfo.name;
+        body.ordererPhone = guestInfo.phone || undefined;
+        body.ordererEmail = guestInfo.email || undefined;
+      } else {
+        body.ordererName = depositorName.trim();
+      }
+
+      const response = user
+        ? await fetchWithAuth('/api/tickets/bank-transfer-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          })
+        : await fetch('/api/tickets/bank-transfer-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || '신청에 실패했습니다.');
+        throw new Error(data.error || (language === 'ko' ? '신청에 실패했습니다.' : 'Request failed.'));
       }
       setBankTransferResult({
         orderId: data.orderId,
@@ -248,22 +322,59 @@ export const TicketPurchaseModal = ({
       setShowDepositorStep(false);
       setDepositorName('');
     } catch (error: any) {
-      alert(error.message || '신청에 실패했습니다.');
+      alert(error.message || (language === 'ko' ? '신청에 실패했습니다.' : 'Request failed.'));
     } finally {
       setPurchasing(false);
     }
   };
 
-  const getDiscountText = (discount: DiscountInfo) => {
-    if (discount.discount_type === 'PERCENT') {
-      return `${discount.discount_value}% 할인`;
+  // ─── 게스트 정보 제출 ───
+  const handleGuestFormSubmit = () => {
+    if (!guestName.trim()) {
+      alert(language === 'ko' ? '이름을 입력해 주세요.' : 'Please enter your name.');
+      return;
     }
-    return `${formatPrice(discount.discount_value)}원 할인`;
+    if (!guestPhone.trim() && !guestEmail.trim()) {
+      alert(language === 'ko' ? '연락처 또는 이메일 중 하나를 입력해 주세요.' : 'Please enter phone or email.');
+      return;
+    }
+    setGuestInfo({
+      name: guestName.trim(),
+      phone: guestPhone.trim(),
+      email: guestEmail.trim(),
+    });
+    setShowGuestForm(false);
+    setShowAuthChoice(false);
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('ko-KR').format(price);
+  const handleClose = () => {
+    setSelectedTicket(null);
+    setSelectedDiscount(null);
+    setPurchaseSuccess(false);
+    setBankTransferResult(null);
+    setShowDepositorStep(false);
+    setDepositorName('');
+    setActiveTab('ticket');
+    setShowAuthChoice(false);
+    setShowGuestForm(false);
+    setGuestName('');
+    setGuestPhone('');
+    setGuestEmail('');
+    setGuestInfo(null);
+    setPurchasePaymentType('card');
+    setWidgetModalOpen(false);
+    setWidgetOrder(null);
+    onClose();
   };
+
+  const getDiscountText = (discount: DiscountInfo) => {
+    if (discount.discount_type === 'PERCENT') {
+      return `${discount.discount_value}% ${language === 'ko' ? '할인' : 'off'}`;
+    }
+    return `${formatPrice(discount.discount_value)}${language === 'ko' ? '원 할인' : ' KRW off'}`;
+  };
+
+  const formatPrice = (price: number) => new Intl.NumberFormat('ko-KR').format(price);
 
   const getValidityText = (ticket: TicketInfo) => {
     if (ticket.ticket_type === 'PERIOD') {
@@ -289,14 +400,20 @@ export const TicketPurchaseModal = ({
     }
   };
 
+  // 구매 가능 여부 (footer 버튼 활성화)
+  const isReadyToPurchase = !!(
+    selectedTicket &&
+    (user || guestInfo)
+  );
+
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in"
       onClick={handleClose}
     >
-      <div 
+      <div
         className="w-full sm:max-w-xl max-h-[85vh] bg-white dark:bg-neutral-900 rounded-t-3xl sm:rounded-3xl overflow-hidden animate-in slide-in-from-bottom"
         onClick={(e) => e.stopPropagation()}
       >
@@ -304,9 +421,7 @@ export const TicketPurchaseModal = ({
         <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800">
           <div>
             <h2 className="text-lg font-bold text-black dark:text-white">{t('ticketModal.title')}</h2>
-            {academyName && (
-              <p className="text-sm text-neutral-500">{academyName}</p>
-            )}
+            {academyName && <p className="text-sm text-neutral-500">{academyName}</p>}
           </div>
           <button
             onClick={handleClose}
@@ -317,7 +432,7 @@ export const TicketPurchaseModal = ({
         </div>
 
         {/* 수강권/쿠폰 탭 */}
-        {!purchaseSuccess && !loading && tickets.length > 0 && (
+        {!purchaseSuccess && !loading && tickets.length > 0 && !showAuthChoice && !showGuestForm && !showDepositorStep && !bankTransferResult && (
           <div className="flex border-b border-neutral-200 dark:border-neutral-800">
             <button
               onClick={() => { setActiveTab('ticket'); setSelectedTicket(null); }}
@@ -346,29 +461,162 @@ export const TicketPurchaseModal = ({
 
         {/* 컨텐츠 */}
         <div className="p-4 overflow-y-auto max-h-[60vh]">
-          {showDepositorStep ? (
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex-1 min-w-[200px]">
+          {showAuthChoice ? (
+            /* ── 인증 선택 (비회원) ── */
+            <div className="space-y-4 py-4">
+              <div className="text-center mb-2">
+                <h3 className="text-base font-bold text-black dark:text-white mb-1">
+                  {language === 'ko' ? '수강권 구매' : 'Purchase Ticket'}
+                </h3>
+                <p className="text-sm text-neutral-500">
+                  {language === 'ko' ? '로그인하시겠습니까? 비회원으로도 구매할 수 있습니다.' : 'Log in or continue as guest.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAuthChoice(false);
+                  setAuthModalInitialTab('login');
+                  setIsAuthModalOpen(true);
+                }}
+                className="w-full py-3.5 rounded-xl bg-primary text-black font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.99] transition-all"
+              >
+                <LogIn size={18} />
+                {language === 'ko' ? '로그인' : 'Log in'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAuthChoice(false);
+                  setAuthModalInitialTab('signup');
+                  setIsAuthModalOpen(true);
+                }}
+                className="w-full py-3.5 rounded-xl border-2 border-neutral-300 dark:border-neutral-600 text-neutral-800 dark:text-neutral-200 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all"
+              >
+                <UserPlus size={18} />
+                {language === 'ko' ? '회원가입' : 'Sign up'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAuthChoice(false);
+                  setShowGuestForm(true);
+                  setGuestName('');
+                  setGuestPhone('');
+                  setGuestEmail('');
+                }}
+                className="w-full py-2.5 text-sm text-neutral-600 dark:text-neutral-400 underline underline-offset-2 flex items-center justify-center gap-2"
+              >
+                <UserX size={16} />
+                {language === 'ko' ? '비회원으로 계속하기' : 'Continue as guest'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAuthChoice(false)}
+                className="w-full py-2 text-xs text-neutral-400"
+              >
+                {language === 'ko' ? '뒤로' : 'Back'}
+              </button>
+            </div>
+
+          ) : showGuestForm ? (
+            /* ── 비회원 정보 입력 ── */
+            <div className="space-y-4 py-2">
+              <h3 className="text-base font-bold text-black dark:text-white">
+                {language === 'ko' ? '비회원 정보 입력' : 'Guest Information'}
+              </h3>
+              <p className="text-xs text-neutral-500">
+                {language === 'ko' ? '연락처 또는 이메일 중 하나는 필수입니다.' : 'Phone or email is required.'}
+              </p>
+              <div>
+                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1">
+                  {language === 'ko' ? '이름' : 'Name'} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder={language === 'ko' ? '이름을 입력하세요' : 'Enter name'}
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1">
+                  {language === 'ko' ? '연락처' : 'Phone'}
+                </label>
+                <input
+                  type="tel"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                  placeholder="010-0000-0000"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1">
+                  {language === 'ko' ? '이메일' : 'Email'}
+                </label>
+                <input
+                  type="email"
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                  placeholder="email@example.com"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm"
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowGuestForm(false); setShowAuthChoice(true); }}
+                  className="flex-1 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-600 text-sm font-medium"
+                >
+                  {language === 'ko' ? '뒤로' : 'Back'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGuestFormSubmit}
+                  className="flex-1 py-2.5 rounded-xl bg-primary text-black font-bold text-sm"
+                >
+                  {language === 'ko' ? '다음' : 'Next'}
+                </button>
+              </div>
+            </div>
+
+          ) : showDepositorStep ? (
+            /* ── 입금자명 입력 (계좌이체) ── */
+            <div className="space-y-4 py-2">
+              <h3 className="text-base font-bold text-black dark:text-white">
+                {language === 'ko' ? '입금 안내' : 'Transfer Details'}
+              </h3>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                {language === 'ko'
+                  ? '아래 입금자명을 입력한 뒤 신청해 주세요. 학원에서 확인 후 수강권이 발급됩니다.'
+                  : 'Enter depositor name and submit. Your ticket will be issued after verification.'}
+              </p>
+              <div>
                 <label className="block text-sm font-bold text-black dark:text-white mb-1">
                   {language === 'ko' ? '입금자명' : 'Depositor name'}
                 </label>
                 {depositorStepLoading ? (
-                  <div className="py-2 flex items-center gap-2"><Loader2 className="animate-spin text-primary" size={20} /><span className="text-sm text-neutral-500">...</span></div>
+                  <div className="py-2 flex items-center gap-2">
+                    <Loader2 className="animate-spin text-primary" size={20} />
+                    <span className="text-sm text-neutral-500">...</span>
+                  </div>
                 ) : (
                   <input
                     type="text"
                     value={depositorName}
                     onChange={(e) => setDepositorName(e.target.value)}
                     placeholder={language === 'ko' ? '입금 시 사용할 이름' : 'Name for transfer'}
-                    className="w-full px-3 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm"
+                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm"
                   />
                 )}
               </div>
-              <div className="flex items-end gap-2 shrink-0">
+              <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => { setShowDepositorStep(false); setDepositorName(''); }}
-                  className="py-2 px-4 rounded-xl border border-neutral-300 dark:border-neutral-600 text-sm"
+                  className="flex-1 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-600 text-sm font-medium"
                 >
                   {language === 'ko' ? '취소' : 'Cancel'}
                 </button>
@@ -376,20 +624,22 @@ export const TicketPurchaseModal = ({
                   type="button"
                   disabled={purchasing || !depositorName.trim() || depositorStepLoading}
                   onClick={handleDepositorSubmit}
-                  className="py-2 px-5 rounded-xl bg-primary text-black font-bold text-sm disabled:opacity-50"
+                  className="flex-1 py-2.5 rounded-xl bg-primary text-black font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {purchasing ? <Loader2 size={18} className="animate-spin" /> : (language === 'ko' ? '신청하기' : 'Submit')}
                 </button>
               </div>
             </div>
+
           ) : bankTransferResult ? (
+            /* ── 계좌 안내 결과 ── */
             <div>
               <p className="text-sm text-neutral-500 mb-3">
                 {language === 'ko' ? '아래 계좌로 입금해 주시면 학원에서 확인 후 수강권이 발급됩니다.' : 'Transfer the amount below. Your ticket will be issued after the academy verifies.'}
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 p-3 text-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 p-3 text-sm mb-4">
                 <span className="text-neutral-500">{language === 'ko' ? '금액' : 'Amount'}</span>
-                <span className="font-semibold">{bankTransferResult.amount.toLocaleString()}원</span>
+                <span className="font-semibold">{bankTransferResult.amount.toLocaleString()}{language === 'ko' ? '원' : ' KRW'}</span>
                 <span className="text-neutral-500">{language === 'ko' ? '은행' : 'Bank'}</span>
                 <span>{bankTransferResult.bankName}</span>
                 <span className="text-neutral-500">{language === 'ko' ? '계좌번호' : 'Account'}</span>
@@ -421,7 +671,9 @@ export const TicketPurchaseModal = ({
                 {language === 'ko' ? '확인' : 'OK'}
               </button>
             </div>
+
           ) : purchaseSuccess ? (
+            /* ── 구매 완료 ── */
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Check size={32} className="text-green-600 dark:text-green-400" />
@@ -433,16 +685,44 @@ export const TicketPurchaseModal = ({
                 {activeTab === 'ticket' ? t('ticketModal.ticketPurchased') : t('ticketModal.couponPurchased')}
               </p>
             </div>
+
           ) : loading ? (
             <div className="text-center py-12 text-neutral-500">
               {t('common.loading')}
             </div>
+
           ) : displayTickets.length === 0 ? (
             <div className="text-center py-12 text-neutral-500">
               {activeTab === 'ticket' ? t('ticketModal.noTickets') : t('ticketModal.noCoupons')}
             </div>
+
           ) : (
+            /* ── 수강권/쿠폰 목록 (기본 뷰) ── */
             <div className="space-y-4">
+              {/* 비회원 게스트 정보 확인 뱃지 */}
+              {!user && guestInfo && (
+                <div className="flex items-center justify-between p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                  <div className="text-sm text-blue-700 dark:text-blue-300">
+                    <span className="font-medium">{guestInfo.name}</span>
+                    <span className="text-blue-500 dark:text-blue-400 ml-2 text-xs">
+                      {guestInfo.phone || guestInfo.email}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGuestInfo(null);
+                      setGuestName('');
+                      setGuestPhone('');
+                      setGuestEmail('');
+                    }}
+                    className="text-xs text-blue-600 dark:text-blue-400 underline"
+                  >
+                    {language === 'ko' ? '변경' : 'Change'}
+                  </button>
+                </div>
+              )}
+
               {/* 상품 설명 */}
               <div className="text-xs text-neutral-500 bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-lg">
                 {activeTab === 'ticket' ? t('ticketModal.ticketDesc') : t('ticketModal.couponDesc')}
@@ -468,9 +748,7 @@ export const TicketPurchaseModal = ({
                           ) : (
                             <Ticket size={16} className="text-neutral-600 dark:text-neutral-400" />
                           )}
-                          <span className="font-bold text-black dark:text-white">
-                            {ticket.name}
-                          </span>
+                          <span className="font-bold text-black dark:text-white">{ticket.name}</span>
                           {ticket.is_general && (
                             <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
                               {t('ticketModal.allAcademy')}
@@ -491,15 +769,11 @@ export const TicketPurchaseModal = ({
                           )}
                         </div>
                         {ticket.description && (
-                          <p className="mt-2 text-xs text-neutral-400">
-                            {ticket.description}
-                          </p>
+                          <p className="mt-2 text-xs text-neutral-400">{ticket.description}</p>
                         )}
                       </div>
                       <div className="text-right">
-                        <span className="text-lg font-bold text-black dark:text-white">
-                          {formatPrice(ticket.price)}
-                        </span>
+                        <span className="text-lg font-bold text-black dark:text-white">{formatPrice(ticket.price)}</span>
                         <span className="text-sm text-neutral-500">{t('ticketModal.won')}</span>
                       </div>
                     </div>
@@ -507,7 +781,7 @@ export const TicketPurchaseModal = ({
                 ))}
               </div>
 
-              {/* 시작일 선택 (기간제 수강권인 경우) */}
+              {/* 시작일 선택 (기간제) */}
               {selectedTicket && selectedTicket.ticket_type === 'PERIOD' && (
                 <div className="p-4 bg-neutral-100 dark:bg-neutral-800 rounded-xl">
                   <label className="block text-sm font-bold text-black dark:text-white mb-2">
@@ -555,12 +829,8 @@ export const TicketPurchaseModal = ({
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-black dark:text-white text-sm">
-                            {discount.name}
-                          </span>
-                          <span className="text-sm text-red-500 font-bold">
-                            {getDiscountText(discount)}
-                          </span>
+                          <span className="font-bold text-black dark:text-white text-sm">{discount.name}</span>
+                          <span className="text-sm text-red-500 font-bold">{getDiscountText(discount)}</span>
                         </div>
                         {discount.description && (
                           <p className="text-xs text-neutral-500 mt-1">{discount.description}</p>
@@ -575,7 +845,7 @@ export const TicketPurchaseModal = ({
         </div>
 
         {/* 하단 버튼 */}
-        {!purchaseSuccess && !bankTransferResult && !showDepositorStep && selectedTicket && (
+        {!purchaseSuccess && !bankTransferResult && !showDepositorStep && !showAuthChoice && !showGuestForm && selectedTicket && (
           <div className="p-4 border-t border-neutral-200 dark:border-neutral-800">
             {/* 가격 정보 */}
             <div className="space-y-1 mb-3">
@@ -600,12 +870,49 @@ export const TicketPurchaseModal = ({
                 </span>
               </div>
             </div>
+
+            {/* TOSS ON일 때 결제 방식 선택 (인증 완료된 상태에서만 표시) */}
+            {ENABLE_TOSS_PAYMENT && (user || guestInfo) && (
+              <div className="mb-3">
+                <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">
+                  {language === 'ko' ? '결제 방식' : 'Payment method'}
+                </p>
+                <div className="flex gap-2 p-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800/80">
+                  <button
+                    onClick={() => setPurchasePaymentType('card')}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      purchasePaymentType === 'card'
+                        ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm border border-neutral-200 dark:border-neutral-600'
+                        : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {language === 'ko' ? '카드결제' : 'Card'}
+                  </button>
+                  <button
+                    onClick={() => setPurchasePaymentType('account')}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      purchasePaymentType === 'account'
+                        ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm border border-neutral-200 dark:border-neutral-600'
+                        : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {language === 'ko' ? '계좌이체' : 'Bank transfer'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <button
               onClick={handlePurchase}
               disabled={purchasing}
               className="w-full py-3 bg-neutral-900 text-white dark:text-black font-bold rounded-xl hover:bg-neutral-800 hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
-              {purchasing ? t('ticketModal.processing') : t('ticketModal.purchaseButton', { type: activeTab === 'ticket' ? t('ticketModal.purchaseButtonTicket') : t('ticketModal.purchaseButtonCoupon') })}
+              {purchasing
+                ? t('ticketModal.processing')
+                : !user && !guestInfo
+                  ? (language === 'ko' ? '구매하기' : 'Purchase')
+                  : t('ticketModal.purchaseButton', { type: activeTab === 'ticket' ? t('ticketModal.purchaseButtonTicket') : t('ticketModal.purchaseButtonCoupon') })
+              }
             </button>
             <p className="mt-2 text-xs text-center text-neutral-400">
               {t('ticketModal.testPaymentNote')}
@@ -613,6 +920,56 @@ export const TicketPurchaseModal = ({
           </div>
         )}
       </div>
+
+      {/* 로그인/회원가입 모달 */}
+      <MyTab
+        isOpen={isAuthModalOpen}
+        onClose={async () => {
+          setIsAuthModalOpen(false);
+          const supabase = getSupabaseClient();
+          if (supabase) {
+            const { data: { user: authUser } } = await (supabase as any).auth.getUser();
+            if (authUser) {
+              // 로그인 성공 시 auth choice를 숨기고 원래 플로우로 복귀 (user가 AuthContext에서 업데이트됨)
+              setShowAuthChoice(false);
+            }
+          }
+        }}
+        initialTab={authModalInitialTab}
+      />
+
+      {/* 토스 결제 위젯 모달 */}
+      {ENABLE_TOSS_PAYMENT && widgetOrder && (
+        <TicketTossPaymentModal
+          isOpen={widgetModalOpen}
+          onClose={() => {
+            setWidgetModalOpen(false);
+            setWidgetOrder(null);
+          }}
+          onSuccess={() => {
+            setWidgetModalOpen(false);
+            setWidgetOrder(null);
+            setPurchaseSuccess(true);
+            setTimeout(() => {
+              onPurchaseComplete?.();
+              handleClose();
+            }, 2000);
+          }}
+          onError={(msg) => {
+            setWidgetModalOpen(false);
+            setWidgetOrder(null);
+            alert(msg);
+          }}
+          clientKey={process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY}
+          orderId={widgetOrder.orderId}
+          amount={widgetOrder.amount}
+          orderName={widgetOrder.orderName}
+          customerKey={widgetOrder.customerKey}
+          successUrl={widgetOrder.successUrl}
+          failUrl={widgetOrder.failUrl}
+          customerMobilePhone={widgetOrder.customerMobilePhone}
+        />
+      )}
     </div>
   );
 };
