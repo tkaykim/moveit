@@ -212,7 +212,7 @@ export const TicketPurchaseModal = ({
 
       if (!orderRes.ok) {
         const data = await orderRes.json();
-        throw new Error(data.error || language === 'ko' ? '주문 생성에 실패했습니다.' : 'Failed to create order.');
+        throw new Error(data.error || (language === 'ko' ? '주문 생성에 실패했습니다.' : 'Failed to create order.'));
       }
 
       const { orderId, amount, orderName } = await orderRes.json();
@@ -400,12 +400,6 @@ export const TicketPurchaseModal = ({
     }
   };
 
-  // 구매 가능 여부 (footer 버튼 활성화)
-  const isReadyToPurchase = !!(
-    selectedTicket &&
-    (user || guestInfo)
-  );
-
   if (!isOpen) return null;
 
   return (
@@ -414,11 +408,11 @@ export const TicketPurchaseModal = ({
       onClick={handleClose}
     >
       <div
-        className="w-full sm:max-w-xl max-h-[85vh] bg-white dark:bg-neutral-900 rounded-t-3xl sm:rounded-3xl overflow-hidden animate-in slide-in-from-bottom"
+        className="w-full sm:max-w-xl max-h-[85vh] bg-white dark:bg-neutral-900 rounded-t-3xl sm:rounded-3xl overflow-hidden animate-in slide-in-from-bottom flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
-        <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800 shrink-0">
           <div>
             <h2 className="text-lg font-bold text-black dark:text-white">{t('ticketModal.title')}</h2>
             {academyName && <p className="text-sm text-neutral-500">{academyName}</p>}
@@ -433,7 +427,7 @@ export const TicketPurchaseModal = ({
 
         {/* 수강권/쿠폰 탭 */}
         {!purchaseSuccess && !loading && tickets.length > 0 && !showAuthChoice && !showGuestForm && !showDepositorStep && !bankTransferResult && (
-          <div className="flex border-b border-neutral-200 dark:border-neutral-800">
+          <div className="flex border-b border-neutral-200 dark:border-neutral-800 shrink-0">
             <button
               onClick={() => { setActiveTab('ticket'); setSelectedTicket(null); }}
               className={`flex-1 py-3 text-sm font-bold transition-colors ${
@@ -460,7 +454,7 @@ export const TicketPurchaseModal = ({
         )}
 
         {/* 컨텐츠 */}
-        <div className="p-4 overflow-y-auto max-h-[60vh]">
+        <div className="p-4 overflow-y-auto flex-1 min-h-0">
           {showAuthChoice ? (
             /* ── 인증 선택 (비회원) ── */
             <div className="space-y-4 py-4">
@@ -846,7 +840,7 @@ export const TicketPurchaseModal = ({
 
         {/* 하단 버튼 */}
         {!purchaseSuccess && !bankTransferResult && !showDepositorStep && !showAuthChoice && !showGuestForm && selectedTicket && (
-          <div className="p-4 border-t border-neutral-200 dark:border-neutral-800">
+          <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 shrink-0">
             {/* 가격 정보 */}
             <div className="space-y-1 mb-3">
               <div className="flex items-center justify-between text-sm">
