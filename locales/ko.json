@@ -200,7 +200,6 @@
   "ticketModal.purchaseButton": "{type} 구매하기 (테스트)",
   "ticketModal.purchaseButtonTicket": "수강권",
   "ticketModal.purchaseButtonCoupon": "쿠폰",
-  "ticketModal.testPaymentNote": "* 테스트 결제입니다. 실제 결제가 이루어지지 않습니다.",
   "ticketModal.processing": "처리 중...",
   "ticketModal.purchaseFailed": "구매에 실패했습니다.",
   "ticketModal.unlimited": "무제한",

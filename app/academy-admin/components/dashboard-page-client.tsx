@@ -34,7 +34,7 @@ export function DashboardPageClient({ academyId }: DashboardPageClientProps) {
     } else if (subscription === 'card_ok') {
       setToast('카드가 등록되었습니다. 구독/결제 관리에서 구독을 시작해 주세요.');
     } else if (billing === 'fail') {
-      setToast('카드 등록에 실패했습니다. 가상 카드가 아닌 실제 본인 카드로 시도해 주세요. (테스트 환경에서는 출금되지 않습니다.)');
+      setToast('카드 등록에 실패했습니다. 본인 명의 카드로 다시 시도해 주세요.');
     }
     if ((subscription || billing) && subscription !== 'start' && typeof window !== 'undefined') {
       const url = new URL(window.location.href);

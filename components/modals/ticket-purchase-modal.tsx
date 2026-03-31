@@ -591,9 +591,6 @@ export const TicketPurchaseModal = ({
                     : t('ticketModal.purchaseButton', { type: activeTab === 'ticket' ? t('ticketModal.purchaseButtonTicket') : t('ticketModal.purchaseButtonCoupon') })
                 }
               </button>
-              <p className="mt-2 text-xs text-center text-neutral-400">
-                {t('ticketModal.testPaymentNote')}
-              </p>
             </div>
           )}
         </SheetContent>

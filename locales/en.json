@@ -200,7 +200,6 @@
   "ticketModal.purchaseButton": "Purchase {type} (Test)",
   "ticketModal.purchaseButtonTicket": "Ticket",
   "ticketModal.purchaseButtonCoupon": "Coupon",
-  "ticketModal.testPaymentNote": "* This is a test payment. No actual charge will be made.",
   "ticketModal.processing": "Processing...",
   "ticketModal.purchaseFailed": "Purchase failed.",
   "ticketModal.unlimited": "Unlimited",

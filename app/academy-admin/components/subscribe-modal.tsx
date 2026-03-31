@@ -167,11 +167,6 @@ export function SubscribeModal({ academyId, isOpen, onClose, initialPlanId, init
             </div>
           )}
 
-          {TOSS_CLIENT_KEY?.startsWith('test_') && (
-            <p className="text-xs text-amber-600 dark:text-amber-400">
-              테스트 환경: 실제 카드 정보를 입력해도 출금되지 않습니다.
-            </p>
-          )}
 
           {error && (
             <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">

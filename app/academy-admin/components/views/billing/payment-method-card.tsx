@@ -114,11 +114,6 @@ export function PaymentMethodCard({
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
                 카드 번호는 저장되지 않으며, 카드사·마스킹 번호(****1234)와 결제 토큰만 안전하게 저장됩니다.
               </p>
-              {TOSS_CLIENT_KEY?.startsWith('test_') && (
-                <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
-                  테스트 환경: 실제 카드 정보를 입력해도 출금되지 않습니다. 자유롭게 등록해 보세요.
-                </p>
-              )}
               <button
                 type="button"
                 onClick={handleRegisterCard}

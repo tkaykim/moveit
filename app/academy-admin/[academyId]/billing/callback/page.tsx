@@ -120,7 +120,7 @@ export default function BillingCallbackPage() {
         <div className="text-center max-w-md">
           <p className="text-red-600 dark:text-red-400 font-medium mb-2">{message}</p>
           <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
-            가상의 카드 번호를 입력한 경우 등록이 실패할 수 있습니다. 테스트 시에는 실제 본인 명의 카드를 사용해 주세요. (테스트 환경에서는 출금되지 않습니다.)
+            카드 등록에 실패했습니다. 본인 명의 카드로 다시 시도해 주세요.
           </p>
           <button
             type="button"
