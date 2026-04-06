@@ -164,6 +164,7 @@ export type Database = {
           naver_map_url: string | null
           other_url: string | null
           section_config: Json | null
+          slug: string | null
           tags: string | null
           ticket_description_popup: string | null
           ticket_description_regular: string | null
@@ -198,6 +199,7 @@ export type Database = {
           naver_map_url?: string | null
           other_url?: string | null
           section_config?: Json | null
+          slug?: string | null
           tags?: string | null
           ticket_description_popup?: string | null
           ticket_description_regular?: string | null
@@ -232,6 +234,7 @@ export type Database = {
           naver_map_url?: string | null
           other_url?: string | null
           section_config?: Json | null
+          slug?: string | null
           tags?: string | null
           ticket_description_popup?: string | null
           ticket_description_regular?: string | null

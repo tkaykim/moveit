@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAcademy } from '../contexts/academy-context';
 
 interface SidebarItemProps {
   icon: LucideIcon;
@@ -65,6 +66,9 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
   const pathname = usePathname();
   const [academyName, setAcademyName] = useState<string | null>(null);
   
+  const { academySlug } = useAcademy();
+  const slug = academySlug;
+  
   // AuthContext에서 직접 프로필/역할 정보를 가져옴 (별도 Supabase 쿼리 불필요)
   const { profile, loading: authLoading } = useAuth();
 
@@ -75,27 +79,27 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
   const canAccessSettings = isSuperAdmin || profile?.role === 'ACADEMY_OWNER';
 
   const menuItems = [
-    { icon: LayoutDashboard, label: '대시보드', href: `/academy-admin/${academyId}` },
-    { icon: Users, label: '학생 관리', href: `/academy-admin/${academyId}/students` },
-    { icon: BookOpen, label: '클래스(반) 관리', href: `/academy-admin/${academyId}/class-masters` },
-    { icon: CalendarDays, label: '스케줄 관리', href: `/academy-admin/${academyId}/schedule` },
-    { icon: UserCog, label: '출석/신청 관리', href: `/academy-admin/${academyId}/enrollments` },
-    { icon: Landmark, label: '수동 입금확인', href: `/academy-admin/${academyId}/deposit-confirm` },
-    { icon: QrCode, label: 'QR 출석 리더', href: `/academy-admin/${academyId}/qr-reader` },
-    { icon: Pause, label: '연장/일시정지 관리', href: `/academy-admin/${academyId}/extension-requests` },
-    { icon: Replace, label: '대강/취소 신청 관리', href: `/academy-admin/${academyId}/schedule-change-requests` },
-    { icon: Ticket, label: '수강권/상품', href: `/academy-admin/${academyId}/products` },
-    { icon: ClipboardList, label: '업무/수업 일지', href: `/academy-admin/${academyId}/logs` },
-    { icon: UserCheck, label: '강사 관리', href: `/academy-admin/${academyId}/instructors` },
-    { icon: MessageSquare, label: '상담 관리', href: `/academy-admin/${academyId}/consultations` },
-    { icon: Bell, label: '알림 발송', href: `/academy-admin/${academyId}/push` },
-    { icon: CreditCard, label: '매출/정산', href: `/academy-admin/${academyId}/revenue` },
-    { icon: Calendar, label: '구독/결제 관리', href: `/academy-admin/${academyId}/billing` },
+    { icon: LayoutDashboard, label: '대시보드', href: `/academy-admin/${slug}` },
+    { icon: Users, label: '학생 관리', href: `/academy-admin/${slug}/students` },
+    { icon: BookOpen, label: '클래스(반) 관리', href: `/academy-admin/${slug}/class-masters` },
+    { icon: CalendarDays, label: '스케줄 관리', href: `/academy-admin/${slug}/schedule` },
+    { icon: UserCog, label: '출석/신청 관리', href: `/academy-admin/${slug}/enrollments` },
+    { icon: Landmark, label: '수동 입금확인', href: `/academy-admin/${slug}/deposit-confirm` },
+    { icon: QrCode, label: 'QR 출석 리더', href: `/academy-admin/${slug}/qr-reader` },
+    { icon: Pause, label: '연장/일시정지 관리', href: `/academy-admin/${slug}/extension-requests` },
+    { icon: Replace, label: '대강/취소 신청 관리', href: `/academy-admin/${slug}/schedule-change-requests` },
+    { icon: Ticket, label: '수강권/상품', href: `/academy-admin/${slug}/products` },
+    { icon: ClipboardList, label: '업무/수업 일지', href: `/academy-admin/${slug}/logs` },
+    { icon: UserCheck, label: '강사 관리', href: `/academy-admin/${slug}/instructors` },
+    { icon: MessageSquare, label: '상담 관리', href: `/academy-admin/${slug}/consultations` },
+    { icon: Bell, label: '알림 발송', href: `/academy-admin/${slug}/push` },
+    { icon: CreditCard, label: '매출/정산', href: `/academy-admin/${slug}/revenue` },
+    { icon: Calendar, label: '구독/결제 관리', href: `/academy-admin/${slug}/billing` },
   ];
 
   // 설정 메뉴: SUPER_ADMIN이면 무조건 표시, auth 로딩 중이면 일단 표시, 그 외 ACADEMY_OWNER만 표시
   if (isSuperAdmin || authLoading || canAccessSettings) {
-    menuItems.push({ icon: Settings, label: '설정', href: `/academy-admin/${academyId}/settings` });
+    menuItems.push({ icon: Settings, label: '설정', href: `/academy-admin/${slug}/settings` });
   }
   
   // 모바일에서 메뉴 클릭 시 드로어 닫기
@@ -140,7 +144,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
   }, [academyId]);
 
   const isActive = (href: string) => {
-    if (href === `/academy-admin/${academyId}`) {
+    if (href === `/academy-admin/${slug}`) {
       return pathname === href;
     }
     return pathname?.startsWith(href);
@@ -170,7 +174,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
         }`}
       >
         <div className="px-6 py-3 lg:py-4 border-b border-neutral-200 dark:border-neutral-800 relative flex-shrink-0">
-          <Link href={`/academy-admin/${academyId}`} className="flex flex-col gap-1.5 lg:gap-2" onClick={handleLinkClick}>
+          <Link href={`/academy-admin/${slug}`} className="flex flex-col gap-1.5 lg:gap-2" onClick={handleLinkClick}>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-black font-bold italic">
                 M
@@ -244,8 +248,8 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
           <SidebarItem
             icon={AlertTriangle}
             label="고장신고/개발요청"
-            href={`/academy-admin/${academyId}/support`}
-            active={isActive(`/academy-admin/${academyId}/support`)}
+            href={`/academy-admin/${slug}/support`}
+            active={isActive(`/academy-admin/${slug}/support`)}
             onClick={handleLinkClick}
           />
 

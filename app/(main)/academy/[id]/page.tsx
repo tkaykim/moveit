@@ -5,11 +5,12 @@ import { useEffect, useState } from 'react';
 import { AcademyDetailView } from '@/components/views/academy-detail-view';
 import { Academy, ClassInfo } from '@/types';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
+import { isUUID } from '@/lib/utils/slug';
 
 export default function AcademyDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const academyId = params.id as string;
+  const slugOrId = params.id as string;
   const [academy, setAcademy] = useState<Academy | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -19,6 +20,7 @@ export default function AcademyDetailPage() {
         const supabase = getSupabaseClient();
         if (!supabase) return;
 
+        const column = isUUID(slugOrId) ? 'id' : 'slug';
         const { data, error } = await (supabase as any)
           .from('academies')
           .select(`
@@ -29,7 +31,7 @@ export default function AcademyDetailPage() {
               halls (*)
             )
           `)
-          .eq('id', academyId)
+          .eq(column, slugOrId)
           .single();
 
         if (error) {
@@ -49,6 +51,7 @@ export default function AcademyDetailPage() {
 
           const transformedAcademy: Academy = {
             id: data.id,
+            slug: data.slug || null,
             name_kr: data.name_kr,
             name_en: data.name_en,
             tags: data.tags,
@@ -70,7 +73,7 @@ export default function AcademyDetailPage() {
 
           setAcademy(transformedAcademy);
         } else {
-          console.error('No academy data found for id:', academyId);
+          console.error('No academy data found for id:', slugOrId);
         }
       } catch (error: any) {
         console.error('Error loading academy:', error);
@@ -86,16 +89,17 @@ export default function AcademyDetailPage() {
       }
     };
 
-    if (academyId) {
+    if (slugOrId) {
       loadAcademy();
     }
-  }, [academyId]);
+  }, [slugOrId]);
 
   const handleBack = () => {
     router.back();
   };
 
   const handleClassBook = (classInfo: ClassInfo & { time?: string; price?: number }) => {
+    const academyId = academy?.academyId ?? slugOrId;
     router.push(`/payment?classId=${classInfo.id}&academyId=${academyId}`);
   };
 

@@ -14,6 +14,7 @@ import { authFetch } from '@/lib/supabase/auth-fetch';
 import { SubscribeModal } from '../subscribe-modal';
 import { TodayClassesSection } from './today-classes-section';
 import type { AcademySubscription } from '@/types/billing';
+import { useAcademy } from '../../contexts/academy-context';
 
 interface DashboardViewProps {
   academyId: string;
@@ -25,6 +26,7 @@ interface DashboardViewProps {
 const ACTIVE_SUBSCRIPTION_STATUSES = ['active'];
 
 export function DashboardView({ academyId, showWelcomeBanner, onDismissWelcomeBanner }: DashboardViewProps) {
+  const { academySlug: slug } = useAcademy();
   const [subscription, setSubscription] = useState<AcademySubscription | null>(null);
   const [loadingSub, setLoadingSub] = useState(true);
   const [subscribeModalOpen, setSubscribeModalOpen] = useState(false);
@@ -60,7 +62,7 @@ export function DashboardView({ academyId, showWelcomeBanner, onDismissWelcomeBa
     {
       label: '클래스 관리',
       icon: BookOpen,
-      href: `/academy-admin/${academyId}/class-masters`,
+      href: `/academy-admin/${slug}/class-masters`,
       description: '클래스(반)를 생성하고 관리합니다',
       color: 'bg-blue-50 dark:bg-blue-900/20',
       iconColor: 'text-blue-600 dark:text-blue-400',
@@ -68,7 +70,7 @@ export function DashboardView({ academyId, showWelcomeBanner, onDismissWelcomeBa
     {
       label: '스케줄 관리',
       icon: CalendarDays,
-      href: `/academy-admin/${academyId}/schedule`,
+      href: `/academy-admin/${slug}/schedule`,
       description: '수업 일정을 등록하고 관리합니다',
       color: 'bg-purple-50 dark:bg-purple-900/20',
       iconColor: 'text-purple-600 dark:text-purple-400',
@@ -76,7 +78,7 @@ export function DashboardView({ academyId, showWelcomeBanner, onDismissWelcomeBa
     {
       label: '출석/신청 관리',
       icon: UserCog,
-      href: `/academy-admin/${academyId}/enrollments`,
+      href: `/academy-admin/${slug}/enrollments`,
       description: '수업 신청 및 등록을 관리합니다',
       color: 'bg-green-50 dark:bg-green-900/20',
       iconColor: 'text-green-600 dark:text-green-400',
@@ -84,7 +86,7 @@ export function DashboardView({ academyId, showWelcomeBanner, onDismissWelcomeBa
     {
       label: '수강권 관리',
       icon: Ticket,
-      href: `/academy-admin/${academyId}/products`,
+      href: `/academy-admin/${slug}/products`,
       description: '수강권 및 상품을 관리합니다',
       color: 'bg-orange-50 dark:bg-orange-900/20',
       iconColor: 'text-orange-600 dark:text-orange-400',
@@ -138,7 +140,7 @@ export function DashboardView({ academyId, showWelcomeBanner, onDismissWelcomeBa
       {/* 활성 구독 시 구독/결제 관리 링크 */}
       {!loadingSub && hasActiveSubscription && (
         <Link
-          href={`/academy-admin/${academyId}/billing`}
+          href={`/academy-admin/${slug}/billing`}
           className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4 text-gray-700 dark:text-gray-300 hover:border-primary transition-colors"
         >
           <CreditCard className="w-5 h-5 text-gray-500 dark:text-gray-400" />

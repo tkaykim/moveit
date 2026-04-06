@@ -7,35 +7,39 @@ import { useEffect, useState, useRef } from 'react';
 import { useOnboardingOptional } from '../contexts/onboarding-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { AdminLoginModal } from '@/components/auth/AdminLoginModal';
+import { useAcademy } from '../contexts/academy-context';
 
 interface AcademyAdminHeaderProps {
   academyId: string;
   onMenuClick: () => void;
 }
 
-const getTitle = (pathname: string | null, academyId: string): string => {
-  if (!pathname) return 'MOVE IT Admin';
-  
-  const titles: Record<string, string> = {
-    [`/academy-admin/${academyId}`]: '대시보드',
-    [`/academy-admin/${academyId}/students`]: '학생(회원) 관리',
-    [`/academy-admin/${academyId}/classes`]: '클래스/시간표',
-    [`/academy-admin/${academyId}/logs`]: '업무/수업 일지',
-    [`/academy-admin/${academyId}/instructors`]: '강사 관리',
-    [`/academy-admin/${academyId}/consultations`]: '상담 및 문의',
-    [`/academy-admin/${academyId}/products`]: '수강권 및 상품 설정',
-    [`/academy-admin/${academyId}/revenue`]: '매출 및 정산',
-    [`/academy-admin/${academyId}/deposit-confirm`]: '수동 입금확인',
-    [`/academy-admin/${academyId}/settings`]: '환경설정',
-  };
-
-  return titles[pathname] || 'MOVE IT Admin';
+const titleMap: Record<string, string> = {
+  '': '대시보드',
+  '/students': '학생(회원) 관리',
+  '/classes': '클래스/시간표',
+  '/logs': '업무/수업 일지',
+  '/instructors': '강사 관리',
+  '/consultations': '상담 및 문의',
+  '/products': '수강권 및 상품 설정',
+  '/revenue': '매출 및 정산',
+  '/deposit-confirm': '수동 입금확인',
+  '/settings': '환경설정',
 };
+
+function getTitle(pathname: string | null, slug: string): string {
+  if (!pathname) return 'MOVE IT Admin';
+  const prefix = `/academy-admin/${slug}`;
+  if (!pathname.startsWith(prefix)) return 'MOVE IT Admin';
+  const sub = pathname.slice(prefix.length);
+  return titleMap[sub] || 'MOVE IT Admin';
+}
 
 export function AcademyAdminHeader({ academyId, onMenuClick }: AcademyAdminHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const title = getTitle(pathname, academyId);
+  const { academySlug: slug } = useAcademy();
+  const title = getTitle(pathname, slug);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
@@ -62,7 +66,7 @@ export function AcademyAdminHeader({ academyId, onMenuClick }: AcademyAdminHeade
   }, []);
 
   const handleTicketSale = () => {
-    router.push(`/academy-admin/${academyId}/revenue?tab=sales`);
+    router.push(`/academy-admin/${slug}/revenue?tab=sales`);
   };
 
   return (
@@ -108,7 +112,7 @@ export function AcademyAdminHeader({ academyId, onMenuClick }: AcademyAdminHeade
               {quickActionsOpen && (
                 <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-900 rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-800 py-2 z-50">
                   <a
-                    href={`/academy-admin/${academyId}/students?action=register`}
+                    href={`/academy-admin/${slug}/students?action=register`}
                     className="flex items-center gap-3 px-4 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm"
                     onClick={() => setQuickActionsOpen(false)}
                   >
@@ -116,7 +120,7 @@ export function AcademyAdminHeader({ academyId, onMenuClick }: AcademyAdminHeade
                     <span className="text-gray-800 dark:text-white">신규 회원 등록</span>
                   </a>
                   <a
-                    href={`/academy-admin/${academyId}/consultations?action=add`}
+                    href={`/academy-admin/${slug}/consultations?action=add`}
                     className="flex items-center gap-3 px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 text-sm"
                     onClick={() => setQuickActionsOpen(false)}
                   >
@@ -188,7 +192,7 @@ export function AcademyAdminHeader({ academyId, onMenuClick }: AcademyAdminHeade
             {quickActionsOpen && (
               <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-neutral-900 rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-800 py-2 z-50">
                 <a
-                  href={`/academy-admin/${academyId}/students?action=register`}
+                  href={`/academy-admin/${slug}/students?action=register`}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                   onClick={() => setQuickActionsOpen(false)}
                 >
@@ -201,7 +205,7 @@ export function AcademyAdminHeader({ academyId, onMenuClick }: AcademyAdminHeade
                   </div>
                 </a>
                 <a
-                  href={`/academy-admin/${academyId}/consultations?action=add`}
+                  href={`/academy-admin/${slug}/consultations?action=add`}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                   onClick={() => setQuickActionsOpen(false)}
                 >

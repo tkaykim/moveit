@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import type { Database } from '@/types/database';
+import { generateUniqueSlug } from '@/lib/utils/slug-server';
 
 type UserRole = Database['public']['Enums']['user_role'];
 
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     const { data: academies, error: acError } = await supabase
       .from('academies')
-      .select('id, name_kr, name_en')
+      .select('id, slug, name_kr, name_en')
       .in('id', academyIds)
       .order('name_kr', { ascending: true });
 
@@ -75,9 +76,13 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient();
 
+    const nameEn = body?.name_en?.trim() || null;
+    const slug = nameEn ? await generateUniqueSlug(supabase, nameEn) : null;
+
     const academyInsert: Record<string, unknown> = {
       name_kr,
-      name_en: body?.name_en?.trim() || null,
+      name_en: nameEn,
+      slug,
       address: body?.address?.trim() || null,
       contact_number: body?.contact_number?.trim() || null,
       is_active: true,
@@ -94,7 +99,7 @@ export async function POST(request: NextRequest) {
     const { data: newAcademy, error: acError } = await supabase
       .from('academies')
       .insert([academyInsert])
-      .select('id')
+      .select('id, slug')
       .single();
 
     if (acError) {
@@ -149,7 +154,7 @@ export async function POST(request: NextRequest) {
         .eq('id', user.id);
     }
 
-    return NextResponse.json({ academyId });
+    return NextResponse.json({ academyId, slug: newAcademy.slug });
   } catch (error) {
     console.error('[me/academies POST] Error:', error);
     return NextResponse.json({ error: '학원 개설 처리 중 오류가 발생했습니다.' }, { status: 500 });

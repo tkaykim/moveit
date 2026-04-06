@@ -665,7 +665,7 @@ export default function AcademiesPage() {
                     <tr key={academy.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
                       <td className="px-6 py-4 text-sm font-medium text-black dark:text-white">
                         <button
-                          onClick={() => router.push(`/academy-admin/${academy.id}`)}
+                          onClick={() => router.push(`/academy-admin/${academy.slug || academy.id}`)}
                           className="hover:text-primary hover:underline transition-colors text-left"
                         >
                           {getDisplayName(academy)}
@@ -777,7 +777,7 @@ export default function AcademiesPage() {
                   <div key={academy.id} className="p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <button
-                        onClick={() => router.push(`/academy-admin/${academy.id}`)}
+                        onClick={() => router.push(`/academy-admin/${academy.slug || academy.id}`)}
                         className="flex-1 text-left hover:text-primary hover:underline transition-colors"
                       >
                         <h3 className="font-semibold text-black dark:text-white text-base">

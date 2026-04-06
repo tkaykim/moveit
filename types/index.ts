@@ -22,6 +22,7 @@ export type ViewState =
 // Academy 타입: DB 스키마 기반
 export interface Academy {
   id: string;
+  slug?: string | null;
   name_kr: string | null;
   name_en: string | null;
   tags: string | null;

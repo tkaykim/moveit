@@ -15,7 +15,7 @@ function SearchContent() {
   };
 
   const handleAcademyClick = (academy: Academy) => {
-    router.push(`/academy/${academy.id}`);
+    router.push(`/academy/${academy.slug || academy.id}`);
   };
 
   const handleDancerClick = (dancer: Dancer) => {

@@ -8,7 +8,7 @@ export default function AcademyPage() {
   const router = useRouter();
 
   const handleAcademyClick = (academy: Academy) => {
-    router.push(`/academy/${academy.id}`);
+    router.push(`/academy/${academy.slug || academy.id}`);
   };
 
   return <AcademyListView onAcademyClick={handleAcademyClick} />;

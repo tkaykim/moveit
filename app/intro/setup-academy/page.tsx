@@ -46,15 +46,15 @@ export default function SetupAcademyPage() {
       if (!res.ok) {
         throw new Error(json?.error ?? '학원 개설에 실패했습니다.');
       }
-      const academyId = json?.academyId;
-      if (academyId) {
+      const academySlug = json?.slug || json?.academyId;
+      if (academySlug) {
         const params = new URLSearchParams();
         params.set('subscription', 'start');
         if (planId) params.set('planId', planId);
         if (cycle) params.set('cycle', cycle);
-        router.push(`/academy-admin/${academyId}?${params.toString()}`);
+        router.push(`/academy-admin/${academySlug}?${params.toString()}`);
       } else {
-        throw new Error('학원 ID를 받지 못했습니다.');
+        throw new Error('학원 정보를 받지 못했습니다.');
       }
     } finally {
       setIsSubmitting(false);

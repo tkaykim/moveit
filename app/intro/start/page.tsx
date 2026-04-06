@@ -10,6 +10,7 @@ import type { BillingPlanId, BillingCycle } from '@/types/billing';
 
 interface AcademyOption {
   id: string;
+  slug: string | null;
   name_kr: string | null;
   name_en: string | null;
 }
@@ -64,11 +65,13 @@ export default function IntroStartPage() {
 
   const handleGoToBilling = () => {
     if (!selectedAcademyId) return;
+    const selected = academies.find(a => a.id === selectedAcademyId);
+    const slugOrId = selected?.slug || selectedAcademyId;
     const params = new URLSearchParams();
     if (planId) params.set('planId', planId);
     if (cycle) params.set('cycle', cycle);
     const q = params.toString();
-    router.push(`/academy-admin/${selectedAcademyId}/billing${q ? `?${q}` : ''}`);
+    router.push(`/academy-admin/${slugOrId}/billing${q ? `?${q}` : ''}`);
   };
 
   if (authLoading) {

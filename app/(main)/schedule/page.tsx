@@ -8,7 +8,7 @@ export default function SchedulePage() {
   const router = useRouter();
 
   const handleAcademyClick = (academy: Academy) => {
-    router.push(`/academy/${academy.id}`);
+    router.push(`/academy/${academy.slug || academy.id}`);
   };
 
   const handleClassBook = (classInfo: ClassInfo & { time?: string; price?: number }) => {

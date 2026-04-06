@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { Academy } from '@/lib/supabase/types';
 import { Database } from '@/types/database';
+import { isUUID } from '@/lib/utils/slug';
 
 export async function getAcademies() {
   const supabase = await createClient() as any;
@@ -19,6 +20,7 @@ export async function getAcademies() {
 
 export async function getAcademyById(id: string) {
   const supabase = await createClient() as any;
+  const column = isUUID(id) ? 'id' : 'slug';
   const { data, error } = await supabase
     .from('academies')
     .select(`
@@ -26,11 +28,35 @@ export async function getAcademyById(id: string) {
       classes (*),
       halls (*)
     `)
-    .eq('id', id)
+    .eq(column, id)
     .single();
 
   if (error) throw error;
   return data;
+}
+
+/**
+ * slug 또는 UUID로 학원의 실제 UUID를 조회.
+ * slug인 경우 DB에서 id를 가져오고, UUID인 경우 그대로 반환.
+ */
+export async function resolveAcademyId(slugOrId: string): Promise<{ id: string; slug: string | null } | null> {
+  if (isUUID(slugOrId)) {
+    const supabase = await createClient() as any;
+    const { data } = await supabase
+      .from('academies')
+      .select('id, slug')
+      .eq('id', slugOrId)
+      .single();
+    return data ?? null;
+  }
+
+  const supabase = await createClient() as any;
+  const { data } = await supabase
+    .from('academies')
+    .select('id, slug')
+    .eq('slug', slugOrId)
+    .single();
+  return data ?? null;
 }
 
 export async function createAcademy(academy: Database['public']['Tables']['academies']['Insert']) {

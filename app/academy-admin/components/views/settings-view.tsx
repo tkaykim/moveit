@@ -256,6 +256,17 @@ export function SettingsView({ academyId }: SettingsViewProps) {
         .eq('id', academyId);
 
       if (error) throw error;
+
+      try {
+        await fetch(`/api/academies/${academyId}/update-slug`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name_en: formData.name_en }),
+        });
+      } catch {
+        // slug 업데이트 실패는 무시
+      }
+
       alert('학원 정보가 수정되었습니다.');
       loadAcademy();
     } catch (error: any) {

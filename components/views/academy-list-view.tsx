@@ -35,6 +35,7 @@ function transformAcademy(dbAcademy: any): Academy {
 
   return {
     id: dbAcademy.id,
+    slug: dbAcademy.slug || null,
     name_kr: dbAcademy.name_kr,
     name_en: dbAcademy.name_en,
     tags: dbAcademy.tags,
@@ -174,7 +175,7 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
 
         const { data, error } = await supabase
           .from('academies')
-          .select(`id, name_kr, name_en, tags, logo_url, address, images, created_at`)
+          .select(`id, slug, name_kr, name_en, tags, logo_url, address, images, created_at`)
           .eq('is_active', true)
           .order('created_at', { ascending: false })
           .limit(200);

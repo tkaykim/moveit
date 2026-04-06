@@ -47,6 +47,7 @@ function transformAcademy(dbAcademy: any): Academy {
 
   return {
     id: dbAcademy.id,
+    slug: dbAcademy.slug || null,
     name_kr: dbAcademy.name_kr,
     name_en: dbAcademy.name_en,
     tags: dbAcademy.tags,

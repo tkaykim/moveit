@@ -162,7 +162,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
 
         const { data, error } = await (supabase as any)
           .from('academies')
-          .select(`id, name_kr, name_en, tags, logo_url, address, images`)
+          .select(`id, slug, name_kr, name_en, tags, logo_url, address, images`)
           .eq('is_active', true)
           .limit(6)
           .order('created_at', { ascending: false });
@@ -179,6 +179,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
 
           return {
             id: dbAcademy.id,
+            slug: dbAcademy.slug || null,
             name_kr: dbAcademy.name_kr,
             name_en: dbAcademy.name_en,
             tags: dbAcademy.tags,
