@@ -1,16 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { authFetch } from '@/lib/supabase/auth-fetch';
+import { useAcademy } from '../../../contexts/academy-context';
 
 const VALID_PLAN_IDS = ['starter', 'growth', 'pro'];
 const VALID_CYCLES = ['monthly', 'annual'];
 
-// 성공 후 리다이렉트 전 잠시 대기 (메시지 표시 + DB 반영 확실)
 const REDIRECT_DELAY_MS = 1200;
 
-// authKey는 1회성이라 동일 키로 두 번 API 호출 시 두 번째는 실패함. 리마운트/이중 effect 방지.
 const processedAuthKeys = new Set<string>();
 const inFlightAuthKeys = new Set<string>();
 
@@ -21,9 +20,8 @@ function isAlreadyUsedAuthError(res: Response, data: { error?: string }): boolea
 }
 
 export default function BillingCallbackPage() {
-  const params = useParams();
   const searchParams = useSearchParams();
-  const academyId = params?.academyId as string;
+  const { academyId, academySlug } = useAcademy();
   const authKey = searchParams?.get('authKey');
   const customerKey = searchParams?.get('customerKey');
   const returnTo = searchParams?.get('returnTo');
@@ -67,7 +65,7 @@ export default function BillingCallbackPage() {
             setStatus('success');
             setMessage('카드가 등록되었습니다.');
             await new Promise((r) => setTimeout(r, REDIRECT_DELAY_MS));
-            window.location.href = `/academy-admin/${academyId}/billing?card=ok`;
+            window.location.href = `/academy-admin/${academySlug}/billing?card=ok`;
             return;
           }
           setStatus('error');
@@ -77,14 +75,13 @@ export default function BillingCallbackPage() {
 
         processedAuthKeys.add(authKey);
 
-        // 카드 등록 = 14일 무료 체험 시작. 별도 결제 없이 구독/결제 관리 또는 대시보드로 이동
         setStatus('success');
         setMessage('카드가 등록되었습니다. 14일 무료 체험이 시작되었습니다.');
         const goToBilling = returnTo === 'billing';
         await new Promise((r) => setTimeout(r, REDIRECT_DELAY_MS));
         window.location.href = goToBilling
-          ? `/academy-admin/${academyId}/billing?card=ok`
-          : `/academy-admin/${academyId}?card=ok`;
+          ? `/academy-admin/${academySlug}/billing?card=ok`
+          : `/academy-admin/${academySlug}?card=ok`;
       } catch {
         setStatus('error');
         setMessage('카드 등록 처리 중 오류가 발생했습니다.');
@@ -93,10 +90,10 @@ export default function BillingCallbackPage() {
         processedAuthKeys.add(authKey);
       }
     })();
-  }, [academyId, authKey, customerKey, returnTo, planId, cycle]);
+  }, [academyId, academySlug, authKey, customerKey, returnTo, planId, cycle]);
 
   const goToBilling = () => {
-    window.location.href = `/academy-admin/${academyId}/billing`;
+    window.location.href = `/academy-admin/${academySlug}/billing`;
   };
 
   return (

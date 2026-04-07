@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAcademy } from '../../contexts/academy-context';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import {
   AlertTriangle,
@@ -42,8 +42,7 @@ const STATUS_CONFIG: Record<Status, { label: string; color: string; bgColor: str
 };
 
 export default function SupportPage() {
-  const params = useParams();
-  const academyId = params.academyId as string;
+  const { academyId } = useAcademy();
   const { user, profile } = useAuth();
 
   const [view, setView] = useState<'list' | 'form'>('list');

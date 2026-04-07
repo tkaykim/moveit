@@ -1,11 +1,10 @@
 "use client";
 
-import { useParams } from 'next/navigation';
 import { PushNotificationView } from '../../components/views/push-notification-view';
+import { useAcademy } from '../../contexts/academy-context';
 
 export default function AcademyPushPage() {
-  const params = useParams();
-  const academyId = params?.academyId as string;
+  const { academyId } = useAcademy();
 
   if (!academyId) {
     return (

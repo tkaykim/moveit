@@ -1,11 +1,13 @@
 import { DashboardPageClient } from '../components/dashboard-page-client';
+import { resolveAcademyId } from '@/lib/db/academies';
 
 export default async function AcademyAdminDashboardPage({
   params,
 }: {
   params: Promise<{ academyId: string }>;
 }) {
-  const { academyId } = await params;
+  const { academyId: slugOrId } = await params;
+  const academy = await resolveAcademyId(slugOrId);
+  const academyId = academy?.id ?? slugOrId;
   return <DashboardPageClient academyId={academyId} />;
 }
-

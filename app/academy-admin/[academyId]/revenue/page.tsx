@@ -1,5 +1,6 @@
 import { SalesSystemView } from '../../components/views/sales-system-view';
 import { RevenueView } from '../../components/views/revenue-view';
+import { resolveAcademyId } from '@/lib/db/academies';
 
 export default async function RevenuePage({
   params,
@@ -8,14 +9,14 @@ export default async function RevenuePage({
   params: Promise<{ academyId: string }>;
   searchParams: Promise<{ tab?: string }>;
 }) {
-  const { academyId } = await params;
+  const { academyId: slugOrId } = await params;
   const { tab } = await searchParams;
-  
-  // tab 파라미터가 'sales'이면 판매 시스템, 아니면 매출/정산 뷰
+  const academy = await resolveAcademyId(slugOrId);
+  const academyId = academy?.id ?? slugOrId;
+
   if (tab === 'sales') {
     return <SalesSystemView academyId={academyId} />;
   }
-  
+
   return <RevenueView academyId={academyId} />;
 }
-
