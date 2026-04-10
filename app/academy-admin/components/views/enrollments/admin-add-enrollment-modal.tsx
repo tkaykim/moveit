@@ -1,11 +1,32 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { X, UserPlus, Search, Loader2, User, FileText } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { X, UserPlus, Search, Loader2, User, FileText, Clock, MapPin, Calendar, Users } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
-import { ScheduleSelector } from '@/components/common/schedule-selector';
+import { convertKSTInputToUTC } from '@/lib/utils/kst-time';
 
 type AddMode = 'member' | 'guest';
+
+interface ScheduleItem {
+  id: string;
+  start_time: string;
+  end_time: string;
+  current_students: number | null;
+  max_students: number | null;
+  classes: {
+    id: string;
+    title: string;
+  } | null;
+  instructors: {
+    id: string;
+    name_kr?: string | null;
+    name_en?: string | null;
+  } | null;
+  halls: {
+    id: string;
+    name: string;
+  } | null;
+}
 
 interface AdminAddEnrollmentModalProps {
   isOpen: boolean;
@@ -14,6 +35,12 @@ interface AdminAddEnrollmentModalProps {
   academyId: string;
   initialScheduleId?: string | null;
   dateFilter?: string;
+}
+
+function getTodayKST(): string {
+  const now = new Date();
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  return kst.toISOString().slice(0, 10);
 }
 
 export function AdminAddEnrollmentModal({
@@ -30,10 +57,13 @@ export function AdminAddEnrollmentModal({
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  // 비회원 수기 추가 (이름·연락처·사유 직접 입력) — 4-B
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [adminNote, setAdminNote] = useState('');
+
+  const [selectedDate, setSelectedDate] = useState<string>(dateFilter || getTodayKST());
+  const [schedulesForDate, setSchedulesForDate] = useState<ScheduleItem[]>([]);
+  const [schedulesLoading, setSchedulesLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen && academyId) {
@@ -43,9 +73,78 @@ export function AdminAddEnrollmentModal({
       setGuestName('');
       setGuestPhone('');
       setAdminNote('');
+      setSelectedDate(dateFilter || getTodayKST());
       loadStudents();
     }
-  }, [isOpen, academyId, initialScheduleId]);
+  }, [isOpen, academyId, initialScheduleId, dateFilter]);
+
+  const loadSchedulesForDate = useCallback(async (date: string) => {
+    if (!date || !academyId) {
+      setSchedulesForDate([]);
+      return;
+    }
+    setSchedulesLoading(true);
+    const supabase = getSupabaseClient() as any;
+    if (!supabase) {
+      setSchedulesLoading(false);
+      return;
+    }
+
+    try {
+      const { data: classesData } = await supabase
+        .from('classes')
+        .select('id')
+        .eq('academy_id', academyId);
+
+      const classIds = classesData?.map((c: any) => c.id) || [];
+      if (classIds.length === 0) {
+        setSchedulesForDate([]);
+        setSchedulesLoading(false);
+        return;
+      }
+
+      const startKST = `${date}T00:00`;
+      const endKST = `${date}T23:59`;
+      const startUTC = convertKSTInputToUTC(startKST);
+      const endUTC = convertKSTInputToUTC(endKST);
+
+      if (!startUTC || !endUTC) {
+        setSchedulesForDate([]);
+        setSchedulesLoading(false);
+        return;
+      }
+
+      const endUTCWithSeconds = new Date(endUTC);
+      endUTCWithSeconds.setSeconds(59, 999);
+
+      const { data, error } = await supabase
+        .from('schedules')
+        .select(`
+          id, start_time, end_time, current_students, max_students,
+          classes ( id, title ),
+          instructors ( id, name_kr, name_en ),
+          halls ( id, name )
+        `)
+        .in('class_id', classIds)
+        .eq('is_canceled', false)
+        .gte('start_time', startUTC)
+        .lte('start_time', endUTCWithSeconds.toISOString())
+        .order('start_time', { ascending: true });
+
+      if (error) throw error;
+      setSchedulesForDate(data || []);
+    } catch {
+      setSchedulesForDate([]);
+    } finally {
+      setSchedulesLoading(false);
+    }
+  }, [academyId]);
+
+  useEffect(() => {
+    if (isOpen && selectedDate) {
+      loadSchedulesForDate(selectedDate);
+    }
+  }, [isOpen, selectedDate, loadSchedulesForDate]);
 
   const loadStudents = async () => {
     const supabase = getSupabaseClient() as any;
@@ -168,6 +267,13 @@ export function AdminAddEnrollmentModal({
     ? scheduleId && guestName.trim() && guestPhone.trim()
     : scheduleId && selectedStudent;
 
+  const selectedSchedule = schedulesForDate.find(s => s.id === scheduleId);
+
+  const formatTime = (utcString: string) => {
+    const d = new Date(utcString);
+    return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul' });
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -208,15 +314,131 @@ export function AdminAddEnrollmentModal({
             </button>
           </div>
 
+          {/* 1단계: 날짜 선택 */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">수업 선택</label>
-            <ScheduleSelector
-              value={scheduleId || undefined}
-              academyId={academyId}
-              dateFilter={dateFilter}
-              onChange={(id) => setScheduleId(id)}
-              className="w-full"
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+              <span className="inline-flex items-center gap-1"><Calendar size={12} /> 날짜 선택</span>
+            </label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => {
+                setSelectedDate(e.target.value);
+                setScheduleId(null);
+              }}
+              className="w-full px-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             />
+          </div>
+
+          {/* 2단계: 수업 선택 */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+              <span className="inline-flex items-center gap-1"><Clock size={12} /> 수업 선택</span>
+            </label>
+            {schedulesLoading ? (
+              <div className="flex items-center justify-center py-6 text-gray-400">
+                <Loader2 size={18} className="animate-spin mr-2" />
+                <span className="text-sm">수업 불러오는 중...</span>
+              </div>
+            ) : !selectedDate ? (
+              <div className="py-6 text-center text-sm text-gray-400 dark:text-gray-500">
+                날짜를 먼저 선택해주세요.
+              </div>
+            ) : schedulesForDate.length === 0 ? (
+              <div className="py-6 text-center text-sm text-gray-400 dark:text-gray-500">
+                해당 날짜에 수업이 없습니다.
+              </div>
+            ) : !selectedSchedule ? (
+              <div className="border border-gray-200 dark:border-neutral-700 rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+                {schedulesForDate.map((s) => {
+                  const spots = s.max_students && s.max_students > 0
+                    ? `${s.current_students || 0}/${s.max_students}`
+                    : null;
+                  const isFull = s.max_students && s.max_students > 0 && (s.current_students || 0) >= s.max_students;
+
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setScheduleId(s.id)}
+                      disabled={!!isFull}
+                      className={`w-full text-left px-3 py-2.5 border-b border-gray-100 dark:border-neutral-800 last:border-0 transition-colors ${
+                        isFull
+                          ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-neutral-800/50'
+                          : 'hover:bg-primary/5 dark:hover:bg-primary/10'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                          {s.classes?.title || '(제목 없음)'}
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 flex-shrink-0 ml-2">
+                          <Clock size={11} />
+                          {formatTime(s.start_time)}
+                          {s.end_time && ` ~ ${formatTime(s.end_time)}`}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        {s.instructors && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {s.instructors.name_kr || s.instructors.name_en}
+                          </span>
+                        )}
+                        {s.halls && (
+                          <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.5">
+                            <MapPin size={10} />
+                            {s.halls.name}
+                          </span>
+                        )}
+                        {spots && (
+                          <span className={`text-xs flex items-center gap-0.5 ${
+                            isFull
+                              ? 'text-red-500 dark:text-red-400 font-medium'
+                              : 'text-gray-400 dark:text-gray-500'
+                          }`}>
+                            <Users size={10} />
+                            {spots}{isFull ? ' (마감)' : ''}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between py-2.5 px-3 bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20">
+                <div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    {selectedSchedule.classes?.title || '(제목 없음)'}
+                  </div>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                      <Clock size={11} />
+                      {formatTime(selectedSchedule.start_time)}
+                      {selectedSchedule.end_time && ` ~ ${formatTime(selectedSchedule.end_time)}`}
+                    </span>
+                    {selectedSchedule.instructors && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {selectedSchedule.instructors.name_kr || selectedSchedule.instructors.name_en}
+                      </span>
+                    )}
+                    {selectedSchedule.halls && (
+                      <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.5">
+                        <MapPin size={10} />
+                        {selectedSchedule.halls.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setScheduleId(null)}
+                  className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            )}
           </div>
 
           {addMode === 'guest' ? (
@@ -292,7 +514,7 @@ export function AdminAddEnrollmentModal({
                 </div>
               </>
             ) : (
-              <div className="flex items-center justify-between py-2.5 px-3 bg-primary/10/10 rounded-lg border border-primary/20/20">
+              <div className="flex items-center justify-between py-2.5 px-3 bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20">
                 <div>
                   <div className="font-medium text-gray-900 dark:text-white">
                     {selectedStudent.name || selectedStudent.nickname || '-'}
