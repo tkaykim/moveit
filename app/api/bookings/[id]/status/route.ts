@@ -67,6 +67,10 @@ export async function PATCH(
     const scheduleId = currentBooking.schedule_id;
     const academyId = (currentBooking as any).classes?.academy_id;
     const actorId = (await getAuthenticatedUser(request))?.id ?? null;
+    const isGuestBooking = !currentBooking.user_id && currentBooking.guest_name;
+    const guestPayload = isGuestBooking
+      ? { guest_name: currentBooking.guest_name, guest_phone: currentBooking.guest_phone || null }
+      : {};
 
     // 상태 변경
     const { error: updateError } = await (supabase as any)
@@ -119,7 +123,7 @@ export async function PATCH(
             user_ticket_id: currentBooking.user_ticket_id,
             booking_id: id,
             action: 'COUNT_RESTORE',
-            payload: { delta: 1, reason: 'booking_cancelled' },
+            payload: { delta: 1, reason: 'booking_cancelled', ...guestPayload },
             actor_user_id: actorId,
           }).catch(() => {});
         }
@@ -134,7 +138,7 @@ export async function PATCH(
         user_ticket_id: currentBooking.user_ticket_id ?? null,
         booking_id: id,
         action: 'CANCEL',
-        payload: { previous_status: oldStatus },
+        payload: { previous_status: oldStatus, ...guestPayload },
         actor_user_id: actorId,
       }).catch(() => {});
     }
@@ -209,7 +213,7 @@ export async function PATCH(
         user_ticket_id: currentBooking.user_ticket_id ?? null,
         booking_id: id,
         action: 'ATTENDANCE_CHECKED',
-        payload: { via: 'manual' },
+        payload: { via: 'manual', ...guestPayload },
         actor_user_id: actorId,
       }).catch(() => {});
     }

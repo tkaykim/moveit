@@ -107,6 +107,32 @@ export async function GET(
       }
     }
 
+    const needBookingLookup = list.filter(
+      (r: any) => !r.user_id && !r.payload?.guest_name && r.booking_id
+    );
+    let bookingMap: Record<string, { user_id?: string; guest_name?: string; guest_phone?: string }> = {};
+    if (needBookingLookup.length > 0) {
+      const bookingIds = [...new Set(needBookingLookup.map((r: any) => r.booking_id))];
+      const { data: bookingsData } = await supabase
+        .from('bookings')
+        .select('id, user_id, guest_name, guest_phone')
+        .in('id', bookingIds);
+      if (bookingsData) {
+        bookingMap = Object.fromEntries(bookingsData.map((b: any) => [b.id, b]));
+        const extraUserIds = bookingsData.map((b: any) => b.user_id).filter(Boolean);
+        const missingUserIds = extraUserIds.filter((id: string) => !userMap[id]);
+        if (missingUserIds.length > 0) {
+          const { data: extraUsers } = await supabase
+            .from('users')
+            .select('id, name, nickname, email')
+            .in('id', [...new Set(missingUserIds)]);
+          if (extraUsers) {
+            for (const u of extraUsers) userMap[u.id] = u;
+          }
+        }
+      }
+    }
+
     const items = list.map((r: any) => {
       let userName = '-';
       if (r.user_id) {
@@ -114,6 +140,14 @@ export async function GET(
         userName = u?.name || u?.nickname || u?.email || '-';
       } else if (r.payload?.guest_name) {
         userName = `${r.payload.guest_name} (비회원)`;
+      } else if (r.booking_id && bookingMap[r.booking_id]) {
+        const bk = bookingMap[r.booking_id];
+        if (bk.user_id && userMap[bk.user_id]) {
+          const u = userMap[bk.user_id];
+          userName = u?.name || u?.nickname || u?.email || '-';
+        } else if (bk.guest_name) {
+          userName = `${bk.guest_name} (비회원)`;
+        }
       }
       return {
         ...r,
