@@ -598,11 +598,26 @@ export default function SessionBookingPage() {
     }
   };
 
+  // 1회성 수강권 판별 (비회원 구매 허용 여부에 사용)
+  const isOneTimeTicket = (ticket: PurchasableTicket) => {
+    if (ticket.ticket_type === 'PERIOD') return false;
+    return (ticket.total_count ?? 0) === 1;
+  };
+
   // 수강권 구매 후 예약 (카드/계좌 = Toss 결제창, 그 외는 기존 구매 API)
   const handlePurchaseBooking = async () => {
     if (!selectedPurchaseTicketId || !selectedPurchaseTicket) {
       setError(t('sessionBooking.selectTicketError'));
       return;
+    }
+
+    // 비로그인: 1회성 수강권이면 비회원 결제 플로우, 아니면 로그인 강제
+    if (!user) {
+      if (!isOneTimeTicket(selectedPurchaseTicket)) {
+        setAuthModalInitialTab('login');
+        setIsAuthModalOpen(true);
+        return;
+      }
     }
 
     const useTossPayment = ENABLE_TOSS_PAYMENT && (purchasePaymentType === 'card' || purchasePaymentType === 'account');
@@ -640,7 +655,7 @@ export default function SessionBookingPage() {
       return;
     }
 
-    // 비회원 카드결제: 게스트 정보 수집 후 진행
+    // 비회원 카드결제 (1회성): 게스트 정보 수집 후 진행
     if (useTossPayment && !user) {
       const payload = {
         ticketId: selectedPurchaseTicket.id,
@@ -1045,14 +1060,14 @@ export default function SessionBookingPage() {
       {/* 예약 폼 */}
       {canBook && (
         <div className="space-y-6">
-          {/* 비로그인: 회원 로그인 유도 안내 (비회원도 구매·예약 가능) */}
+          {/* 비로그인: 회원 로그인 유도 안내 */}
           {!user && (
             <div className="rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/80 p-5 shadow-sm">
               <p className="text-[15px] font-semibold text-neutral-900 dark:text-white mb-1">
                 {language === 'ko' ? '회원이시라면 로그인해 주세요' : 'Log in if you have an account'}
               </p>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
-                {language === 'ko' ? '비회원도 아래에서 수강권을 구매하고 예약할 수 있습니다.' : 'Guests can also purchase tickets and book below.'}
+                {language === 'ko' ? '수강권 구매는 로그인이 필요합니다. 비회원은 1회권 구매 또는 현장 결제로 예약할 수 있습니다.' : 'Login is required for multi-use tickets. Guests can purchase 1-time tickets or book with on-site payment.'}
               </p>
               <div className="flex gap-3">
                 <button
@@ -1141,7 +1156,13 @@ export default function SessionBookingPage() {
                     <div>
                       <div className="text-[15px] font-semibold text-neutral-900 dark:text-white">{t('sessionBooking.purchaseAndBook')}</div>
                       <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                        {loadingPurchasableTickets ? t('common.loading') : t('sessionBooking.purchasableCount', { count: purchasableTickets.length })}
+                        {loadingPurchasableTickets
+                          ? t('common.loading')
+                          : !user
+                            ? (purchasableTickets.some(t => t.ticket_type === 'COUNT' && (t.total_count ?? 0) === 1)
+                              ? (language === 'ko' ? '1회권은 비회원도 구매 가능' : '1-time tickets available for guests')
+                              : (language === 'ko' ? '로그인 후 이용 가능' : 'Login required'))
+                            : t('sessionBooking.purchasableCount', { count: purchasableTickets.length })}
                       </div>
                     </div>
                   </div>
@@ -1312,6 +1333,16 @@ export default function SessionBookingPage() {
                       );
                     })}
                   </div>
+
+                  {/* 비회원 + 다회권 선택 시 로그인 안내 */}
+                  {!user && selectedPurchaseTicket && !isOneTimeTicket(selectedPurchaseTicket) && (
+                    <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                      <LogIn size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                      <p className="text-xs text-amber-700 dark:text-amber-300">
+                        {language === 'ko' ? '다회권/기간권은 로그인 후 구매할 수 있습니다.' : 'Multi-use tickets require login.'}
+                      </p>
+                    </div>
+                  )}
 
                   {/* 결제 방식 선택 — 수강권 목록과 시각적으로 구분 */}
                   <div className="pt-6 mt-6 border-t border-neutral-200 dark:border-neutral-700">

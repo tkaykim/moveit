@@ -6,8 +6,8 @@ import { createServiceClient } from '@/lib/supabase/server';
 /**
  * 수강권 결제용 주문 생성 (Toss Payments 결제창 연동)
  * Body: { ticketId, scheduleId?, countOptionIndex?, discountId?, guestName?, guestPhone?, guestEmail? }
- * - 로그인 사용자: 기존 방식
- * - 비회원: guestName 필수, guestPhone 또는 guestEmail 필수. 게스트 users 생성 후 주문.
+ * - 로그인 사용자: 모든 수강권 구매 가능
+ * - 비회원: scheduleId가 있고, 1회성 수강권인 경우에만 허용 (구매 후 즉시 예약)
  * Returns: { orderId, amount, orderName }
  */
 export async function POST(request: Request) {
@@ -16,58 +16,6 @@ export async function POST(request: Request) {
     const supabase = createServiceClient() as any;
     const body = await request.json();
     const { ticketId, scheduleId, countOptionIndex, discountId, guestName, guestPhone, guestEmail } = body;
-
-    let userId: string | null = null;
-
-    if (user) {
-      userId = user.id;
-    } else {
-      const name = guestName != null ? String(guestName).trim() : '';
-      const phone = guestPhone != null ? String(guestPhone).trim() : '';
-      const email = guestEmail != null ? String(guestEmail).trim() : '';
-      if (!name) {
-        return NextResponse.json({ error: '이름을 입력해 주세요.' }, { status: 400 });
-      }
-      if (!phone && !email) {
-        return NextResponse.json({ error: '연락처 또는 이메일 중 하나는 필수입니다.' }, { status: 400 });
-      }
-
-      let guestUser: { id: string } | null = null;
-      if (email) {
-        const { data: existing } = await supabase
-          .from('users')
-          .select('id')
-          .eq('email', email)
-          .limit(1)
-          .single();
-        if (existing) guestUser = existing;
-      }
-      if (!guestUser && phone) {
-        const { data: existing } = await supabase
-          .from('users')
-          .select('id')
-          .eq('phone', phone)
-          .limit(1)
-          .single();
-        if (existing) guestUser = existing;
-      }
-      if (!guestUser) {
-        const { data: inserted, error: insertUserErr } = await supabase
-          .from('users')
-          .insert({ name, phone: phone || null, email: email || null, is_guest: true })
-          .select('id')
-          .single();
-        if (insertUserErr) {
-          console.error('Guest user creation error:', insertUserErr);
-          return NextResponse.json({ error: '게스트 정보 생성에 실패했습니다.' }, { status: 500 });
-        }
-        guestUser = inserted;
-      }
-      if (!guestUser) {
-        return NextResponse.json({ error: '게스트 계정을 확인할 수 없습니다.' }, { status: 500 });
-      }
-      userId = guestUser.id;
-    }
 
     if (!ticketId) {
       return NextResponse.json({ error: 'ticketId가 필요합니다.' }, { status: 400 });
@@ -98,6 +46,61 @@ export async function POST(request: Request) {
 
     const selectedOption = hasCountOptions && countOpts[optIndex] ? countOpts[optIndex] : null;
     const optionPrice = selectedOption ? (selectedOption.price ?? ticket.price ?? 0) : (ticket.price ?? 0);
+
+    // 1회성 판별: count_options 사용 시 선택된 옵션의 count, 아니면 total_count
+    const effectiveCount = selectedOption ? (selectedOption.count ?? 1) : (ticket.total_count ?? 1);
+    const isPeriodTicket = ticket.ticket_type === 'PERIOD';
+    const isOneTimeTicket = !isPeriodTicket && effectiveCount === 1;
+
+    let userId: string;
+
+    if (user) {
+      userId = user.id;
+    } else if (scheduleId && isOneTimeTicket) {
+      // 1회성 + 특정 수업 수강신청 → 비회원 허용 (구매 후 즉시 예약)
+      const name = guestName != null ? String(guestName).trim() : '';
+      const phone = guestPhone != null ? String(guestPhone).trim() : '';
+      const email = guestEmail != null ? String(guestEmail).trim() : '';
+      if (!name) {
+        return NextResponse.json({ error: '이름을 입력해 주세요.' }, { status: 400 });
+      }
+      if (!phone && !email) {
+        return NextResponse.json({ error: '연락처 또는 이메일 중 하나는 필수입니다.' }, { status: 400 });
+      }
+
+      let guestUser: { id: string } | null = null;
+      if (email) {
+        const { data: existing } = await supabase
+          .from('users').select('id').eq('email', email).limit(1).single();
+        if (existing) guestUser = existing;
+      }
+      if (!guestUser && phone) {
+        const { data: existing } = await supabase
+          .from('users').select('id').eq('phone', phone).limit(1).single();
+        if (existing) guestUser = existing;
+      }
+      if (!guestUser) {
+        const { data: inserted, error: insertUserErr } = await supabase
+          .from('users')
+          .insert({ name, phone: phone || null, email: email || null, is_guest: true })
+          .select('id')
+          .single();
+        if (insertUserErr) {
+          console.error('Guest user creation error:', insertUserErr);
+          return NextResponse.json({ error: '게스트 정보 생성에 실패했습니다.' }, { status: 500 });
+        }
+        guestUser = inserted;
+      }
+      if (!guestUser) {
+        return NextResponse.json({ error: '게스트 계정을 확인할 수 없습니다.' }, { status: 500 });
+      }
+      userId = guestUser.id;
+    } else {
+      return NextResponse.json(
+        { error: scheduleId ? '다회권/기간권 구매는 로그인이 필요합니다.' : '수강권 구매를 위해서는 로그인이 필요합니다.' },
+        { status: 401 }
+      );
+    }
 
     let discountAmount = 0;
     if (discountId) {

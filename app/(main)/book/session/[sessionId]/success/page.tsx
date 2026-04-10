@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CheckCircle, Home, Calendar, ArrowRight } from 'lucide-react';
+import { CheckCircle, Home, Calendar, ArrowRight, UserPlus } from 'lucide-react';
 import { Suspense } from 'react';
 
 function SuccessContent() {
@@ -39,6 +39,29 @@ function SuccessContent() {
           <p className="text-sm text-neutral-500">
             수업 시간에 맞춰 방문해주세요!
           </p>
+        </div>
+      )}
+
+      {/* 비회원 회원가입 유도 */}
+      {type === 'guest' && (
+        <div className="w-full max-w-sm bg-primary/10 border border-primary/30 rounded-2xl p-5 mb-6">
+          <div className="flex items-start gap-3">
+            <UserPlus size={20} className="text-primary shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-bold text-black dark:text-white text-sm mb-1">
+                회원가입하면 더 편리해요!
+              </h3>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3">
+                예약 내역 조회, 수강권 관리, 출석 기록 확인까지 한 번에 할 수 있어요.
+              </p>
+              <button
+                onClick={() => router.push('/my?tab=signup')}
+                className="px-4 py-2 bg-primary text-black text-sm font-bold rounded-lg hover:opacity-95 active:scale-[0.98] transition-all"
+              >
+                회원가입하기
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

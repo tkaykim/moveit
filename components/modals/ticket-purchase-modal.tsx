@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
-import { X, Ticket, Calendar, Hash, Check, Tag, Gift, Copy, Loader2, LogIn, UserPlus, UserX } from 'lucide-react';
+import { X, Ticket, Calendar, Hash, Check, Tag, Gift, Copy, Loader2, LogIn } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { useLocale } from '@/contexts/LocaleContext';
 import { ENABLE_TOSS_PAYMENT } from '@/lib/constants/payment';
@@ -45,7 +45,6 @@ interface TicketPurchaseModalProps {
   academyId: string;
   academyName?: string;
   onPurchaseComplete?: () => void;
-  onRequireAuth?: () => void;
 }
 
 export const TicketPurchaseModal = ({
@@ -80,12 +79,6 @@ export const TicketPurchaseModal = ({
   const [depositorName, setDepositorName] = useState('');
   const [depositorStepLoading, setDepositorStepLoading] = useState(false);
 
-  const [showAuthChoice, setShowAuthChoice] = useState(false);
-  const [showGuestForm, setShowGuestForm] = useState(false);
-  const [guestName, setGuestName] = useState('');
-  const [guestPhone, setGuestPhone] = useState('');
-  const [guestEmail, setGuestEmail] = useState('');
-  const [guestInfo, setGuestInfo] = useState<{ name: string; phone: string; email: string } | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalInitialTab, setAuthModalInitialTab] = useState<'login' | 'signup'>('login');
 
@@ -167,8 +160,9 @@ export const TicketPurchaseModal = ({
 
   const handlePurchase = async () => {
     if (!selectedTicket) return;
-    if (!user && !guestInfo) {
-      setShowAuthChoice(true);
+    if (!user) {
+      setAuthModalInitialTab('login');
+      setIsAuthModalOpen(true);
       return;
     }
     if (ENABLE_TOSS_PAYMENT) {
@@ -183,29 +177,18 @@ export const TicketPurchaseModal = ({
   };
 
   const handleTossCardPayment = async () => {
-    if (!selectedTicket) return;
+    if (!selectedTicket || !user) return;
     setPurchasing(true);
     try {
       const body: Record<string, unknown> = {
         ticketId: selectedTicket.id,
         discountId: selectedDiscount?.id || undefined,
       };
-      if (guestInfo) {
-        body.guestName = guestInfo.name;
-        body.guestPhone = guestInfo.phone || undefined;
-        body.guestEmail = guestInfo.email || undefined;
-      }
-      const orderRes = user
-        ? await fetchWithAuth('/api/tickets/payment-order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          })
-        : await fetch('/api/tickets/payment-order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          });
+      const orderRes = await fetchWithAuth('/api/tickets/payment-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
       if (!orderRes.ok) {
         const data = await orderRes.json();
         throw new Error(data.error || (language === 'ko' ? '주문 생성에 실패했습니다.' : 'Failed to create order.'));
@@ -214,24 +197,19 @@ export const TicketPurchaseModal = ({
       const origin = window.location.origin;
       const successUrl = `${origin}/payment/ticket/success`;
       const failUrl = `${origin}/payment/ticket/fail`;
-      const customerKey = user?.id ?? `guest_${orderId}`;
+      const customerKey = user.id;
       let customerMobilePhone: string | undefined;
-      if (user?.id) {
-        try {
-          const profileRes = await fetchWithAuth('/api/auth/profile');
-          if (profileRes.ok) {
-            const data = await profileRes.json();
-            const raw = data?.profile?.phone;
-            if (typeof raw === 'string' && raw.trim()) {
-              const digits = raw.replace(/\D/g, '');
-              if (digits.length >= 8 && digits.length <= 15) customerMobilePhone = digits;
-            }
+      try {
+        const profileRes = await fetchWithAuth('/api/auth/profile');
+        if (profileRes.ok) {
+          const data = await profileRes.json();
+          const raw = data?.profile?.phone;
+          if (typeof raw === 'string' && raw.trim()) {
+            const digits = raw.replace(/\D/g, '');
+            if (digits.length >= 8 && digits.length <= 15) customerMobilePhone = digits;
           }
-        } catch { /* ignore */ }
-      } else if (guestInfo?.phone) {
-        const digits = guestInfo.phone.replace(/\D/g, '');
-        if (digits.length >= 8 && digits.length <= 15) customerMobilePhone = digits;
-      }
+        }
+      } catch { /* ignore */ }
       setWidgetOrder({ orderId, amount, orderName, successUrl, failUrl, customerKey, customerMobilePhone });
       setWidgetModalOpen(true);
     } catch (error: any) {
@@ -243,56 +221,40 @@ export const TicketPurchaseModal = ({
   };
 
   const startDepositorStep = async () => {
+    if (!user) return;
     setShowDepositorStep(true);
-    if (user) {
-      setDepositorStepLoading(true);
-      try {
-        const profileRes = await fetchWithAuth('/api/auth/profile');
-        if (profileRes.ok) {
-          const data = await profileRes.json();
-          const name = data?.profile?.name ?? data?.profile?.name_en ?? '';
-          setDepositorName(String(name).trim() || '');
-        } else {
-          setDepositorName('');
-        }
-      } catch {
+    setDepositorStepLoading(true);
+    try {
+      const profileRes = await fetchWithAuth('/api/auth/profile');
+      if (profileRes.ok) {
+        const data = await profileRes.json();
+        const name = data?.profile?.name ?? data?.profile?.name_en ?? '';
+        setDepositorName(String(name).trim() || '');
+      } else {
         setDepositorName('');
-      } finally {
-        setDepositorStepLoading(false);
       }
-    } else if (guestInfo) {
-      setDepositorName(guestInfo.name);
+    } catch {
+      setDepositorName('');
+    } finally {
       setDepositorStepLoading(false);
     }
   };
 
   const handleDepositorSubmit = async () => {
-    if (!selectedTicket || !depositorName.trim()) return;
+    if (!selectedTicket || !depositorName.trim() || !user) return;
     setPurchasing(true);
     try {
       const body: Record<string, unknown> = {
         ticketId: selectedTicket.id,
         discountId: selectedDiscount?.id ?? undefined,
         depositorName: depositorName.trim(),
+        ordererName: depositorName.trim(),
       };
-      if (guestInfo) {
-        body.ordererName = guestInfo.name;
-        body.ordererPhone = guestInfo.phone || undefined;
-        body.ordererEmail = guestInfo.email || undefined;
-      } else {
-        body.ordererName = depositorName.trim();
-      }
-      const response = user
-        ? await fetchWithAuth('/api/tickets/bank-transfer-order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          })
-        : await fetch('/api/tickets/bank-transfer-order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          });
+      const response = await fetchWithAuth('/api/tickets/bank-transfer-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || (language === 'ko' ? '신청에 실패했습니다.' : 'Request failed.'));
@@ -315,20 +277,6 @@ export const TicketPurchaseModal = ({
     }
   };
 
-  const handleGuestFormSubmit = () => {
-    if (!guestName.trim()) {
-      alert(language === 'ko' ? '이름을 입력해 주세요.' : 'Please enter your name.');
-      return;
-    }
-    if (!guestPhone.trim() && !guestEmail.trim()) {
-      alert(language === 'ko' ? '연락처 또는 이메일 중 하나를 입력해 주세요.' : 'Please enter phone or email.');
-      return;
-    }
-    setGuestInfo({ name: guestName.trim(), phone: guestPhone.trim(), email: guestEmail.trim() });
-    setShowGuestForm(false);
-    setShowAuthChoice(false);
-  };
-
   const handleClose = () => {
     setSelectedTicket(null);
     setSelectedDiscount(null);
@@ -337,12 +285,6 @@ export const TicketPurchaseModal = ({
     setShowDepositorStep(false);
     setDepositorName('');
     setActiveTab('ticket');
-    setShowAuthChoice(false);
-    setShowGuestForm(false);
-    setGuestName('');
-    setGuestPhone('');
-    setGuestEmail('');
-    setGuestInfo(null);
     setPurchasePaymentType('card');
     setWidgetModalOpen(false);
     setWidgetOrder(null);
@@ -382,8 +324,8 @@ export const TicketPurchaseModal = ({
     }
   };
 
-  const showTabs = !purchaseSuccess && !loading && tickets.length > 0 && !showAuthChoice && !showGuestForm && !showDepositorStep && !bankTransferResult;
-  const showFooter = !purchaseSuccess && !bankTransferResult && !showDepositorStep && !showAuthChoice && !showGuestForm && selectedTicket;
+  const showTabs = !purchaseSuccess && !loading && tickets.length > 0 && !showDepositorStep && !bankTransferResult;
+  const showFooter = !purchaseSuccess && !bankTransferResult && !showDepositorStep && selectedTicket;
 
   return (
     <>
@@ -448,27 +390,7 @@ export const TicketPurchaseModal = ({
 
           {/* 컨텐츠 */}
           <div className="flex-1 overflow-y-auto p-4 min-h-0">
-            {showAuthChoice ? (
-              <AuthChoiceStep
-                language={language}
-                onLogin={() => { setShowAuthChoice(false); setAuthModalInitialTab('login'); setIsAuthModalOpen(true); }}
-                onSignup={() => { setShowAuthChoice(false); setAuthModalInitialTab('signup'); setIsAuthModalOpen(true); }}
-                onGuest={() => { setShowAuthChoice(false); setShowGuestForm(true); setGuestName(''); setGuestPhone(''); setGuestEmail(''); }}
-                onBack={() => setShowAuthChoice(false)}
-              />
-            ) : showGuestForm ? (
-              <GuestFormStep
-                language={language}
-                guestName={guestName}
-                guestPhone={guestPhone}
-                guestEmail={guestEmail}
-                onNameChange={setGuestName}
-                onPhoneChange={setGuestPhone}
-                onEmailChange={setGuestEmail}
-                onSubmit={handleGuestFormSubmit}
-                onBack={() => { setShowGuestForm(false); setShowAuthChoice(true); }}
-              />
-            ) : showDepositorStep ? (
+            {showDepositorStep ? (
               <DepositorStep
                 language={language}
                 depositorName={depositorName}
@@ -511,13 +433,11 @@ export const TicketPurchaseModal = ({
                 startDate={startDate}
                 activeTab={activeTab}
                 user={user}
-                guestInfo={guestInfo}
                 language={language}
                 t={t}
                 onSelectTicket={setSelectedTicket}
                 onSelectDiscount={setSelectedDiscount}
                 onStartDateChange={setStartDate}
-                onClearGuestInfo={() => { setGuestInfo(null); setGuestName(''); setGuestPhone(''); setGuestEmail(''); }}
                 getValidityText={getValidityText}
                 getDiscountText={getDiscountText}
                 formatPrice={formatPrice}
@@ -549,7 +469,7 @@ export const TicketPurchaseModal = ({
                 </div>
               </div>
 
-              {ENABLE_TOSS_PAYMENT && (user || guestInfo) && (
+              {ENABLE_TOSS_PAYMENT && user && (
                 <div className="mb-3">
                   <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">
                     {language === 'ko' ? '결제 방식' : 'Payment method'}
@@ -586,8 +506,8 @@ export const TicketPurchaseModal = ({
               >
                 {purchasing
                   ? t('ticketModal.processing')
-                  : !user && !guestInfo
-                    ? (language === 'ko' ? '구매하기' : 'Purchase')
+                  : !user
+                    ? (language === 'ko' ? '로그인 후 구매하기' : 'Log in to purchase')
                     : t('ticketModal.purchaseButton', { type: activeTab === 'ticket' ? t('ticketModal.purchaseButtonTicket') : t('ticketModal.purchaseButtonCoupon') })
                 }
               </button>
@@ -599,16 +519,7 @@ export const TicketPurchaseModal = ({
       {/* 로그인/회원가입 모달 */}
       <MyTab
         isOpen={isAuthModalOpen}
-        onClose={async () => {
-          setIsAuthModalOpen(false);
-          const supabase = getSupabaseClient();
-          if (supabase) {
-            const { data: { user: authUser } } = await (supabase as any).auth.getUser();
-            if (authUser) {
-              setShowAuthChoice(false);
-            }
-          }
-        }}
+        onClose={() => setIsAuthModalOpen(false)}
         initialTab={authModalInitialTab}
       />
 
@@ -639,98 +550,6 @@ export const TicketPurchaseModal = ({
 };
 
 // ─── 분리된 서브 컴포넌트들 ───
-
-function AuthChoiceStep({ language, onLogin, onSignup, onGuest, onBack }: {
-  language: string;
-  onLogin: () => void;
-  onSignup: () => void;
-  onGuest: () => void;
-  onBack: () => void;
-}) {
-  return (
-    <div className="space-y-4 py-4">
-      <div className="text-center mb-2">
-        <h3 className="text-base font-bold text-black dark:text-white mb-1">
-          {language === 'ko' ? '수강권 구매' : 'Purchase Ticket'}
-        </h3>
-        <p className="text-sm text-neutral-500">
-          {language === 'ko' ? '로그인하시겠습니까? 비회원으로도 구매할 수 있습니다.' : 'Log in or continue as guest.'}
-        </p>
-      </div>
-      <button type="button" onClick={onLogin}
-        className="w-full py-3.5 rounded-xl bg-primary text-black font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.99] transition-all">
-        <LogIn size={18} />
-        {language === 'ko' ? '로그인' : 'Log in'}
-      </button>
-      <button type="button" onClick={onSignup}
-        className="w-full py-3.5 rounded-xl border-2 border-neutral-300 dark:border-neutral-600 text-neutral-800 dark:text-neutral-200 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all">
-        <UserPlus size={18} />
-        {language === 'ko' ? '회원가입' : 'Sign up'}
-      </button>
-      <button type="button" onClick={onGuest}
-        className="w-full py-2.5 text-sm text-neutral-600 dark:text-neutral-400 underline underline-offset-2 flex items-center justify-center gap-2">
-        <UserX size={16} />
-        {language === 'ko' ? '비회원으로 계속하기' : 'Continue as guest'}
-      </button>
-      <button type="button" onClick={onBack} className="w-full py-2 text-xs text-neutral-400">
-        {language === 'ko' ? '뒤로' : 'Back'}
-      </button>
-    </div>
-  );
-}
-
-function GuestFormStep({ language, guestName, guestPhone, guestEmail, onNameChange, onPhoneChange, onEmailChange, onSubmit, onBack }: {
-  language: string;
-  guestName: string;
-  guestPhone: string;
-  guestEmail: string;
-  onNameChange: (v: string) => void;
-  onPhoneChange: (v: string) => void;
-  onEmailChange: (v: string) => void;
-  onSubmit: () => void;
-  onBack: () => void;
-}) {
-  return (
-    <div className="space-y-4 py-2">
-      <h3 className="text-base font-bold text-black dark:text-white">
-        {language === 'ko' ? '비회원 정보 입력' : 'Guest Information'}
-      </h3>
-      <p className="text-xs text-neutral-500">
-        {language === 'ko' ? '연락처 또는 이메일 중 하나는 필수입니다.' : 'Phone or email is required.'}
-      </p>
-      <div>
-        <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1">
-          {language === 'ko' ? '이름' : 'Name'} <span className="text-red-500">*</span>
-        </label>
-        <input type="text" value={guestName} onChange={(e) => onNameChange(e.target.value)}
-          placeholder={language === 'ko' ? '이름을 입력하세요' : 'Enter name'}
-          className="w-full px-3 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm" />
-      </div>
-      <div>
-        <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1">{language === 'ko' ? '연락처' : 'Phone'}</label>
-        <input type="tel" value={guestPhone} onChange={(e) => onPhoneChange(e.target.value)}
-          placeholder="010-0000-0000"
-          className="w-full px-3 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm" />
-      </div>
-      <div>
-        <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1">{language === 'ko' ? '이메일' : 'Email'}</label>
-        <input type="email" value={guestEmail} onChange={(e) => onEmailChange(e.target.value)}
-          placeholder="email@example.com"
-          className="w-full px-3 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm" />
-      </div>
-      <div className="flex gap-2 pt-2">
-        <button type="button" onClick={onBack}
-          className="flex-1 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-600 text-sm font-medium">
-          {language === 'ko' ? '뒤로' : 'Back'}
-        </button>
-        <button type="button" onClick={onSubmit}
-          className="flex-1 py-2.5 rounded-xl bg-primary text-black font-bold text-sm">
-          {language === 'ko' ? '다음' : 'Next'}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 function DepositorStep({ language, depositorName, depositorStepLoading, purchasing, onNameChange, onSubmit, onCancel }: {
   language: string;
@@ -821,7 +640,7 @@ function BankTransferResult({ language, result, onClose }: {
   );
 }
 
-function TicketListContent({ displayTickets, selectedTicket, selectedDiscount, discounts, startDate, activeTab, user, guestInfo, language, t, onSelectTicket, onSelectDiscount, onStartDateChange, onClearGuestInfo, getValidityText, getDiscountText, formatPrice }: {
+function TicketListContent({ displayTickets, selectedTicket, selectedDiscount, discounts, startDate, activeTab, user, language, t, onSelectTicket, onSelectDiscount, onStartDateChange, getValidityText, getDiscountText, formatPrice }: {
   displayTickets: TicketInfo[];
   selectedTicket: TicketInfo | null;
   selectedDiscount: DiscountInfo | null;
@@ -829,28 +648,23 @@ function TicketListContent({ displayTickets, selectedTicket, selectedDiscount, d
   startDate: string;
   activeTab: string;
   user: any;
-  guestInfo: { name: string; phone: string; email: string } | null;
   language: string;
   t: (key: string, params?: Record<string, string>) => string;
   onSelectTicket: (t: TicketInfo) => void;
   onSelectDiscount: (d: DiscountInfo | null) => void;
   onStartDateChange: (d: string) => void;
-  onClearGuestInfo: () => void;
   getValidityText: (t: TicketInfo) => string;
   getDiscountText: (d: DiscountInfo) => string;
   formatPrice: (p: number) => string;
 }) {
   return (
     <div className="space-y-3">
-      {!user && guestInfo && (
-        <div className="flex items-center justify-between p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-          <div className="text-sm text-blue-700 dark:text-blue-300">
-            <span className="font-medium">{guestInfo.name}</span>
-            <span className="text-blue-500 dark:text-blue-400 ml-2 text-xs">{guestInfo.phone || guestInfo.email}</span>
-          </div>
-          <button type="button" onClick={onClearGuestInfo} className="text-xs text-blue-600 dark:text-blue-400 underline">
-            {language === 'ko' ? '변경' : 'Change'}
-          </button>
+      {!user && (
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+          <LogIn size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
+          <p className="text-sm text-amber-700 dark:text-amber-300">
+            {language === 'ko' ? '수강권 구매를 위해서는 로그인이 필요합니다.' : 'Login is required to purchase tickets.'}
+          </p>
         </div>
       )}
 

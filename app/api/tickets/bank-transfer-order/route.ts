@@ -7,7 +7,7 @@ import { createServiceClient } from '@/lib/supabase/server';
  * 계좌이체 신청 주문 생성 (입금 대기).
  * Body: { ticketId, scheduleId?, countOptionIndex?, discountId?, ordererName?, ordererPhone?, ordererEmail?, depositorName? }
  * - 로그인 시: orderer*·depositorName 생략 가능(프로필/이름 사용). 전달 시 그대로 저장.
- * - 비회원(guest): ordererName 필수, ordererPhone 또는 ordererEmail 중 하나 필수. depositorName 생략 시 ordererName 사용.
+ * - 비회원(guest): scheduleId + 1회성 수강권인 경우에만 허용. ordererName 필수, ordererPhone 또는 ordererEmail 중 하나 필수.
  * Returns: orderId, amount, orderName, bankName, bankAccountNumber, bankDepositorName
  */
 export async function POST(request: Request) {
@@ -25,6 +25,41 @@ export async function POST(request: Request) {
       ordererEmail: bodyOrdererEmail,
       depositorName: bodyDepositorName,
     } = body;
+
+    if (!ticketId) {
+      return NextResponse.json({ error: 'ticketId가 필요합니다.' }, { status: 400 });
+    }
+
+    const ticket = await getTicketById(ticketId);
+    if (!ticket) {
+      return NextResponse.json({ error: '티켓을 찾을 수 없습니다.' }, { status: 404 });
+    }
+    if (!ticket.is_on_sale) {
+      return NextResponse.json({ error: '판매 중인 티켓이 아닙니다.' }, { status: 400 });
+    }
+    if (ticket.is_public === false) {
+      return NextResponse.json({ error: '비공개 수강권은 직접 구매할 수 없습니다.' }, { status: 400 });
+    }
+
+    const academyId = ticket.academy_id;
+    if (!academyId) {
+      return NextResponse.json({ error: '학원 정보가 없는 수강권입니다.' }, { status: 400 });
+    }
+
+    const countOpts = (ticket.count_options as { count?: number; price?: number; valid_days?: number | null }[] | null) || [];
+    const hasCountOptions = countOpts.length > 0 && (ticket.ticket_category === 'popup' || ticket.access_group === 'popup');
+    const optIndex = typeof countOptionIndex === 'number' ? countOptionIndex : 0;
+    if (hasCountOptions && (optIndex < 0 || optIndex >= countOpts.length)) {
+      return NextResponse.json({ error: '유효하지 않은 수강권 옵션입니다.' }, { status: 400 });
+    }
+
+    const selectedOption = hasCountOptions && countOpts[optIndex] ? countOpts[optIndex] : null;
+    const optionPrice = selectedOption ? (selectedOption.price ?? ticket.price ?? 0) : (ticket.price ?? 0);
+
+    // 1회성 판별
+    const effectiveCount = selectedOption ? (selectedOption.count ?? 1) : (ticket.total_count ?? 1);
+    const isPeriodTicket = ticket.ticket_type === 'PERIOD';
+    const isOneTimeTicket = !isPeriodTicket && effectiveCount === 1;
 
     let ordererName: string;
     let ordererPhone: string | null = null;
@@ -54,8 +89,8 @@ export async function POST(request: Request) {
       depositorName = bodyDepositorName != null && String(bodyDepositorName).trim()
         ? String(bodyDepositorName).trim()
         : ordererName;
-    } else {
-      // 비회원
+    } else if (scheduleId && isOneTimeTicket) {
+      // 1회성 + 특정 수업 → 비회원 허용
       const name = bodyOrdererName != null ? String(bodyOrdererName).trim() : '';
       const phone = bodyOrdererPhone != null ? String(bodyOrdererPhone).trim() : '';
       const email = bodyOrdererEmail != null ? String(bodyOrdererEmail).trim() : '';
@@ -71,26 +106,11 @@ export async function POST(request: Request) {
       depositorName = bodyDepositorName != null && String(bodyDepositorName).trim()
         ? String(bodyDepositorName).trim()
         : ordererName;
-    }
-
-    if (!ticketId) {
-      return NextResponse.json({ error: 'ticketId가 필요합니다.' }, { status: 400 });
-    }
-
-    const ticket = await getTicketById(ticketId);
-    if (!ticket) {
-      return NextResponse.json({ error: '티켓을 찾을 수 없습니다.' }, { status: 404 });
-    }
-    if (!ticket.is_on_sale) {
-      return NextResponse.json({ error: '판매 중인 티켓이 아닙니다.' }, { status: 400 });
-    }
-    if (ticket.is_public === false) {
-      return NextResponse.json({ error: '비공개 수강권은 직접 구매할 수 없습니다.' }, { status: 400 });
-    }
-
-    const academyId = ticket.academy_id;
-    if (!academyId) {
-      return NextResponse.json({ error: '학원 정보가 없는 수강권입니다.' }, { status: 400 });
+    } else {
+      return NextResponse.json(
+        { error: scheduleId ? '다회권/기간권 구매는 로그인이 필요합니다.' : '수강권 구매를 위해서는 로그인이 필요합니다.' },
+        { status: 401 }
+      );
     }
 
     const { data: academy, error: acError } = await (supabase as any)
@@ -112,16 +132,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
-    const countOpts = (ticket.count_options as { count?: number; price?: number; valid_days?: number | null }[] | null) || [];
-    const hasCountOptions = countOpts.length > 0 && (ticket.ticket_category === 'popup' || ticket.access_group === 'popup');
-    const optIndex = typeof countOptionIndex === 'number' ? countOptionIndex : 0;
-    if (hasCountOptions && (optIndex < 0 || optIndex >= countOpts.length)) {
-      return NextResponse.json({ error: '유효하지 않은 수강권 옵션입니다.' }, { status: 400 });
-    }
-
-    const selectedOption = hasCountOptions && countOpts[optIndex] ? countOpts[optIndex] : null;
-    const optionPrice = selectedOption ? (selectedOption.price ?? ticket.price ?? 0) : (ticket.price ?? 0);
 
     let discountAmount = 0;
     if (discountId) {
@@ -158,7 +168,6 @@ export async function POST(request: Request) {
     }
 
     let classIdForOrder: string | null = null;
-    /** 주문이 표시될 학원: 예약이 출석/신청 관리에 보이는 학원과 동일하게 맞춤(수동 입금확인 목록 정합성) */
     let orderAcademyId = academyId;
     if (scheduleId) {
       const { data: scheduleRow, error: scheduleErr } = await (supabase as any)
@@ -218,7 +227,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '주문 생성에 실패했습니다.' }, { status: 500 });
     }
 
-    // 수업 예약( schedule_id )인 경우: 출석/신청 관리에 반영되도록 booking 선생성 (status=PENDING)
     if (scheduleId && classIdForOrder) {
       const { data: scheduleForBooking } = await (supabase as any)
         .from('schedules')
@@ -246,7 +254,6 @@ export async function POST(request: Request) {
           .insert(bookingInsert);
         if (bookErr) {
           console.error('bank-transfer-order: booking pre-create error', bookErr);
-          // 주문은 이미 생성됐으므로 롤백하지 않고 진행. 입금 확인 시 기존처럼 booking 생성됨.
         }
       }
     }
