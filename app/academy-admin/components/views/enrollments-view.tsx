@@ -855,7 +855,8 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
 
                     const isAdminAdded = enrollment.is_admin_added === true;
                     const isNonMember = !user && (enrollment.guest_name || enrollment.guest_phone || enrollment.guest_email);
-                    const isGuest = isAdminAdded;
+                    const isOnSiteRegistration = isAdminAdded && !!user;
+                    const isGuest = isAdminAdded && !user;
                     const showAsNonMember = isNonMember && !isAdminAdded;
                     const displayName = user?.name || enrollment.guest_name || '(이름 없음)';
                     const displayPhone = user?.phone || enrollment.guest_phone || '';
@@ -879,6 +880,11 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                                 <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                   {displayName}
                                 </span>
+                                {isOnSiteRegistration && (
+                                  <span className="text-[10px] px-1.5 py-0.5 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 rounded font-medium">
+                                    현장신청
+                                  </span>
+                                )}
                                 {isGuest && (
                                   <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded font-medium">
                                     게스트
@@ -918,8 +924,12 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                         </td>
                         <td className="px-4 py-3">
                           {enrollment.is_admin_added ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
-                              관리자 권한
+                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                              isOnSiteRegistration
+                                ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300'
+                                : 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
+                            }`}>
+                              {isOnSiteRegistration ? '현장신청' : '게스트'}
                             </span>
                           ) : enrollment.user_tickets?.tickets ? (
                             <div className="min-w-0">

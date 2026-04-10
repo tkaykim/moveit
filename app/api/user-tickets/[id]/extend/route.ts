@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
+import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 
 /**
  * POST: 관리자 임의 연장
@@ -13,12 +14,13 @@ export async function POST(
   try {
     const { id: userTicketId } = await params;
     const supabase = await createClient() as any;
+    const authUser = await getAuthenticatedUser(request);
     const body = await request.json();
     const { extend_days, new_expiry_date } = body;
 
     const { data: ut, error: fetchErr } = await supabase
       .from('user_tickets')
-      .select('id, expiry_date, ticket_id, tickets(academy_id)')
+      .select('id, user_id, expiry_date, ticket_id, tickets(academy_id)')
       .eq('id', userTicketId)
       .single();
     if (fetchErr || !ut) {
@@ -51,6 +53,7 @@ export async function POST(
     if (academyId) {
       insertEnrollmentActivityLog({
         academy_id: academyId,
+        user_id: ut.user_id ?? null,
         user_ticket_id: userTicketId,
         action: 'ADMIN_EXTEND',
         payload: {
@@ -58,6 +61,7 @@ export async function POST(
           new_expiry: nextExpiry,
           extend_days: extend_days ?? null,
         },
+        actor_user_id: authUser?.id ?? null,
       }, supabase).catch(() => {});
     }
 

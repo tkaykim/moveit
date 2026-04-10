@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
+import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 
 /**
  * POST /api/bookings/admin-add-guest
@@ -16,6 +17,7 @@ import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 export async function POST(request: Request) {
   try {
     const supabase = await createClient() as any;
+    const authUser = await getAuthenticatedUser(request);
     const body = await request.json();
     const { scheduleId, academyId, guestName, guestPhone, adminNote } = body;
 
@@ -127,6 +129,7 @@ export async function POST(request: Request) {
         guest_name: String(guestName).trim(),
         guest_phone: String(guestPhone).trim(),
       },
+      actor_user_id: authUser?.id ?? null,
     }, supabase).catch(() => {});
 
     return NextResponse.json({

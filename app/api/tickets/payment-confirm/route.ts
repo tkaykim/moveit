@@ -225,6 +225,7 @@ export async function POST(request: Request) {
         expiry_date: expiryDateStr,
         order_id: orderId,
       },
+      actor_user_id: order.user_id,
     }, supabase).catch(() => {});
 
     // 동시 요청: 다른 요청이 이미 revenue를 생성했으면 방금 만든 user_ticket 롤백 후 기존 결과 반환
@@ -395,6 +396,7 @@ export async function POST(request: Request) {
             user_ticket_id: userTicket.id,
             action: 'COUNT_DEDUCT',
             payload: { delta: -1, class_id: resolvedClassId, schedule_id: order.schedule_id, via: 'payment_confirm' },
+            actor_user_id: order.user_id,
           }, supabase).catch(() => {});
 
           // 활동 로그: 수강권 소진
@@ -405,6 +407,7 @@ export async function POST(request: Request) {
               user_ticket_id: userTicket.id,
               action: 'TICKET_EXHAUSTED',
               payload: { class_id: resolvedClassId, via: 'payment_confirm' },
+              actor_user_id: order.user_id,
             }, supabase).catch(() => {});
           }
         } catch (e: any) {
@@ -447,6 +450,7 @@ export async function POST(request: Request) {
             booking_id: booking.id,
             action: 'ENROLL',
             payload: { schedule_id: order.schedule_id, class_id: resolvedClassId, via: 'payment_confirm' },
+            actor_user_id: order.user_id,
           }, supabase).catch(() => {});
         }
         }

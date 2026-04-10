@@ -581,6 +581,7 @@ export type Database = {
           payload: Json | null
           note: string | null
           actor_user_id: string | null
+          memo: string | null
           created_at: string
         }
         Insert: {
@@ -594,6 +595,7 @@ export type Database = {
           payload?: Json | null
           note?: string | null
           actor_user_id?: string | null
+          memo?: string | null
           created_at?: string
         }
         Update: {
@@ -607,6 +609,7 @@ export type Database = {
           payload?: Json | null
           note?: string | null
           actor_user_id?: string | null
+          memo?: string | null
           created_at?: string
         }
         Relationships: [

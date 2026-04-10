@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { RefreshCw, Loader2, FileText, Ticket, MinusCircle, PlusCircle, Clock, ShieldCheck, UserPlus, CheckCircle, XCircle, Search } from 'lucide-react';
+import { RefreshCw, Loader2, FileText, Ticket, MinusCircle, PlusCircle, Clock, ShieldCheck, UserPlus, CheckCircle, XCircle, Search, MessageSquare, Pencil, Save, X } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 
 interface ActivityLogItem {
@@ -16,6 +16,7 @@ interface ActivityLogItem {
   action_label: string;
   payload: Record<string, unknown> | null;
   note: string | null;
+  memo: string | null;
   actor_user_id: string | null;
   actor_name: string | null;
   user_name: string;
@@ -86,7 +87,11 @@ export function ActivityLogSection({ academyId }: { academyId: string }) {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [backfilling, setBackfilling] = useState(false);
   const [backfillDone, setBackfillDone] = useState(false);
+  const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
+  const [memoText, setMemoText] = useState('');
+  const [savingMemo, setSavingMemo] = useState(false);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const memoInputRef = useRef<HTMLTextAreaElement | null>(null);
   const limit = 30;
 
   useEffect(() => {
@@ -151,6 +156,45 @@ export function ActivityLogSection({ academyId }: { academyId: string }) {
       setBackfilling(false);
     }
   }, [academyId, load]);
+
+  const saveMemo = useCallback(async (logId: string, memo: string) => {
+    setSavingMemo(true);
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+      }
+
+      const res = await fetch(`/api/academy-admin/${academyId}/activity-log`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ logId, memo }),
+      });
+      if (!res.ok) throw new Error('메모 저장 실패');
+
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === logId ? { ...item, memo: memo.trim() || null } : item
+        )
+      );
+      setEditingMemoId(null);
+    } catch (e) {
+      console.error(e);
+      alert('메모 저장에 실패했습니다.');
+    } finally {
+      setSavingMemo(false);
+    }
+  }, [academyId]);
+
+  const startEditMemo = useCallback((item: ActivityLogItem) => {
+    setEditingMemoId(item.id);
+    setMemoText(item.memo || '');
+    setTimeout(() => memoInputRef.current?.focus(), 50);
+  }, []);
 
   useEffect(() => {
     load();
@@ -232,6 +276,12 @@ export function ActivityLogSection({ academyId }: { academyId: string }) {
                 <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">회원</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">처리자</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">비고</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">
+                  <span className="inline-flex items-center gap-1">
+                    <MessageSquare size={14} />
+                    메모
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -240,6 +290,7 @@ export function ActivityLogSection({ academyId }: { academyId: string }) {
                 const noteStr = row.note || '';
                 const remarkParts = [noteStr, payloadStr].filter(Boolean);
                 const remark = remarkParts.join(' · ') || '-';
+                const isEditing = editingMemoId === row.id;
 
                 return (
                   <tr key={row.id} className="border-b border-gray-50 dark:border-neutral-800/50 hover:bg-gray-50/50 dark:hover:bg-neutral-800/30">
@@ -265,9 +316,72 @@ export function ActivityLogSection({ academyId }: { academyId: string }) {
                       })()}
                     </td>
                     <td className="py-2.5 px-4 text-gray-700 dark:text-gray-300">{row.user_name}</td>
-                    <td className="py-2.5 px-4 text-gray-600 dark:text-gray-400">{row.actor_name ?? '-'}</td>
-                    <td className="py-2.5 px-4 text-gray-500 dark:text-gray-500 text-xs max-w-[320px]" title={remark}>
+                    <td className="py-2.5 px-4 text-gray-600 dark:text-gray-400">
+                      {row.actor_name === '시스템' ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 italic">시스템</span>
+                      ) : (
+                        row.actor_name ?? '-'
+                      )}
+                    </td>
+                    <td className="py-2.5 px-4 text-gray-500 dark:text-gray-500 text-xs max-w-[260px]" title={remark}>
                       <span className="line-clamp-2">{remark}</span>
+                    </td>
+                    <td className="py-2.5 px-4 text-xs max-w-[220px]">
+                      {isEditing ? (
+                        <div className="flex items-start gap-1">
+                          <textarea
+                            ref={memoInputRef}
+                            value={memoText}
+                            onChange={(e) => setMemoText(e.target.value)}
+                            rows={2}
+                            className="flex-1 text-xs border border-blue-300 dark:border-blue-600 rounded px-2 py-1 bg-white dark:bg-neutral-800 text-gray-800 dark:text-gray-200 resize-none focus:ring-1 focus:ring-blue-400 outline-none"
+                            placeholder="메모 입력..."
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                saveMemo(row.id, memoText);
+                              }
+                              if (e.key === 'Escape') {
+                                setEditingMemoId(null);
+                              }
+                            }}
+                            disabled={savingMemo}
+                          />
+                          <div className="flex flex-col gap-0.5">
+                            <button
+                              type="button"
+                              onClick={() => saveMemo(row.id, memoText)}
+                              disabled={savingMemo}
+                              className="p-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 disabled:opacity-50"
+                              title="저장"
+                            >
+                              <Save size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingMemoId(null)}
+                              disabled={savingMemo}
+                              className="p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                              title="취소"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          className="group flex items-center gap-1 cursor-pointer min-h-[24px]"
+                          onClick={() => startEditMemo(row)}
+                          title="클릭하여 메모 편집"
+                        >
+                          {row.memo ? (
+                            <span className="text-gray-600 dark:text-gray-400 line-clamp-2">{row.memo}</span>
+                          ) : (
+                            <span className="text-gray-300 dark:text-gray-600 italic">메모 추가</span>
+                          )}
+                          <Pencil size={12} className="flex-shrink-0 text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );

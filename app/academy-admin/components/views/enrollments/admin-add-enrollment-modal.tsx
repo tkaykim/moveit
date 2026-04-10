@@ -24,7 +24,7 @@ export function AdminAddEnrollmentModal({
   initialScheduleId,
   dateFilter,
 }: AdminAddEnrollmentModalProps) {
-  const [addMode, setAddMode] = useState<AddMode>('guest');
+  const [addMode, setAddMode] = useState<AddMode>('member');
   const [scheduleId, setScheduleId] = useState<string | null>(initialScheduleId ?? null);
   const [students, setStudents] = useState<any[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
@@ -111,7 +111,7 @@ export function AdminAddEnrollmentModal({
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || '수기 추가에 실패했습니다.');
-      alert(json.message || '수강 명단에 추가되었습니다.');
+      alert(json.message || '현장신청으로 수강 명단에 추가되었습니다.');
       onSuccess();
       onClose();
     } catch (e: any) {
@@ -185,26 +185,26 @@ export function AdminAddEnrollmentModal({
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            수강권 사용 없이 관리자가 수강 명단에 넣습니다. 회원 선택 또는 이름·연락처·사유를 직접 입력하세요.
+            수강권 사용 없이 관리자가 수강 명단에 넣습니다. 기존 회원은 현장신청, 비회원은 게스트로 추가하세요.
           </p>
 
-          {/* 추가 방식: 게스트(이름·연락처·사유) / 회원 선택 */}
+          {/* 추가 방식: 현장신청(회원 검색) / 게스트(이름·연락처·사유) */}
           <div className="flex gap-2 p-1 bg-gray-100 dark:bg-neutral-800 rounded-lg">
-            <button
-              type="button"
-              onClick={() => setAddMode('guest')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-colors ${addMode === 'guest' ? 'bg-white dark:bg-neutral-700 shadow text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
-            >
-              <FileText size={16} />
-              이름·연락처·사유 입력
-            </button>
             <button
               type="button"
               onClick={() => setAddMode('member')}
               className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-colors ${addMode === 'member' ? 'bg-white dark:bg-neutral-700 shadow text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
             >
               <User size={16} />
-              회원 검색
+              현장신청
+            </button>
+            <button
+              type="button"
+              onClick={() => setAddMode('guest')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-colors ${addMode === 'guest' ? 'bg-white dark:bg-neutral-700 shadow text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+            >
+              <FileText size={16} />
+              게스트
             </button>
           </div>
 

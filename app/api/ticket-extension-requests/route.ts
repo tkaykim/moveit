@@ -109,6 +109,7 @@ export async function POST(request: Request) {
           days: request_type === 'EXTENSION' ? extension_days : pauseDays,
           reason: reason?.trim(),
         },
+        actor_user_id: authUser.id,
       }, supabase).catch(() => {});
     }
 

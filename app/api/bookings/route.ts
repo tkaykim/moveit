@@ -293,6 +293,7 @@ export async function POST(request: Request) {
               user_ticket_id: selectedUserTicketId,
               action: 'COUNT_DEDUCT',
               payload: { delta: -1, class_id: resolvedClassId, schedule_id: scheduleId ?? null },
+              actor_user_id: user.id,
             }).catch(() => {});
 
             // 활동 로그: 수강권 소진 (remaining_count가 0이 되었을 때)
@@ -303,6 +304,7 @@ export async function POST(request: Request) {
                 user_ticket_id: selectedUserTicketId,
                 action: 'TICKET_EXHAUSTED',
                 payload: { class_id: resolvedClassId },
+                actor_user_id: user.id,
               }).catch(() => {});
             }
           }
@@ -398,6 +400,7 @@ export async function POST(request: Request) {
         class_id: resolvedClassId,
         ...(selectedUserTicketId ? { ticket_used: true } : {}),
       },
+      actor_user_id: user.id,
     }).catch(() => {});
 
     // 푸시 알림 발송 (비동기, 실패해도 예약은 성공)

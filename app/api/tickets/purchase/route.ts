@@ -182,6 +182,7 @@ export async function POST(request: Request) {
           expiry_date: expiryDateStr,
           price: finalPrice,
         },
+        actor_user_id: user.id,
       }).catch(() => {});
     }
 

@@ -4,6 +4,9 @@
  *
  * POST /api/academy-admin/[academyId]/activity-log
  * 클라이언트에서 활동 로그 기록 요청
+ *
+ * PATCH /api/academy-admin/[academyId]/activity-log
+ * 활동 로그 메모 수정
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
@@ -73,7 +76,7 @@ export async function GET(
     }
 
     if (search) {
-      const orFilters = [`note.ilike.%${search}%`];
+      const orFilters = [`note.ilike.%${search}%`, `memo.ilike.%${search}%`];
       if (matchedUserIds && matchedUserIds.length > 0) {
         orFilters.push(`user_id.in.(${matchedUserIds.join(',')})`);
       }
@@ -118,7 +121,7 @@ export async function GET(
         user_name: userName,
         actor_name: r.actor_user_id
           ? (userMap[r.actor_user_id]?.name || userMap[r.actor_user_id]?.nickname || '-')
-          : null,
+          : '시스템',
       };
     });
 
@@ -181,6 +184,61 @@ export async function POST(
       return NextResponse.json({ error: (e as Error).message }, { status: 403 });
     }
     console.error('activity-log POST error:', e);
+    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ academyId: string }> }
+) {
+  try {
+    const { academyId } = await params;
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+    }
+    await assertAcademyAdmin(academyId, user.id);
+
+    const body = await request.json();
+    const { logId, memo } = body;
+
+    if (!logId) {
+      return NextResponse.json({ error: '로그 ID가 필요합니다.' }, { status: 400 });
+    }
+    if (typeof memo !== 'string') {
+      return NextResponse.json({ error: '메모 내용이 필요합니다.' }, { status: 400 });
+    }
+
+    const supabase = createServiceClient() as any;
+
+    const { data: logRow, error: fetchErr } = await supabase
+      .from('enrollment_activity_log')
+      .select('id, academy_id')
+      .eq('id', logId)
+      .eq('academy_id', academyId)
+      .single();
+
+    if (fetchErr || !logRow) {
+      return NextResponse.json({ error: '로그를 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    const { error: updateErr } = await supabase
+      .from('enrollment_activity_log')
+      .update({ memo: memo.trim() || null })
+      .eq('id', logId);
+
+    if (updateErr) {
+      console.error('[PATCH activity-log]', updateErr);
+      return NextResponse.json({ error: '메모 저장에 실패했습니다.' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (e: unknown) {
+    if (e && typeof e === 'object' && 'message' in e && (e as Error).message === '학원 관리자 권한이 필요합니다.') {
+      return NextResponse.json({ error: (e as Error).message }, { status: 403 });
+    }
+    console.error('activity-log PATCH error:', e);
     return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });
   }
 }
