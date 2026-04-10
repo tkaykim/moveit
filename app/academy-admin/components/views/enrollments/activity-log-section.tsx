@@ -20,6 +20,8 @@ interface ActivityLogItem {
   actor_user_id: string | null;
   actor_name: string | null;
   user_name: string;
+  user_phone: string | null;
+  user_email: string | null;
   created_at: string;
 }
 
@@ -315,7 +317,16 @@ export function ActivityLogSection({ academyId }: { academyId: string }) {
                         );
                       })()}
                     </td>
-                    <td className="py-2.5 px-4 text-gray-700 dark:text-gray-300">{row.user_name}</td>
+                    <td className="py-2.5 px-4">
+                      <div className="text-gray-700 dark:text-gray-300">{row.user_name}</div>
+                      {(row.user_phone || row.user_email) && (
+                        <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 leading-tight">
+                          {row.user_phone && <span>{row.user_phone}</span>}
+                          {row.user_phone && row.user_email && <span> · </span>}
+                          {row.user_email && <span>{row.user_email}</span>}
+                        </div>
+                      )}
+                    </td>
                     <td className="py-2.5 px-4 text-gray-600 dark:text-gray-400">
                       {row.actor_name === '시스템' ? (
                         <span className="inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 italic">시스템</span>

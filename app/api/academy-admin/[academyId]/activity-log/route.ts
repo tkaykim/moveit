@@ -96,26 +96,23 @@ export async function GET(
     const actorIds = [...new Set(list.map((r: any) => r.actor_user_id).filter(Boolean))];
     const allIds = [...new Set([...userIds, ...actorIds])];
 
-    let userMap: Record<string, { name?: string; nickname?: string; email?: string }> = {};
+    let userMap: Record<string, { name?: string; nickname?: string; email?: string; phone?: string }> = {};
     if (allIds.length > 0) {
       const { data: usersData } = await supabase
         .from('users')
-        .select('id, name, nickname, email')
+        .select('id, name, nickname, email, phone')
         .in('id', allIds);
       if (usersData) {
         userMap = Object.fromEntries(usersData.map((u: any) => [u.id, u]));
       }
     }
 
-    const needBookingLookup = list.filter(
-      (r: any) => !r.user_id && !r.payload?.guest_name && r.booking_id
-    );
-    let bookingMap: Record<string, { user_id?: string; guest_name?: string; guest_phone?: string }> = {};
-    if (needBookingLookup.length > 0) {
-      const bookingIds = [...new Set(needBookingLookup.map((r: any) => r.booking_id))];
+    const bookingIds = [...new Set(list.filter((r: any) => !r.user_id && r.booking_id).map((r: any) => r.booking_id))];
+    let bookingMap: Record<string, { user_id?: string; guest_name?: string; guest_phone?: string; guest_email?: string }> = {};
+    if (bookingIds.length > 0) {
       const { data: bookingsData } = await supabase
         .from('bookings')
-        .select('id, user_id, guest_name, guest_phone')
+        .select('id, user_id, guest_name, guest_phone, guest_email')
         .in('id', bookingIds);
       if (bookingsData) {
         bookingMap = Object.fromEntries(bookingsData.map((b: any) => [b.id, b]));
@@ -124,7 +121,7 @@ export async function GET(
         if (missingUserIds.length > 0) {
           const { data: extraUsers } = await supabase
             .from('users')
-            .select('id, name, nickname, email')
+            .select('id, name, nickname, email, phone')
             .in('id', [...new Set(missingUserIds)]);
           if (extraUsers) {
             for (const u of extraUsers) userMap[u.id] = u;
@@ -135,24 +132,40 @@ export async function GET(
 
     const items = list.map((r: any) => {
       let userName = '-';
+      let userPhone: string | null = null;
+      let userEmail: string | null = null;
+
       if (r.user_id) {
         const u = userMap[r.user_id];
         userName = u?.name || u?.nickname || u?.email || '-';
-      } else if (r.payload?.guest_name) {
-        userName = `${r.payload.guest_name} (비회원)`;
-      } else if (r.booking_id && bookingMap[r.booking_id]) {
-        const bk = bookingMap[r.booking_id];
-        if (bk.user_id && userMap[bk.user_id]) {
-          const u = userMap[bk.user_id];
-          userName = u?.name || u?.nickname || u?.email || '-';
-        } else if (bk.guest_name) {
-          userName = `${bk.guest_name} (비회원)`;
+        userPhone = u?.phone || null;
+        userEmail = u?.email || null;
+      } else {
+        const guestName = r.payload?.guest_name || (r.booking_id && bookingMap[r.booking_id]?.guest_name) || null;
+        const guestPhone = r.payload?.guest_phone || (r.booking_id && bookingMap[r.booking_id]?.guest_phone) || null;
+        const guestEmail = r.payload?.guest_email || (r.booking_id && bookingMap[r.booking_id]?.guest_email) || null;
+
+        if (r.booking_id && bookingMap[r.booking_id]?.user_id) {
+          const bkUserId = bookingMap[r.booking_id].user_id!;
+          const u = userMap[bkUserId];
+          if (u) {
+            userName = u.name || u.nickname || u.email || '-';
+            userPhone = u.phone || null;
+            userEmail = u.email || null;
+          }
+        } else if (guestName) {
+          userName = `${guestName} (비회원)`;
+          userPhone = guestPhone;
+          userEmail = guestEmail;
         }
       }
+
       return {
         ...r,
         action_label: ACTION_LABELS[r.action] || r.action,
         user_name: userName,
+        user_phone: userPhone,
+        user_email: userEmail,
         actor_name: r.actor_user_id
           ? (userMap[r.actor_user_id]?.name || userMap[r.actor_user_id]?.nickname || '-')
           : '시스템',
