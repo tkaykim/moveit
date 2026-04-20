@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { LanguageToggle } from '@/components/common/language-toggle';
 import { searchAll, SearchResult } from '@/lib/utils/search';
 import { Academy, Dancer } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SearchResultsViewProps {
   query: string;
@@ -18,11 +19,14 @@ export const SearchResultsView = ({ query, onBack, onAcademyClick, onDancerClick
   const [results, setResults] = useState<SearchResult>({ academies: [], instructors: [], genres: [] });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'academies' | 'instructors'>('all');
+  const { user } = useAuth();
 
   useEffect(() => {
     async function performSearch() {
       setLoading(true);
-      const searchResults = await searchAll(query);
+      // P0-1 (2026-04-20): pass user.id so search restricts to joined academies when
+      // NEXT_PUBLIC_HIDE_PUBLIC_ACADEMIES is enabled.
+      const searchResults = await searchAll(query, user?.id);
       setResults(searchResults);
       setLoading(false);
     }
@@ -33,7 +37,7 @@ export const SearchResultsView = ({ query, onBack, onAcademyClick, onDancerClick
       setResults({ academies: [], instructors: [], genres: [] });
       setLoading(false);
     }
-  }, [query]);
+  }, [query, user?.id]);
 
   const totalResults = results.academies.length + results.instructors.length;
 

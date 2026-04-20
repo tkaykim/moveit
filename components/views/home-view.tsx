@@ -11,6 +11,7 @@ import { LanguageToggle } from '@/components/common/language-toggle';
 import { BannerCarousel } from '@/components/banner/banner-carousel';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useAuth } from '@/contexts/AuthContext';
 import { NotificationBadge } from '@/components/notifications/notification-badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -69,6 +70,10 @@ const AcademyListSkeleton = () => (
 export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeViewProps) => {
   const { t, language } = useLocale();
   const { translateTexts, isEnglish } = useTranslation();
+  const { user } = useAuth();
+  // P0-1 (2026-04-20): hide public academy discovery by default. Set
+  // NEXT_PUBLIC_HIDE_PUBLIC_ACADEMIES="false" to restore the original behavior.
+  const hidePublicAcademies = process.env.NEXT_PUBLIC_HIDE_PUBLIC_ACADEMIES !== 'false';
   const [searchQuery, setSearchQuery] = useState('');
   const [recentAcademies, setRecentAcademies] = useState<Academy[]>([]);
   const [nearbyAcademies, setNearbyAcademies] = useState<Academy[]>([]);
@@ -160,12 +165,41 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
         const supabase = getSupabaseClient();
         if (!supabase) return;
 
-        const { data, error } = await (supabase as any)
+        // P0-1: restrict to joined academies when flag is on.
+        let joinedIds: string[] | null = null;
+        if (hidePublicAcademies) {
+          if (!user) {
+            if (isMounted) {
+              setNearbyAcademies([]);
+              setAcademiesLoading(false);
+            }
+            return;
+          }
+          const { data: memberships, error: memberErr } = await (supabase as any)
+            .from('academy_students')
+            .select('academy_id')
+            .eq('user_id', user.id);
+          if (memberErr) throw memberErr;
+          joinedIds = Array.from(new Set((memberships || []).map((m: any) => m.academy_id).filter(Boolean)));
+          if (joinedIds.length === 0) {
+            if (isMounted) {
+              setNearbyAcademies([]);
+              setAcademiesLoading(false);
+            }
+            return;
+          }
+        }
+
+        let query = (supabase as any)
           .from('academies')
           .select(`id, slug, name_kr, name_en, tags, logo_url, address, images`)
           .eq('is_active', true)
           .limit(6)
           .order('created_at', { ascending: false });
+        if (joinedIds && joinedIds.length > 0) {
+          query = query.in('id', joinedIds);
+        }
+        const { data, error } = await query;
 
         if (error) throw error;
         if (!isMounted) return;
@@ -384,11 +418,11 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
     loadBanners();
     loadNearbyAcademies();
     loadHotInstructors();
-    
+
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [user, hidePublicAcademies]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -631,10 +665,14 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
         </div>
       )}
 
-      {/* 주변 학원 */}
+      {/* 주변 학원 / 내 학원 */}
       <div className="mt-8">
         <div className="flex items-center justify-between px-5 mb-3">
-          <h2 className="text-lg font-bold text-black dark:text-white">{language === 'en' ? 'Nearby Academies' : '주변 댄스학원'}</h2>
+          <h2 className="text-lg font-bold text-black dark:text-white">
+            {hidePublicAcademies
+              ? (language === 'en' ? 'My Academies' : '내 학원')
+              : (language === 'en' ? 'Nearby Academies' : '주변 댄스학원')}
+          </h2>
           <button 
             onClick={() => onNavigate('ACADEMY')}
             className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400"
@@ -694,7 +732,15 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           </div>
         ) : (
           <div className="px-5 text-center py-6 text-neutral-400 text-sm">
-            {language === 'en' ? 'No academies found' : '학원이 없습니다'}
+            {hidePublicAcademies && !user
+              ? (language === 'en'
+                  ? 'Log in to see academies you have joined.'
+                  : '로그인하면 내가 등록한 학원을 볼 수 있어요.')
+              : hidePublicAcademies
+                ? (language === 'en'
+                    ? 'You have not joined any academies yet.'
+                    : '등록한 학원이 없어요.')
+                : (language === 'en' ? 'No academies found' : '학원이 없습니다')}
           </div>
         )}
       </div>

@@ -7,27 +7,56 @@ export interface SearchResult {
   genres: string[];
 }
 
-export async function searchAll(query: string): Promise<SearchResult> {
+// P0-1 (2026-04-20): When NEXT_PUBLIC_HIDE_PUBLIC_ACADEMIES !== "false", academy search
+// is restricted to academies the user has joined. Set the env var to "false" to restore
+// open search behavior. Instructors and genres are intentionally unfiltered for this P0.
+const hidePublicAcademies = () => process.env.NEXT_PUBLIC_HIDE_PUBLIC_ACADEMIES !== 'false';
+
+async function getJoinedAcademyIds(supabase: any, userId: string | undefined | null): Promise<string[] | null> {
+  if (!hidePublicAcademies()) return null;
+  if (!userId) return [];
+  const { data, error } = await supabase
+    .from('academy_students')
+    .select('academy_id')
+    .eq('user_id', userId);
+  if (error) return [];
+  return Array.from(new Set((data || []).map((m: any) => m.academy_id).filter(Boolean))) as string[];
+}
+
+export async function searchAll(query: string, userId?: string | null): Promise<SearchResult> {
   const supabase = getSupabaseClient() as any;
   if (!supabase || !query.trim()) {
     return { academies: [], instructors: [], genres: [] };
   }
 
   const searchTerm = query.trim().toLowerCase();
-  
-  try {
-    // 학원 검색 (이름, 태그)
-    const { data: academiesData, error: academiesError } = await supabase
-      .from('academies')
-      .select(`
-        *,
-        classes (*)
-      `)
-      .eq('is_active', true)
-      .or(`name_kr.ilike.%${searchTerm}%,name_en.ilike.%${searchTerm}%,tags.ilike.%${searchTerm}%`)
-      .limit(20);
 
-    if (academiesError) throw academiesError;
+  try {
+    const joinedIds = await getJoinedAcademyIds(supabase, userId);
+    // Flag ON but no joined academies → skip the academies query entirely.
+    if (joinedIds !== null && joinedIds.length === 0) {
+      // Still run instructor + genre searches below.
+    }
+
+    // 학원 검색 (이름, 태그)
+    let academiesData: any[] | null = [];
+    if (joinedIds === null || joinedIds.length > 0) {
+      let aQuery = supabase
+        .from('academies')
+        .select(`
+          *,
+          classes (*)
+        `)
+        .eq('is_active', true)
+        .or(`name_kr.ilike.%${searchTerm}%,name_en.ilike.%${searchTerm}%,tags.ilike.%${searchTerm}%`)
+        .limit(20);
+      if (joinedIds && joinedIds.length > 0) {
+        aQuery = aQuery.in('id', joinedIds);
+      }
+      const { data, error: academiesError } = await aQuery;
+      if (academiesError) throw academiesError;
+      academiesData = data;
+    }
 
     // 강사 검색 (이름, 특기)
     const { data: instructorsData, error: instructorsError } = await supabase
@@ -118,13 +147,16 @@ export async function searchAll(query: string): Promise<SearchResult> {
   }
 }
 
-export async function searchByGenre(genre: string): Promise<SearchResult> {
+export async function searchByGenre(genre: string, userId?: string | null): Promise<SearchResult> {
   const supabase = getSupabaseClient() as any;
   if (!supabase || !genre) {
     return { academies: [], instructors: [], genres: [] };
   }
 
   try {
+    const joinedIds = await getJoinedAcademyIds(supabase, userId);
+    const joinedSet = joinedIds ? new Set(joinedIds) : null;
+
     // 장르로 클래스 검색
     const { data: classesData, error: classesError } = await supabase
       .from('classes')
@@ -144,6 +176,8 @@ export async function searchByGenre(genre: string): Promise<SearchResult> {
     (classesData || []).forEach((cls: any) => {
       // 학원 수집 (is_active가 true인 것만)
       if (cls.academies && cls.academies.is_active !== false && !academyMap.has(cls.academies.id)) {
+        // P0-1: when flag is on, restrict to joined academies only.
+        if (joinedSet && !joinedSet.has(cls.academies.id)) return;
         academyMap.set(cls.academies.id, cls.academies);
       }
       // 강사 수집

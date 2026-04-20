@@ -161,10 +161,15 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
     }
   }, [sortOption, userLocation]);
 
+  // P0-1 (2026-04-20): When NEXT_PUBLIC_HIDE_PUBLIC_ACADEMIES !== "false", restrict the
+  // academy list to ones the user has joined (via academy_students). Set env var to "false"
+  // to restore the original public discovery behavior.
+  const hidePublicAcademies = process.env.NEXT_PUBLIC_HIDE_PUBLIC_ACADEMIES !== 'false';
+
   // Phase 1: 학원 기본 정보 로드 (가격 없이)
   useEffect(() => {
     let isMounted = true;
-    
+
     async function loadAcademies() {
       try {
         const supabase = getSupabaseClient();
@@ -173,20 +178,51 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
           return;
         }
 
-        const { data, error } = await supabase
+        // P0-1: Restrict to joined academies when flag is on.
+        let joinedIds: string[] | null = null;
+        if (hidePublicAcademies) {
+          if (!user) {
+            // Logged-out users see nothing in the restricted mode. A guide message
+            // is rendered in the empty-state branch below.
+            if (isMounted) {
+              setAcademies([]);
+              setInitialLoading(false);
+            }
+            return;
+          }
+          const { data: memberships, error: memberErr } = await supabase
+            .from('academy_students')
+            .select('academy_id')
+            .eq('user_id', user.id);
+          if (memberErr) throw memberErr;
+          joinedIds = Array.from(new Set((memberships || []).map((m: any) => m.academy_id).filter(Boolean)));
+          if (joinedIds.length === 0) {
+            if (isMounted) {
+              setAcademies([]);
+              setInitialLoading(false);
+            }
+            return;
+          }
+        }
+
+        let query = supabase
           .from('academies')
           .select(`id, slug, name_kr, name_en, tags, logo_url, address, images, created_at`)
           .eq('is_active', true)
           .order('created_at', { ascending: false })
           .limit(200);
+        if (joinedIds && joinedIds.length > 0) {
+          query = query.in('id', joinedIds);
+        }
+        const { data, error } = await query;
 
         if (error) throw error;
         if (!isMounted) return;
-        
+
         const transformed = (data || []).map((dbAcademy: any) => {
           return transformAcademy({ ...dbAcademy, classes: [] });
         });
-        
+
         if (isMounted) {
           setAcademies(transformed);
           setInitialLoading(false);
@@ -197,10 +233,10 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
         if (isMounted) setInitialLoading(false);
       }
     }
-    
+
     loadAcademies();
     return () => { isMounted = false; };
-  }, []);
+  }, [user, hidePublicAcademies]);
 
   // Phase 2: 가격 정보 백그라운드 로드
   useEffect(() => {
@@ -504,9 +540,17 @@ export const AcademyListView = ({ onAcademyClick }: AcademyListViewProps) => {
           <div className="text-center py-16 text-neutral-500">
             <MapPin className="mx-auto mb-3 text-neutral-400" size={40} />
             <p className="text-sm">
-              {searchQuery || activeFilterCount > 0 
-                ? (language === 'en' ? 'No results found.' : '검색 결과가 없습니다.') 
-                : t('academy.noAcademies')}
+              {searchQuery || activeFilterCount > 0
+                ? (language === 'en' ? 'No results found.' : '검색 결과가 없습니다.')
+                : hidePublicAcademies && !user
+                  ? (language === 'en'
+                      ? 'Log in to see academies you have joined.'
+                      : '로그인하면 내가 등록한 학원을 볼 수 있어요.')
+                  : hidePublicAcademies
+                    ? (language === 'en'
+                        ? 'You have not joined any academies yet.'
+                        : '등록한 학원이 없어요.')
+                    : t('academy.noAcademies')}
             </p>
           </div>
         ) : (
