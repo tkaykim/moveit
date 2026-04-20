@@ -14,6 +14,7 @@ import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getTicketById } from '@/lib/db/tickets';
+import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 
 function normalizePhone(value: string | null | undefined): string {
   if (value == null || typeof value !== 'string') return '';
@@ -31,8 +32,9 @@ async function mergeGuestUsers(
   realUserId: string,
   normalizedPhone: string,
   profileEmail: string
-) {
+): Promise<{ mergedBookingCount: number; affectedAcademyIds: string[]; mergedGuestCount: number }> {
   let mergedCount = 0;
+  const affectedAcademyIds = new Set<string>();
 
   const guestUserIds: string[] = [];
 
@@ -70,7 +72,9 @@ async function mergeGuestUsers(
     }
   }
 
-  if (guestUserIds.length === 0) return mergedCount;
+  if (guestUserIds.length === 0) {
+    return { mergedBookingCount: 0, affectedAcademyIds: [], mergedGuestCount: 0 };
+  }
 
   for (const guestId of guestUserIds) {
     const { data: updatedBookings } = await supabase
@@ -92,6 +96,7 @@ async function mergeGuestUsers(
 
     if (guestAcademies) {
       for (const ga of guestAcademies) {
+        if (ga.academy_id) affectedAcademyIds.add(ga.academy_id);
         const { data: existing } = await supabase
           .from('academy_students')
           .select('id')
@@ -141,7 +146,11 @@ async function mergeGuestUsers(
       .eq('is_guest', true);
   }
 
-  return mergedCount;
+  return {
+    mergedBookingCount: mergedCount,
+    affectedAcademyIds: Array.from(affectedAcademyIds),
+    mergedGuestCount: guestUserIds.length,
+  };
 }
 
 /**
@@ -315,12 +324,15 @@ export async function POST(request: Request) {
     const linkedBookingIds = new Set<string>();
 
     // 1) 연락처 기준: user_id IS NULL인 bookings 매핑
+    // B-2 (2026-04-21): exact match도 normalized phone으로 수행. guest_phone은 이제
+    // bank-transfer-order/payment-order에서 digits-only로 저장되므로 원본(rawPhone)
+    // 비교는 과거 데이터에서만 유효했던 경로.
     if (normalizedProfilePhone) {
       const { data: exactBookings, error: exactErr } = await supabase
         .from('bookings')
         .update({ user_id: user.id })
         .is('user_id', null)
-        .eq('guest_phone', rawPhone)
+        .eq('guest_phone', normalizedProfilePhone)
         .select('id');
 
       if (exactErr) {
@@ -347,13 +359,13 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2) bank_transfer_orders: 연락처 기준
+    // 2) bank_transfer_orders: 연락처 기준 (신규 주문은 digits-only로 저장)
     if (normalizedProfilePhone) {
       const { data: exactOrders } = await supabase
         .from('bank_transfer_orders')
         .update({ user_id: user.id })
         .is('user_id', null)
-        .eq('orderer_phone', rawPhone)
+        .eq('orderer_phone', normalizedProfilePhone)
         .select('id');
 
       const { data: guestOrders } = await supabase
@@ -391,9 +403,14 @@ export async function POST(request: Request) {
 
     // 4) purchase-guest가 생성한 게스트 유저 병합
     let mergedCount = 0;
+    let mergedAcademyIds: string[] = [];
+    let mergedGuestCount = 0;
     if (normalizedProfilePhone || profileEmail) {
       try {
-        mergedCount = await mergeGuestUsers(supabase, user.id, normalizedProfilePhone, profileEmail);
+        const mergeResult = await mergeGuestUsers(supabase, user.id, normalizedProfilePhone, profileEmail);
+        mergedCount = mergeResult.mergedBookingCount;
+        mergedAcademyIds = mergeResult.affectedAcademyIds;
+        mergedGuestCount = mergeResult.mergedGuestCount;
       } catch (e) {
         console.error('[link-guest-bookings] merge guest users error:', e);
       }
@@ -405,6 +422,25 @@ export async function POST(request: Request) {
       retroIssuedCount = await issueTicketsForConfirmedOrders(supabase, user.id);
     } catch (e) {
       console.error('[link-guest-bookings] retroactive ticket issue error:', e);
+    }
+
+    // 6) GUEST_MERGED activity log: 병합 영향을 받은 학원별로 한 번씩 기록.
+    //    관리자 UI에서 "이 회원이 언제 비회원→회원 전환되었는가"를 추적 가능.
+    if (mergedGuestCount > 0 && mergedAcademyIds.length > 0) {
+      for (const academyId of mergedAcademyIds) {
+        insertEnrollmentActivityLog({
+          academy_id: academyId,
+          user_id: user.id,
+          action: 'GUEST_MERGED',
+          payload: {
+            merged_guest_count: mergedGuestCount,
+            merged_booking_count: mergedCount,
+            retro_issued_count: retroIssuedCount,
+            linked_booking_count: linkedBookingIds.size,
+          },
+          actor_user_id: user.id,
+        }, supabase).catch(() => {});
+      }
     }
 
     return NextResponse.json({ linked: linkedBookingIds.size, merged: mergedCount, retroIssued: retroIssuedCount });
