@@ -65,8 +65,10 @@ export function MyTab({ isOpen, onClose, initialTab = 'login' }: MyTabProps) {
     setError(null);
     setLoading(true);
 
-    if (!email || !password || !name || !phone?.trim()) {
-      setError('이메일, 비밀번호, 이름, 전화번호를 입력해주세요.');
+    // P0-3 (2026-04-20): Phone is now optional to allow foreigners without a KR phone number
+    // to sign up with email only.
+    if (!email || !password || !name) {
+      setError('이메일, 비밀번호, 이름을 입력해주세요.');
       setLoading(false);
       return;
     }
@@ -82,13 +84,22 @@ export function MyTab({ isOpen, onClose, initialTab = 'login' }: MyTabProps) {
       const timeoutPromise = new Promise<{ error: { message: string } }>((resolve) =>
         setTimeout(() => resolve({ error: { message: '회원가입 요청 시간이 초과되었습니다. 다시 시도해주세요.' } }), 30000)
       );
+      const trimmedPhone = phone.trim();
       const result = await Promise.race([
-        signUp(email, password, name, undefined, phone.trim(), undefined),
+        signUp(email, password, name, undefined, trimmedPhone || undefined, undefined),
         timeoutPromise,
       ]);
 
       if (result.error) {
-        setError(result.error.message || '회원가입에 실패했습니다.');
+        const message = result.error.message || '회원가입에 실패했습니다.';
+        setError(message);
+        // P0-2: On "already registered" outcomes, switch to login tab automatically so users
+        // can recover without re-entering the form.
+        const code = (result.error as any)?.code;
+        if (code === 'ALREADY_REGISTERED' || /이미 가입/.test(message)) {
+          setIsLogin(true);
+          setPassword('');
+        }
       } else {
         onClose();
         setEmail('');
@@ -224,7 +235,7 @@ export function MyTab({ isOpen, onClose, initialTab = 'login' }: MyTabProps) {
 
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                전화번호 *
+                전화번호 (선택)
               </label>
               <input
                 type="tel"
@@ -232,8 +243,10 @@ export function MyTab({ isOpen, onClose, initialTab = 'login' }: MyTabProps) {
                 onChange={(e) => setPhone(e.target.value)}
                 className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="전화번호를 입력하세요 (예: 010-0000-0000)"
-                required
               />
+              <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                전화번호가 없으면 이메일만으로도 가입할 수 있어요.
+              </p>
             </div>
 
             <button
