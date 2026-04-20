@@ -59,8 +59,13 @@ export async function POST(request: Request) {
     } else if (scheduleId && isOneTimeTicket) {
       // 1회성 + 특정 수업 수강신청 → 비회원 허용 (구매 후 즉시 예약)
       const name = guestName != null ? String(guestName).trim() : '';
-      const phone = guestPhone != null ? String(guestPhone).trim() : '';
-      const email = guestEmail != null ? String(guestEmail).trim() : '';
+      // P0-2 (2026-04-20): normalize email to lowercase/trim and phone to digits-only so
+      // signup_with_guest_merge's LOWER(email) / regexp_replace(phone) matching always
+      // hits. Without this, mixed-case email at checkout blocks the later guest→member
+      // merge on signup.
+      const phoneRaw = guestPhone != null ? String(guestPhone).trim() : '';
+      const phone = phoneRaw.replace(/\D/g, '');
+      const email = guestEmail != null ? String(guestEmail).trim().toLowerCase() : '';
       if (!name) {
         return NextResponse.json({ error: '이름을 입력해 주세요.' }, { status: 400 });
       }
@@ -71,7 +76,7 @@ export async function POST(request: Request) {
       let guestUser: { id: string } | null = null;
       if (email) {
         const { data: existing } = await supabase
-          .from('users').select('id').eq('email', email).limit(1).single();
+          .from('users').select('id').ilike('email', email).limit(1).single();
         if (existing) guestUser = existing;
       }
       if (!guestUser && phone) {
