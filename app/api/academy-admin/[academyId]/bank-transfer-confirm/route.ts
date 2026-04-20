@@ -51,7 +51,10 @@ export async function POST(
 
     const customerUserId = order.user_id;
 
-    // 비회원 주문: 입금 확인만 처리(수강권 발급 불가). 예약이 있으면 해당 booking은 CONFIRMED로 업데이트
+    // Legacy fallback: B-2 (2026-04-21) 이전에 생성된 주문은 user_id가 null일 수 있음.
+    // 이 경우 입금 확인만 처리하고, 수강권 발급은 link-guest-bookings의 Phase 4
+    // (issueTicketsForConfirmedOrders)가 회원가입 후 소급 처리.
+    // 신규 주문은 bank-transfer-order에서 guest user를 생성하므로 이 분기로 오지 않음.
     if (!customerUserId) {
       await supabase
         .from('bank_transfer_orders')
