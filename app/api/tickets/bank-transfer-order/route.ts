@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getTicketById } from '@/lib/db/tickets';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
+import { normalizeGuestEmail, normalizeGuestPhone } from '@/lib/utils/guest-normalize';
 
 /**
  * 계좌이체 신청 주문 생성 (입금 대기).
@@ -90,19 +91,50 @@ export async function POST(request: Request) {
         ? String(bodyDepositorName).trim()
         : ordererName;
     } else if (scheduleId && isOneTimeTicket) {
-      // 1회성 + 특정 수업 → 비회원 허용
+      // 1회성 + 특정 수업 → 비회원 허용.
+      // B-2 (2026-04-21): payment-order와 동일하게 guest user를 여기서 생성해
+      // bank-transfer-confirm/revert가 user_id 있는 단일 경로로 처리되도록 맞춤.
+      // email/phone은 공통 normalize로 signup_with_guest_merge·link-guest-bookings 매칭 보장.
       const name = bodyOrdererName != null ? String(bodyOrdererName).trim() : '';
-      const phone = bodyOrdererPhone != null ? String(bodyOrdererPhone).trim() : '';
-      const email = bodyOrdererEmail != null ? String(bodyOrdererEmail).trim() : '';
+      const phone = normalizeGuestPhone(bodyOrdererPhone);
+      const email = normalizeGuestEmail(bodyOrdererEmail);
       if (!name) {
         return NextResponse.json({ error: '이름을 입력해 주세요.' }, { status: 400 });
       }
       if (!phone && !email) {
         return NextResponse.json({ error: '연락처 또는 이메일 중 하나는 필수입니다.' }, { status: 400 });
       }
+
+      let guestUser: { id: string } | null = null;
+      if (email) {
+        const { data: existing } = await supabase
+          .from('users').select('id').ilike('email', email).limit(1).single();
+        if (existing) guestUser = existing;
+      }
+      if (!guestUser && phone) {
+        const { data: existing } = await supabase
+          .from('users').select('id').eq('phone', phone).limit(1).single();
+        if (existing) guestUser = existing;
+      }
+      if (!guestUser) {
+        const { data: inserted, error: insertUserErr } = await supabase
+          .from('users')
+          .insert({ name, phone: phone ?? null, email: email ?? null, is_guest: true })
+          .select('id')
+          .single();
+        if (insertUserErr) {
+          console.error('Guest user creation error (bank-transfer):', insertUserErr);
+          return NextResponse.json({ error: '게스트 정보 생성에 실패했습니다.' }, { status: 500 });
+        }
+        guestUser = inserted;
+      }
+      if (!guestUser) {
+        return NextResponse.json({ error: '게스트 계정을 확인할 수 없습니다.' }, { status: 500 });
+      }
+      userId = guestUser.id;
       ordererName = name;
-      ordererPhone = phone || null;
-      ordererEmail = email || null;
+      ordererPhone = phone;
+      ordererEmail = email;
       depositorName = bodyDepositorName != null && String(bodyDepositorName).trim()
         ? String(bodyDepositorName).trim()
         : ordererName;
@@ -244,7 +276,9 @@ export async function POST(request: Request) {
           payment_status: 'PENDING',
           bank_transfer_order_id: order.id,
         };
-        if (!userId) {
+        if (!user) {
+          // 비회원 주문: bookings.user_id는 guest user.id로 채워지지만, guest_name/phone/email도
+          // 동반 저장해서 관리자 UI·activity log의 비회원 표시가 병합 전후로 일관되게 유지되도록 함.
           bookingInsert.guest_name = ordererName;
           bookingInsert.guest_phone = ordererPhone || null;
           bookingInsert.guest_email = ordererEmail || null;

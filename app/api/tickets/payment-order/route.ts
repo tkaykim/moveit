@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getTicketById } from '@/lib/db/tickets';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
+import { normalizeGuestEmail, normalizeGuestPhone } from '@/lib/utils/guest-normalize';
 
 /**
  * 수강권 결제용 주문 생성 (Toss Payments 결제창 연동)
@@ -59,13 +60,8 @@ export async function POST(request: Request) {
     } else if (scheduleId && isOneTimeTicket) {
       // 1회성 + 특정 수업 수강신청 → 비회원 허용 (구매 후 즉시 예약)
       const name = guestName != null ? String(guestName).trim() : '';
-      // P0-2 (2026-04-20): normalize email to lowercase/trim and phone to digits-only so
-      // signup_with_guest_merge's LOWER(email) / regexp_replace(phone) matching always
-      // hits. Without this, mixed-case email at checkout blocks the later guest→member
-      // merge on signup.
-      const phoneRaw = guestPhone != null ? String(guestPhone).trim() : '';
-      const phone = phoneRaw.replace(/\D/g, '');
-      const email = guestEmail != null ? String(guestEmail).trim().toLowerCase() : '';
+      const phone = normalizeGuestPhone(guestPhone);
+      const email = normalizeGuestEmail(guestEmail);
       if (!name) {
         return NextResponse.json({ error: '이름을 입력해 주세요.' }, { status: 400 });
       }
@@ -87,7 +83,7 @@ export async function POST(request: Request) {
       if (!guestUser) {
         const { data: inserted, error: insertUserErr } = await supabase
           .from('users')
-          .insert({ name, phone: phone || null, email: email || null, is_guest: true })
+          .insert({ name, phone: phone ?? null, email: email ?? null, is_guest: true })
           .select('id')
           .single();
         if (insertUserErr) {
