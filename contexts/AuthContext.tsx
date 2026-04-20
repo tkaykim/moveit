@@ -203,6 +203,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase, fetchProfileFromApi]);
 
   // 회원가입
+  // P0-2 (2026-04-20): Distinguish Case B (legitimate existing member) from Case C
+  // (orphan is_guest row). "already registered" now triggers a precheck; Case B surfaces
+  // a friendly message prompting login, Case C would be auto-recovered by RPC v2 if the
+  // user could complete signUp, but auth.users collision blocks that path — so Case C also
+  // falls back to the same "please log in" guidance (the RPC recovery happens on the next
+  // successful signUp retry from a different flow, e.g., admin cleanup).
   const signUp = useCallback(async (
     email: string,
     password: string,
@@ -214,13 +220,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase) {
       return { error: { message: '클라이언트가 초기화되지 않았습니다.' } };
     }
+    const normalizedEmail = email.trim().toLowerCase();
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
+        email: normalizedEmail,
         password,
       });
 
       if (authError) {
+        const msg = String(authError.message || '').toLowerCase();
+        if (msg.includes('already registered') || msg.includes('already been registered') || msg.includes('user already')) {
+          // Probe whether this email corresponds to a guest row we can merge on next attempt.
+          let isGuest = false;
+          try {
+            const res = await fetch('/api/auth/precheck-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: normalizedEmail }),
+            });
+            if (res.ok) {
+              const json = await res.json().catch(() => ({}));
+              isGuest = !!json?.isGuest;
+            }
+          } catch {
+            // Ignore probe errors — default to Case B messaging.
+          }
+          return {
+            error: {
+              message: isGuest
+                ? '이미 가입 절차가 시작된 이메일입니다. 로그인해주세요.'
+                : '이미 가입된 이메일입니다. 로그인해주세요.',
+              code: 'ALREADY_REGISTERED',
+            },
+          };
+        }
         return { error: authError };
       }
 
@@ -230,7 +263,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const { error: profileError } = await (supabase as any).rpc('signup_with_guest_merge', {
         p_auth_id: authData.user.id,
-        p_email: email,
+        p_email: normalizedEmail,
         p_name: name,
         p_name_en: nameEn || null,
         p_phone: phone || null,
