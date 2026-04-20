@@ -41,7 +41,7 @@ export async function PATCH(
       );
     }
 
-    const validStatuses = ['CONFIRMED', 'COMPLETED', 'CANCELLED', 'PENDING'];
+    const validStatuses = ['CONFIRMED', 'COMPLETED', 'CANCELLED', 'PENDING', 'ABSENT'];
     if (!validStatuses.includes(status)) {
       return NextResponse.json(
         { error: '유효하지 않은 상태 값입니다.' },
@@ -67,7 +67,11 @@ export async function PATCH(
     const scheduleId = currentBooking.schedule_id;
     const academyId = (currentBooking as any).classes?.academy_id;
     const actorId = (await getAuthenticatedUser(request))?.id ?? null;
-    const isGuestBooking = !currentBooking.user_id && currentBooking.guest_name;
+    // B-2 (2026-04-21): guest_name 존재로 비회원 판별. bank-transfer-order가 guest user.id를
+    // booking.user_id에 채우기 시작한 이후로 user_id IS NULL 기준만으로는 비회원 booking을
+    // 식별할 수 없음. guest_name은 가입 병합 후에도 보존되므로 activity log의 비회원
+    // 표시 일관성 유지에 사용.
+    const isGuestBooking = !!currentBooking.guest_name;
     const guestPayload = isGuestBooking
       ? { guest_name: currentBooking.guest_name, guest_phone: currentBooking.guest_phone || null }
       : {};
@@ -214,6 +218,30 @@ export async function PATCH(
         booking_id: id,
         action: 'ATTENDANCE_CHECKED',
         payload: { via: 'manual', ...guestPayload },
+        actor_user_id: actorId,
+      }).catch(() => {});
+    }
+
+    // 활동 로그: 결석 처리 / 결석 취소
+    if (academyId && status === 'ABSENT' && oldStatus !== 'ABSENT') {
+      insertEnrollmentActivityLog({
+        academy_id: academyId,
+        user_id: currentBooking.user_id,
+        user_ticket_id: currentBooking.user_ticket_id ?? null,
+        booking_id: id,
+        action: 'ABSENT_MARKED',
+        payload: { previous_status: oldStatus, ...guestPayload },
+        actor_user_id: actorId,
+      }).catch(() => {});
+    }
+    if (academyId && oldStatus === 'ABSENT' && status !== 'ABSENT') {
+      insertEnrollmentActivityLog({
+        academy_id: academyId,
+        user_id: currentBooking.user_id,
+        user_ticket_id: currentBooking.user_ticket_id ?? null,
+        booking_id: id,
+        action: 'ABSENT_CLEARED',
+        payload: { next_status: status, ...guestPayload },
         actor_user_id: actorId,
       }).catch(() => {});
     }

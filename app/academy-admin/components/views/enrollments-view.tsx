@@ -21,13 +21,14 @@ type EnrollmentWithRelations = any & {
   user_tickets: any | null;
 };
 
-type StatusFilter = 'ALL' | 'CONFIRMED' | 'PENDING' | 'CANCELLED' | 'COMPLETED';
+type StatusFilter = 'ALL' | 'CONFIRMED' | 'PENDING' | 'CANCELLED' | 'COMPLETED' | 'ABSENT';
 
 const STATUS_TABS: { value: StatusFilter; label: string; color: string }[] = [
   { value: 'ALL', label: '전체', color: 'bg-primary text-black' },
   { value: 'CONFIRMED', label: '확정', color: 'bg-green-600 text-white' },
   { value: 'PENDING', label: '대기', color: 'bg-yellow-500 text-white' },
   { value: 'COMPLETED', label: '출석완료', color: 'bg-blue-600 text-white' },
+  { value: 'ABSENT', label: '결석', color: 'bg-rose-600 text-white' },
   { value: 'CANCELLED', label: '취소', color: 'bg-red-600 text-white' },
 ];
 
@@ -58,6 +59,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
     PENDING: 0,
     CANCELLED: 0,
     COMPLETED: 0,
+    ABSENT: 0,
   });
   const [isAdminAddModalOpen, setIsAdminAddModalOpen] = useState(false);
   const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
@@ -167,7 +169,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
       if (classIds.length === 0) {
         setEnrollments([]);
         setTotalCount(0);
-        setStatusCounts({ ALL: 0, CONFIRMED: 0, PENDING: 0, CANCELLED: 0, COMPLETED: 0 });
+        setStatusCounts({ ALL: 0, CONFIRMED: 0, PENDING: 0, CANCELLED: 0, COMPLETED: 0, ABSENT: 0 });
         setInitialLoading(false);
         setIsRefreshing(false);
         isFirstLoad.current = false;
@@ -207,6 +209,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
         PENDING: allStatusData?.filter((b: any) => b.status === 'PENDING').length || 0,
         CANCELLED: allStatusData?.filter((b: any) => b.status === 'CANCELLED').length || 0,
         COMPLETED: allStatusData?.filter((b: any) => b.status === 'COMPLETED').length || 0,
+        ABSENT: allStatusData?.filter((b: any) => b.status === 'ABSENT').length || 0,
       };
       setStatusCounts(counts);
 

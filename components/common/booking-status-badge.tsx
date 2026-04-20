@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, XCircle, Clock, CheckCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, CheckCircle, UserX } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +33,8 @@ export function BookingStatusBadge({ status, className = '', startTime, bankTran
         };
       case 'COMPLETED':
         return { icon: CheckCircle, text: '출석 완료', variant: 'info' };
+      case 'ABSENT':
+        return { icon: UserX, text: '결석', variant: 'destructive' };
       default:
         return { icon: Clock, text: status || '알 수 없음', variant: 'secondary' };
     }

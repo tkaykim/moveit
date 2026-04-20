@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, CheckCircle2, Clock, XCircle, UserCheck, Trash2 } from 'lucide-react';
+import { MoreVertical, CheckCircle2, Clock, XCircle, UserCheck, UserX, Trash2 } from 'lucide-react';
 
 interface EnrollmentActionMenuProps {
   enrollment: {
@@ -80,6 +80,7 @@ export function EnrollmentActionMenu({
       COMPLETED: '출석 처리를 하시겠습니까?',
       CANCELLED: '예약을 취소하시겠습니까?',
       PENDING: '예약을 대기 상태로 변경하시겠습니까?',
+      ABSENT: '결석 처리를 하시겠습니까? (수업 인원 수에서 제외됩니다)',
     }[newStatus] || '상태를 변경하시겠습니까?';
 
     if (!confirm(confirmMessage)) {
@@ -145,7 +146,7 @@ export function EnrollmentActionMenu({
       });
     }
 
-    // CONFIRMED -> COMPLETED (출석)
+    // CONFIRMED -> COMPLETED (출석) / ABSENT (결석)
     if (currentStatus === 'CONFIRMED') {
       actions.push({
         label: '출석 처리',
@@ -153,6 +154,13 @@ export function EnrollmentActionMenu({
         status: 'COMPLETED',
         onClick: () => handleStatusChange('COMPLETED'),
         className: 'text-blue-600 dark:text-blue-400',
+      });
+      actions.push({
+        label: '결석 처리',
+        icon: UserX,
+        status: 'ABSENT',
+        onClick: () => handleStatusChange('ABSENT'),
+        className: 'text-red-600 dark:text-red-400',
       });
     }
 
@@ -167,10 +175,28 @@ export function EnrollmentActionMenu({
       });
     }
 
-    // COMPLETED -> CONFIRMED (출석 취소)
+    // COMPLETED -> CONFIRMED (출석 취소) / ABSENT (결석으로 전환)
     if (currentStatus === 'COMPLETED') {
       actions.push({
         label: '출석 취소',
+        icon: Clock,
+        status: 'CONFIRMED',
+        onClick: () => handleStatusChange('CONFIRMED'),
+        className: 'text-yellow-600 dark:text-yellow-400',
+      });
+      actions.push({
+        label: '결석으로 변경',
+        icon: UserX,
+        status: 'ABSENT',
+        onClick: () => handleStatusChange('ABSENT'),
+        className: 'text-red-600 dark:text-red-400',
+      });
+    }
+
+    // ABSENT -> CONFIRMED (결석 취소)
+    if (currentStatus === 'ABSENT') {
+      actions.push({
+        label: '결석 취소 (구입 승인 복구)',
         icon: Clock,
         status: 'CONFIRMED',
         onClick: () => handleStatusChange('CONFIRMED'),
