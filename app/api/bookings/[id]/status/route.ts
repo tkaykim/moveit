@@ -49,10 +49,10 @@ export async function PATCH(
       );
     }
 
-    // 현재 예약 정보 조회 (활동 로그용 academy_id 포함)
+    // 현재 예약 정보 조회 (활동 로그용 academy_id + user.is_guest 포함)
     const { data: currentBooking, error: bookingError } = await (supabase as any)
       .from('bookings')
-      .select('*, schedule_id, status, classes(academy_id)')
+      .select('*, schedule_id, status, classes(academy_id), users(is_guest)')
       .eq('id', id)
       .single();
 
@@ -67,11 +67,11 @@ export async function PATCH(
     const scheduleId = currentBooking.schedule_id;
     const academyId = (currentBooking as any).classes?.academy_id;
     const actorId = (await getAuthenticatedUser(request))?.id ?? null;
-    // B-2 (2026-04-21): guest_name 존재로 비회원 판별. bank-transfer-order가 guest user.id를
-    // booking.user_id에 채우기 시작한 이후로 user_id IS NULL 기준만으로는 비회원 booking을
-    // 식별할 수 없음. guest_name은 가입 병합 후에도 보존되므로 activity log의 비회원
-    // 표시 일관성 유지에 사용.
-    const isGuestBooking = !!currentBooking.guest_name;
+    // B-3 (2026-04-21): users.is_guest를 일등시민으로 사용. guest_name은 병합 후에도
+    // 보존되므로 is_guest가 false로 바뀌어도(병합 완료) 과거 비회원 주문임을 payload에
+    // 남기기 위한 보조 신호로 유지. 둘 중 하나라도 참이면 guest payload 첨부.
+    const userIsGuest = (currentBooking as any).users?.is_guest === true;
+    const isGuestBooking = userIsGuest || !!currentBooking.guest_name;
     const guestPayload = isGuestBooking
       ? { guest_name: currentBooking.guest_name, guest_phone: currentBooking.guest_phone || null }
       : {};
