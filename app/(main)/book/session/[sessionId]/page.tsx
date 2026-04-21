@@ -795,7 +795,13 @@ export default function SessionBookingPage() {
       const { orderId, amount, orderName } = await orderRes.json();
 
       const origin = window.location.origin;
-      const successUrl = `${origin}/payment/ticket/success?returnTo=session&sessionId=${sessionId}`;
+      // B-3 (2026-04-21): 비회원 카드결제는 성공 화면에서 가입 CTA + 프리필 필요.
+      // guestOrderer 정보를 URL로 전달(결제자 본인이 입력한 값, 외부 유출 위험 없음).
+      const guestParams = `&guest=1` +
+        `&gname=${encodeURIComponent(guest.name || '')}` +
+        (guest.email ? `&gemail=${encodeURIComponent(guest.email)}` : '') +
+        (guest.phone ? `&gphone=${encodeURIComponent(guest.phone)}` : '');
+      const successUrl = `${origin}/payment/ticket/success?returnTo=session&sessionId=${sessionId}${guestParams}`;
       const failUrl = `${origin}/payment/ticket/fail?sessionId=${sessionId}`;
       const customerKey = `guest_${orderId}`;
 

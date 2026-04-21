@@ -33,6 +33,11 @@ function TicketPaymentSuccessContent() {
     const amount = searchParams.get('amount');
     const returnTo = searchParams.get('returnTo');
     const sessionId = searchParams.get('sessionId');
+    // B-3: 비회원 카드결제 식별자. 세션 페이지에서 successUrl 구성 시 주입.
+    const isGuest = searchParams.get('guest') === '1';
+    const gname = searchParams.get('gname') || '';
+    const gemail = searchParams.get('gemail') || '';
+    const gphone = searchParams.get('gphone') || '';
 
     if (!paymentKey || !orderId || !amount) {
       if (mountedRef.current) {
@@ -59,13 +64,29 @@ function TicketPaymentSuccessContent() {
     const doRedirect = (toSession: boolean, sid: string | null) => {
       if (redirectScheduledRef.current) return;
       redirectScheduledRef.current = true;
+      // B-3: 비회원이면 guest 파라미터 전파. session 성공 화면에서 가입 CTA + 프리필.
+      const guestQs = isGuest
+        ? `&guest=1` +
+          (gname ? `&name=${encodeURIComponent(gname)}` : '') +
+          (gemail ? `&email=${encodeURIComponent(gemail)}` : '') +
+          (gphone ? `&phone=${encodeURIComponent(gphone)}` : '')
+        : '';
       if (toSession && sid) {
-        window.location.replace(`/book/session/${sid}/success?type=purchase`);
+        window.location.replace(`/book/session/${sid}/success?type=purchase${guestQs}`);
         return;
       }
       redirectTimeoutRef.current = setTimeout(() => {
         redirectTimeoutRef.current = null;
-        window.location.replace('/my/tickets');
+        // 비회원은 /my/tickets(로그인 필요) 대신 가입 유도 화면으로
+        if (isGuest) {
+          const qs = `?tab=signup` +
+            (gemail ? `&email=${encodeURIComponent(gemail)}` : '') +
+            (gname ? `&name=${encodeURIComponent(gname)}` : '') +
+            (gphone ? `&phone=${encodeURIComponent(gphone)}` : '');
+          window.location.replace(`/my${qs}`);
+        } else {
+          window.location.replace('/my/tickets');
+        }
       }, REDIRECT_DELAY_MS);
     };
 

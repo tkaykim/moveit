@@ -9,6 +9,22 @@ function SuccessContent() {
   const searchParams = useSearchParams();
   const type = searchParams.get('type') || 'guest';
   const name = searchParams.get('name') || '';
+  const email = searchParams.get('email') || '';
+  const phone = searchParams.get('phone') || '';
+  // B-3: 비회원 카드결제는 type=purchase + guest=1 조합으로 전달됨.
+  const isGuestPaid = type === 'purchase' && searchParams.get('guest') === '1';
+  const isGuestOnsite = type === 'guest';
+  const showGuestCTA = isGuestOnsite || isGuestPaid;
+
+  // 프리필이 붙은 가입 링크 생성
+  const signupHref = (() => {
+    const qs = new URLSearchParams();
+    qs.set('tab', 'signup');
+    if (email) qs.set('email', email);
+    if (name) qs.set('name', name);
+    if (phone) qs.set('phone', phone);
+    return `/my?${qs.toString()}`;
+  })();
 
   return (
     <div className="min-h-screen bg-white dark:bg-neutral-950 flex flex-col items-center justify-center p-6">
@@ -21,14 +37,23 @@ function SuccessContent() {
       <h1 className="text-2xl font-black text-black dark:text-white mb-2 text-center">
         예약이 완료되었습니다!
       </h1>
-      
-      {type === 'guest' ? (
+
+      {isGuestOnsite ? (
         <div className="text-center space-y-2 mb-8">
           <p className="text-neutral-600 dark:text-neutral-400">
             {name && <span className="font-medium text-black dark:text-white">{name}</span>}님의 예약이 접수되었습니다.
           </p>
           <p className="text-sm text-neutral-500">
             수업 시작 전까지 현장에서 결제해주세요.
+          </p>
+        </div>
+      ) : isGuestPaid ? (
+        <div className="text-center space-y-2 mb-8">
+          <p className="text-neutral-600 dark:text-neutral-400">
+            {name && <span className="font-medium text-black dark:text-white">{name}</span>}님, 결제가 완료되었어요.
+          </p>
+          <p className="text-sm text-neutral-500">
+            수업 시간에 맞춰 방문해주세요.
           </p>
         </div>
       ) : (
@@ -42,8 +67,8 @@ function SuccessContent() {
         </div>
       )}
 
-      {/* 비회원 회원가입 유도 */}
-      {type === 'guest' && (
+      {/* 비회원 회원가입 유도 — 현장결제/카드결제 모두 */}
+      {showGuestCTA && (
         <div className="w-full max-w-sm bg-primary/10 border border-primary/30 rounded-2xl p-5 mb-6">
           <div className="flex items-start gap-3">
             <UserPlus size={20} className="text-primary shrink-0 mt-0.5" />
@@ -52,10 +77,12 @@ function SuccessContent() {
                 회원가입하면 더 편리해요!
               </h3>
               <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3">
-                예약 내역 조회, 수강권 관리, 출석 기록 확인까지 한 번에 할 수 있어요.
+                {isGuestPaid
+                  ? '결제한 수강권과 예약 내역을 계정에 연결하려면 회원가입이 필요해요.'
+                  : '예약 내역 조회, 수강권 관리, 출석 기록 확인까지 한 번에 할 수 있어요.'}
               </p>
               <button
-                onClick={() => router.push('/my?tab=signup')}
+                onClick={() => router.push(signupHref)}
                 className="px-4 py-2 bg-primary text-black text-sm font-bold rounded-lg hover:opacity-95 active:scale-[0.98] transition-all"
               >
                 회원가입하기
@@ -77,7 +104,7 @@ function SuccessContent() {
             <ArrowRight size={16} className="mt-0.5 text-primary flex-shrink-0" />
             <span>편한 복장과 실내용 운동화를 준비해주세요.</span>
           </li>
-          {type === 'guest' && (
+          {showGuestCTA && (
             <li className="flex items-start gap-2">
               <ArrowRight size={16} className="mt-0.5 text-primary flex-shrink-0" />
               <span>예약 취소는 학원에 직접 문의해주세요.</span>
