@@ -9,9 +9,13 @@ interface MyTabProps {
   onClose: () => void;
   /** 모달을 열 때 보여줄 탭. 미지정 시 로그인 */
   initialTab?: 'login' | 'signup';
+  /** B-3: 비회원 결제 후 가입 유도 시 이메일·이름·전화 프리필 */
+  initialEmail?: string;
+  initialName?: string;
+  initialPhone?: string;
 }
 
-export function MyTab({ isOpen, onClose, initialTab = 'login' }: MyTabProps) {
+export function MyTab({ isOpen, onClose, initialTab = 'login', initialEmail, initialName, initialPhone }: MyTabProps) {
   const [isLogin, setIsLogin] = useState(initialTab === 'login');
 
   useEffect(() => {
@@ -19,10 +23,19 @@ export function MyTab({ isOpen, onClose, initialTab = 'login' }: MyTabProps) {
       setIsLogin(initialTab === 'login');
     }
   }, [isOpen, initialTab]);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail ?? '');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [name, setName] = useState(initialName ?? '');
+  const [phone, setPhone] = useState(initialPhone ?? '');
+
+  // B-3: 초기값 prop 변경 시 입력값 반영 (모달 재오픈 시나리오)
+  useEffect(() => {
+    if (isOpen) {
+      if (initialEmail !== undefined) setEmail(initialEmail);
+      if (initialName !== undefined) setName(initialName);
+      if (initialPhone !== undefined) setPhone(initialPhone);
+    }
+  }, [isOpen, initialEmail, initialName, initialPhone]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 

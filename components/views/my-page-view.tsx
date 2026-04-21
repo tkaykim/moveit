@@ -51,12 +51,23 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
   const { t, language } = useLocale();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
-  // 쿼리 ?auth=open 이면 로그인 모달 자동 오픈 (테스트/디버깅용)
+  // 쿼리 ?auth=open 또는 ?tab=signup/login 이면 로그인 모달 자동 오픈.
+  // B-3 (2026-04-21): 비회원 결제 성공 화면의 가입 CTA가 /my?tab=signup&email=...&name=...&phone=...
+  // 로 이동하므로 해당 쿼리 진입 시 가입 탭을 연 상태로 프리필 전달.
   useEffect(() => {
-    if (searchParams?.get('auth') === 'open' && !user) {
-      setIsAuthModalOpen(true);
+    if (!user && searchParams) {
+      const authQ = searchParams.get('auth');
+      const tabQ = searchParams.get('tab');
+      if (authQ === 'open' || tabQ === 'signup' || tabQ === 'login') {
+        setIsAuthModalOpen(true);
+      }
     }
   }, [searchParams, user]);
+
+  const authInitialTab: 'login' | 'signup' = searchParams?.get('tab') === 'signup' ? 'signup' : 'login';
+  const authInitialEmail = searchParams?.get('email') || undefined;
+  const authInitialName = searchParams?.get('name') || undefined;
+  const authInitialPhone = searchParams?.get('phone') || undefined;
 
   // 로그인된 상태인데 instructor_id가 없으면 프로필 재조회 (강사 연결 반영)
   useEffect(() => {
@@ -639,7 +650,14 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
         </div>
       </div>
 
-      <MyTab isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      <MyTab
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialTab={authInitialTab}
+        initialEmail={authInitialEmail}
+        initialName={authInitialName}
+        initialPhone={authInitialPhone}
+      />
 
       {/* QR 출석 모달 */}
       {qrBookingId && (
