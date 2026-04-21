@@ -278,6 +278,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 프로필 정보 가져오기 (비동기, 실패해도 계속 진행)
       fetchProfile(authData.user.id, authData.user).catch(() => {});
 
+      // B-3 (2026-04-21): 비회원 시절 예약·결제 즉시 병합. my-page-view 진입 이전 경로
+      // (예: 카드결제 success → /my/tickets 리다이렉트)에서도 Phase 1~4가 누락되지 않도록
+      // 가입 직후 fire-and-forget 호출. 실패해도 my-page-view에서 한 번 더 시도됨.
+      try {
+        const { fetchWithAuth } = await import('@/lib/api/auth-fetch');
+        fetchWithAuth('/api/me/link-guest-bookings', { method: 'POST' }).catch(() => {});
+      } catch {
+        // ignore
+      }
+
       return { error: null };
     } catch (error: any) {
       return { error };
@@ -303,6 +313,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data?.user) {
         setUser(data.user);
         fetchProfile(data.user.id, data.user).catch(() => {});
+
+        // B-3 (2026-04-21): 가입 없이 로그인 복귀한 경우에도 비회원 예약 병합 필요
+        // (기존 회원이 로그아웃한 채 비회원 결제 후 복귀 등). my-page-view 경유 없이
+        // 즉시 실행해 success 화면 리다이렉트 경로에서도 최신 상태 반영.
+        try {
+          const { fetchWithAuth } = await import('@/lib/api/auth-fetch');
+          fetchWithAuth('/api/me/link-guest-bookings', { method: 'POST' }).catch(() => {});
+        } catch {
+          // ignore
+        }
       }
 
       return { error: null };
