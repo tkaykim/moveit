@@ -69,16 +69,34 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: '연락처 또는 이메일 중 하나는 필수입니다.' }, { status: 400 });
       }
 
+      // B-3 (2026-04-21): 이메일/전화가 정식 회원(is_guest=false)과 충돌하면
+      // 무음 귀속 대신 명시적 차단. 오타로 타 회원 계정에 결제 귀속되는 위험 제거.
       let guestUser: { id: string } | null = null;
       if (email) {
         const { data: existing } = await supabase
-          .from('users').select('id').ilike('email', email).limit(1).single();
-        if (existing) guestUser = existing;
+          .from('users').select('id, is_guest').ilike('email', email).limit(1).maybeSingle();
+        if (existing) {
+          if (existing.is_guest !== true) {
+            return NextResponse.json({
+              error: '이미 가입된 이메일입니다. 로그인 후 결제해 주세요.',
+              code: 'EMAIL_BELONGS_TO_MEMBER',
+            }, { status: 409 });
+          }
+          guestUser = { id: existing.id };
+        }
       }
       if (!guestUser && phone) {
         const { data: existing } = await supabase
-          .from('users').select('id').eq('phone', phone).limit(1).single();
-        if (existing) guestUser = existing;
+          .from('users').select('id, is_guest').eq('phone', phone).limit(1).maybeSingle();
+        if (existing) {
+          if (existing.is_guest !== true) {
+            return NextResponse.json({
+              error: '이미 가입된 전화번호입니다. 로그인 후 결제해 주세요.',
+              code: 'PHONE_BELONGS_TO_MEMBER',
+            }, { status: 409 });
+          }
+          guestUser = { id: existing.id };
+        }
       }
       if (!guestUser) {
         const { data: inserted, error: insertUserErr } = await supabase
