@@ -857,13 +857,25 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                     const instructor = schedule?.instructors;
 
                     const isAdminAdded = enrollment.is_admin_added === true;
-                    const isNonMember = !user && (enrollment.guest_name || enrollment.guest_phone || enrollment.guest_email);
-                    const isOnSiteRegistration = isAdminAdded && !!user;
-                    const isGuest = isAdminAdded && !user;
-                    const showAsNonMember = isNonMember && !isAdminAdded;
-                    const displayName = user?.name || enrollment.guest_name || '(이름 없음)';
-                    const displayPhone = user?.phone || enrollment.guest_phone || '';
-                    const displayEmail = user?.email || enrollment.guest_email || '';
+                    // B-3 (2026-04-21): B-2에서 비회원 결제가 guest user(is_guest=true)를 생성해
+                    // booking.user_id를 채우기 시작하면서 `!user` 기반 비회원 판정이 무너졌음.
+                    // users.is_guest 플래그를 일등시민으로 사용해 3가지 유형을 구분한다.
+                    const isGuestUser = user?.is_guest === true;
+                    const hasLegacyGuestFields = !user && !!(enrollment.guest_name || enrollment.guest_phone || enrollment.guest_email);
+                    const isGuestBookingRow = isGuestUser || hasLegacyGuestFields;
+                    const isOnSiteRegistration = isAdminAdded && !!user && !isGuestUser;
+                    const isGuest = isAdminAdded && (!user || isGuestUser);
+                    const showAsNonMember = !isAdminAdded && isGuestBookingRow;
+                    // 비회원/게스트 행은 guest_name/phone/email을 우선 표시 (가입 병합 후에도 guest_* 보존)
+                    const displayName = isGuestBookingRow
+                      ? (enrollment.guest_name || user?.name || '(이름 없음)')
+                      : (user?.name || enrollment.guest_name || '(이름 없음)');
+                    const displayPhone = isGuestBookingRow
+                      ? (enrollment.guest_phone || user?.phone || '')
+                      : (user?.phone || enrollment.guest_phone || '');
+                    const displayEmail = isGuestBookingRow
+                      ? (enrollment.guest_email || user?.email || '')
+                      : (user?.email || enrollment.guest_email || '');
                     const displayContact = displayPhone || displayEmail || '(연락처 없음)';
 
                     const rowNumber = (currentPage - 1) * itemsPerPage + index + 1;
