@@ -65,14 +65,16 @@ function TicketPaymentSuccessContent() {
       if (redirectScheduledRef.current) return;
       redirectScheduledRef.current = true;
       // B-3: 비회원이면 guest 파라미터 전파. session 성공 화면에서 가입 CTA + 프리필.
+      // B-4: orderId도 함께 전파해 비회원이 본인 거래 식별 가능.
       const guestQs = isGuest
         ? `&guest=1` +
           (gname ? `&name=${encodeURIComponent(gname)}` : '') +
           (gemail ? `&email=${encodeURIComponent(gemail)}` : '') +
           (gphone ? `&phone=${encodeURIComponent(gphone)}` : '')
         : '';
+      const orderQs = orderId ? `&orderId=${encodeURIComponent(orderId)}` : '';
       if (toSession && sid) {
-        window.location.replace(`/book/session/${sid}/success?type=purchase${guestQs}`);
+        window.location.replace(`/book/session/${sid}/success?type=purchase${orderQs}${guestQs}`);
         return;
       }
       redirectTimeoutRef.current = setTimeout(() => {

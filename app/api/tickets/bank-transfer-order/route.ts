@@ -103,8 +103,9 @@ export async function POST(request: Request) {
       if (!name) {
         return NextResponse.json({ error: '이름을 입력해 주세요.' }, { status: 400 });
       }
-      if (!phone && !email) {
-        return NextResponse.json({ error: '연락처 또는 이메일 중 하나는 필수입니다.' }, { status: 400 });
+      // B-4 (2026-04-27): 이메일 필수화 (알림 인프라 단일화 + 외국인 수용).
+      if (!email) {
+        return NextResponse.json({ error: '이메일을 입력해 주세요. (입금 안내·알림 발송용)' }, { status: 400 });
       }
 
       // B-3 (2026-04-21): 이메일/전화가 정식 회원과 충돌하면 무음 귀속 대신 명시적 차단.

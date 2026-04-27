@@ -36,9 +36,11 @@ export async function POST(request: Request) {
     const phone = guestPhone ? String(guestPhone).trim() : '';
     const email = guestEmail ? String(guestEmail).trim() : '';
 
-    if (!phone && !email) {
+    // B-4 (2026-04-27): 이메일 필수화 (영수증·알림 채널 단일화 + 외국인 수용).
+    // 전화는 옵션 — 한국 전화 없는 외국인이 Gmail만으로 결제 가능.
+    if (!email) {
       return NextResponse.json(
-        { error: '연락처 또는 이메일을 입력해주세요.' },
+        { error: '이메일을 입력해주세요. (영수증·알림 발송용)' },
         { status: 400 }
       );
     }

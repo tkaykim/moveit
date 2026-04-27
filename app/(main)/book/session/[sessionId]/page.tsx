@@ -803,7 +803,8 @@ export default function SessionBookingPage() {
         `&gname=${encodeURIComponent(guest.name || '')}` +
         (guest.email ? `&gemail=${encodeURIComponent(guest.email)}` : '') +
         (guest.phone ? `&gphone=${encodeURIComponent(guest.phone)}` : '');
-      const successUrl = `${origin}/payment/ticket/success?returnTo=session&sessionId=${sessionId}${guestParams}`;
+      // B-4 (2026-04-27): orderId(Toss order id)를 success로 전달 — 비회원이 본인 거래 식별용.
+      const successUrl = `${origin}/payment/ticket/success?returnTo=session&sessionId=${sessionId}&orderId=${encodeURIComponent(orderId)}${guestParams}`;
       const failUrl = `${origin}/payment/ticket/fail?sessionId=${sessionId}`;
       const customerKey = `guest_${orderId}`;
 
@@ -838,8 +839,9 @@ export default function SessionBookingPage() {
       setError(t('sessionBooking.nameError'));
       return;
     }
-    if (!guestPhone.trim() && !guestEmail.trim()) {
-      setError(language === 'ko' ? '연락처 또는 이메일 중 하나를 입력해주세요.' : 'Please enter a phone number or email.');
+    // B-4 (2026-04-27): 이메일 필수화 (영수증·알림 채널 단일화 + 외국인 수용).
+    if (!guestEmail.trim()) {
+      setError(language === 'ko' ? '이메일을 입력해주세요. (영수증·알림 발송용)' : 'Please enter your email (for receipts and notifications).');
       return;
     }
 
@@ -863,7 +865,11 @@ export default function SessionBookingPage() {
         throw new Error(data.error || t('sessionBooking.bookingFailed'));
       }
 
-      router.push(`/book/session/${sessionId}/success?type=guest&name=${encodeURIComponent(guestName)}`);
+      // B-4 (2026-04-27): 예약번호(booking.id)를 success로 전달해 비회원이 본인 거래 식별 가능하게.
+      const data = await response.json();
+      const bookingId: string | undefined = data?.data?.id;
+      const orderQs = bookingId ? `&orderId=${encodeURIComponent(bookingId)}` : '';
+      router.push(`/book/session/${sessionId}/success?type=guest&name=${encodeURIComponent(guestName)}${orderQs}`);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -1417,19 +1423,7 @@ export default function SessionBookingPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-2">
-                  {t('sessionBooking.contact')} <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  value={guestPhone}
-                  onChange={(e) => setGuestPhone(e.target.value)}
-                  placeholder="010-0000-0000"
-                  className="w-full px-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-black dark:text-white placeholder-neutral-400"
-                />
-              </div>
-
+              {/* B-4 (2026-04-27): 이메일 필수, 전화 옵션. 알림 인프라(Gmail SMTP/Apps Script) 단일화 + 외국인 수용. */}
               <div>
                 <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-2">
                   {language === 'ko' ? '이메일' : 'Email'} <span className="text-red-500">*</span>
@@ -1443,8 +1437,23 @@ export default function SessionBookingPage() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm text-neutral-600 dark:text-neutral-400 mb-2">
+                  {t('sessionBooking.contact')} {language === 'ko' ? '(선택)' : '(optional)'}
+                </label>
+                <input
+                  type="tel"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                  placeholder="010-0000-0000"
+                  className="w-full px-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-black dark:text-white placeholder-neutral-400"
+                />
+              </div>
+
               <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
-                {language === 'ko' ? '* 연락처 또는 이메일 중 하나는 필수입니다.' : '* Phone or email is required.'}
+                {language === 'ko'
+                  ? '* 결제 영수증·수업 알림은 이메일로 보내드려요. 전화번호는 환불 안내가 필요한 경우에만 사용됩니다.'
+                  : '* Receipts and class notifications are sent by email. Phone is used only for refund inquiries.'}
               </p>
 
               <div className="text-xs text-neutral-500 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 rounded-lg">
@@ -1624,7 +1633,7 @@ export default function SessionBookingPage() {
         </div>
       )}
 
-      {/* 비회원 정보 입력 (이름, 연락처, 이메일 — 연락처 또는 이메일 필수) */}
+      {/* B-4 (2026-04-27): 비회원 정보 입력 — 이름·이메일 필수, 전화 옵션 (영수증·알림 메일 단일화). */}
       {bankTransferGuestFormOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setBankTransferGuestFormOpen(false)} />
@@ -1633,7 +1642,9 @@ export default function SessionBookingPage() {
               {language === 'ko' ? '비회원 정보 입력' : 'Guest information'}
             </h3>
             <p className="text-xs text-neutral-500 mb-3">
-              {language === 'ko' ? '연락처 또는 이메일 중 하나는 필수입니다.' : 'Phone or email is required.'}
+              {language === 'ko'
+                ? '결제 영수증·수업 알림은 이메일로 보내드려요. 전화는 환불 안내용 (선택).'
+                : 'Receipts and class notifications are sent by email. Phone is optional (for refunds).'}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
               <div>
@@ -1647,22 +1658,24 @@ export default function SessionBookingPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-0.5">{language === 'ko' ? '연락처' : 'Phone'}</label>
-                <input
-                  type="tel"
-                  value={guestFormPhone}
-                  onChange={(e) => setGuestFormPhone(e.target.value)}
-                  placeholder="010-0000-0000"
-                  className="w-full px-3 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-0.5">{language === 'ko' ? '이메일' : 'Email'}</label>
+                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-0.5">{language === 'ko' ? '이메일' : 'Email'} *</label>
                 <input
                   type="email"
                   value={guestFormEmail}
                   onChange={(e) => setGuestFormEmail(e.target.value)}
                   placeholder="email@example.com"
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-0.5">
+                  {language === 'ko' ? '연락처 (선택)' : 'Phone (optional)'}
+                </label>
+                <input
+                  type="tel"
+                  value={guestFormPhone}
+                  onChange={(e) => setGuestFormPhone(e.target.value)}
+                  placeholder="010-0000-0000"
                   className="w-full px-3 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-black dark:text-white text-sm"
                 />
               </div>
@@ -1680,8 +1693,8 @@ export default function SessionBookingPage() {
                     setError(language === 'ko' ? '이름을 입력해 주세요.' : 'Enter name.');
                     return;
                   }
-                  if (!guestFormPhone.trim() && !guestFormEmail.trim()) {
-                    setError(language === 'ko' ? '연락처 또는 이메일 중 하나를 입력해 주세요.' : 'Enter phone or email.');
+                  if (!guestFormEmail.trim()) {
+                    setError(language === 'ko' ? '이메일을 입력해 주세요.' : 'Enter email.');
                     return;
                   }
                   const guest = {
