@@ -11,13 +11,21 @@ interface BottomNavProps {
   onTabChange: (tab: ViewState) => void;
 }
 
-const tabConfig = [
+// B-4 (2026-04-27): 단일학원 모드에서 공개 탐색 탭(ACADEMY/DANCER)을 숨김.
+// flag OFF로 설정 시 즉시 복원. /academy/[id] 상세는 직접 URL/결제 리다이렉트로 보존됨.
+const HIDE_PUBLIC_TABS = process.env.NEXT_PUBLIC_HIDE_PUBLIC_ACADEMIES !== 'false';
+
+const allTabs = [
   { id: 'HOME' as ViewState, icon: Home, labelKey: 'bottomNav.home', href: '/home' },
   { id: 'ACADEMY' as ViewState, icon: MapPin, labelKey: 'bottomNav.academy', href: '/academy' },
   { id: 'DANCER' as ViewState, icon: User, labelKey: 'bottomNav.instructor', href: '/instructor' },
   { id: 'SAVED' as ViewState, icon: Calendar, labelKey: 'bottomNav.schedule', href: '/schedule' },
   { id: 'MY' as ViewState, icon: User, labelKey: 'bottomNav.my', href: '/my' },
 ];
+
+const tabConfig = HIDE_PUBLIC_TABS
+  ? allTabs.filter(t => t.id !== 'ACADEMY' && t.id !== 'DANCER')
+  : allTabs;
 
 export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
   const pathname = usePathname();
@@ -36,7 +44,7 @@ export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
   if (hiddenTabs.includes(activeTab)) return null;
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] bg-white/90 dark:bg-neutral-950/90 backdrop-blur-xl border-t border-neutral-200 dark:border-neutral-800 pt-2 pb-1.5 px-6 flex justify-between items-center z-40">
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] bg-white/90 dark:bg-neutral-950/90 backdrop-blur-xl border-t border-neutral-200 dark:border-neutral-800 pt-2 pb-1.5 px-6 flex justify-around items-center z-40">
       {tabConfig.map((tab) => {
         const Icon = tab.icon;
         const active = isActive(tab.id, tab.href);
