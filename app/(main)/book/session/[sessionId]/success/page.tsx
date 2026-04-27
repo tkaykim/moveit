@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CheckCircle, Home, Calendar, ArrowRight, UserPlus } from 'lucide-react';
+import { CheckCircle, Home, Calendar, ArrowRight, UserPlus, Receipt } from 'lucide-react';
 import { Suspense } from 'react';
+import { formatBookingCode } from '@/lib/utils/booking-code';
 
 function SuccessContent() {
   const router = useRouter();
@@ -11,6 +12,8 @@ function SuccessContent() {
   const name = searchParams.get('name') || '';
   const email = searchParams.get('email') || '';
   const phone = searchParams.get('phone') || '';
+  // B-4: 예약번호(toss orderId 또는 booking.id) — 비회원이 본인 거래 식별용.
+  const orderId = searchParams.get('orderId') || '';
   // B-3: 비회원 카드결제는 type=purchase + guest=1 조합으로 전달됨.
   const isGuestPaid = type === 'purchase' && searchParams.get('guest') === '1';
   const isGuestOnsite = type === 'guest';
@@ -67,20 +70,51 @@ function SuccessContent() {
         </div>
       )}
 
-      {/* 비회원 회원가입 유도 — 현장결제/카드결제 모두 */}
+      {/* B-4 (2026-04-27): 예약번호(단축 코드) — 비회원이 본인 거래 식별·문의 시 사용 */}
+      {showGuestCTA && orderId && (
+        <div className="w-full max-w-sm bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 mb-4">
+          <div className="flex items-center gap-3">
+            <Receipt size={18} className="text-neutral-500 shrink-0" />
+            <div className="flex-1">
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mb-0.5">예약번호</p>
+              <p className="font-mono text-sm font-semibold text-black dark:text-white tracking-wider">
+                {formatBookingCode(orderId)}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.navigator?.clipboard) {
+                  window.navigator.clipboard.writeText(formatBookingCode(orderId)).catch(() => {});
+                }
+              }}
+              className="text-xs text-neutral-500 hover:text-black dark:hover:text-white px-2 py-1"
+              aria-label="예약번호 복사"
+            >
+              복사
+            </button>
+          </div>
+          <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-2">
+            학원에 문의하실 때 이 번호를 알려주세요.
+          </p>
+        </div>
+      )}
+
+      {/* B-4 (2026-04-27): 회원가입 메리트 정직 표현 — "더 저렴" 폐기,
+          예약 조회·자동 추적·빠른 신청을 강조 */}
       {showGuestCTA && (
         <div className="w-full max-w-sm bg-primary/10 border border-primary/30 rounded-2xl p-5 mb-6">
           <div className="flex items-start gap-3">
             <UserPlus size={20} className="text-primary shrink-0 mt-0.5" />
             <div>
-              <h3 className="font-bold text-black dark:text-white text-sm mb-1">
-                회원가입하면 더 편리해요!
+              <h3 className="font-bold text-black dark:text-white text-sm mb-2">
+                회원가입하면 이런 게 편해져요
               </h3>
-              <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3">
-                {isGuestPaid
-                  ? '결제한 수강권과 예약 내역을 계정에 연결하려면 회원가입이 필요해요.'
-                  : '예약 내역 조회, 수강권 관리, 출석 기록 확인까지 한 번에 할 수 있어요.'}
-              </p>
+              <ul className="text-xs text-neutral-600 dark:text-neutral-400 mb-3 space-y-1 list-disc list-inside">
+                <li>내 예약을 한 곳에서 한눈에 확인</li>
+                <li>출결·잔여 횟수가 자동으로 추적</li>
+                <li>다음 신청은 정보 입력 없이 한 번에</li>
+                <li>학원 새 일정·이벤트 알림을 받을 수 있어요</li>
+              </ul>
               <button
                 onClick={() => router.push(signupHref)}
                 className="px-4 py-2 bg-primary text-black text-sm font-bold rounded-lg hover:opacity-95 active:scale-[0.98] transition-all"
