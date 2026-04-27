@@ -13,6 +13,7 @@ import { TicketTossPaymentModal } from '@/components/modals/ticket-toss-payment-
 import { useLocale } from '@/contexts/LocaleContext';
 import { ENABLE_TOSS_PAYMENT } from '@/lib/constants/payment';
 import { useTicketLabels } from '@/lib/hooks/useTicketLabels';
+import { isGuestEligibleTicket } from '@/lib/utils/ticket-policy';
 
 interface SessionData {
   id: string;
@@ -598,11 +599,12 @@ export default function SessionBookingPage() {
     }
   };
 
-  // 1회성 수강권 판별 (비회원 구매 허용 여부에 사용)
-  const isOneTimeTicket = (ticket: PurchasableTicket) => {
-    if (ticket.ticket_type === 'PERIOD') return false;
-    return (ticket.total_count ?? 0) === 1;
-  };
+  // B-4 (2026-04-27): 비회원 구매 허용 판별 — lib/utils/ticket-policy.ts 단일 헬퍼 호출.
+  // 서버(payment-order, bank-transfer-order)와 정확히 같은 기준 사용.
+  // count_options가 있는 ticket은 expand 단계에서 옵션 count가 total_count로 채워져 있으므로
+  // (line 478) 헬퍼에 ticket을 그대로 넘기면 4·8회 옵션은 자동 차단됨.
+  const isOneTimeTicket = (ticket: PurchasableTicket) =>
+    isGuestEligibleTicket({ ticket_type: ticket.ticket_type, total_count: ticket.total_count ?? null });
 
   // 수강권 구매 후 예약 (카드/계좌 = Toss 결제창, 그 외는 기존 구매 API)
   const handlePurchaseBooking = async () => {
@@ -1165,7 +1167,7 @@ export default function SessionBookingPage() {
                         {loadingPurchasableTickets
                           ? t('common.loading')
                           : !user
-                            ? (purchasableTickets.some(t => t.ticket_type === 'COUNT' && (t.total_count ?? 0) === 1)
+                            ? (purchasableTickets.some(t => isOneTimeTicket(t))
                               ? (language === 'ko' ? '1회권은 비회원도 구매 가능' : '1-time tickets available for guests')
                               : (language === 'ko' ? '로그인 후 이용 가능' : 'Login required'))
                             : t('sessionBooking.purchasableCount', { count: purchasableTickets.length })}

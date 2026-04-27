@@ -3,6 +3,7 @@ import { getTicketById } from '@/lib/db/tickets';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { normalizeGuestEmail, normalizeGuestPhone } from '@/lib/utils/guest-normalize';
+import { isGuestEligibleTicket } from '@/lib/utils/ticket-policy';
 
 /**
  * 수강권 결제용 주문 생성 (Toss Payments 결제창 연동)
@@ -48,16 +49,18 @@ export async function POST(request: Request) {
     const selectedOption = hasCountOptions && countOpts[optIndex] ? countOpts[optIndex] : null;
     const optionPrice = selectedOption ? (selectedOption.price ?? ticket.price ?? 0) : (ticket.price ?? 0);
 
-    // 1회성 판별: count_options 사용 시 선택된 옵션의 count, 아니면 total_count
-    const effectiveCount = selectedOption ? (selectedOption.count ?? 1) : (ticket.total_count ?? 1);
-    const isPeriodTicket = ticket.ticket_type === 'PERIOD';
-    const isOneTimeTicket = !isPeriodTicket && effectiveCount === 1;
+    // B-4 (2026-04-27): 비회원 결제 허용 여부는 lib/utils/ticket-policy.ts의 단일 헬퍼로 통일.
+    // 클라이언트(book/session/[sessionId]/page.tsx)와 정확히 동일한 판별 보장.
+    const guestEligible = isGuestEligibleTicket(
+      { ticket_type: ticket.ticket_type ?? 'COUNT', total_count: ticket.total_count ?? null },
+      selectedOption,
+    );
 
     let userId: string;
 
     if (user) {
       userId = user.id;
-    } else if (scheduleId && isOneTimeTicket) {
+    } else if (scheduleId && guestEligible) {
       // 1회성 + 특정 수업 수강신청 → 비회원 허용 (구매 후 즉시 예약)
       const name = guestName != null ? String(guestName).trim() : '';
       const phone = normalizeGuestPhone(guestPhone);

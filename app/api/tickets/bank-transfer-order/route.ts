@@ -3,6 +3,7 @@ import { getTicketById } from '@/lib/db/tickets';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { normalizeGuestEmail, normalizeGuestPhone } from '@/lib/utils/guest-normalize';
+import { isGuestEligibleTicket } from '@/lib/utils/ticket-policy';
 
 /**
  * 계좌이체 신청 주문 생성 (입금 대기).
@@ -57,10 +58,11 @@ export async function POST(request: Request) {
     const selectedOption = hasCountOptions && countOpts[optIndex] ? countOpts[optIndex] : null;
     const optionPrice = selectedOption ? (selectedOption.price ?? ticket.price ?? 0) : (ticket.price ?? 0);
 
-    // 1회성 판별
-    const effectiveCount = selectedOption ? (selectedOption.count ?? 1) : (ticket.total_count ?? 1);
-    const isPeriodTicket = ticket.ticket_type === 'PERIOD';
-    const isOneTimeTicket = !isPeriodTicket && effectiveCount === 1;
+    // B-4 (2026-04-27): 비회원 결제 허용 여부는 lib/utils/ticket-policy.ts의 단일 헬퍼로 통일.
+    const guestEligible = isGuestEligibleTicket(
+      { ticket_type: ticket.ticket_type ?? 'COUNT', total_count: ticket.total_count ?? null },
+      selectedOption,
+    );
 
     let ordererName: string;
     let ordererPhone: string | null = null;
@@ -90,7 +92,7 @@ export async function POST(request: Request) {
       depositorName = bodyDepositorName != null && String(bodyDepositorName).trim()
         ? String(bodyDepositorName).trim()
         : ordererName;
-    } else if (scheduleId && isOneTimeTicket) {
+    } else if (scheduleId && guestEligible) {
       // 1회성 + 특정 수업 → 비회원 허용.
       // B-2 (2026-04-21): payment-order와 동일하게 guest user를 여기서 생성해
       // bank-transfer-confirm/revert가 user_id 있는 단일 경로로 처리되도록 맞춤.
