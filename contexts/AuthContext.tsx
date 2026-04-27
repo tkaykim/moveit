@@ -37,6 +37,12 @@ interface AuthContextType {
     nickname?: string
   ) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
+  /**
+   * B-4 (2026-04-27): Google OAuth 로그인·가입 통합 1버튼.
+   * Supabase Auth → Providers → Google이 활성화되어 있어야 동작.
+   * `redirectTo`로 returnTo 경로 전달 가능 (예: 결제 진입 후 복귀).
+   */
+  signInWithGoogle: (redirectTo?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -331,6 +337,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [supabase, fetchProfile]);
 
+  // B-4 (2026-04-27): Google OAuth 로그인·가입 통합.
+  // Supabase Auth → Providers → Google이 활성화되어 있고 redirect URL이
+  // `<origin>/auth/callback` 으로 등록되어 있어야 함.
+  const signInWithGoogle = useCallback(async (redirectTo?: string) => {
+    if (!supabase) return { error: new Error('Supabase client not initialized') };
+    try {
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      // returnTo는 callback에서 query param으로 받아 최종 redirect 시 사용.
+      const callback = `${origin}/auth/callback${redirectTo ? `?next=${encodeURIComponent(redirectTo)}` : ''}`;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: callback,
+          // 강사·운영자 계정 OAuth로 들어와도 RLS는 users.role 기반으로 동작.
+        },
+      });
+      if (error) return { error };
+      return { error: null };
+    } catch (error: any) {
+      return { error };
+    }
+  }, [supabase]);
+
   // 로그아웃
   const signOut = useCallback(async () => {
     if (!supabase) return;
@@ -447,6 +476,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     signUp,
     signIn,
+    signInWithGoogle,
     signOut,
     refreshProfile,
   };
