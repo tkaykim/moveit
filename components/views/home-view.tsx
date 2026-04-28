@@ -500,7 +500,8 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
         </div>
       ) : null}
 
-      {/* 학원 찾기 카드 */}
+      {/* 학원 찾기 카드 — 단일학원 모드에서는 통째로 숨김 (B-4 2026-04-28) */}
+      {!hidePublicAcademies && (
       <section className="px-5 mt-6" aria-label={language === 'en' ? 'Find studios' : '학원 찾기'}>
         <div className="grid grid-cols-2 gap-3">
           <Card
@@ -555,8 +556,10 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           </Card>
         </div>
       </section>
+      )}
 
-      {/* HOT한 강사 */}
+      {/* HOT한 강사 — 단일학원 모드에서는 숨김 (B-4 2026-04-28) */}
+      {!hidePublicAcademies && (
       <section className="mt-8" aria-label={language === 'en' ? 'HOT Instructors' : 'HOT 강사'}>
         <div className="flex items-center justify-between px-5 mb-3">
           <div className="flex items-center gap-2">
@@ -618,6 +621,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
           </div>
         )}
       </section>
+      )}
 
       {/* 최근 본 학원 */}
       {recentAcademies.length > 0 && (
