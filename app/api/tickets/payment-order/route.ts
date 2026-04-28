@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { getTicketById } from '@/lib/db/tickets';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -111,9 +112,11 @@ export async function POST(request: Request) {
         }
       }
       if (!guestUser) {
+        // B-4 hotfix (2026-04-28): users.id default가 auth.uid()라 service role insert에선 NULL 반환 →
+        // NOT NULL 위반(23502). 명시적 UUID로 회피. f890b6a의 23505 fallback도 그대로 유지.
         const { data: inserted, error: insertUserErr } = await supabase
           .from('users')
-          .insert({ name, phone: phone ?? null, email: email ?? null, is_guest: true })
+          .insert({ id: randomUUID(), name, phone: phone ?? null, email: email ?? null, is_guest: true })
           .select('id')
           .single();
         if (insertUserErr) {
