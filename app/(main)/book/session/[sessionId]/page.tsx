@@ -1452,8 +1452,8 @@ export default function SessionBookingPage() {
 
               <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
                 {language === 'ko'
-                  ? '* 결제 영수증·수업 알림은 이메일로 보내드려요. 전화번호는 환불 안내가 필요한 경우에만 사용됩니다.'
-                  : '* Receipts and class notifications are sent by email. Phone is used only for refund inquiries.'}
+                  ? '* 결제 영수증·수업 알림은 이메일로 보내드려요.'
+                  : '* Receipts and class notifications are sent by email.'}
               </p>
 
               <div className="text-xs text-neutral-500 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 rounded-lg">
@@ -1584,25 +1584,29 @@ export default function SessionBookingPage() {
         </div>
       )}
 
-      {/* 계좌이체 시 비로그인: 로그인/회원가입/비회원 선택 */}
+      {/* B-4 (2026-04-28): 결제 진입 모달 — MyTab/비회원 입력과 동일한 하단 시트 패턴.
+          비로그인: 로그인 / 회원가입 / 비회원으로 계속 3분기. */}
       {bankTransferAuthModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setBankTransferAuthModalOpen(false)} />
-          <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-xl w-full p-5">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="absolute inset-0" onClick={() => setBankTransferAuthModalOpen(false)} />
+          <div
+            className="relative w-full max-w-[420px] bg-white dark:bg-neutral-900 rounded-t-3xl sm:rounded-3xl p-6 max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="text-lg font-bold text-black dark:text-white mb-1">
               {language === 'ko' ? '수강권 구매 및 예약' : 'Ticket & booking'}
             </h3>
             <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
-              {language === 'ko' ? '로그인하시겠습니까? 비회원으로 진행하시면 이름·연락처를 입력해 주세요.' : 'Log in or continue as guest with name and contact.'}
+              {language === 'ko' ? '로그인하시겠습니까? 비회원으로 진행하시면 이름·이메일을 입력해 주세요.' : 'Log in or continue as guest with name and email.'}
             </p>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col gap-2">
               <button
                 onClick={() => {
                   setBankTransferAuthModalOpen(false);
                   setAuthModalInitialTab('login');
                   setIsAuthModalOpen(true);
                 }}
-                className="py-2.5 px-5 rounded-xl bg-primary text-black font-bold text-sm"
+                className="w-full py-3 rounded-xl bg-primary text-black font-bold text-sm"
               >
                 {t('sessionBooking.loginButton')}
               </button>
@@ -1612,7 +1616,7 @@ export default function SessionBookingPage() {
                   setAuthModalInitialTab('signup');
                   setIsAuthModalOpen(true);
                 }}
-                className="py-2.5 px-5 rounded-xl border-2 border-neutral-300 dark:border-neutral-600 text-neutral-800 dark:text-neutral-200 font-medium text-sm"
+                className="w-full py-3 rounded-xl border border-neutral-300 dark:border-neutral-600 text-neutral-800 dark:text-neutral-200 font-medium text-sm"
               >
                 {t('sessionBooking.signupButton')}
               </button>
@@ -1624,7 +1628,7 @@ export default function SessionBookingPage() {
                   setGuestFormPhone('');
                   setGuestFormEmail('');
                 }}
-                className="py-2.5 px-4 text-sm text-neutral-600 dark:text-neutral-400 underline underline-offset-2"
+                className="w-full py-3 text-sm text-neutral-600 dark:text-neutral-400"
               >
                 {language === 'ko' ? '비회원으로 계속하기' : 'Continue as guest'}
               </button>
@@ -1633,20 +1637,24 @@ export default function SessionBookingPage() {
         </div>
       )}
 
-      {/* B-4 (2026-04-27): 비회원 정보 입력 — 이름·이메일 필수, 전화 옵션 (영수증·알림 메일 단일화). */}
+      {/* B-4 (2026-04-28): 비회원 정보 입력 — MyTab과 동일한 하단 시트 패턴으로 통일.
+          이전(중앙정렬)에는 화면 상단에 떠 인지가 어려웠음. */}
       {bankTransferGuestFormOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setBankTransferGuestFormOpen(false)} />
-          <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-2xl w-full p-5">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="absolute inset-0" onClick={() => setBankTransferGuestFormOpen(false)} />
+          <div
+            className="relative w-full max-w-[420px] bg-white dark:bg-neutral-900 rounded-t-3xl sm:rounded-3xl p-6 max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="text-lg font-bold text-black dark:text-white mb-1">
               {language === 'ko' ? '비회원 정보 입력' : 'Guest information'}
             </h3>
-            <p className="text-xs text-neutral-500 mb-3">
+            <p className="text-xs text-neutral-500 mb-4">
               {language === 'ko'
-                ? '결제 영수증·수업 알림은 이메일로 보내드려요. 전화는 환불 안내용 (선택).'
-                : 'Receipts and class notifications are sent by email. Phone is optional (for refunds).'}
+                ? '결제 영수증·수업 알림은 이메일로 보내드려요.'
+                : 'Receipts and class notifications are sent by email.'}
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div className="grid grid-cols-1 gap-3 mb-4">
               <div>
                 <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-0.5">{language === 'ko' ? '이름' : 'Name'} *</label>
                 <input
