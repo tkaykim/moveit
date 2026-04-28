@@ -74,12 +74,16 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: '이메일을 입력해 주세요. (영수증·알림 발송용)' }, { status: 400 });
       }
 
-      // B-3 (2026-04-21): 이메일/전화가 정식 회원(is_guest=false)과 충돌하면
-      // 무음 귀속 대신 명시적 차단. 오타로 타 회원 계정에 결제 귀속되는 위험 제거.
+      // B-3 (2026-04-21) / B-4 (2026-04-28): 이메일/전화가 정식 회원(is_guest=false)과 충돌하면
+      // 무음 귀속 대신 명시적 차단. SELECT가 어떤 이유로 row를 놓쳐 INSERT 단계로 떨어지더라도
+      // unique violation(23505)을 잡아 동일 메시지로 안내한다.
       let guestUser: { id: string } | null = null;
       if (email) {
-        const { data: existing } = await supabase
+        const { data: existing, error: selectEmailErr } = await supabase
           .from('users').select('id, is_guest').ilike('email', email).limit(1).maybeSingle();
+        if (selectEmailErr) {
+          console.error('Email lookup error in payment-order:', selectEmailErr);
+        }
         if (existing) {
           if (existing.is_guest !== true) {
             return NextResponse.json({
@@ -91,8 +95,11 @@ export async function POST(request: Request) {
         }
       }
       if (!guestUser && phone) {
-        const { data: existing } = await supabase
+        const { data: existing, error: selectPhoneErr } = await supabase
           .from('users').select('id, is_guest').eq('phone', phone).limit(1).maybeSingle();
+        if (selectPhoneErr) {
+          console.error('Phone lookup error in payment-order:', selectPhoneErr);
+        }
         if (existing) {
           if (existing.is_guest !== true) {
             return NextResponse.json({
@@ -111,6 +118,14 @@ export async function POST(request: Request) {
           .single();
         if (insertUserErr) {
           console.error('Guest user creation error:', insertUserErr);
+          // B-4 (2026-04-28): unique violation은 거의 항상 정식 회원 row와 충돌. 친절한 409로 변환.
+          // SELECT 단계가 RLS·race condition·서비스 키 누락 등으로 row를 놓쳤을 때의 안전망.
+          if ((insertUserErr as any).code === '23505') {
+            return NextResponse.json({
+              error: '이미 가입된 이메일 또는 전화번호입니다. 로그인 후 결제해 주세요.',
+              code: 'EMAIL_OR_PHONE_BELONGS_TO_MEMBER',
+            }, { status: 409 });
+          }
           return NextResponse.json({ error: '게스트 정보 생성에 실패했습니다.' }, { status: 500 });
         }
         guestUser = inserted;

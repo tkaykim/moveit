@@ -575,6 +575,19 @@ export default function SessionBookingPage() {
           });
       if (!orderRes.ok) {
         const data = await orderRes.json();
+        // B-4 (2026-04-28): 계좌이체에서도 회원 충돌 시 로그인 유도.
+        if (
+          orderRes.status === 409 &&
+          (data?.code === 'EMAIL_BELONGS_TO_MEMBER' ||
+            data?.code === 'PHONE_BELONGS_TO_MEMBER' ||
+            data?.code === 'EMAIL_OR_PHONE_BELONGS_TO_MEMBER')
+        ) {
+          setBankTransferGuestFormOpen(false);
+          setAuthModalInitialTab('login');
+          setIsAuthModalOpen(true);
+          setError(data.error || (language === 'ko' ? '이미 가입된 계정이에요. 로그인 후 결제해 주세요.' : 'Account exists. Please log in.'));
+          return;
+        }
         throw new Error(data.error || t('sessionBooking.purchaseFailed'));
       }
       const data = await orderRes.json();
@@ -792,6 +805,19 @@ export default function SessionBookingPage() {
       });
       if (!orderRes.ok) {
         const data = await orderRes.json();
+        // B-4 (2026-04-28): 비회원이 입력한 이메일/전화가 정식 회원과 충돌하면 친절히 로그인 유도.
+        if (
+          orderRes.status === 409 &&
+          (data?.code === 'EMAIL_BELONGS_TO_MEMBER' ||
+            data?.code === 'PHONE_BELONGS_TO_MEMBER' ||
+            data?.code === 'EMAIL_OR_PHONE_BELONGS_TO_MEMBER')
+        ) {
+          setBankTransferGuestFormOpen(false);
+          setAuthModalInitialTab('login');
+          setIsAuthModalOpen(true);
+          setError(data.error || (language === 'ko' ? '이미 가입된 계정이에요. 로그인 후 결제해 주세요.' : 'Account exists. Please log in.'));
+          return;
+        }
         throw new Error(data.error || t('sessionBooking.purchaseFailed'));
       }
       const { orderId, amount, orderName } = await orderRes.json();

@@ -108,11 +108,15 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: '이메일을 입력해 주세요. (입금 안내·알림 발송용)' }, { status: 400 });
       }
 
-      // B-3 (2026-04-21): 이메일/전화가 정식 회원과 충돌하면 무음 귀속 대신 명시적 차단.
+      // B-3 (2026-04-21) / B-4 (2026-04-28): 이메일/전화가 정식 회원과 충돌하면 명시적 차단.
+      // SELECT가 row를 놓쳐 INSERT까지 가도 unique violation(23505)을 잡아 동일 메시지로 안내.
       let guestUser: { id: string } | null = null;
       if (email) {
-        const { data: existing } = await supabase
+        const { data: existing, error: selectEmailErr } = await supabase
           .from('users').select('id, is_guest').ilike('email', email).limit(1).maybeSingle();
+        if (selectEmailErr) {
+          console.error('Email lookup error in bank-transfer-order:', selectEmailErr);
+        }
         if (existing) {
           if (existing.is_guest !== true) {
             return NextResponse.json({
@@ -124,8 +128,11 @@ export async function POST(request: Request) {
         }
       }
       if (!guestUser && phone) {
-        const { data: existing } = await supabase
+        const { data: existing, error: selectPhoneErr } = await supabase
           .from('users').select('id, is_guest').eq('phone', phone).limit(1).maybeSingle();
+        if (selectPhoneErr) {
+          console.error('Phone lookup error in bank-transfer-order:', selectPhoneErr);
+        }
         if (existing) {
           if (existing.is_guest !== true) {
             return NextResponse.json({
@@ -144,6 +151,12 @@ export async function POST(request: Request) {
           .single();
         if (insertUserErr) {
           console.error('Guest user creation error (bank-transfer):', insertUserErr);
+          if ((insertUserErr as any).code === '23505') {
+            return NextResponse.json({
+              error: '이미 가입된 이메일 또는 전화번호입니다. 로그인 후 결제해 주세요.',
+              code: 'EMAIL_OR_PHONE_BELONGS_TO_MEMBER',
+            }, { status: 409 });
+          }
           return NextResponse.json({ error: '게스트 정보 생성에 실패했습니다.' }, { status: 500 });
         }
         guestUser = inserted;
