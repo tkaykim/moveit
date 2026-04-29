@@ -7,18 +7,18 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
 
 function Badge({ className, variant = "default", ...props }: BadgeProps) {
   const variantClasses = {
-    default: "border-transparent bg-neutral-900 text-neutral-50 shadow dark:bg-neutral-50 dark:text-neutral-900",
-    secondary: "border-transparent bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-50",
-    destructive: "border-transparent bg-red-600 text-neutral-50 shadow dark:bg-red-900 dark:text-neutral-50",
-    outline: "text-neutral-950 dark:text-neutral-50 border-neutral-200 dark:border-neutral-800",
-    success: "border-transparent bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-    warning: "border-transparent bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-    info: "border-transparent bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+    default: "border-transparent bg-text text-bg shadow-token-sm",
+    secondary: "border-transparent bg-surface-2 text-text",
+    destructive: "border-transparent bg-danger text-white shadow-token-sm",
+    outline: "text-text border-border",
+    success: "border-transparent bg-positive-soft text-positive",
+    warning: "border-transparent bg-warning-soft text-warning",
+    info: "border-transparent bg-accent-soft text-accent",
   };
   return (
     <div
       className={cn(
-        "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-950 focus:ring-offset-2 dark:focus:ring-neutral-300 dark:focus:ring-offset-neutral-950",
+        "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-text focus:ring-offset-2 focus:ring-offset-bg",
         variantClasses[variant],
         className
       )}
