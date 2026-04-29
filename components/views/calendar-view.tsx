@@ -328,105 +328,105 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
   });
 
   return (
-    <div className="h-full pt-8 px-5 pb-24 animate-in fade-in">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-black dark:text-white">클래스 일정</h2>
+    <div className="h-full pt-7 px-5 pb-24 animate-in fade-in">
+      {/* 헤더 — 디자인 패턴: meta + mono section label */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-3">
+            THIS WEEK · {getDisplayDateRange()}
+          </span>
+        </div>
         <LanguageToggle />
       </div>
+      <h1 className="text-[28px] font-semibold leading-[1.1] tracking-[-0.03em] text-text mb-5">
+        수업 캘린더
+      </h1>
 
-      {/* 주간 네비게이션 */}
+      {/* 주간 네비게이션 — 작은 chevron + 이번주 칩 */}
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={goToPreviousWeek}
-          className="p-2 text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white"
+          className="p-1.5 text-text-3 hover:text-text"
         >
-          <ChevronLeft size={20} />
+          <ChevronLeft size={16} />
         </button>
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-bold text-black dark:text-white">{getDisplayDateRange()}</span>
-          <button
-            onClick={goToToday}
-            className="text-xs px-3 py-1 bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white rounded-full font-bold"
-          >
-            이번주
-          </button>
-        </div>
+        <button
+          onClick={goToToday}
+          className="font-mono text-[11px] uppercase tracking-[0.06em] px-2.5 py-1 rounded-md bg-surface-2 text-text-2 hover:bg-surface-3 transition-colors"
+        >
+          이번주
+        </button>
         <button
           onClick={goToNextWeek}
-          className="p-2 text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white"
+          className="p-1.5 text-text-3 hover:text-text"
         >
-          <ChevronRight size={20} />
+          <ChevronRight size={16} />
         </button>
       </div>
 
-      {/* 요일 선택 버튼 */}
-      <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide pb-2">
+      {/* 요일 그리드 — 디자인 패턴 7-cell boxed (each cell with individual border) */}
+      <div className="grid grid-cols-7 gap-1.5 mb-6">
         {DAYS.map((day, index) => {
           const date = weekDates[index];
           const isToday = isKSTToday(date);
           const isSelected = selectedDay === day;
           const classCount = scheduleGrid[day]?.length || 0;
           const dayOfMonth = getKSTDayOfMonth(date);
+          const active = isSelected || (selectedDay === null && isToday);
 
           return (
             <button
               key={day}
               onClick={() => setSelectedDay(isSelected ? null : day)}
-              className={`flex-shrink-0 flex flex-col items-center gap-1 px-4 py-3 rounded-xl font-bold transition-all ${
-                isSelected
-                  ? 'bg-primary text-black'
-                  : isToday
-                  ? 'bg-neutral-200 dark:bg-neutral-800 text-black dark:text-white'
-                  : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400'
+              className={`relative flex flex-col items-center justify-center gap-1 py-3 rounded-[10px] border transition-colors ${
+                active
+                  ? 'bg-text text-bg border-text'
+                  : 'border-border bg-surface text-text-3 hover:border-border-strong'
               }`}
             >
-              <span className="text-xs">{DAY_NAMES[index]}</span>
-              <span className="text-sm">{dayOfMonth}</span>
+              <span className={`font-mono text-[10px] uppercase tracking-[0.06em] ${active ? 'opacity-80' : ''}`}>
+                {day}
+              </span>
+              <span className={`text-[15px] font-semibold ${active ? '' : 'text-text'}`}>
+                {dayOfMonth}
+              </span>
               {classCount > 0 && (
-                <span className={`text-[10px] ${isSelected ? 'text-black' : 'text-primary'}`}>
-                  {classCount}
-                </span>
+                <span
+                  className={`absolute bottom-1.5 w-1 h-1 rounded-full ${active ? 'bg-bg/70' : 'bg-accent'}`}
+                />
               )}
             </button>
           );
         })}
       </div>
 
-      {/* 클래스 목록 */}
-      <div className="space-y-4">
+      {/* 클래스 목록 — 디자인 패턴: 좌측 mono 시간(장르 컬러) + 본문 */}
+      <div className="space-y-5">
         {loading ? (
-          // 스켈레톤 UI
-          <div className="space-y-4">
-            {Array.from({ length: 3 }).map((_, groupIdx) => (
-              <div key={groupIdx} className="space-y-2">
-                <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-12 mx-2 animate-pulse" />
-                {Array.from({ length: 2 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 animate-pulse"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="h-5 bg-neutral-200 dark:bg-neutral-800 rounded w-32" />
-                      <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-12" />
-                    </div>
-                    <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-20 mb-2" />
-                    <div className="flex gap-3">
-                      <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-24" />
-                      <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-28" />
-                    </div>
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-surface border border-border rounded-[10px] p-3.5 animate-pulse">
+                <div className="flex gap-3">
+                  <div className="w-12 space-y-1">
+                    <div className="h-3 bg-surface-3 rounded" />
+                    <div className="h-2 bg-surface-3 rounded w-8" />
                   </div>
-                ))}
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-4 bg-surface-3 rounded w-32" />
+                    <div className="h-3 bg-surface-3 rounded w-24" />
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         ) : timeSlots.length === 0 ? (
-          <div className="text-center py-12 text-neutral-500 dark:text-neutral-400">
+          <div className="text-center py-12 text-text-4 text-[13px]">
             {selectedDay ? `${DAY_NAMES[DAYS.indexOf(selectedDay)]}요일 클래스가 없습니다.` : '이번 주 클래스가 없습니다.'}
           </div>
         ) : (
           timeSlots.map((time: string) => (
             <div key={time} className="space-y-2">
-              <h3 className="text-sm font-bold text-neutral-600 dark:text-neutral-400 px-2">{time}</h3>
               {classesByTime[time].map((classInfo) => {
                 const endTimeStr = (classInfo as any).endTimeFormatted;
                 const color = (classInfo as any)._colorStyle ?? getClassColor((classInfo as any).card_color, classInfo.level);
@@ -434,48 +434,34 @@ export const CalendarView = ({ onAcademyClick, onClassBook }: CalendarViewProps)
                 return (
                   <div
                     key={`${classInfo.schedule_id || classInfo.id}`}
-                    className={`${color.bg} ${color.border} border rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-transform`}
+                    className={`bg-surface border ${color.border} rounded-[10px] p-3.5 cursor-pointer active:scale-[0.99] transition-transform flex items-stretch gap-3`}
                     onClick={() => handleClassClick(classInfo)}
                   >
-                    {/* 상단: 제목 + 난이도 + 상태 */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className="text-base font-bold text-black dark:text-white leading-tight truncate">
-                        {classInfo.class_title || `${classInfo.genre} 클래스`}
-                      </h4>
-                      {classInfo.level && <LevelBadge level={classInfo.level} />}
-                      <div className="flex-1" />
-                      {classInfo.status === 'FULL' ? (
-                        <span className="flex-shrink-0 text-[10px] font-bold px-2 py-1 rounded bg-red-500/10 text-red-500 dark:text-red-400">
-                          마감
-                        </span>
-                      ) : classInfo.status === 'ALMOST_FULL' ? (
-                        <span className="flex-shrink-0 text-[10px] font-bold px-2 py-1 rounded bg-orange-500/10 text-orange-500 dark:text-orange-400">
-                          마감임박
-                        </span>
-                      ) : null}
+                    {/* 좌측: mono start/end 시간 (장르 컬러) */}
+                    <div className="font-mono shrink-0 w-12 flex flex-col">
+                      <span className={`text-[15px] font-semibold leading-none ${color.text}`}>{classInfo.time}</span>
+                      {endTimeStr && (
+                        <span className="text-[11px] text-text-4 mt-1 leading-none">{endTimeStr}</span>
+                      )}
                     </div>
 
-                    {/* 중단: 강사 */}
-                    {classInfo.instructor && (
-                      <div className="mb-2">
-                        <span className="text-sm text-neutral-700 dark:text-neutral-300 font-medium">
-                          {classInfo.instructor}
-                        </span>
+                    {/* 본문 */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="text-[14px] font-semibold text-text tracking-[-0.01em] truncate">
+                          {classInfo.class_title || `${classInfo.genre} 클래스`}
+                        </h4>
+                        {classInfo.level && <LevelBadge level={classInfo.level} />}
                       </div>
-                    )}
-
-                    {/* 하단: 시간 · 학원 · 인원 */}
-                    <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-neutral-500 dark:text-neutral-400">
-                      <span className="inline-flex items-center gap-1">
-                        <Clock size={12} />
-                        {classInfo.time}{endTimeStr ? ` - ${endTimeStr}` : ''}
-                      </span>
-                      {classInfo.academy?.name && (
-                        <span className="inline-flex items-center gap-1">
-                          <MapPin size={12} />
-                          {classInfo.academy.name}
-                        </span>
-                      )}
+                      <div className="mt-1 text-[11px] text-text-3 truncate">
+                        {classInfo.genre && <span>{classInfo.genre}</span>}
+                        {classInfo.instructor && (
+                          <>
+                            {classInfo.genre && <> · </>}
+                            {classInfo.instructor}
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
