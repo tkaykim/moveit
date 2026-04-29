@@ -10,10 +10,53 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Legacy primary (alias of accent — keep for backward compat)
         primary: {
           DEFAULT: "var(--primary)",
           foreground: "var(--primary-foreground)",
         },
+        // Design tokens
+        bg: "var(--bg)",
+        surface: {
+          DEFAULT: "var(--surface)",
+          2: "var(--surface-2)",
+          3: "var(--surface-3)",
+        },
+        border: {
+          DEFAULT: "var(--border)",
+          strong: "var(--border-strong)",
+        },
+        text: {
+          DEFAULT: "var(--text)",
+          2: "var(--text-2)",
+          3: "var(--text-3)",
+          4: "var(--text-4)",
+        },
+        accent: {
+          DEFAULT: "var(--accent)",
+          ink: "var(--accent-ink)",
+          soft: "var(--accent-soft)",
+        },
+        positive: {
+          DEFAULT: "var(--positive)",
+          soft: "var(--positive-soft)",
+        },
+        warning: {
+          DEFAULT: "var(--warning)",
+          soft: "var(--warning-soft)",
+        },
+        danger: {
+          DEFAULT: "var(--danger)",
+          soft: "var(--danger-soft)",
+        },
+      },
+      fontFamily: {
+        mono: ['var(--font-mono)', 'ui-monospace', '"SF Mono"', 'monospace'],
+      },
+      boxShadow: {
+        token: "var(--shadow)",
+        "token-sm": "var(--shadow-sm)",
+        "token-lg": "var(--shadow-lg)",
       },
       animation: {
         'in': 'fadeIn 0.3s ease-in',
@@ -49,4 +92,3 @@ const config: Config = {
   plugins: [require('@tailwindcss/typography')],
 };
 export default config;
-

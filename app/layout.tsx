@@ -1,16 +1,23 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PushNotificationProvider } from "@/contexts/PushNotificationContext";
 import { CapacitorSafeArea } from "@/components/common/capacitor-safe-area";
 
-const inter = Inter({ 
+const inter = Inter({
   subsets: ["latin"],
   display: 'swap',
   preload: true,
   fallback: ['system-ui', 'arial'],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ['400', '500', '600'],
+  display: 'swap',
+  variable: '--font-mono',
 });
 
 export const metadata: Metadata = {
@@ -38,7 +45,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" suppressHydrationWarning>
+    <html lang="ko" suppressHydrationWarning className={jetbrainsMono.variable}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />

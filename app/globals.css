@@ -4,43 +4,113 @@
 
 @layer base {
   :root {
-    --primary: #7AB2D3;
-    --primary-foreground: #ffffff;
+    /* ─── Design tokens (Claude design / moveit Studio OS) ───────────── */
+    /* Surfaces (light) */
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --surface-2: #f5f5f4;
+    --surface-3: #efeeec;
+    --border: #e7e5e4;
+    --border-strong: #d6d3d1;
+
+    /* Text (light) */
+    --text: #0c0a09;
+    --text-2: #44403c;
+    --text-3: #78716c;
+    --text-4: #a8a29e;
+
+    /* Accent — Path A: brand sky-blue */
+    --accent: #7AB2D3;
+    --accent-ink: #ffffff;
+    --accent-soft: #DFF2EB;
+
+    /* Semantic colors (light) */
+    --positive: #16a34a;
+    --positive-soft: #dcfce7;
+    --warning: #d97706;
+    --warning-soft: #fef3c7;
+    --danger: #dc2626;
+    --danger-soft: #fee2e2;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.04);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.05), 0 24px 48px rgba(0, 0, 0, 0.08);
+
+    /* ─── Legacy aliases (do not remove — older components reference them) */
+    --primary: var(--accent);
+    --primary-foreground: var(--accent-ink);
     --primary-rgb: 122, 178, 211;
-    --primary-muted: #DFF2EB;
+    --primary-muted: var(--accent-soft);
     --primary-accent: #B9E5E8;
+
+    /* Capacitor / safe-area */
     --app-safe-bottom: 0px;
-    /* 상단: 상태바(알림/시계/배터리) 영역만큼 헤더가 내려가도록. Capacitor 앱에서 JS로 Android 폴백 설정 */
     --app-safe-top: env(safe-area-inset-top, 0px);
   }
 
   .dark {
-    --primary: #B9E5E8;
-    --primary-foreground: #0a0a0a;
+    /* Surfaces (dark) */
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface-2: #1c1c1c;
+    --surface-3: #262626;
+    --border: #2a2a2a;
+    --border-strong: #3a3a3a;
+
+    /* Text (dark) */
+    --text: #fafafa;
+    --text-2: #d4d4d4;
+    --text-3: #a3a3a3;
+    --text-4: #737373;
+
+    /* Accent — sky-blue dark variant */
+    --accent: #B9E5E8;
+    --accent-ink: #0a0a0a;
+    --accent-soft: rgba(185, 229, 232, 0.12);
+
+    /* Semantic colors (dark) */
+    --positive: #22c55e;
+    --positive-soft: rgba(34, 197, 94, 0.12);
+    --warning: #f59e0b;
+    --warning-soft: rgba(245, 158, 11, 0.12);
+    --danger: #ef4444;
+    --danger-soft: rgba(239, 68, 68, 0.12);
+
+    /* Shadows (dark) */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.4), 0 24px 48px rgba(0, 0, 0, 0.5);
+
+    /* Legacy aliases */
+    --primary: var(--accent);
+    --primary-foreground: var(--accent-ink);
     --primary-rgb: 185, 229, 232;
     --primary-muted: #4A628A;
+    --primary-accent: #B9E5E8;
   }
 
-  /* Capacitor Android: 네이티브에서 시스템 바 패딩 처리하므로 CSS 추가 패딩 불필요 */
+  /* Capacitor Android: 네이티브에서 시스템 바 패딩 처리 */
   html.capacitor-android {
     --app-safe-bottom: 0px;
   }
-  
-  /* 기본 레이아웃 보호 */
+
   * {
     box-sizing: border-box;
   }
-  
+
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  
+
   body {
     margin: 0;
     padding: 0;
     min-height: 100vh;
-    /* Capacitor 앱: 시스템 UI 영역 안전 패딩 */
+    background: var(--bg);
+    color: var(--text);
+    font-feature-settings: 'ss01', 'cv11', 'tnum';
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
@@ -54,6 +124,55 @@
     padding-top: var(--app-safe-top, env(safe-area-inset-top, 0px));
   }
 
+  /* Mono numerals — for stat values, time codes, counters */
+  .mono {
+    font-family: var(--font-mono, 'JetBrains Mono'), ui-monospace, 'SF Mono', monospace;
+    font-feature-settings: 'tnum', 'zero';
+  }
+
+  /* Section label — uppercase mono caption (TODAY · 3) */
+  .section-label {
+    font-family: var(--font-mono, 'JetBrains Mono'), ui-monospace, monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-3);
+  }
+
+  /* Progress bar — accent / warn / danger variants */
+  .bar {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--surface-3);
+    overflow: hidden;
+    position: relative;
+  }
+  .bar > span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+  .bar.warn > span {
+    background: var(--warning);
+  }
+  .bar.danger > span {
+    background: var(--danger);
+  }
+
+  /* Dot separator */
+  .sep {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--text-4);
+    display: inline-block;
+    margin: 0 6px;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -61,42 +180,42 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
-  
+
   .custom-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: rgb(203 213 225) transparent;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar-thumb {
     background-color: rgb(203 213 225);
     border-radius: 3px;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: rgb(148 163 184);
   }
-  
+
   .dark .custom-scrollbar {
     scrollbar-color: rgb(51 65 85) transparent;
   }
-  
+
   .dark .custom-scrollbar::-webkit-scrollbar-thumb {
     background-color: rgb(51 65 85);
   }
-  
+
   .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: rgb(71 85 105);
   }
 
-  /* 인트로 QR 스캔 라인 애니메이션 (쥥쥥) */
+  /* 인트로 QR 스캔 라인 애니메이션 */
   @keyframes intro-scanline {
     0% { top: 0; }
     50% { top: 100%; }
@@ -194,4 +313,3 @@
   display: block;
   margin: 0 auto;
 }
-
