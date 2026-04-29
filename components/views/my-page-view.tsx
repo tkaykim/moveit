@@ -43,6 +43,42 @@ interface MyPageViewProps {
   onNavigate?: (view: string) => void;
 }
 
+// 디자인의 STATS 3-card 그리드용 컴포넌트
+function StatCard({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="bg-surface-2 rounded-[10px] py-4 px-2 flex flex-col items-center justify-center min-h-[80px]">
+      <div className="font-mono text-[24px] font-semibold leading-none text-text tracking-[-0.02em]">
+        {value}
+      </div>
+      <div className="text-[11px] text-text-3 mt-1.5 text-center">{label}</div>
+    </div>
+  );
+}
+
+// 디자인의 clean list row — 좌측 아이콘 / 라벨 / 우측 chevron, divider로 구분
+function MenuRow({
+  icon: Icon,
+  label,
+  onClick,
+  divider = true,
+}: {
+  icon: any;
+  label: string;
+  onClick?: () => void;
+  divider?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 py-3.5 px-1 hover:bg-surface-2 transition-colors ${divider ? 'border-b border-border' : ''}`}
+    >
+      <Icon size={18} className="text-text-3 shrink-0" />
+      <span className="flex-1 text-left text-[14px] text-text">{label}</span>
+      <ChevronRight size={16} className="text-text-4 shrink-0" />
+    </button>
+  );
+}
+
 export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -289,362 +325,163 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
 
   return (
     <>
-      <div className="min-h-screen bg-neutral-50 dark:bg-black pb-24">
-        {/* 헤더 */}
-        <div className="bg-white dark:bg-neutral-900 px-5 pt-8 pb-6">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-xl font-bold text-black dark:text-white">{t('my.title')}</h1>
-            <div className="flex gap-3 items-center">
-              {user && (
-                <button
-                  onClick={() => router.push('/notifications')}
-                  className="relative p-1 text-neutral-600 dark:text-neutral-400 active:opacity-70"
-                >
-                  <Bell size={20} />
-                  <NotificationBadge />
-                </button>
-              )}
-              <LanguageToggle />
-              <ThemeToggle />
-              {user && <UserMenu />}
-            </div>
-          </div>
+      <div className="min-h-screen bg-bg pb-24">
+        {/* 헤더 — 토글만 우상단 */}
+        <div className="px-5 pt-6 pb-2 flex items-center justify-end gap-3">
+          {user && (
+            <button
+              onClick={() => router.push('/notifications')}
+              className="relative p-1 text-text-3 active:opacity-70"
+            >
+              <Bell size={18} />
+              <NotificationBadge />
+            </button>
+          )}
+          <LanguageToggle />
+          <ThemeToggle />
+          {user && <UserMenu />}
+        </div>
 
-          {/* 프로필 */}
+        {/* 프로필 — 중앙 큰 아바타 (디자인 패턴) */}
+        <div className="px-5 pt-2 pb-6">
           {authLoading ? (
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-neutral-200 dark:bg-neutral-800 animate-pulse" />
-              <div className="flex-1">
-                <div className="h-5 bg-neutral-200 dark:bg-neutral-800 rounded w-24 mb-2 animate-pulse" />
-                <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-32 animate-pulse" />
-              </div>
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-20 h-20 rounded-full bg-surface-3 animate-pulse" />
+              <div className="h-6 bg-surface-3 rounded w-24 animate-pulse" />
+              <div className="h-4 bg-surface-3 rounded w-32 animate-pulse" />
             </div>
           ) : user ? (
             <button
               onClick={() => onNavigate?.('SETTINGS')}
-              className="w-full flex items-center gap-4 hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-2xl p-2 -mx-2 transition-colors"
+              className="w-full flex flex-col items-center gap-2"
             >
-              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-primary to-green-500 p-[2px]">
-                <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center overflow-hidden">
-                  {profileImage ? (
-                    <img src={profileImage} alt={displayName} className="w-full h-full object-cover" />
-                  ) : (
-                    <User className="text-black dark:text-white" size={24} />
-                  )}
-                </div>
+              <div className="w-20 h-20 rounded-full bg-surface-2 border border-border flex items-center justify-center overflow-hidden">
+                {profileImage ? (
+                  <img src={profileImage} alt={displayName} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[28px] font-semibold text-text-3 tracking-[-0.02em]">
+                    {displayName?.[0] ?? '·'}
+                  </span>
+                )}
               </div>
-              <div className="flex-1 text-left">
-                <h2 className="text-lg font-bold text-black dark:text-white">{displayName}</h2>
-                <p className="text-sm text-neutral-500">{t('settings.editProfile')}</p>
-              </div>
-              <ChevronRight className="text-neutral-400" size={20} />
+              <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-text mt-1">{displayName}</h2>
+              {user.email && (
+                <p className="text-[13px] text-text-3">{user.email}</p>
+              )}
             </button>
           ) : (
             <button
               onClick={() => setIsAuthModalOpen(true)}
-              className="w-full flex items-center gap-4 border-2 border-dashed border-neutral-300 dark:border-neutral-700 rounded-2xl p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+              className="w-full flex items-center gap-3 border border-dashed border-border-strong rounded-[10px] p-4 hover:bg-surface-2 transition-colors"
             >
-              <div className="w-14 h-14 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center">
-                <User className="text-neutral-400" size={24} />
+              <div className="w-12 h-12 rounded-full bg-surface-2 flex items-center justify-center">
+                <User className="text-text-4" size={20} />
               </div>
               <div className="flex-1 text-left">
-                <h2 className="text-base font-bold text-black dark:text-white">{t('my.login')}</h2>
-                <p className="text-sm text-neutral-500">{t('my.loginForMore')}</p>
+                <h2 className="text-[14px] font-semibold text-text">{t('my.login')}</h2>
+                <p className="text-[12px] text-text-3 mt-0.5">{t('my.loginForMore')}</p>
               </div>
-              <ChevronRight className="text-neutral-400" size={20} />
+              <ChevronRight className="text-text-4" size={18} />
             </button>
           )}
         </div>
 
-        {/* 내 수업 관리 (강사용) - 강사 프로필 연결된 유저만 */}
-        {user && isInstructor && (
-          <div className="px-5 mt-4">
-            <button
-              type="button"
-              onClick={() => router.push('/instructor-dashboard')}
-              className="w-full bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-sm border border-neutral-200 dark:border-neutral-800 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-primary/20/20 flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-base font-bold text-black dark:text-white">
-                    내 수업 관리 (강사용)
-                  </h2>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-                    제가 강사로 진행하는 수업 일정
-                  </p>
-                </div>
-                <ChevronRight className="text-neutral-400 shrink-0" size={20} />
-              </div>
-            </button>
-          </div>
-        )}
-
-        {/* 보유 수강권 */}
-        <div className="px-5 mt-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold text-black dark:text-white">{t('my.myTickets')}</h2>
-              <button
-                onClick={() => onNavigate?.('TICKETS')}
-                className="text-sm text-primary font-medium flex items-center gap-1"
-              >
-                {t('common.viewAll')} <ChevronRight size={16} />
-              </button>
-            </div>
-
-            {loading ? (
-              <div className="grid grid-cols-3 gap-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="bg-neutral-100 dark:bg-neutral-800 rounded-xl p-4 animate-pulse">
-                    <div className="h-6 bg-neutral-200 dark:bg-neutral-700 rounded mb-2" />
-                    <div className="h-4 bg-neutral-200 dark:bg-neutral-700 rounded w-16" />
-                  </div>
-                ))}
-              </div>
-            ) : dataError && user ? (
-              <div className="text-center py-6">
-                <p className="text-neutral-500 text-sm mb-3">
-                  {language === 'en' ? 'Failed to load data' : '데이터를 불러오지 못했습니다'}
-                </p>
-                <button
-                  onClick={() => loadData()}
-                  className="inline-flex items-center gap-1.5 text-sm text-primary font-medium"
-                >
-                  <RefreshCw size={14} />
-                  {language === 'en' ? 'Retry' : '다시 시도'}
-                </button>
-              </div>
-            ) : !user ? (
-                <div className="text-center py-6 text-neutral-500 text-sm">
-                {t('my.loginToView')}
-              </div>
-            ) : ticketSummary.total === 0 ? (
-              <div className="text-center py-6">
-                <Ticket size={40} className="text-neutral-300 dark:text-neutral-700 mx-auto mb-2" />
-                <p className="text-neutral-500 text-sm">{t('my.noTickets')}</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-black text-blue-600 dark:text-blue-400 mb-1">
-                    {ticketSummary.regular}
-                  </div>
-                  <div className="text-xs font-medium text-blue-600 dark:text-blue-400">{t('my.periodTicket')}</div>
-                </div>
-                <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-black text-purple-600 dark:text-purple-400 mb-1">
-                    {ticketSummary.popup}
-                  </div>
-                  <div className="text-xs font-medium text-purple-600 dark:text-purple-400">{t('my.countTicket')}</div>
-                </div>
-                <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mb-1">
-                    {ticketSummary.workshop}
-                  </div>
-                  <div className="text-xs font-medium text-amber-600 dark:text-amber-400">{t('my.workshopTicket')}</div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 수강 예정 클래스 */}
+        {/* STATS — 디자인의 3-card 그리드 */}
         {user && (
-          <div className="px-5 mt-4">
-            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold text-black dark:text-white">{t('my.myBookings')}</h2>
-                  {totalUpcoming > 0 && (
-                    <span className="px-2 py-0.5 text-xs font-bold bg-primary/10/20 text-primary rounded-full">
-                      {totalUpcoming}{language === 'ko' ? '건' : ''}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => router.push('/my/bookings')}
-                  className="text-sm text-primary font-medium flex items-center gap-1"
-                >
-                  {t('common.viewAll')} <ChevronRight size={16} />
-                </button>
-              </div>
-
-              {loading ? (
-                <div className="space-y-3">
-                  <div className="bg-neutral-100 dark:bg-neutral-800 rounded-xl p-4 animate-pulse">
-                    <div className="h-5 bg-neutral-200 dark:bg-neutral-700 rounded w-32 mb-2" />
-                    <div className="h-4 bg-neutral-200 dark:bg-neutral-700 rounded w-24" />
-                  </div>
-                  <div className="flex gap-2">
-                    {[1,2,3,4,5,6,7].map(i => (
-                      <div key={i} className="flex-1 h-14 bg-neutral-100 dark:bg-neutral-800 rounded-lg animate-pulse" />
-                    ))}
-                  </div>
-                </div>
-              ) : dataError ? (
-                <div className="text-center py-6">
-                  <p className="text-neutral-500 text-sm mb-3">
-                    {language === 'en' ? 'Failed to load bookings' : '예약 정보를 불러오지 못했습니다'}
-                  </p>
-                  <button
-                    onClick={() => loadData()}
-                    className="inline-flex items-center gap-1.5 text-sm text-primary font-medium"
-                  >
-                    <RefreshCw size={14} />
-                    {language === 'en' ? 'Retry' : '다시 시도'}
-                  </button>
-                </div>
-              ) : !nextClass ? (
-                <div className="text-center py-6">
-                  <Calendar size={40} className="text-neutral-300 dark:text-neutral-700 mx-auto mb-2" />
-                  <p className="text-neutral-500 text-sm">{t('my.noBookings')}</p>
-                  <button
-                    onClick={() => router.push('/search')}
-                    className="mt-3 text-sm text-primary font-medium"
-                  >
-                    {t('my.findClasses')}
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* 다음 수업 */}
-                  <div className="bg-neutral-50 dark:bg-neutral-800 rounded-xl p-4 border border-neutral-200 dark:border-neutral-700">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                        <Play size={12} className="text-white dark:text-black ml-0.5" />
-                      </div>
-                      <span className="text-xs font-bold text-primary">{t('my.nextClass')}</span>
-                    </div>
-                    <div className="font-bold text-black dark:text-white text-lg mb-2">
-                      {nextClass.className}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-wrap gap-3 text-sm text-neutral-600 dark:text-neutral-400">
-                        <span className="flex items-center gap-1">
-                          <Clock size={14} />
-                          {formatDateTime(nextClass.startTime)}
-                        </span>
-                        {nextClass.academyName && (
-                          <span className="flex items-center gap-1">
-                            <MapPin size={14} />
-                            {nextClass.academyName}
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => {
-                          setQrBookingId(nextClass.id);
-                          setQrBookingInfo({
-                            className: nextClass.className,
-                            academyName: nextClass.academyName,
-                            startTime: nextClass.startTime,
-                          });
-                          setIsQrModalOpen(true);
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white dark:text-black text-xs font-bold rounded-lg hover:opacity-90 transition-opacity flex-shrink-0"
-                      >
-                        <QrCode size={14} />
-                        QR 출석
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 이번 주 일정 미니 캘린더 */}
-                  {weekSchedule.length > 0 && (
-                    <div>
-                      <div className="text-xs font-medium text-neutral-500 mb-2">{t('my.thisWeek')}</div>
-                      <div className="grid grid-cols-7 gap-1">
-                        {weekSchedule.map((day, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => router.push('/my/bookings')}
-                            className={`
-                              flex flex-col items-center py-2 rounded-lg transition-colors
-                              ${day.isToday 
-                                ? 'bg-primary/10/20 ring-2 ring-primary' 
-                                : 'bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700'
-                              }
-                            `}
-                          >
-                            <span className={`text-xs font-medium ${
-                              day.isToday 
-                                ? 'text-primary' 
-                                : 'text-neutral-500'
-                            }`}>
-                              {day.dayLabel}
-                            </span>
-                            <span className={`text-sm font-bold mt-0.5 ${
-                              day.count > 0 
-                                ? day.isToday 
-                                  ? 'text-primary'
-                                  : 'text-black dark:text-white'
-                                : 'text-neutral-300 dark:text-neutral-600'
-                            }`}>
-                              {day.count > 0 ? day.count : '-'}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+          <div className="px-5 mb-3">
+            <div className="section-label mb-2">STATS</div>
+            <div className="grid grid-cols-3 gap-2">
+              <StatCard
+                value={totalUpcoming}
+                label={language === 'en' ? 'upcoming' : '예약'}
+              />
+              <StatCard
+                value={ticketSummary.total}
+                label={language === 'en' ? 'passes' : '수강권'}
+              />
+              <StatCard
+                value={weekSchedule.reduce((s, d) => s + d.count, 0)}
+                label={language === 'en' ? 'this week' : '이번주'}
+              />
             </div>
           </div>
         )}
 
-        {/* 메뉴 */}
-        <div className="px-5 mt-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden shadow-sm">
+        {/* 다음 수업 — 디자인 패턴 mini 카드 */}
+        {user && nextClass && (
+          <div className="px-5 mb-3">
+            <div className="section-label mb-2">{language === 'en' ? 'NEXT CLASS' : '다음 수업'}</div>
             <button
-              onClick={() => onNavigate?.('PAYMENT_HISTORY')}
-              className="w-full flex items-center gap-4 p-4 border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+              onClick={() => {
+                setQrBookingId(nextClass.id);
+                setQrBookingInfo({
+                  className: nextClass.className,
+                  academyName: nextClass.academyName,
+                  startTime: nextClass.startTime,
+                });
+                setIsQrModalOpen(true);
+              }}
+              className="w-full bg-surface border border-border rounded-[10px] p-3.5 flex items-center gap-3 hover:bg-surface-2 transition-colors text-left"
             >
-              <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
-                <CreditCard size={20} className="text-neutral-600 dark:text-neutral-400" />
+              <div className="w-11 h-11 rounded-md bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                <Play size={16} />
               </div>
-              <span className="flex-1 text-left font-medium text-black dark:text-white">{t('my.paymentHistory')}</span>
-              <ChevronRight size={18} className="text-neutral-400" />
-            </button>
-            <button
-              onClick={() => onNavigate?.('FAQ')}
-              className="w-full flex items-center gap-4 p-4 border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-            >
-              <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
-                <HelpCircle size={20} className="text-neutral-600 dark:text-neutral-400" />
+              <div className="flex-1 min-w-0">
+                <div className="text-[14px] font-semibold text-text truncate tracking-[-0.01em]">{nextClass.className}</div>
+                <div className="font-mono text-[11px] text-text-3 mt-0.5 truncate">
+                  {formatDateTime(nextClass.startTime)}
+                  {nextClass.academyName && <> · {nextClass.academyName}</>}
+                </div>
               </div>
-              <span className="flex-1 text-left font-medium text-black dark:text-white">{t('my.faq')}</span>
-              <ChevronRight size={18} className="text-neutral-400" />
-            </button>
-            <button
-              onClick={() => onNavigate?.('NOTICES')}
-              className="w-full flex items-center gap-4 p-4 border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-            >
-              <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
-                <Bell size={20} className="text-neutral-600 dark:text-neutral-400" />
+              <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-text text-bg text-[10px] font-semibold shrink-0">
+                <QrCode size={12} /> QR
               </div>
-              <span className="flex-1 text-left font-medium text-black dark:text-white">{t('my.notices')}</span>
-              <ChevronRight size={18} className="text-neutral-400" />
-            </button>
-            <button
-              onClick={() => onNavigate?.('SETTINGS')}
-              className="w-full flex items-center gap-4 p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-            >
-              <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
-                <Settings size={20} className="text-neutral-600 dark:text-neutral-400" />
-              </div>
-              <span className="flex-1 text-left font-medium text-black dark:text-white">{t('my.settings')}</span>
-              <ChevronRight size={18} className="text-neutral-400" />
             </button>
           </div>
+        )}
+
+        {/* 메뉴 — 디자인의 clean list rows */}
+        <div className="px-5 mt-2">
+          {user && isInstructor && (
+            <MenuRow
+              icon={BookOpen}
+              label={language === 'en' ? 'My Classes (Instructor)' : '내 수업 관리 (강사용)'}
+              onClick={() => router.push('/instructor-dashboard')}
+            />
+          )}
+          {user && (
+            <MenuRow
+              icon={Calendar}
+              label={language === 'en' ? 'My Bookings' : '내 예약 내역'}
+              onClick={() => router.push('/my/bookings')}
+            />
+          )}
+          <MenuRow
+            icon={CreditCard}
+            label={t('my.paymentHistory')}
+            onClick={() => onNavigate?.('PAYMENT_HISTORY')}
+          />
+          <MenuRow
+            icon={Bell}
+            label={t('my.notices')}
+            onClick={() => onNavigate?.('NOTICES')}
+          />
+          <MenuRow
+            icon={HelpCircle}
+            label={t('my.faq')}
+            onClick={() => onNavigate?.('FAQ')}
+          />
+          <MenuRow
+            icon={Settings}
+            label={t('my.settings')}
+            onClick={() => onNavigate?.('SETTINGS')}
+            divider={false}
+          />
         </div>
 
         {/* 앱 정보 */}
-        <div className="px-5 mt-6 mb-4">
-          <div className="text-center text-xs text-neutral-400">
+        <div className="px-5 mt-8 mb-4">
+          <div className="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-text-4">
             MOVE.IT v1.0.0
           </div>
         </div>
