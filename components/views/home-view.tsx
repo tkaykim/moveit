@@ -455,12 +455,13 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
 
   return (
     <div className="pb-24 animate-in fade-in duration-300">
-      {/* 헤더 */}
-      <header className="px-5 pt-8 pb-4 sticky top-0 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md z-30">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-xl font-black italic tracking-tighter">
-            MOVE<span className="text-neutral-800">.</span>IT
-          </h1>
+      {/* 헤더 — 디자인 패턴: meta + brand mono mark + hero greeting */}
+      <header className="px-5 pt-7 pb-4 sticky top-0 bg-surface/85 backdrop-blur-md z-30">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+            <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-3">moveit · studio OS</span>
+          </div>
           <div className="flex gap-3 items-center">
             <LanguageToggle />
             <ThemeToggle />
@@ -468,30 +469,33 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
               className="relative"
               onClick={() => window.location.href = '/notifications'}
             >
-              <Bell className="text-neutral-600 dark:text-neutral-400" size={22} />
+              <Bell className="text-text-3" size={20} />
               <NotificationBadge />
             </button>
           </div>
         </div>
+        <h1 className="text-[28px] font-semibold leading-[1.1] tracking-[-0.03em] text-text mb-3">
+          {language === 'en' ? 'Move with' : '오늘도'} <span className="italic">it</span>.
+        </h1>
         <form onSubmit={handleSearch} className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none z-10" size={18} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-4 pointer-events-none z-10" size={16} />
           <Input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={language === 'en' ? 'Search genre, instructor, academy' : '장르, 강사, 학원 검색'}
-            className="h-11 w-full pl-10 rounded-xl bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 focus-visible:ring-neutral-400"
+            className="h-9 w-full pl-9 rounded-md bg-surface-2 border-transparent text-[13px] focus-visible:ring-1 focus-visible:ring-border-strong"
           />
         </form>
       </header>
 
       {/* 배너 캐러셀 */}
       {bannersLoading ? (
-        <div className="px-5 mt-2">
-          <div className="aspect-[2.5/1] rounded-2xl bg-neutral-200 dark:bg-neutral-800 animate-pulse" />
+        <div className="px-5 mt-3">
+          <div className="aspect-[2.5/1] rounded-[10px] bg-surface-3 animate-pulse" />
         </div>
       ) : banners.length > 0 ? (
-        <div className="px-5 mt-2">
+        <div className="px-5 mt-3">
           <BannerCarousel
             banners={banners}
             autoSlideInterval={bannerSettings.auto_slide_interval}
@@ -625,24 +629,26 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
 
       {/* 최근 본 학원 */}
       {recentAcademies.length > 0 && (
-        <div className="mt-8">
-          <div className="flex items-center justify-between px-5 mb-3">
-            <h2 className="text-lg font-bold text-black dark:text-white">{language === 'en' ? 'Recently Viewed' : '최근 본 학원'}</h2>
-            <button 
+        <section className="mt-7">
+          <div className="flex items-center justify-between px-5 mb-2.5">
+            <span className="section-label">
+              {language === 'en' ? `RECENT · ${recentAcademies.length}` : `최근 본 · ${recentAcademies.length}`}
+            </span>
+            <button
               onClick={() => onNavigate('ACADEMY')}
-              className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400"
+              className="flex items-center gap-1 text-[11px] text-text-3 hover:text-text"
             >
-              {t('common.viewAll')} <ChevronRight size={14} />
+              {t('common.viewAll')} <ChevronRight size={12} />
             </button>
           </div>
-          <div className="flex gap-3 overflow-x-auto scrollbar-hide px-5 pb-2">
+          <div className="flex gap-2.5 overflow-x-auto scrollbar-hide px-5 pb-2">
             {recentAcademies.map(academy => (
               <div
                 key={academy.id}
                 onClick={() => handleAcademyClickInternal(academy)}
-                className="flex-shrink-0 w-44 bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 active:scale-[0.98] transition-transform cursor-pointer"
+                className="flex-shrink-0 w-44 bg-surface rounded-[10px] overflow-hidden border border-border active:scale-[0.98] transition-transform cursor-pointer"
               >
-                <div className="aspect-[4/3] relative bg-neutral-100 dark:bg-neutral-800">
+                <div className="aspect-[4/3] relative bg-surface-2">
                   {(academy.img || academy.logo_url) ? (
                     <Image
                       src={academy.img || academy.logo_url || ''}
@@ -653,71 +659,71 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <MapPin className="text-neutral-400" size={24} />
+                      <MapPin className="text-text-4" size={22} />
                     </div>
                   )}
                 </div>
                 <div className="p-3">
-                  <h3 className="text-sm font-bold text-black dark:text-white truncate">{academy.name}</h3>
+                  <h3 className="text-[13px] font-semibold text-text truncate tracking-[-0.01em]">{academy.name}</h3>
                   {academy.address && (
-                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate mt-0.5">{academy.address}</p>
+                    <p className="text-[11px] text-text-3 truncate mt-0.5">{academy.address}</p>
                   )}
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {/* 주변 학원 / 내 학원 */}
-      <div className="mt-8">
-        <div className="flex items-center justify-between px-5 mb-3">
-          <h2 className="text-lg font-bold text-black dark:text-white">
+      <section className="mt-7">
+        <div className="flex items-center justify-between px-5 mb-2.5">
+          <span className="section-label">
             {hidePublicAcademies
-              ? (language === 'en' ? 'My Academies' : '내 학원')
-              : (language === 'en' ? 'Nearby Academies' : '주변 댄스학원')}
-          </h2>
-          <button 
+              ? (language === 'en' ? 'MY ACADEMIES' : '내 학원')
+              : (language === 'en' ? 'NEARBY' : '주변 학원')}
+          </span>
+          <button
             onClick={() => onNavigate('ACADEMY')}
-            className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400"
+            className="flex items-center gap-1 text-[11px] text-text-3 hover:text-text"
           >
-            {t('common.viewAll')} <ChevronRight size={14} />
+            {t('common.viewAll')} <ChevronRight size={12} />
           </button>
         </div>
         {academiesLoading ? (
           <AcademyListSkeleton />
         ) : nearbyAcademies.length > 0 ? (
-          <div className="px-5 space-y-3">
+          <div className="px-5 space-y-2">
             {nearbyAcademies.slice(0, 4).map(academy => (
               <div
                 key={academy.id}
                 onClick={() => handleAcademyClickInternal(academy)}
-                className="flex gap-3 bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 active:scale-[0.99] transition-transform cursor-pointer p-3"
+                className="flex gap-3 bg-surface rounded-[10px] overflow-hidden border border-border active:scale-[0.99] transition-transform cursor-pointer p-3"
               >
-                <div className="w-20 h-20 relative rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex-shrink-0">
+                <div className="w-16 h-16 relative rounded-md overflow-hidden bg-surface-2 flex-shrink-0">
                   {(academy.img || academy.logo_url) ? (
                     <Image
                       src={academy.img || academy.logo_url || ''}
                       alt={academy.name}
                       fill
-                      sizes="80px"
+                      sizes="64px"
                       className="object-cover"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <MapPin className="text-neutral-400" size={20} />
+                      <MapPin className="text-text-4" size={18} />
                     </div>
                   )}
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  <h3 className="text-sm font-bold text-black dark:text-white truncate">{academy.name}</h3>
+                  <h3 className="text-[14px] font-semibold text-text truncate tracking-[-0.01em]">{academy.name}</h3>
                   {academy.address && (
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate mt-0.5">{academy.address}</p>
+                    <p className="text-[11px] text-text-3 truncate mt-0.5">{academy.address}</p>
                   )}
                   {academy.tags && (
-                    <div className="flex gap-1 mt-2">
+                    <div className="flex gap-1 mt-1.5">
                       {academy.tags.split(',').slice(0, 2).map((tag: string, i: number) => (
-                        <span key={i} className="text-[10px] px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full">
+                        <span key={i} className="text-[10px] px-2 py-0.5 bg-surface-2 text-text-3 rounded-full">
                           {tag.trim()}
                         </span>
                       ))}
@@ -726,8 +732,8 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
                 </div>
                 {academy.price && (
                   <div className="flex-shrink-0 self-center">
-                    <span className="text-sm font-bold text-neutral-800">
-                      {academy.price.toLocaleString()}원~
+                    <span className="font-mono text-[13px] font-semibold text-text">
+                      ₩{academy.price.toLocaleString()}
                     </span>
                   </div>
                 )}
@@ -735,7 +741,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             ))}
           </div>
         ) : (
-          <div className="px-5 text-center py-6 text-neutral-400 text-sm">
+          <div className="px-5 text-center py-6 text-text-4 text-[13px]">
             {hidePublicAcademies && !user
               ? (language === 'en'
                   ? 'Log in to see academies you have joined.'
@@ -747,7 +753,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
                 : (language === 'en' ? 'No academies found' : '학원이 없습니다')}
           </div>
         )}
-      </div>
+      </section>
 
       {/* 하단 여백 */}
       <div className="h-8" />
