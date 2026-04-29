@@ -18,6 +18,11 @@
   "bottomNav.instructor": "Instructor",
   "bottomNav.schedule": "Schedule",
   "bottomNav.my": "My",
+  "bottomNav.studios": "Studios",
+  "bottomNav.today": "Today",
+  "bottomNav.classes": "Classes",
+  "bottomNav.myPass": "My Pass",
+  "bottomNav.me": "Me",
 
   "settings.title": "Settings",
   "settings.profile": "Profile",

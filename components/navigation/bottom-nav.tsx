@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MapPin, User, Calendar } from 'lucide-react';
+import { Home, Sparkles, Calendar, Ticket, User } from 'lucide-react';
 import { ViewState } from '@/types';
 import { useLocale } from '@/contexts/LocaleContext';
 
@@ -11,60 +11,75 @@ interface BottomNavProps {
   onTabChange: (tab: ViewState) => void;
 }
 
-// B-4 (2026-04-27): 단일학원 모드에서 공개 탐색 탭(ACADEMY/DANCER)을 숨김.
-// flag OFF로 설정 시 즉시 복원. /academy/[id] 상세는 직접 URL/결제 리다이렉트로 보존됨.
-const HIDE_PUBLIC_TABS = process.env.NEXT_PUBLIC_HIDE_PUBLIC_ACADEMIES !== 'false';
-
-const allTabs = [
-  { id: 'HOME' as ViewState, icon: Home, labelKey: 'bottomNav.home', href: '/home' },
-  { id: 'ACADEMY' as ViewState, icon: MapPin, labelKey: 'bottomNav.academy', href: '/academy' },
-  { id: 'DANCER' as ViewState, icon: User, labelKey: 'bottomNav.instructor', href: '/instructor' },
-  { id: 'SAVED' as ViewState, icon: Calendar, labelKey: 'bottomNav.schedule', href: '/schedule' },
-  { id: 'MY' as ViewState, icon: User, labelKey: 'bottomNav.my', href: '/my' },
+// 5탭 구조 (Claude design / moveit Studio OS):
+// Studios (등록 학원 목록 = /academy) / Today (/home) / Classes (/schedule) / My Pass (/tickets) / Me (/my)
+const TABS: Array<{ id: ViewState; icon: any; labelKey: string; href: string; matchPath: (p: string) => boolean }> = [
+  {
+    id: 'ACADEMY' as ViewState,
+    icon: Home,
+    labelKey: 'bottomNav.studios',
+    href: '/academy',
+    matchPath: (p) => p.startsWith('/academy'),
+  },
+  {
+    id: 'HOME' as ViewState,
+    icon: Sparkles,
+    labelKey: 'bottomNav.today',
+    href: '/home',
+    matchPath: (p) => p === '/' || p === '/home',
+  },
+  {
+    id: 'SAVED' as ViewState,
+    icon: Calendar,
+    labelKey: 'bottomNav.classes',
+    href: '/schedule',
+    matchPath: (p) => p === '/schedule',
+  },
+  {
+    id: 'TICKETS' as ViewState,
+    icon: Ticket,
+    labelKey: 'bottomNav.myPass',
+    href: '/tickets',
+    matchPath: (p) => p.startsWith('/tickets'),
+  },
+  {
+    id: 'MY' as ViewState,
+    icon: User,
+    labelKey: 'bottomNav.me',
+    href: '/my',
+    matchPath: (p) => p.startsWith('/my'),
+  },
 ];
-
-const tabConfig = HIDE_PUBLIC_TABS
-  ? allTabs.filter(t => t.id !== 'ACADEMY' && t.id !== 'DANCER')
-  : allTabs;
 
 export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
   const pathname = usePathname();
   const { t } = useLocale();
-  
-  const isActive = (tabId: ViewState, href: string) => {
-    if (tabId === 'HOME' && (pathname === '/' || pathname === '/home')) return true;
-    if (tabId === 'ACADEMY' && pathname.startsWith('/academy')) return true;
-    if (tabId === 'DANCER' && pathname.startsWith('/instructor')) return true;
-    if (tabId === 'SAVED' && pathname === '/schedule') return true;
-    if (tabId === 'MY' && pathname.startsWith('/my')) return true;
-    return false;
-  };
 
-  const hiddenTabs = ['PAYMENT', 'PAYMENT_SUCCESS', 'DETAIL_DANCER', 'SEARCH_RESULTS', 'TICKETS', 'PAYMENT_HISTORY', 'SETTINGS', 'FAQ', 'NOTICES'];
+  const hiddenTabs = ['PAYMENT', 'PAYMENT_SUCCESS', 'DETAIL_DANCER', 'SEARCH_RESULTS', 'PAYMENT_HISTORY', 'SETTINGS', 'FAQ', 'NOTICES'];
   if (hiddenTabs.includes(activeTab)) return null;
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] bg-white/90 dark:bg-neutral-950/90 backdrop-blur-xl border-t border-neutral-200 dark:border-neutral-800 pt-2 pb-1.5 px-6 flex justify-around items-center z-40">
-      {tabConfig.map((tab) => {
+    <nav
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] h-[76px] bg-surface/95 backdrop-blur-xl border-t border-border px-2 pb-4 grid items-center z-40"
+      style={{ gridTemplateColumns: `repeat(${TABS.length}, 1fr)` }}
+    >
+      {TABS.map((tab) => {
         const Icon = tab.icon;
-        const active = isActive(tab.id, tab.href);
+        const active = tab.matchPath(pathname);
         return (
           <Link
             key={tab.id}
             href={tab.href}
             onClick={() => onTabChange(tab.id)}
-            className={`flex flex-col items-center gap-1 transition-all duration-300 w-12 ${
-              active 
-                ? 'text-primary -translate-y-1' 
-                : 'text-neutral-500 dark:text-neutral-500'
+            className={`flex flex-col items-center justify-center gap-1.5 h-full transition-colors ${
+              active ? 'text-text' : 'text-text-4'
             }`}
           >
-            <Icon size={24} strokeWidth={active ? 2.5 : 2} />
-            <span className="text-[10px] font-medium">{t(tab.labelKey)}</span>
+            <Icon size={20} strokeWidth={active ? 2.2 : 1.8} className={active ? 'opacity-100' : 'opacity-70'} />
+            <span className="text-[10px] font-medium tracking-[0.04em]">{t(tab.labelKey)}</span>
           </Link>
         );
       })}
     </nav>
   );
 };
-

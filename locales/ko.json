@@ -18,6 +18,11 @@
   "bottomNav.instructor": "강사",
   "bottomNav.schedule": "일정",
   "bottomNav.my": "마이",
+  "bottomNav.studios": "Studios",
+  "bottomNav.today": "Today",
+  "bottomNav.classes": "Classes",
+  "bottomNav.myPass": "My Pass",
+  "bottomNav.me": "Me",
 
   "settings.title": "설정",
   "settings.profile": "프로필 정보",
