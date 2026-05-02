@@ -78,7 +78,9 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
   // SUPER_ADMIN이면 무조건 true, 그 외에는 ACADEMY_OWNER만 설정 접근 가능
   const canAccessSettings = isSuperAdmin || profile?.role === 'ACADEMY_OWNER';
 
-  const menuItems = [
+  // hidden:true 항목은 라우트·코드는 유지하되 사이드바 노출만 막는다.
+  // 그룹 슬라이스(0..6 / 6..10 / 10..) 의 인덱스 정합을 보존하기 위해 배열에서 제거하지 않고 플래그만 부여.
+  const menuItems: { icon: LucideIcon; label: string; href: string; hidden?: boolean }[] = [
     { icon: LayoutDashboard, label: '대시보드', href: `/academy-admin/${slug}` },
     { icon: Users, label: '학생 관리', href: `/academy-admin/${slug}/students` },
     { icon: BookOpen, label: '클래스(반) 관리', href: `/academy-admin/${slug}/class-masters` },
@@ -87,14 +89,14 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
     { icon: Landmark, label: '수동 입금확인', href: `/academy-admin/${slug}/deposit-confirm` },
     { icon: QrCode, label: 'QR 출석 리더', href: `/academy-admin/${slug}/qr-reader` },
     { icon: Pause, label: '연장/일시정지 관리', href: `/academy-admin/${slug}/extension-requests` },
-    { icon: Replace, label: '대강/취소 신청 관리', href: `/academy-admin/${slug}/schedule-change-requests` },
+    { icon: Replace, label: '대강/취소 신청 관리', href: `/academy-admin/${slug}/schedule-change-requests`, hidden: true },
     { icon: Ticket, label: '수강권/상품', href: `/academy-admin/${slug}/products` },
     { icon: ClipboardList, label: '업무/수업 일지', href: `/academy-admin/${slug}/logs` },
     { icon: UserCheck, label: '강사 관리', href: `/academy-admin/${slug}/instructors` },
     { icon: MessageSquare, label: '상담 관리', href: `/academy-admin/${slug}/consultations` },
     { icon: Bell, label: '알림 발송', href: `/academy-admin/${slug}/push` },
     { icon: CreditCard, label: '매출/정산', href: `/academy-admin/${slug}/revenue` },
-    { icon: Calendar, label: '구독/결제 관리', href: `/academy-admin/${slug}/billing` },
+    { icon: Calendar, label: '구독/결제 관리', href: `/academy-admin/${slug}/billing`, hidden: true },
   ];
 
   // 설정 메뉴: SUPER_ADMIN이면 무조건 표시, auth 로딩 중이면 일단 표시, 그 외 ACADEMY_OWNER만 표시
@@ -203,7 +205,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
           <div className="px-6 pt-3 lg:pt-6 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             수업 관리
           </div>
-          {menuItems.slice(0, 6).map((item, idx) => (
+          {menuItems.slice(0, 6).filter((item) => !item.hidden).map((item, idx) => (
             <SidebarItem
               key={item.href}
               icon={item.icon}
@@ -217,7 +219,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
           <div className="px-6 pt-3 lg:pt-6 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             운영 관리
           </div>
-          {menuItems.slice(6, 10).map((item, idx) => (
+          {menuItems.slice(6, 10).filter((item) => !item.hidden).map((item, idx) => (
             <SidebarItem
               key={item.href}
               icon={item.icon}
@@ -231,7 +233,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
           <div className="px-6 pt-3 lg:pt-6 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             매출 및 설정
           </div>
-          {menuItems.slice(10).map((item, idx) => (
+          {menuItems.slice(10).filter((item) => !item.hidden).map((item, idx) => (
             <SidebarItem
               key={item.href}
               icon={item.icon}

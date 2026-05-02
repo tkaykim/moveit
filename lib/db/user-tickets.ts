@@ -228,9 +228,17 @@ export async function getAvailableUserTickets(
  * @param userTicketId user_tickets.id
  * @param classId 사용할 클래스 ID (선택사항, 제공 시 ticket_classes 연결 검증)
  * @param count 차감할 횟수 (기본 1)
+ * @param client 호출자가 supabase 클라이언트를 직접 주입할 수 있다.
+ *   service-role 컨텍스트(예: bank-transfer-confirm) 에서 게스트/타인 user_tickets 를
+ *   안전하게 갱신하려면 service 클라이언트를 넘겨야 한다.
  */
-export async function consumeUserTicket(userTicketId: string, classId?: string, count: number = 1) {
-  const supabase = await createClient() as any;
+export async function consumeUserTicket(
+  userTicketId: string,
+  classId?: string,
+  count: number = 1,
+  client?: SupabaseClientAny,
+) {
+  const supabase = (client || (await createClient())) as any;
 
   // 현재 수강권 정보 조회 (ticket_type, is_general 확인을 위해 tickets 조인)
   const { data: currentTicket, error: fetchError } = await supabase
