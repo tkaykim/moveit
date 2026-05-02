@@ -25,7 +25,7 @@ type StatusFilter = 'ALL' | 'CONFIRMED' | 'PENDING' | 'CANCELLED' | 'COMPLETED' 
 
 const STATUS_TABS: { value: StatusFilter; label: string; color: string }[] = [
   { value: 'ALL', label: '전체', color: 'bg-primary text-black' },
-  { value: 'CONFIRMED', label: '확정', color: 'bg-green-600 text-white' },
+  { value: 'CONFIRMED', label: '확정/출석', color: 'bg-green-600 text-white' },
   { value: 'PENDING', label: '대기', color: 'bg-yellow-500 text-white' },
   { value: 'COMPLETED', label: '출석완료', color: 'bg-blue-600 text-white' },
   { value: 'ABSENT', label: '결석', color: 'bg-rose-600 text-white' },
@@ -176,7 +176,36 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
         return;
       }
 
-      // 기본 쿼리 (상태별 카운트용)
+      // 검색어 사전 처리: PostgREST .or() 는 부모 테이블 컬럼만 직접 인식하므로,
+      // users.name / classes.title 같은 임베디드 컬럼은 사전 조회해 ID 목록으로 환원한다.
+      let searchOrClause: string | null = null;
+      if (searchTerm) {
+        // PostgREST or() 파서가 의미를 두는 문자(쉼표·괄호·퍼센트)는 제거
+        const sanitized = searchTerm.toLowerCase().replace(/[(),%*]/g, '').trim();
+        if (sanitized) {
+          const like = `%${sanitized}%`;
+
+          const [usersRes, classMatchRes] = await Promise.all([
+            supabase.from('users').select('id').or(`name.ilike.${like},email.ilike.${like},phone.ilike.${like}`),
+            supabase.from('classes').select('id').eq('academy_id', academyId).ilike('title', like),
+          ]);
+
+          const matchedUserIds: string[] = (usersRes?.data || []).map((u: any) => u.id);
+          const matchedClassIds: string[] = (classMatchRes?.data || []).map((c: any) => c.id);
+
+          const orParts: string[] = [
+            `guest_name.ilike.${like}`,
+            `guest_phone.ilike.${like}`,
+            `guest_email.ilike.${like}`,
+          ];
+          if (matchedUserIds.length) orParts.push(`user_id.in.(${matchedUserIds.join(',')})`);
+          if (matchedClassIds.length) orParts.push(`class_id.in.(${matchedClassIds.join(',')})`);
+
+          searchOrClause = orParts.join(',');
+        }
+      }
+
+      // 기본 쿼리 (상태별 카운트용) — 카운트 뱃지가 검색·필터 결과와 정합되도록 동일한 조건을 적용
       let baseQuery = supabase
         .from('bookings')
         .select('status', { count: 'exact' });
@@ -201,11 +230,15 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
         }
       }
 
+      if (searchOrClause) {
+        baseQuery = baseQuery.or(searchOrClause);
+      }
+
       // 상태별 카운트 조회
       const { data: allStatusData } = await baseQuery;
       const counts: Record<string, number> = {
         ALL: allStatusData?.length || 0,
-        CONFIRMED: allStatusData?.filter((b: any) => b.status === 'CONFIRMED').length || 0,
+        CONFIRMED: allStatusData?.filter((b: any) => b.status === 'CONFIRMED' || b.status === 'COMPLETED').length || 0,
         PENDING: allStatusData?.filter((b: any) => b.status === 'PENDING').length || 0,
         CANCELLED: allStatusData?.filter((b: any) => b.status === 'CANCELLED').length || 0,
         COMPLETED: allStatusData?.filter((b: any) => b.status === 'COMPLETED').length || 0,
@@ -255,13 +288,16 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
         }
       }
 
-      if (statusFilter !== 'ALL') {
+      // 확정 탭은 입금확인 직후 부킹(CONFIRMED) 과 출석처리된 부킹(COMPLETED) 을 함께 노출.
+      // 그렇지 않으면 출석체크 후 행이 사라지는 것처럼 보여 "신청자 사라짐" 으로 오인됨.
+      if (statusFilter === 'CONFIRMED') {
+        query = query.in('status', ['CONFIRMED', 'COMPLETED']);
+      } else if (statusFilter !== 'ALL') {
         query = query.eq('status', statusFilter);
       }
 
-      if (searchTerm) {
-        const search = searchTerm.toLowerCase();
-        query = query.or(`users.name.ilike.%${search}%,users.email.ilike.%${search}%,users.phone.ilike.%${search}%,guest_name.ilike.%${search}%,guest_phone.ilike.%${search}%,guest_email.ilike.%${search}%,schedules.classes.title.ilike.%${search}%`);
+      if (searchOrClause) {
+        query = query.or(searchOrClause);
       }
 
       query = query.order('created_at', { ascending: false });
@@ -877,6 +913,12 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                       ? (enrollment.guest_email || user?.email || '')
                       : (user?.email || enrollment.guest_email || '');
                     const displayContact = displayPhone || displayEmail || '(연락처 없음)';
+                    // 회원이 본인과 다른 주문자/수령인으로 결제(대리결제 등)했을 때 주문자명을 같이 노출.
+                    // bank_transfer_orders.orderer_name 과 화면 표시명이 어긋나서 "안 보임"으로 인식되는 것을 방지.
+                    const ordererHint =
+                      !isGuestBookingRow && enrollment.guest_name && enrollment.guest_name !== user?.name
+                        ? enrollment.guest_name
+                        : null;
 
                     const rowNumber = (currentPage - 1) * itemsPerPage + index + 1;
 
@@ -908,6 +950,14 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                                 {showAsNonMember && (
                                   <span className="text-[10px] px-1.5 py-0.5 bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 rounded font-medium">
                                     비회원
+                                  </span>
+                                )}
+                                {ordererHint && (
+                                  <span
+                                    className="text-[10px] px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded font-medium"
+                                    title="회원 본인과 다른 주문자명으로 결제됨"
+                                  >
+                                    주문자: {ordererHint}
                                   </span>
                                 )}
                               </div>

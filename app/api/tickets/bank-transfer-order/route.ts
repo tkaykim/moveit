@@ -70,6 +70,10 @@ export async function POST(request: Request) {
     let ordererEmail: string | null = null;
     let depositorName: string;
     let userId: string | null = null;
+    // 회원이 자기 프로필과 다른 주문자/수령인 정보로 결제할 때 (예: 가족 대신 결제, 본인 외 명의)
+    // bookings.guest_* 에 동반 저장해 신청목록·출석체크 화면에서도 동일한 이름으로 검색·표시되게 한다.
+    // 회원 프로필과 동일하면 guest_* 는 null 로 남겨 의미적 노이즈를 줄인다.
+    let memberOrdererDiffers = false;
 
     if (user) {
       userId = user.id;
@@ -93,6 +97,11 @@ export async function POST(request: Request) {
       depositorName = bodyDepositorName != null && String(bodyDepositorName).trim()
         ? String(bodyDepositorName).trim()
         : ordererName;
+      const norm = (s: string | null) => (s ?? '').trim().toLowerCase();
+      memberOrdererDiffers =
+        norm(ordererName) !== norm(rawName) ||
+        norm(ordererPhone) !== norm(rawPhone) ||
+        norm(ordererEmail) !== norm(rawEmail);
     } else if (scheduleId && guestEligible) {
       // 1회성 + 특정 수업 → 비회원 허용.
       // B-2 (2026-04-21): payment-order와 동일하게 guest user를 여기서 생성해
@@ -312,9 +321,11 @@ export async function POST(request: Request) {
           payment_status: 'PENDING',
           bank_transfer_order_id: order.id,
         };
-        if (!user) {
-          // 비회원 주문: bookings.user_id는 guest user.id로 채워지지만, guest_name/phone/email도
-          // 동반 저장해서 관리자 UI·activity log의 비회원 표시가 병합 전후로 일관되게 유지되도록 함.
+        if (!user || memberOrdererDiffers) {
+          // 비회원 주문이거나, 회원이 본인과 다른 주문자 정보로 결제한 경우(예: 가족·지인 대리 결제)
+          // bookings.guest_* 에 주문자 정보를 동반 저장한다. 이렇게 하지 않으면
+          // 수동입금확인 화면(orderer_name 사용) 과 신청목록(users.name 사용) 의 표시가 어긋나
+          // "수동입금확인엔 보이는데 신청목록엔 안 보임" 으로 인식된다.
           bookingInsert.guest_name = ordererName;
           bookingInsert.guest_phone = ordererPhone || null;
           bookingInsert.guest_email = ordererEmail || null;

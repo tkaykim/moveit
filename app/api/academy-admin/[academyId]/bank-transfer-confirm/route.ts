@@ -258,7 +258,7 @@ export async function POST(
         const { consumeUserTicket } = await import('@/lib/db/user-tickets');
         let consumeOk = false;
         try {
-          const consumedTicket = await consumeUserTicket(userTicket.id, resolvedClassId, 1);
+          const consumedTicket = await consumeUserTicket(userTicket.id, resolvedClassId, 1, supabase);
           consumeOk = true;
           // 활동 로그: 횟수 차감
           insertEnrollmentActivityLog({
