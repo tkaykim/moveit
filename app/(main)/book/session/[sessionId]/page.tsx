@@ -1579,12 +1579,13 @@ export default function SessionBookingPage() {
         </div>
       )}
 
-      {/* 하단 고정 버튼 (하단 네비게이션 80px 위에 배치).
-          2026-05-10 D5/D7/D9/D10: error 메시지 sticky 영역에 함께 노출(스크롤 위에 가려지는 문제 해소),
-          CTA 색을 high-contrast(neutral-900/white)로 강화, 학원·수업 미니 헤더 추가로 결제 직전
-          최종 확인 + bottom-nav 와 분리되는 그림자/separation 강화. */}
+      {/* 하단 고정 버튼 — book/layout 의 BottomNav 높이(약 64px, layout paddingBottom 기준)와
+          정확히 인접하도록 bottom-[64px] 사용. 80px 로 두면 nav 와 sticky CTA 사이에 16~20px
+          빈 영역이 노출됨.
+          2026-05-10 D5/D7/D9/D10: error 메시지 sticky 영역에 함께 노출, CTA 색 high-contrast,
+          학원·수업 미니 헤더, bottom-nav 와 인접한 그림자 separation 강화. */}
       {canBook && (
-        <div className="fixed bottom-[80px] left-1/2 -translate-x-1/2 w-full max-w-[420px] px-4 pt-3 pb-4 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.4)] z-50">
+        <div className="fixed bottom-[64px] left-1/2 -translate-x-1/2 w-full max-w-[420px] px-4 pt-3 pb-4 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.4)] z-50">
           {/* D5: error inline — sticky 위에 우선 노출. drawer 가 떠 있을 땐 drawer 내부 영역에서 별도 노출. */}
           {error && (
             <div className="mb-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg break-keep">
