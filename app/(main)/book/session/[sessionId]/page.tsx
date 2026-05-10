@@ -122,6 +122,11 @@ export default function SessionBookingPage() {
   // 모달 (비로그인 시 회원가입/로그인 유도용 초기 탭)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalInitialTab, setAuthModalInitialTab] = useState<'login' | 'signup'>('login');
+  // 2026-05-10: 회원 충돌 → 로그인 유도 흐름. 충돌 안내문/이메일 잠금/로그인 후 자동 재진입.
+  const [authConflictNotice, setAuthConflictNotice] = useState<string>('');
+  const [authPrefillEmail, setAuthPrefillEmail] = useState<string>('');
+  const [authLockEmail, setAuthLockEmail] = useState(false);
+  const [pendingPurchaseResume, setPendingPurchaseResume] = useState(false);
   const [isTicketPurchaseModalOpen, setIsTicketPurchaseModalOpen] = useState(false);
   const [showOnsiteWarning, setShowOnsiteWarning] = useState(false);
 
@@ -298,6 +303,23 @@ export default function SessionBookingPage() {
       loadPurchasableTickets();
     }
   }, [session?.classes?.id, user]);
+
+  // 2026-05-10: 회원충돌 → 로그인 성공 시 결제 흐름 자동 재진입.
+  // 비회원 계좌이체/카드결제 시도 → 서버 409 → AuthModal 노출 → 로그인 성공 →
+  // user state 갱신 → 이 effect 가 pendingPurchaseResume 을 감지해 handlePurchaseBooking 재호출.
+  // 사용자는 동일한 ticket·schedule 선택 그대로 회원 자격으로 결제 완료까지 직진.
+  useEffect(() => {
+    if (user && pendingPurchaseResume) {
+      setPendingPurchaseResume(false);
+      // 로그인 시점에 보유 수강권은 아직 로딩 전. handlePurchaseBooking 은 selectedPurchaseTicket
+      // (구매할 수강권) 기반이라 보유와 무관하므로 즉시 호출 가능.
+      // useTossPayment 분기는 '카드결제' 그대로 따라가고, '계좌이체'는 회원이므로 입금자명 prefill 후 drawer 진입.
+      handlePurchaseBooking();
+    }
+    // handlePurchaseBooking 은 같은 컴포넌트 내 클로저 — deps 에 넣지 않아도 user/pendingPurchaseResume
+    // 트리거 시점의 최신 함수 참조를 사용.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, pendingPurchaseResume]);
 
   // 사용자 보유 수강권 로드 - 클라이언트 Supabase에서 직접 조회 (서버 API 인증 문제 방지)
   const loadUserTickets = async () => {
@@ -587,11 +609,20 @@ export default function SessionBookingPage() {
         ) {
           setBankTransferGuestFormOpen(false);
           setDepositorModalOpen(false);
-          setPendingBankTransfer(null);
+          // pendingBankTransfer 는 그대로 유지 — 로그인 후 자동 재진입에서 동일 ticket·schedule 재사용.
+          setAuthConflictNotice(
+            data.error ||
+              (language === 'ko'
+                ? '이미 가입된 계정이에요. 비밀번호를 입력하면 결제가 자동으로 이어집니다.'
+                : 'Account exists. Sign in to continue your purchase automatically.')
+          );
+          setAuthPrefillEmail(ordererEmail || '');
+          setAuthLockEmail(!!ordererEmail);
+          setPendingPurchaseResume(true);
           setGuestOrderer(null);
           setAuthModalInitialTab('login');
           setIsAuthModalOpen(true);
-          setError(data.error || (language === 'ko' ? '이미 가입된 계정이에요. 로그인 후 결제해 주세요.' : 'Account exists. Please log in.'));
+          setError('');
           return;
         }
         throw new Error(data.error || t('sessionBooking.purchaseFailed'));
@@ -823,11 +854,20 @@ export default function SessionBookingPage() {
           setBankTransferGuestFormOpen(false);
           setWidgetModalOpen(false);
           setWidgetOrder(null);
-          setPendingCardPayment(null);
+          // pendingCardPayment 는 그대로 유지 — 로그인 후 자동 재진입에서 동일 ticket·schedule 재사용.
+          setAuthConflictNotice(
+            data.error ||
+              (language === 'ko'
+                ? '이미 가입된 계정이에요. 비밀번호를 입력하면 결제가 자동으로 이어집니다.'
+                : 'Account exists. Sign in to continue your purchase automatically.')
+          );
+          setAuthPrefillEmail(guest.email || '');
+          setAuthLockEmail(!!guest.email);
+          setPendingPurchaseResume(true);
           setGuestOrderer(null);
           setAuthModalInitialTab('login');
           setIsAuthModalOpen(true);
-          setError(data.error || (language === 'ko' ? '이미 가입된 계정이에요. 로그인 후 결제해 주세요.' : 'Account exists. Please log in.'));
+          setError('');
           return;
         }
         throw new Error(data.error || t('sessionBooking.purchaseFailed'));
@@ -2002,6 +2042,12 @@ export default function SessionBookingPage() {
         isOpen={isAuthModalOpen}
         onClose={async () => {
           setIsAuthModalOpen(false);
+          // 사용자가 X·배경 클릭으로 닫음(취소). 회원충돌-자동재진입 보류 상태가 남아 있으면
+          // 다음 흐름에 영향 주지 않게 정리.
+          setPendingPurchaseResume(false);
+          setAuthConflictNotice('');
+          setAuthLockEmail(false);
+          setAuthPrefillEmail('');
           // 비회원 계좌이체 완료 후 회원가입/로그인한 경우: 로그인 성공이면 /my로 이동
           if (bankTransferAuthRedirectRef.current) {
             bankTransferAuthRedirectRef.current = false;
@@ -2016,7 +2062,30 @@ export default function SessionBookingPage() {
           }
           checkAuth();
         }}
+        onAuthSuccess={async () => {
+          // 로그인/가입 성공: 모달만 닫고 자동 재진입은 useEffect [user, pendingPurchaseResume] 가 처리.
+          setIsAuthModalOpen(false);
+          setAuthConflictNotice('');
+          setAuthLockEmail(false);
+          setAuthPrefillEmail('');
+          // bankTransferAuthRedirectRef 흐름은 결제 완료 후 가입 유도이므로 그대로 처리.
+          if (bankTransferAuthRedirectRef.current) {
+            bankTransferAuthRedirectRef.current = false;
+            const supabase = getSupabaseClient();
+            if (supabase) {
+              const { data: { user: authUser } } = await (supabase as any).auth.getUser();
+              if (authUser) {
+                router.push('/my');
+                return;
+              }
+            }
+          }
+          checkAuth();
+        }}
         initialTab={authModalInitialTab}
+        initialEmail={authPrefillEmail || undefined}
+        conflictNotice={authConflictNotice || undefined}
+        lockEmail={authLockEmail}
       />
 
       {/* 수강권 구매 모달 */}

@@ -117,16 +117,15 @@ export function TicketTossPaymentModal({
     try {
       const customerMobilePhone = toTossPhone(customerMobilePhoneProp);
       const isApp = isNativePlatform();
-      // 모바일/앱: 같은 WebView에서 결제창 열기. 페이북/ISP·카드사 앱에서 결제 후 상점 앱으로 복귀용 스킴.
+      // 2026-05-10: 빈 문자열 customerEmail/customerName 을 보내면 일부 케이스에서
+      // SDK 가 invalid 로 판정해 silent reject 함. 값이 없으면 키 자체를 넣지 않음.
       const paymentRequest: Record<string, unknown> = {
         orderId,
         orderName,
         successUrl,
         failUrl,
-        customerEmail: '',
-        customerName: '',
-        customerMobilePhone: customerMobilePhone || undefined,
       };
+      if (customerMobilePhone) paymentRequest.customerMobilePhone = customerMobilePhone;
       if (isApp) {
         paymentRequest.windowTarget = 'self';
         paymentRequest.card = { appScheme: 'moveitapp://' };
@@ -134,17 +133,25 @@ export function TicketTossPaymentModal({
       await widgetsRef.current.requestPayment(paymentRequest);
       // 성공/실패는 리다이렉트로 처리됨
     } catch (e: any) {
+      // 2026-05-10: 결제하기 클릭 후 redirect 가 아예 일어나지 않는 사고 추적용.
+      // 토스 SDK 가 throw 하지만 e.message 가 비어있으면 부모 onError 가 빈 문자열로
+      // setError 해서 사용자가 사고를 인지하지 못함. 로깅 + fallback 메시지 강화.
+      console.error('[toss] requestPayment error', { code: e?.code, message: e?.message, raw: e });
       const code: string = e?.code ?? '';
       const isCancelled = code === 'PAY_PROCESS_CANCELED' || code === 'PAY_PROCESS_ABORTED';
       if (isCancelled) {
         setCancelMsg('결제가 취소되었습니다. 다시 시도하려면 결제하기를 눌러주세요.');
         setTimeout(() => setCancelMsg(''), 4000);
       } else {
-        const msg = e?.message ?? '결제 요청에 실패했습니다.';
+        const rawMsg = (typeof e?.message === 'string' && e.message.trim()) ? e.message : '';
         const isPhoneFormatError =
-          typeof msg === 'string' &&
-          (msg.includes('전화번호') && (msg.includes('특수문자') || msg.includes('형식')));
-        onError(isPhoneFormatError ? '전화번호는 하이픈(-) 없이 숫자만 입력해주세요.' : msg);
+          rawMsg && (rawMsg.includes('전화번호') && (rawMsg.includes('특수문자') || rawMsg.includes('형식')));
+        const friendly = isPhoneFormatError
+          ? '전화번호는 하이픈(-) 없이 숫자만 입력해주세요.'
+          : (rawMsg || (code
+              ? `결제 요청 중 오류가 발생했습니다 (${code}). 잠시 후 다시 시도해주세요.`
+              : '결제 요청에 실패했습니다. 결제 수단을 다시 선택하고 시도해주세요.'));
+        onError(friendly);
       }
     } finally {
       setPaying(false);

@@ -17,9 +17,18 @@ interface MyTabProps {
   initialEmail?: string;
   initialName?: string;
   initialPhone?: string;
+  /** 2026-05-10: 비회원 결제 시 입력한 이메일/전화가 정식 회원과 충돌해 로그인을 유도할 때
+   *  모달 상단에 명확한 안내문을 띄우는 prop. 빈 값이면 노출 안 함. */
+  conflictNotice?: string;
+  /** 2026-05-10: 충돌 흐름에서 이메일이 이미 결정돼 있어 사용자가 다시 입력하면 안 되는 경우
+   *  email input을 readonly + 시각적으로 잠금 상태로 표시. */
+  lockEmail?: boolean;
+  /** 2026-05-10: 로그인/회원가입 성공 시 호출. 부모가 onClose(=취소/dismiss)와 구분해
+   *  자동 재진입 등 후속 액션을 결정할 수 있게 함. 미지정이면 onClose 만 호출. */
+  onAuthSuccess?: () => void;
 }
 
-export function MyTab({ isOpen, onClose, initialTab = 'login', initialEmail, initialName, initialPhone }: MyTabProps) {
+export function MyTab({ isOpen, onClose, initialTab = 'login', initialEmail, initialName, initialPhone, conflictNotice, lockEmail, onAuthSuccess }: MyTabProps) {
   const [isLogin, setIsLogin] = useState(initialTab === 'login');
 
   useEffect(() => {
@@ -92,7 +101,7 @@ export function MyTab({ isOpen, onClose, initialTab = 'login', initialEmail, ini
       if (result.error) {
         setError(result.error.message || '로그인에 실패했습니다.');
       } else {
-        onClose();
+        if (onAuthSuccess) onAuthSuccess(); else onClose();
         setEmail('');
         setPassword('');
       }
@@ -144,7 +153,7 @@ export function MyTab({ isOpen, onClose, initialTab = 'login', initialEmail, ini
           setPassword('');
         }
       } else {
-        onClose();
+        if (onAuthSuccess) onAuthSuccess(); else onClose();
         setEmail('');
         setPassword('');
         setName('');
@@ -178,6 +187,15 @@ export function MyTab({ isOpen, onClose, initialTab = 'login', initialEmail, ini
             <X className="text-neutral-600 dark:text-neutral-400" size={20} />
           </button>
         </div>
+
+        {/* 2026-05-10: 회원 충돌 안내 — 비회원 결제 진입 시 이메일/전화가 정식 회원과
+            충돌하면 부모가 conflictNotice 로 사유를 전달. 사용자가 본인이 가입된 줄 모르는
+            상태에서 즉시 인지하고 비밀번호만 입력하면 결제 흐름이 자동 재진입되도록 안내. */}
+        {conflictNotice && (
+          <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg">
+            <p className="text-sm text-amber-800 dark:text-amber-200">{conflictNotice}</p>
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -220,11 +238,17 @@ export function MyTab({ isOpen, onClose, initialTab = 'login', initialEmail, ini
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                onChange={(e) => { if (!lockEmail) setEmail(e.target.value); }}
+                readOnly={lockEmail}
+                className={`w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-primary ${lockEmail ? 'opacity-70 cursor-not-allowed' : ''}`}
                 placeholder="이메일을 입력하세요"
                 required
               />
+              {lockEmail && (
+                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                  결제 진행 중 입력한 이메일로 로그인합니다.
+                </p>
+              )}
             </div>
 
             <div>
