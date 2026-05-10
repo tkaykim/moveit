@@ -221,7 +221,9 @@ export async function PATCH(
     if (academyId && status === 'COMPLETED' && oldStatus === 'CONFIRMED') {
       let attendanceSnapshot: { remaining_count: number | null; status: string | null } | null = null;
       if (currentBooking.user_ticket_id) {
-        const { data: utNow } = await (supabase as any)
+        // RLS 우회: snapshot 조회는 service client 로 강제 (anon/cookie 컨텍스트에서도 안정적으로 잔여를 읽기 위함)
+        const snapshotClient = createServiceClient() as any;
+        const { data: utNow } = await snapshotClient
           .from('user_tickets')
           .select('remaining_count, status')
           .eq('id', currentBooking.user_ticket_id)
