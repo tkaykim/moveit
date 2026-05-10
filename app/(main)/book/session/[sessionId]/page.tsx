@@ -576,6 +576,9 @@ export default function SessionBookingPage() {
       if (!orderRes.ok) {
         const data = await orderRes.json();
         // B-4 (2026-04-28): 계좌이체에서도 회원 충돌 시 로그인 유도.
+        // 2026-05-10: 입금 안내 drawer가 떠 있는 상태에서 AuthModal만 띄우면
+        // drawer가 위(z-[60])라 AuthModal·에러 안내가 가려짐. 결제 진행 중 모달
+        // 전부 닫고 AuthModal만 노출해 사용자가 충돌을 인지하도록 정리.
         if (
           orderRes.status === 409 &&
           (data?.code === 'EMAIL_BELONGS_TO_MEMBER' ||
@@ -583,6 +586,9 @@ export default function SessionBookingPage() {
             data?.code === 'EMAIL_OR_PHONE_BELONGS_TO_MEMBER')
         ) {
           setBankTransferGuestFormOpen(false);
+          setDepositorModalOpen(false);
+          setPendingBankTransfer(null);
+          setGuestOrderer(null);
           setAuthModalInitialTab('login');
           setIsAuthModalOpen(true);
           setError(data.error || (language === 'ko' ? '이미 가입된 계정이에요. 로그인 후 결제해 주세요.' : 'Account exists. Please log in.'));
@@ -806,6 +812,8 @@ export default function SessionBookingPage() {
       if (!orderRes.ok) {
         const data = await orderRes.json();
         // B-4 (2026-04-28): 비회원이 입력한 이메일/전화가 정식 회원과 충돌하면 친절히 로그인 유도.
+        // 2026-05-10: 결제 진행 중 모달이 떠 있으면 AuthModal·에러 안내가 가려지므로
+        // 카드결제 위젯·비회원 폼·pendingCardPayment·guestOrderer 모두 정리.
         if (
           orderRes.status === 409 &&
           (data?.code === 'EMAIL_BELONGS_TO_MEMBER' ||
@@ -813,6 +821,10 @@ export default function SessionBookingPage() {
             data?.code === 'EMAIL_OR_PHONE_BELONGS_TO_MEMBER')
         ) {
           setBankTransferGuestFormOpen(false);
+          setWidgetModalOpen(false);
+          setWidgetOrder(null);
+          setPendingCardPayment(null);
+          setGuestOrderer(null);
           setAuthModalInitialTab('login');
           setIsAuthModalOpen(true);
           setError(data.error || (language === 'ko' ? '이미 가입된 계정이에요. 로그인 후 결제해 주세요.' : 'Account exists. Please log in.'));
@@ -1763,7 +1775,7 @@ export default function SessionBookingPage() {
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => {
               if (bankTransferResult) closeBankTransferResultAndGoToMy();
-              else { setDepositorModalOpen(false); setPendingBankTransfer(null); setGuestOrderer(null); }
+              else { setDepositorModalOpen(false); setPendingBankTransfer(null); setGuestOrderer(null); setError(''); }
             }}
             aria-hidden
           />
@@ -1871,9 +1883,16 @@ export default function SessionBookingPage() {
                       />
                     )}
                   </div>
+                  {/* 2026-05-10: drawer 가 본문을 덮으므로 본문의 error 영역(line 1491)이
+                      가려진다. drawer 내부에서도 즉시 인지하도록 동일 메시지를 노출. */}
+                  {error && (
+                    <div className="mb-3 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
+                      {error}
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <button
-                      onClick={() => { setDepositorModalOpen(false); setPendingBankTransfer(null); setGuestOrderer(null); }}
+                      onClick={() => { setDepositorModalOpen(false); setPendingBankTransfer(null); setGuestOrderer(null); setError(''); }}
                       className="flex-1 py-2.5 px-4 rounded-xl border border-neutral-300 dark:border-neutral-600 text-sm font-medium"
                     >
                       {language === 'ko' ? '취소' : 'Cancel'}

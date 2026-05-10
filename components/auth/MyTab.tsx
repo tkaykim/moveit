@@ -162,7 +162,7 @@ export function MyTab({ isOpen, onClose, initialTab = 'login', initialEmail, ini
 
   // B-4 (2026-04-27): 중앙정렬 → 하단 시트로 변경. 모바일 표준 패턴 + 시선 추적 명확.
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm">
       <div
         className="w-full max-w-[420px] bg-white dark:bg-neutral-900 rounded-t-3xl sm:rounded-3xl p-6 max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200"
         onClick={(e) => e.stopPropagation()}
