@@ -530,12 +530,14 @@ export default function SessionBookingPage() {
         }
       }
 
-      setPurchasableTickets(expanded);
-      // 2026-05-10 D2: 자동 default 선택 제거. list 첫 row 가 가장 비싼 상품인 경우
-      // 사용자가 인지하지 못한 채 큰 금액이 청구되는 위험이 있어 명시적 선택을 강제.
-      // 단, 옵션이 1개뿐이면 기존처럼 자동 선택해도 모호함 없음.
-      if (expanded.length === 1) {
-        setSelectedPurchaseTicketId(expanded[0].productKey ?? expanded[0].id);
+      // 2026-05-10 D2 v2: 자동 default 를 완전히 끄면 사용자가 0원 + disabled CTA 에 갇혀
+      // 어떻게 진행해야 할지 모르고 이탈함. 일반 이커머스 패턴대로 가격 낮은 순으로 정렬해
+      // 가장 저렴한 옵션을 default 로 두면, 비싼 항목을 인지 없이 결제하는 위험 + 0원 갇힘
+      // 두 문제를 동시에 회피. 사용자는 위쪽부터 자연스럽게 보고 다른 옵션 선택 가능.
+      const sorted = [...expanded].sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+      setPurchasableTickets(sorted);
+      if (sorted.length > 0) {
+        setSelectedPurchaseTicketId(sorted[0].productKey ?? sorted[0].id);
       } else {
         setSelectedPurchaseTicketId('');
       }
@@ -1019,7 +1021,7 @@ export default function SessionBookingPage() {
   const selectedPurchaseTicket = purchasableTickets.find(t => (t.productKey ?? t.id) === selectedPurchaseTicketId);
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 pt-6 px-4 pb-48 relative">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 pt-6 px-4 pb-60 relative">
       {/* 예약/구매 처리 중 로딩 오버레이 */}
       {submitting && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/50 dark:bg-black/60 backdrop-blur-sm">
