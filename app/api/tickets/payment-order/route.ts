@@ -5,6 +5,7 @@ import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { normalizeGuestEmail, normalizeGuestPhone } from '@/lib/utils/guest-normalize';
 import { isGuestEligibleTicket } from '@/lib/utils/ticket-policy';
+import { logTicketEvent } from '@/lib/db/enrollment-activity-log';
 
 /**
  * 수강권 결제용 주문 생성 (Toss Payments 결제창 연동)
@@ -87,6 +88,22 @@ export async function POST(request: Request) {
         }
         if (existing) {
           if (existing.is_guest !== true) {
+            // 활동 로그: 회원 이메일과 충돌해 비회원 결제 시도 거절
+            logTicketEvent({
+              academy_id: academyId,
+              user_id: existing.id,
+              action: 'MEMBER_CONFLICT_REJECTED',
+              via: 'member_conflict',
+              reason: 'EMAIL_BELONGS_TO_MEMBER',
+              context: {
+                ticket_id: ticketId,
+                schedule_id: scheduleId ?? null,
+                attempted_email: email,
+                attempted_phone: phone ?? null,
+                attempted_name: name,
+              },
+              actor_user_id: null,
+            }, supabase).catch(() => {});
             return NextResponse.json({
               error: '이미 가입된 이메일입니다. 로그인 후 결제해 주세요.',
               code: 'EMAIL_BELONGS_TO_MEMBER',
@@ -103,6 +120,22 @@ export async function POST(request: Request) {
         }
         if (existing) {
           if (existing.is_guest !== true) {
+            // 활동 로그: 회원 전화번호와 충돌해 비회원 결제 시도 거절
+            logTicketEvent({
+              academy_id: academyId,
+              user_id: existing.id,
+              action: 'MEMBER_CONFLICT_REJECTED',
+              via: 'member_conflict',
+              reason: 'PHONE_BELONGS_TO_MEMBER',
+              context: {
+                ticket_id: ticketId,
+                schedule_id: scheduleId ?? null,
+                attempted_email: email,
+                attempted_phone: phone,
+                attempted_name: name,
+              },
+              actor_user_id: null,
+            }, supabase).catch(() => {});
             return NextResponse.json({
               error: '이미 가입된 전화번호입니다. 로그인 후 결제해 주세요.',
               code: 'PHONE_BELONGS_TO_MEMBER',
@@ -124,6 +157,22 @@ export async function POST(request: Request) {
           // B-4 (2026-04-28): unique violation은 거의 항상 정식 회원 row와 충돌. 친절한 409로 변환.
           // SELECT 단계가 RLS·race condition·서비스 키 누락 등으로 row를 놓쳤을 때의 안전망.
           if ((insertUserErr as any).code === '23505') {
+            // 활동 로그: SELECT 가 race 로 회원 행을 놓치고 INSERT 충돌로 떨어진 케이스
+            logTicketEvent({
+              academy_id: academyId,
+              action: 'MEMBER_CONFLICT_REJECTED',
+              via: 'member_conflict',
+              reason: 'EMAIL_OR_PHONE_BELONGS_TO_MEMBER',
+              context: {
+                ticket_id: ticketId,
+                schedule_id: scheduleId ?? null,
+                attempted_email: email,
+                attempted_phone: phone ?? null,
+                attempted_name: name,
+                detection: 'unique_violation_23505',
+              },
+              actor_user_id: null,
+            }, supabase).catch(() => {});
             return NextResponse.json({
               error: '이미 가입된 이메일 또는 전화번호입니다. 로그인 후 결제해 주세요.',
               code: 'EMAIL_OR_PHONE_BELONGS_TO_MEMBER',

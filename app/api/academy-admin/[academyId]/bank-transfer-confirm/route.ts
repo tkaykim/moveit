@@ -9,7 +9,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { getTicketById } from '@/lib/db/tickets';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
-import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
+import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
 import { Database } from '@/types/database';
 import { sendNotification } from '@/lib/notifications';
 
@@ -166,19 +166,26 @@ export async function POST(
       return NextResponse.json({ error: '수강권 발급에 실패했습니다.' }, { status: 500 });
     }
 
-    // 활동 로그: 수강권 발급 (계좌이체 입금확인)
-    insertEnrollmentActivityLog({
+    // 활동 로그: 수강권 발급 (계좌이체 입금확인) — 표준 envelope
+    logTicketEvent({
       academy_id: academyId,
       user_id: customerUserId,
       user_ticket_id: userTicket.id,
       action: 'TICKET_ISSUED',
-      payload: {
-        via: 'bank_transfer',
+      before: { remaining_count: null, status: null, expiry_date: null },
+      after: { remaining_count: remainingCount, status: 'ACTIVE', expiry_date: expiryDateStr },
+      via: 'bank_transfer',
+      context: {
+        ticket_id: order.ticket_id,
         ticket_name: ticket.name,
         ticket_type: ticket.ticket_type,
-        remaining_count: remainingCount,
-        expiry_date: expiryDateStr,
+        initial_count: remainingCount,
+        valid_days: optionValidDays,
+        price: order.amount,
+        payment_method: 'BANK_TRANSFER',
         order_id: orderId,
+        bank_transfer_order_id: orderId,
+        start_date: userTicketData.start_date,
       },
       actor_user_id: user.id,
     }, supabase).catch(() => {});
@@ -214,6 +221,8 @@ export async function POST(
         ticket_name: ticketDisplayName,
         ticket_type_snapshot: ticket.ticket_type,
         transaction_date: transactionDate,
+        // 관리자 대행 결제 → actor = 입금 확인을 누른 관리자
+        actor_user_id: user.id,
       })
       .select('id')
       .single();
@@ -258,26 +267,35 @@ export async function POST(
         const { consumeUserTicket } = await import('@/lib/db/user-tickets');
         let consumeOk = false;
         try {
+          const beforeRemaining = remainingCount;
           const consumedTicket = await consumeUserTicket(userTicket.id, resolvedClassId, 1, supabase);
           consumeOk = true;
-          // 활동 로그: 횟수 차감
-          insertEnrollmentActivityLog({
-            academy_id: academyId,
-            user_id: customerUserId,
-            user_ticket_id: userTicket.id,
-            action: 'COUNT_DEDUCT',
-            payload: { delta: -1, class_id: resolvedClassId, schedule_id: order.schedule_id, via: 'bank_transfer' },
-            actor_user_id: user.id,
-          }, supabase).catch(() => {});
+          // 활동 로그: 횟수 차감 (PERIOD 권은 차감이 없으므로 로그 생략)
+          if (!isPeriodTicket && consumedTicket && typeof beforeRemaining === 'number') {
+            await logTicketEvent({
+              academy_id: academyId,
+              user_id: customerUserId,
+              user_ticket_id: userTicket.id,
+              action: 'COUNT_DEDUCT',
+              before: { remaining_count: beforeRemaining, status: 'ACTIVE' },
+              after: { remaining_count: consumedTicket.remaining_count, status: consumedTicket.status },
+              via: 'bank_transfer',
+              context: { class_id: resolvedClassId, schedule_id: order.schedule_id, order_id: orderId },
+              actor_user_id: user.id,
+            }, supabase).catch(() => {});
+          }
 
           // 활동 로그: 수강권 소진
           if (consumedTicket && consumedTicket.remaining_count === 0 && consumedTicket.status === 'USED') {
-            insertEnrollmentActivityLog({
+            await logTicketEvent({
               academy_id: academyId,
               user_id: customerUserId,
               user_ticket_id: userTicket.id,
               action: 'TICKET_EXHAUSTED',
-              payload: { class_id: resolvedClassId, via: 'bank_transfer' },
+              before: { remaining_count: 1, status: 'ACTIVE' },
+              after: { remaining_count: 0, status: 'USED' },
+              via: 'bank_transfer',
+              context: { class_id: resolvedClassId, schedule_id: order.schedule_id },
               actor_user_id: user.id,
             }, supabase).catch(() => {});
           }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getTicketById } from '@/lib/db/tickets';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
-import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
+import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { Database } from '@/types/database';
 import { sendNotification } from '@/lib/notifications';
@@ -167,20 +167,28 @@ export async function POST(request: Request) {
       );
     }
 
-    // 활동 로그: 수강권 발급
+    // 활동 로그: 수강권 발급 (직접 구매) — 표준 envelope
     if (ticket.academy_id) {
-      insertEnrollmentActivityLog({
+      const finalPaymentMethodForLog = paymentMethod === 'card' ? 'CARD_DEMO' : (paymentMethod || 'TEST');
+      logTicketEvent({
         academy_id: ticket.academy_id,
         user_id: user.id,
         user_ticket_id: userTicket.id,
         action: 'TICKET_ISSUED',
-        payload: {
-          via: 'purchase',
+        before: { remaining_count: null, status: null, expiry_date: null },
+        after: { remaining_count: remainingCount, status: 'ACTIVE', expiry_date: expiryDateStr },
+        via: 'admin_purchase',
+        context: {
+          ticket_id: ticketId,
           ticket_name: ticket.name,
           ticket_type: ticket.ticket_type,
-          remaining_count: remainingCount,
-          expiry_date: expiryDateStr,
+          initial_count: remainingCount,
+          valid_days: optionValidDays,
           price: finalPrice,
+          original_price: originalPrice,
+          discount_amount: discountAmount,
+          payment_method: finalPaymentMethodForLog,
+          start_date: userTicketData.start_date,
         },
         actor_user_id: user.id,
       }).catch(() => {});
@@ -228,6 +236,8 @@ export async function POST(request: Request) {
           ticket_name: ticketDisplayName,
           ticket_type_snapshot: ticket.ticket_type,
           transaction_date: transactionDate,
+          // 본인이 직접 구매하는 경로 → actor = 구매자 본인
+          actor_user_id: user.id,
         });
 
       // 학원 학생으로 자동 등록 (중복 방지: 이미 등록된 경우 무시)
