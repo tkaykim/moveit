@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { Database } from '@/types/database';
 import { logTicketEvent } from '@/lib/db/enrollment-activity-log';
+import { isPeriodTicket as checkIsPeriodTicket } from '@/lib/utils/ticket-type';
 
 type SupabaseClientAny = any;
 
@@ -333,7 +334,7 @@ export async function consumeUserTicket(
   }
 
   const ticketType = currentTicket.tickets?.ticket_type;
-  const isPeriodTicket = ticketType === 'PERIOD';
+  const isPeriodTicket = checkIsPeriodTicket(ticketType);
 
   // 5. 기간권(PERIOD)인 경우: 횟수 차감 없이 반환
   if (isPeriodTicket || currentTicket.remaining_count === null) {

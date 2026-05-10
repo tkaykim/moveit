@@ -9,6 +9,7 @@ import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { logTicketEvent } from '@/lib/db/enrollment-activity-log';
+import { isPeriodTicket as checkIsPeriodTicket } from '@/lib/utils/ticket-type';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,7 +62,7 @@ export async function POST(
       return NextResponse.json({ error: '수강권을 찾을 수 없습니다.' }, { status: 404 });
     }
 
-    if (userTicket.tickets?.ticket_type === 'PERIOD') {
+    if (checkIsPeriodTicket(userTicket.tickets?.ticket_type)) {
       return NextResponse.json({ error: '기간제 수강권은 횟수 조정이 불가합니다.' }, { status: 400 });
     }
 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getTicketById } from '@/lib/db/tickets';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
+import { isPeriodTicket as checkIsPeriodTicket } from '@/lib/utils/ticket-type';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { Database } from '@/types/database';
@@ -221,7 +222,7 @@ export async function POST(request: Request) {
     const selectedOption = hasCountOptions && countOpts[optIndex] ? countOpts[optIndex] : null;
     const optionCount = selectedOption ? (selectedOption.count ?? 1) : (ticket.total_count ?? 1);
     const optionValidDays = selectedOption?.valid_days ?? ticket.valid_days ?? null;
-    const isPeriodTicket = ticket.ticket_type === 'PERIOD';
+    const isPeriodTicket = checkIsPeriodTicket(ticket.ticket_type);
     const remainingCount = isPeriodTicket ? null : optionCount;
 
     const startDate = new Date();

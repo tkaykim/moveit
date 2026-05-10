@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { consumeUserTicket, getAvailableUserTickets, updateUserTicket } from '@/lib/db/user-tickets';
-import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
+import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
 import { Database } from '@/types/database';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { sendNotification } from '@/lib/notifications';
@@ -284,26 +284,41 @@ export async function POST(request: Request) {
       // 수강권 차감 (카드결제 데모인 경우에도 수강권 차감)
       if (selectedUserTicketId) {
         try {
+          // 차감 전 스냅샷 캡처 — 표준 envelope 의 previous_count 용
+          const { data: beforeUt } = await (supabase as any)
+            .from('user_tickets')
+            .select('remaining_count, status')
+            .eq('id', selectedUserTicketId)
+            .maybeSingle();
+          const beforeRemaining = beforeUt?.remaining_count ?? null;
+          const beforeStatus = beforeUt?.status ?? null;
+
           const consumedTicket = await consumeUserTicket(selectedUserTicketId, resolvedClassId, 1);
-          // 활동 로그: 횟수 차감
-          if (academyId) {
-            insertEnrollmentActivityLog({
+          // 활동 로그: 횟수 차감 — PERIOD 권은 차감이 없으므로 로그 생략
+          if (academyId && typeof beforeRemaining === 'number' && consumedTicket) {
+            await logTicketEvent({
               academy_id: academyId,
               user_id: user.id,
               user_ticket_id: selectedUserTicketId,
               action: 'COUNT_DEDUCT',
-              payload: { delta: -1, class_id: resolvedClassId, schedule_id: scheduleId ?? null },
+              before: { remaining_count: beforeRemaining, status: beforeStatus },
+              after: { remaining_count: consumedTicket.remaining_count, status: consumedTicket.status },
+              via: 'booking',
+              context: { class_id: resolvedClassId, schedule_id: scheduleId ?? null },
               actor_user_id: user.id,
             }).catch(() => {});
 
             // 활동 로그: 수강권 소진 (remaining_count가 0이 되었을 때)
-            if (consumedTicket && consumedTicket.remaining_count === 0 && consumedTicket.status === 'USED') {
-              insertEnrollmentActivityLog({
+            if (consumedTicket.remaining_count === 0 && consumedTicket.status === 'USED') {
+              await logTicketEvent({
                 academy_id: academyId,
                 user_id: user.id,
                 user_ticket_id: selectedUserTicketId,
                 action: 'TICKET_EXHAUSTED',
-                payload: { class_id: resolvedClassId },
+                before: { remaining_count: beforeRemaining, status: 'ACTIVE' },
+                after: { remaining_count: 0, status: 'USED' },
+                via: 'booking',
+                context: { class_id: resolvedClassId, schedule_id: scheduleId ?? null },
                 actor_user_id: user.id,
               }).catch(() => {});
             }
@@ -388,17 +403,21 @@ export async function POST(request: Request) {
         .eq('id', scheduleId);
     }
 
-    // 활동 로그: 수강신청 (활동로그 탭용)
-    insertEnrollmentActivityLog({
+    // 활동 로그: 수강신청 (활동로그 탭용) — 표준 envelope: status before/after
+    await logTicketEvent({
       academy_id: academyId,
       user_id: user.id,
       user_ticket_id: selectedUserTicketId || null,
       booking_id: booking.id,
       action: 'ENROLL',
-      payload: {
+      before: { status: null },
+      after: { status: 'CONFIRMED' },
+      via: 'booking',
+      context: {
         schedule_id: scheduleId ?? null,
         class_id: resolvedClassId,
-        ...(selectedUserTicketId ? { ticket_used: true } : {}),
+        ticket_used: !!selectedUserTicketId,
+        payment_status: finalPaymentStatus,
       },
       actor_user_id: user.id,
     }).catch(() => {});

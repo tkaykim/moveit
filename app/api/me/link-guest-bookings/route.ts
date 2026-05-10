@@ -15,6 +15,7 @@ import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getTicketById } from '@/lib/db/tickets';
 import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
+import { isPeriodTicket as checkIsPeriodTicket } from '@/lib/utils/ticket-type';
 
 function normalizePhone(value: string | null | undefined): string {
   if (value == null || typeof value !== 'string') return '';
@@ -184,7 +185,7 @@ async function issueTicketsForConfirmedOrders(
       const selectedOption = hasCountOptions && countOpts[optIndex] ? countOpts[optIndex] : null;
       const optionCount = selectedOption ? (selectedOption.count ?? 1) : (ticket.total_count ?? 1);
       const optionValidDays = selectedOption?.valid_days ?? ticket.valid_days ?? null;
-      const isPeriodTicket = ticket.ticket_type === 'PERIOD';
+      const isPeriodTicket = checkIsPeriodTicket(ticket.ticket_type);
       const remainingCount = isPeriodTicket ? null : optionCount;
 
       const startDate = new Date();
