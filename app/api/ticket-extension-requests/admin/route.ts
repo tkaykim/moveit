@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getSchedulesForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
-import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
+import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
 
 /**
  * POST: 관리자 직접 연장/일시정지 생성 및 즉시 승인 - 쿠키 또는 Authorization Bearer
@@ -88,11 +88,14 @@ export async function POST(request: Request) {
 
     // 즉시 반영: 만료일 연장 및 기간권 예약 재생성
     const addDays = request_type === 'EXTENSION' ? extension_days : pauseDays;
+    let cancelledBookingIds: string[] = [];
+    let newExpiryStr: string | null = null;
+
     if (userTicket.expiry_date && addDays > 0) {
       const currentExpiry = new Date(userTicket.expiry_date);
       const newExpiry = new Date(currentExpiry);
       newExpiry.setDate(newExpiry.getDate() + addDays);
-      const newExpiryStr = newExpiry.toISOString().slice(0, 10);
+      newExpiryStr = newExpiry.toISOString().slice(0, 10);
 
       await supabase
         .from('user_tickets')
@@ -109,11 +112,34 @@ export async function POST(request: Request) {
         for (const sch of schedulesInAbsent || []) {
           const { data: toCancel } = await supabase
             .from('bookings')
-            .select('id')
+            .select('id, status, schedule_id, class_id')
             .eq('user_ticket_id', user_ticket_id)
             .eq('schedule_id', sch.id)
             .in('status', ['CONFIRMED', 'PENDING']);
           if (toCancel?.length) {
+            // 활동 로그: 관리자 강제 일시정지로 인한 예약 취소 (예약별 1건씩)
+            for (const b of toCancel as any[]) {
+              await logTicketEvent({
+                academy_id: academyId,
+                user_id: userId,
+                user_ticket_id: user_ticket_id,
+                booking_id: b.id,
+                extension_request_id: inserted?.id ?? null,
+                action: 'CANCEL',
+                before: { status: b.status },
+                after: { status: 'CANCELLED' },
+                via: 'period_pause',
+                reason: `admin_pause:${absent_start_date}..${absent_end_date}`,
+                context: {
+                  schedule_id: b.schedule_id,
+                  class_id: b.class_id,
+                  absent_start_date,
+                  absent_end_date,
+                },
+                actor_user_id: adminUser.id,
+              }, supabase).catch(() => {});
+            }
+            cancelledBookingIds.push(...toCancel.map((b: any) => b.id));
             await supabase.from('bookings').update({ status: 'CANCELLED' }).in('id', toCancel.map((b: any) => b.id));
             const cur = (sch as any).current_students ?? 0;
             await supabase.from('schedules').update({ current_students: Math.max(0, cur - toCancel.length) }).eq('id', sch.id);
@@ -126,21 +152,24 @@ export async function POST(request: Request) {
       }
     }
 
-    // 활동 로그: 관리자 연장/일시정지
-    insertEnrollmentActivityLog({
+    // 활동 로그: 관리자 연장/일시정지 (만료일 before/after, 취소된 예약 정보 포함)
+    await logTicketEvent({
       academy_id: academyId,
       user_id: userTicket.user_id,
       user_ticket_id: user_ticket_id,
       extension_request_id: inserted?.id ?? null,
       action: 'ADMIN_EXTEND',
-      payload: {
+      before: { expiry_date: userTicket.expiry_date ?? null },
+      after: { expiry_date: newExpiryStr ?? userTicket.expiry_date ?? null },
+      via: 'extension_approval',
+      reason: reason?.trim(),
+      context: {
         request_type,
         days: request_type === 'EXTENSION' ? extension_days : pauseDays,
-        reason: reason?.trim(),
-        prev_expiry: userTicket.expiry_date,
-        new_expiry: userTicket.expiry_date && addDays > 0
-          ? new Date(new Date(userTicket.expiry_date).getTime() + addDays * 86400000).toISOString().slice(0, 10)
-          : null,
+        absent_start_date: request_type === 'PAUSE' ? absent_start_date : null,
+        absent_end_date: request_type === 'PAUSE' ? absent_end_date : null,
+        cancelled_booking_count: cancelledBookingIds.length,
+        cancelled_booking_ids: cancelledBookingIds,
       },
       actor_user_id: adminUser.id,
     }, supabase).catch(() => {});

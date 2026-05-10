@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
-import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
+import { logTicketEvent } from '@/lib/db/enrollment-activity-log';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,25 +100,46 @@ export async function POST(
     }
 
     const action = delta > 0 ? 'COUNT_RESTORE' : 'COUNT_DEDUCT';
-    await insertEnrollmentActivityLog(
+    // 횟수가 0 이 되어 USED 로 자동 전환된 경우 별도로 TICKET_EXHAUSTED 도 기록
+    const exhausted = newCount === 0 && userTicket.status === 'ACTIVE';
+
+    await logTicketEvent(
       {
         academy_id: academyId,
         user_id: userTicket.user_id,
         user_ticket_id: user_ticket_id,
         action,
-        payload: {
+        before: { remaining_count: currentCount, status: userTicket.status },
+        after: { remaining_count: newCount, status: updated.status },
+        via: 'admin_adjust',
+        reason: reason.trim(),
+        context: {
+          ticket_id: userTicket.ticket_id,
           ticket_name: userTicket.tickets?.name,
-          delta,
-          previous_count: currentCount,
-          remaining_count: newCount,
-          reason: reason.trim(),
-          via: 'admin_manual',
         },
         note: reason.trim(),
         actor_user_id: user.id,
       },
       supabase
     );
+
+    if (exhausted) {
+      await logTicketEvent(
+        {
+          academy_id: academyId,
+          user_id: userTicket.user_id,
+          user_ticket_id: user_ticket_id,
+          action: 'TICKET_EXHAUSTED',
+          before: { remaining_count: currentCount, status: 'ACTIVE' },
+          after: { remaining_count: 0, status: 'USED' },
+          via: 'admin_adjust',
+          reason: reason.trim(),
+          context: { ticket_id: userTicket.ticket_id, ticket_name: userTicket.tickets?.name },
+          actor_user_id: user.id,
+        },
+        supabase
+      ).catch(() => {});
+    }
 
     return NextResponse.json({
       success: true,

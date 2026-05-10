@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getTicketById } from '@/lib/db/tickets';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
-import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
+import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { Database } from '@/types/database';
@@ -84,6 +84,21 @@ export async function POST(request: Request) {
             .maybeSingle();
           existingBooking = b;
         }
+        // 활동 로그: 이미 처리된 주문에 대한 재호출 (사용자 새로고침 등)
+        logTicketEvent({
+          academy_id: order.academy_id,
+          user_id: order.user_id,
+          user_ticket_id: existingRev.user_ticket_id,
+          action: 'WEBHOOK_DUPLICATE',
+          via: 'webhook',
+          reason: 'order_already_processed',
+          context: {
+            order_id: orderId,
+            order_status: order.status,
+            previous_user_ticket_id: existingRev.user_ticket_id,
+          },
+          actor_user_id: authUser?.id ?? null,
+        }, supabase).catch(() => {});
         return NextResponse.json(
           {
             success: true,
@@ -117,6 +132,23 @@ export async function POST(request: Request) {
         .from('user_ticket_payment_orders')
         .update({ status: 'FAILED', updated_at: new Date().toISOString() })
         .eq('order_id', orderId);
+      // 활동 로그: 결제 실패 (PG 응답 비OK)
+      logTicketEvent({
+        academy_id: order.academy_id,
+        user_id: order.user_id,
+        action: 'PAYMENT_FAILED',
+        via: 'toss_payment',
+        reason: errData?.code || 'toss_confirm_non_ok',
+        context: {
+          order_id: orderId,
+          ticket_id: order.ticket_id,
+          amount,
+          toss_status: tossRes.status,
+          toss_message: errData?.message ?? null,
+          toss_code: errData?.code ?? null,
+        },
+        actor_user_id: authUser?.id ?? null,
+      }, supabase).catch(() => {});
       return NextResponse.json(
         { error: errData.message || '결제 승인에 실패했습니다.' },
         { status: 400 }
@@ -153,6 +185,21 @@ export async function POST(request: Request) {
         .from('user_ticket_payment_orders')
         .update({ status: 'COMPLETED', toss_payment_key: paymentKey, updated_at: new Date().toISOString() })
         .eq('order_id', orderId);
+      // 활동 로그: 멱등 단락 (revenue 가 이미 존재해 중복 발급을 방지)
+      logTicketEvent({
+        academy_id: order.academy_id,
+        user_id: order.user_id,
+        user_ticket_id: existingRev.user_ticket_id,
+        action: 'WEBHOOK_DUPLICATE',
+        via: 'webhook',
+        reason: 'revenue_already_exists',
+        context: {
+          order_id: orderId,
+          previous_user_ticket_id: existingRev.user_ticket_id,
+          payment_key: paymentKey,
+        },
+        actor_user_id: authUser?.id ?? null,
+      }, supabase).catch(() => {});
       return NextResponse.json(
         {
           success: true,
@@ -211,19 +258,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '수강권 발급에 실패했습니다.' }, { status: 500 });
     }
 
-    // 활동 로그: 수강권 발급 (토스 결제)
-    insertEnrollmentActivityLog({
+    // 활동 로그: 수강권 발급 (토스 결제) — 표준 envelope: before=NULL, after=발급 직후 상태
+    logTicketEvent({
       academy_id: order.academy_id,
       user_id: order.user_id,
       user_ticket_id: userTicket.id,
       action: 'TICKET_ISSUED',
-      payload: {
-        via: 'toss_payment',
+      before: { remaining_count: null, status: null, expiry_date: null },
+      after: { remaining_count: remainingCount, status: 'ACTIVE', expiry_date: expiryDateStr },
+      via: 'toss_payment',
+      context: {
+        ticket_id: order.ticket_id,
         ticket_name: ticket.name,
         ticket_type: ticket.ticket_type,
-        remaining_count: remainingCount,
-        expiry_date: expiryDateStr,
+        initial_count: remainingCount,
+        valid_days: optionValidDays,
+        price: amount,
+        payment_method: paymentMethod,
+        payment_key: paymentKey,
         order_id: orderId,
+        start_date: userTicketData.start_date,
       },
       actor_user_id: order.user_id,
     }, supabase).catch(() => {});
@@ -299,6 +353,8 @@ export async function POST(request: Request) {
         toss_payment_key: paymentKey,
         toss_order_id: orderId,
         transaction_date: transactionDate,
+        // 토스 결제는 본인이 직접 결제하므로 actor = 구매자 본인
+        actor_user_id: order.user_id,
       });
 
     if (revInsertError) {
@@ -387,26 +443,36 @@ export async function POST(request: Request) {
         const { consumeUserTicket } = await import('@/lib/db/user-tickets');
         let consumeOk = false;
         try {
+          // 차감 전 스냅샷 (PERIOD 인 경우 remaining_count 는 null 그대로 유지)
+          const beforeRemaining = remainingCount;
           const consumedTicket = await consumeUserTicket(userTicket.id, resolvedClassId, 1, supabase);
           consumeOk = true;
-          // 활동 로그: 횟수 차감
-          insertEnrollmentActivityLog({
-            academy_id: order.academy_id,
-            user_id: order.user_id,
-            user_ticket_id: userTicket.id,
-            action: 'COUNT_DEDUCT',
-            payload: { delta: -1, class_id: resolvedClassId, schedule_id: order.schedule_id, via: 'payment_confirm' },
-            actor_user_id: order.user_id,
-          }, supabase).catch(() => {});
+          // 활동 로그: 횟수 차감 (PERIOD 권은 차감이 발생하지 않으므로 로그도 생략)
+          if (!isPeriodTicket && consumedTicket && typeof beforeRemaining === 'number') {
+            await logTicketEvent({
+              academy_id: order.academy_id,
+              user_id: order.user_id,
+              user_ticket_id: userTicket.id,
+              action: 'COUNT_DEDUCT',
+              before: { remaining_count: beforeRemaining, status: 'ACTIVE' },
+              after: { remaining_count: consumedTicket.remaining_count, status: consumedTicket.status },
+              via: 'toss_payment',
+              context: { class_id: resolvedClassId, schedule_id: order.schedule_id, order_id: orderId },
+              actor_user_id: order.user_id,
+            }, supabase).catch(() => {});
+          }
 
           // 활동 로그: 수강권 소진
           if (consumedTicket && consumedTicket.remaining_count === 0 && consumedTicket.status === 'USED') {
-            insertEnrollmentActivityLog({
+            await logTicketEvent({
               academy_id: order.academy_id,
               user_id: order.user_id,
               user_ticket_id: userTicket.id,
               action: 'TICKET_EXHAUSTED',
-              payload: { class_id: resolvedClassId, via: 'payment_confirm' },
+              before: { remaining_count: 1, status: 'ACTIVE' },
+              after: { remaining_count: 0, status: 'USED' },
+              via: 'toss_payment',
+              context: { class_id: resolvedClassId, schedule_id: order.schedule_id },
               actor_user_id: order.user_id,
             }, supabase).catch(() => {});
           }

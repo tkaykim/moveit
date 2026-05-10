@@ -1,7 +1,7 @@
 import { verifyQrToken, verifyQrTokenSignature } from '@/lib/qr-token';
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
-import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
+import { logTicketEvent } from '@/lib/db/enrollment-activity-log';
 
 /**
  * POST /api/attendance/qr-checkin
@@ -49,11 +49,11 @@ export async function POST(request: Request) {
 
     const { bookingId } = verification;
 
-    // 2단계: 예약 정보 조회
+    // 2단계: 예약 정보 조회 (user_ticket_id 포함 — G10: 잔여 스냅샷용)
     const { data: booking, error: bookingError } = await (supabase as any)
       .from('bookings')
       .select(`
-        id, user_id, status, schedule_id, class_id,
+        id, user_id, status, schedule_id, class_id, user_ticket_id,
         classes(title, academy_id, academies(name_kr)),
         schedules(start_time, end_time),
         users(name, nickname, email)
@@ -133,15 +133,33 @@ export async function POST(request: Request) {
       }
     }
 
-    // 활동 로그: QR 출석 체크
+    // 활동 로그: QR 출석 체크 — G10: 잔여 스냅샷 포함 (출석은 잔여 변동 없으므로 before == after)
     const qrAcademyId = booking.classes?.academy_id;
     if (qrAcademyId) {
-      insertEnrollmentActivityLog({
+      let snapshot: { remaining_count: number | null; status: string | null } | null = null;
+      if (booking.user_ticket_id) {
+        const { data: utNow } = await (supabase as any)
+          .from('user_tickets')
+          .select('remaining_count, status')
+          .eq('id', booking.user_ticket_id)
+          .maybeSingle();
+        if (utNow) {
+          snapshot = { remaining_count: utNow.remaining_count, status: utNow.status };
+        }
+      }
+      await logTicketEvent({
         academy_id: qrAcademyId,
         user_id: booking.user_id,
+        user_ticket_id: booking.user_ticket_id ?? null,
         booking_id: bookingId,
         action: 'ATTENDANCE_CHECKED',
-        payload: { via: 'qr' },
+        before: snapshot ?? undefined,
+        after: snapshot ?? undefined,
+        via: 'qr',
+        context: {
+          schedule_id: booking.schedule_id ?? null,
+          class_id: booking.class_id ?? null,
+        },
         actor_user_id: authUser.id,
       }).catch(() => {});
     }

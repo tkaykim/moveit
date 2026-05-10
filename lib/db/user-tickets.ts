@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { Database } from '@/types/database';
+import { logTicketEvent } from '@/lib/db/enrollment-activity-log';
 
 type SupabaseClientAny = any;
 
@@ -244,7 +245,8 @@ export async function consumeUserTicket(
   const { data: currentTicket, error: fetchError } = await supabase
     .from('user_tickets')
     .select(`
-      remaining_count, 
+      user_id,
+      remaining_count,
       status,
       expiry_date,
       start_date,
@@ -254,7 +256,8 @@ export async function consumeUserTicket(
         ticket_type,
         is_general,
         is_coupon,
-        academy_id
+        academy_id,
+        name
       )
     `)
     .eq('id', userTicketId)
@@ -271,11 +274,35 @@ export async function consumeUserTicket(
   // 2. 유효기간 검증 (모든 수강권 공통)
   const today = new Date().toISOString().split('T')[0];
   if (currentTicket.expiry_date && currentTicket.expiry_date < today) {
-    // 만료 상태 자동 업데이트
-    await supabase
+    // 만료 상태 자동 업데이트 (동시성 가드: 직전까지 ACTIVE 였던 행만)
+    const { data: expiredRow } = await supabase
       .from('user_tickets')
       .update({ status: 'EXPIRED' })
-      .eq('id', userTicketId);
+      .eq('id', userTicketId)
+      .eq('status', 'ACTIVE')
+      .select('id')
+      .maybeSingle();
+
+    if (expiredRow) {
+      // 실제로 ACTIVE → EXPIRED 로 전환된 경우에만 로그 기록 (idempotent)
+      await logTicketEvent(
+        {
+          academy_id: (currentTicket.tickets as any)?.academy_id,
+          user_id: (currentTicket as any).user_id ?? null,
+          user_ticket_id: userTicketId,
+          action: 'TICKET_EXPIRED',
+          before: { status: 'ACTIVE', expiry_date: currentTicket.expiry_date },
+          after: { status: 'EXPIRED', expiry_date: currentTicket.expiry_date },
+          via: 'consume_check',
+          context: {
+            ticket_id: currentTicket.ticket_id,
+            ticket_name: (currentTicket.tickets as any)?.name ?? null,
+            ticket_type: (currentTicket.tickets as any)?.ticket_type ?? null,
+          },
+        },
+        supabase,
+      ).catch(() => {});
+    }
     throw new Error('수강권 유효기간이 만료되었습니다.');
   }
 

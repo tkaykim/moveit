@@ -3,7 +3,7 @@ import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getSchedulesForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { sendNotification } from '@/lib/notifications';
-import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
+import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
 
 /**
  * PATCH: 연장/일시정지 신청 승인 또는 거절 (관리자) - 쿠키 또는 Authorization Bearer
@@ -72,6 +72,7 @@ export async function PATCH(
 
       if (addDays > 0) {
         const currentExpiry = new Date(reqRow.user_tickets.expiry_date);
+        const previousExpiryStr = (reqRow.user_tickets.expiry_date as string).slice(0, 10);
         const newExpiry = new Date(currentExpiry);
         newExpiry.setDate(newExpiry.getDate() + addDays);
         const newExpiryStr = newExpiry.toISOString().slice(0, 10);
@@ -84,8 +85,10 @@ export async function PATCH(
         const ticketType = reqRow.user_tickets?.tickets?.ticket_type;
         const ticketId = reqRow.user_tickets?.ticket_id;
         const userId = reqRow.user_tickets?.user_id;
+        const academyIdForLog = (reqRow.user_tickets as any)?.tickets?.academy_id ?? null;
 
         // 일시정지(PAUSE)일 때만 기간권 예약 취소 및 재생성
+        let cancelledBookingIds: string[] = [];
         if (reqRow.request_type === 'PAUSE' && ticketType === 'PERIOD' && ticketId && userId) {
           const absentStart = reqRow.absent_start_date;
           const absentEnd = reqRow.absent_end_date;
@@ -93,11 +96,36 @@ export async function PATCH(
           for (const sch of schedulesInAbsent || []) {
             const { data: toCancel } = await supabase
               .from('bookings')
-              .select('id')
+              .select('id, status, schedule_id, class_id')
               .eq('user_ticket_id', reqRow.user_ticket_id)
               .eq('schedule_id', sch.id)
               .in('status', ['CONFIRMED', 'PENDING']);
             if (toCancel?.length) {
+              // 활동 로그: 일시정지로 인한 예약 취소 (예약별 1건씩)
+              if (academyIdForLog) {
+                for (const b of toCancel as any[]) {
+                  await logTicketEvent({
+                    academy_id: academyIdForLog,
+                    user_id: userId,
+                    user_ticket_id: reqRow.user_ticket_id,
+                    booking_id: b.id,
+                    extension_request_id: id,
+                    action: 'CANCEL',
+                    before: { status: b.status },
+                    after: { status: 'CANCELLED' },
+                    via: 'period_pause',
+                    reason: `extension_pause:${absentStart}..${absentEnd}`,
+                    context: {
+                      schedule_id: b.schedule_id,
+                      class_id: b.class_id,
+                      absent_start_date: absentStart,
+                      absent_end_date: absentEnd,
+                    },
+                    actor_user_id: adminUser.id,
+                  }, supabase).catch(() => {});
+                }
+              }
+              cancelledBookingIds.push(...toCancel.map((b: any) => b.id));
               await supabase.from('bookings').update({ status: 'CANCELLED' }).in('id', toCancel.map((b: any) => b.id));
               const cur = (sch as any).current_students ?? 0;
               await supabase.from('schedules').update({ current_students: Math.max(0, cur - toCancel.length) }).eq('id', sch.id);
@@ -108,22 +136,30 @@ export async function PATCH(
           const extendStartStr = extendStart.toISOString().slice(0, 10);
           await createBookingsForPeriodTicket(userId, reqRow.user_ticket_id, ticketId, extendStartStr, newExpiryStr);
         }
-      }
-    }
 
-    // 활동 로그: 연장/일시정지 승인
-    if (status === 'APPROVED') {
-      const academyId = (reqRow.user_tickets as any)?.tickets?.academy_id;
-      if (academyId) {
-        insertEnrollmentActivityLog({
-          academy_id: academyId,
-          user_id: reqRow.user_tickets?.user_id ?? null,
-          user_ticket_id: reqRow.user_ticket_id,
-          extension_request_id: id,
-          action: 'EXTENSION_APPROVED',
-          payload: { request_type: reqRow.request_type },
-          actor_user_id: adminUser.id,
-        }, supabase).catch(() => {});
+        // 활동 로그: 연장/일시정지 승인 (만료일 before/after, 취소된 예약 수 포함)
+        if (academyIdForLog) {
+          await logTicketEvent({
+            academy_id: academyIdForLog,
+            user_id: userId ?? null,
+            user_ticket_id: reqRow.user_ticket_id,
+            extension_request_id: id,
+            action: 'EXTENSION_APPROVED',
+            before: { expiry_date: previousExpiryStr },
+            after: { expiry_date: newExpiryStr },
+            via: 'extension_approval',
+            reason: reqRow.request_type,
+            context: {
+              request_type: reqRow.request_type,
+              extension_days: addDays,
+              absent_start_date: reqRow.absent_start_date ?? null,
+              absent_end_date: reqRow.absent_end_date ?? null,
+              cancelled_booking_count: cancelledBookingIds.length,
+              cancelled_booking_ids: cancelledBookingIds,
+            },
+            actor_user_id: adminUser.id,
+          }, supabase).catch(() => {});
+        }
       }
     }
 

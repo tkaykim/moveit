@@ -2,7 +2,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { sendNotification } from '@/lib/notifications';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
-import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
+import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
 
 /**
  * PATCH /api/bookings/[id]/status
@@ -107,42 +107,50 @@ export async function PATCH(
 
       if (!utError && userTicket?.tickets?.ticket_type === 'COUNT' && typeof userTicket.remaining_count === 'number') {
         const newRemaining = userTicket.remaining_count + 1;
+        const previousStatus = userTicket.status as string;
         const updateData: any = { remaining_count: newRemaining };
-        
+
         // USED 상태였다면 복원 시 ACTIVE로 변경
         if (userTicket.status === 'USED' && newRemaining > 0) {
           updateData.status = 'ACTIVE';
         }
-        
+
         await (supabase as any)
           .from('user_tickets')
           .update(updateData)
           .eq('id', currentBooking.user_ticket_id);
 
-        // 활동 로그: 횟수 복구
+        // 활동 로그: 횟수 복구 (표준 envelope: before/after 포함)
         if (academyId) {
-          insertEnrollmentActivityLog({
+          await logTicketEvent({
             academy_id: academyId,
             user_id: currentBooking.user_id,
             user_ticket_id: currentBooking.user_ticket_id,
             booking_id: id,
             action: 'COUNT_RESTORE',
-            payload: { delta: 1, reason: 'booking_cancelled', ...guestPayload },
+            before: { remaining_count: userTicket.remaining_count, status: previousStatus },
+            after: { remaining_count: newRemaining, status: updateData.status ?? previousStatus },
+            via: 'cancel',
+            reason: 'booking_cancelled',
+            context: guestPayload,
             actor_user_id: actorId,
           }).catch(() => {});
         }
       }
     }
 
-    // 활동 로그: 예약 취소
+    // 활동 로그: 예약 취소 (표준 envelope: before/after status)
     if (academyId && status === 'CANCELLED') {
-      insertEnrollmentActivityLog({
+      await logTicketEvent({
         academy_id: academyId,
         user_id: currentBooking.user_id,
         user_ticket_id: currentBooking.user_ticket_id ?? null,
         booking_id: id,
         action: 'CANCEL',
-        payload: { previous_status: oldStatus, ...guestPayload },
+        before: { status: oldStatus },
+        after: { status: 'CANCELLED' },
+        via: 'cancel',
+        context: { ...guestPayload, restored_ticket: !!(restoreTicket && currentBooking.user_ticket_id) },
         actor_user_id: actorId,
       }).catch(() => {});
     }
@@ -209,39 +217,60 @@ export async function PATCH(
         .catch((err: any) => console.error('[cancel-notification]', err));
     }
 
-    // 활동 로그: 출석 체크
+    // 활동 로그: 출석 체크 (수동) — G10: 잔여 스냅샷 포함
     if (academyId && status === 'COMPLETED' && oldStatus === 'CONFIRMED') {
-      insertEnrollmentActivityLog({
+      let attendanceSnapshot: { remaining_count: number | null; status: string | null } | null = null;
+      if (currentBooking.user_ticket_id) {
+        const { data: utNow } = await (supabase as any)
+          .from('user_tickets')
+          .select('remaining_count, status')
+          .eq('id', currentBooking.user_ticket_id)
+          .maybeSingle();
+        if (utNow) {
+          attendanceSnapshot = { remaining_count: utNow.remaining_count, status: utNow.status };
+        }
+      }
+      await logTicketEvent({
         academy_id: academyId,
         user_id: currentBooking.user_id,
         user_ticket_id: currentBooking.user_ticket_id ?? null,
         booking_id: id,
         action: 'ATTENDANCE_CHECKED',
-        payload: { via: 'manual', ...guestPayload },
+        // 출석 체크는 잔여를 변동시키지 않으므로 before == after
+        before: attendanceSnapshot ?? undefined,
+        after: attendanceSnapshot ?? undefined,
+        via: 'manual',
+        context: guestPayload,
         actor_user_id: actorId,
       }).catch(() => {});
     }
 
-    // 활동 로그: 결석 처리 / 결석 취소
+    // 활동 로그: 결석 처리 / 결석 취소 (표준 envelope)
     if (academyId && status === 'ABSENT' && oldStatus !== 'ABSENT') {
-      insertEnrollmentActivityLog({
+      await logTicketEvent({
         academy_id: academyId,
         user_id: currentBooking.user_id,
         user_ticket_id: currentBooking.user_ticket_id ?? null,
         booking_id: id,
         action: 'ABSENT_MARKED',
-        payload: { previous_status: oldStatus, ...guestPayload },
+        before: { status: oldStatus },
+        after: { status: 'ABSENT' },
+        via: 'manual',
+        context: guestPayload,
         actor_user_id: actorId,
       }).catch(() => {});
     }
     if (academyId && oldStatus === 'ABSENT' && status !== 'ABSENT') {
-      insertEnrollmentActivityLog({
+      await logTicketEvent({
         academy_id: academyId,
         user_id: currentBooking.user_id,
         user_ticket_id: currentBooking.user_ticket_id ?? null,
         booking_id: id,
         action: 'ABSENT_CLEARED',
-        payload: { next_status: status, ...guestPayload },
+        before: { status: 'ABSENT' },
+        after: { status },
+        via: 'manual',
+        context: guestPayload,
         actor_user_id: actorId,
       }).catch(() => {});
     }
