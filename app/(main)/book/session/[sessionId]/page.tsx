@@ -483,6 +483,14 @@ export default function SessionBookingPage() {
 
       // count_options가 있으면 옵션별로 확장 (쿠폰제)
       const expanded: PurchasableTicket[] = [];
+      // 2026-05-10 D3: ticket.name 이 이미 'N회권'으로 끝나면 자동 라벨을 붙이지 않음.
+      // 예: '1 COUPON' + 1회 → '1 COUPON 1회권' / '[QA-TEST] 1회권' + 1회 → '[QA-TEST] 1회권' (중복 방지)
+      const buildOptionName = (baseName: string, count: number) => {
+        const trimmed = baseName.trim();
+        const suffix = `${count}회권`;
+        if (trimmed.endsWith(suffix)) return trimmed;
+        return `${trimmed} ${suffix}`;
+      };
       for (const ticket of filteredTickets) {
         const opts = (ticket.count_options as { count?: number; price?: number; valid_days?: number | null }[] | null) || [];
         const hasCountOptions = opts.length > 0 && (ticket.ticket_category === 'popup' || ticket.access_group === 'popup');
@@ -493,7 +501,7 @@ export default function SessionBookingPage() {
               expanded.push({
                 id: ticket.id,
                 productKey: `${ticket.id}_${count}`,
-                name: `${ticket.name} ${count}회권`,
+                name: buildOptionName(ticket.name, count),
                 description: ticket.description ?? null,
                 price: Number(o?.price ?? 0),
                 ticket_type: 'COUNT',
@@ -523,8 +531,13 @@ export default function SessionBookingPage() {
       }
 
       setPurchasableTickets(expanded);
-      if (expanded.length > 0) {
+      // 2026-05-10 D2: 자동 default 선택 제거. list 첫 row 가 가장 비싼 상품인 경우
+      // 사용자가 인지하지 못한 채 큰 금액이 청구되는 위험이 있어 명시적 선택을 강제.
+      // 단, 옵션이 1개뿐이면 기존처럼 자동 선택해도 모호함 없음.
+      if (expanded.length === 1) {
         setSelectedPurchaseTicketId(expanded[0].productKey ?? expanded[0].id);
+      } else {
+        setSelectedPurchaseTicketId('');
       }
     } catch (err) {
       console.error('Error loading purchasable tickets:', err);
@@ -1383,80 +1396,93 @@ export default function SessionBookingPage() {
                       const category = ticket.ticket_category || (ticket.is_coupon ? 'popup' : 'regular');
                       const categoryLabel = category === 'regular' ? ticketLabels.regular : category === 'popup' ? ticketLabels.popup : ticketLabels.workshop;
                       const selected = selectedPurchaseTicketId === selKey;
+                      // 2026-05-10 D11/D12: 선택 외곽선을 brand primary 가 아닌 더 진한 강조(neutral-900/white)
+                      // 로 분리. 카테고리 색은 그대로 둬서 ticket type 구분은 유지.
                       const iconBg = category === 'regular' ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400' : category === 'popup' ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
                       const tagBg = category === 'regular' ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300' : category === 'popup' ? 'bg-violet-500/15 text-violet-700 dark:text-violet-300' : 'bg-amber-500/15 text-amber-700 dark:text-amber-300';
                       return (
                         <button
                           key={selKey}
                           onClick={() => setSelectedPurchaseTicketId(selKey)}
-                          className={`w-full rounded-2xl p-4 flex justify-between items-center border transition-all duration-200 text-left shadow-sm ${
+                          className={`w-full rounded-2xl p-4 flex items-center gap-3 border-2 transition-all duration-200 text-left shadow-sm ${
                             selected
-                              ? 'border-primary bg-primary/5/5 ring-2 ring-primary/20/20'
+                              ? 'border-neutral-900 dark:border-white bg-neutral-50 dark:bg-neutral-800'
                               : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-600 active:scale-[0.99]'
                           }`}
                         >
-                          <div className="flex items-center gap-4 min-w-0">
-                            <div className={`w-11 h-11 flex-shrink-0 rounded-xl flex items-center justify-center ${iconBg}`}>
-                              {category === 'regular' ? <Ticket size={20} strokeWidth={1.5} /> : category === 'popup' ? <Gift size={20} strokeWidth={1.5} /> : <Ticket size={20} strokeWidth={1.5} />}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="text-[15px] font-semibold text-neutral-900 dark:text-white flex items-center gap-2 flex-wrap">
-                                <span className="break-words [word-break:keep-all]">{ticket.name}</span>
-                                <span className={`text-[11px] px-2 py-0.5 rounded-md font-medium ${tagBg}`}>
-                                  {categoryLabel}
-                                </span>
-                              </div>
-                              <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                                {ticket.ticket_type === 'COUNT' ? `${ticket.total_count ?? 0}${t('ticketRecharge.count')}` : `${ticket.valid_days ?? 0}${t('ticketRecharge.days')}`}
-                                {' · '}
-                                <span className="font-semibold text-neutral-800 dark:text-neutral-200">{ticket.price.toLocaleString()}원</span>
-                              </div>
-                              {ticket.description && (
-                                <p className="mt-1 text-xs text-neutral-400 dark:text-neutral-500 line-clamp-2">{ticket.description}</p>
-                              )}
-                            </div>
+                          {/* 2026-05-10 D8: 가격을 카드 우측에 큰 글씨로 분리 — 시선 흐름 좌(이름·태그) → 우(가격) */}
+                          <div className={`w-11 h-11 flex-shrink-0 rounded-xl flex items-center justify-center ${iconBg}`}>
+                            {category === 'regular' ? <Ticket size={20} strokeWidth={1.5} /> : category === 'popup' ? <Gift size={20} strokeWidth={1.5} /> : <Ticket size={20} strokeWidth={1.5} />}
                           </div>
-                          {selected && (
-                            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
-                              <CheckCircle size={14} className="text-neutral-900" strokeWidth={2.5} />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[15px] font-semibold text-neutral-900 dark:text-white flex items-center gap-2 flex-wrap">
+                              <span className="break-words [word-break:keep-all]">{ticket.name}</span>
+                              <span className={`text-[11px] px-2 py-0.5 rounded-md font-medium ${tagBg}`}>
+                                {categoryLabel}
+                              </span>
                             </div>
-                          )}
+                            <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                              {ticket.ticket_type === 'COUNT' ? `${ticket.total_count ?? 0}${t('ticketRecharge.count')}` : `${ticket.valid_days ?? 0}${t('ticketRecharge.days')}`}
+                            </div>
+                            {/* 2026-05-10 D1: ticket.description 은 admin internal note(예: "(삭제 예정)") 가 그대로
+                                노출될 위험이 있어 사용자 화면에서 숨김. 별도 description 채널이 마련되면 다시 노출. */}
+                          </div>
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            <span className="text-base font-bold text-neutral-900 dark:text-white whitespace-nowrap">
+                              {ticket.price.toLocaleString()}원
+                            </span>
+                            {selected && (
+                              <div className="w-5 h-5 rounded-full bg-neutral-900 dark:bg-white flex items-center justify-center">
+                                <CheckCircle size={12} className="text-white dark:text-neutral-900" strokeWidth={3} />
+                              </div>
+                            )}
+                          </div>
                         </button>
                       );
                     })}
                   </div>
 
-                  {/* 비회원: 다회권/기간권은 list에서 숨기고 존재 시 로그인 안내 */}
-                  {!user && purchasableTickets.some(t => !isOneTimeTicket(t)) && (
-                    <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                      <LogIn size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
-                      <p className="text-xs text-amber-700 dark:text-amber-300">
-                        {language === 'ko' ? '다회권/기간권은 로그인 후 구매할 수 있습니다.' : 'Multi-use tickets require login.'}
-                      </p>
-                    </div>
-                  )}
+                  {/* 2026-05-10 D4: 비회원에게는 다회권/기간권을 list 에서 이미 숨김. 로그인 시 더 많은
+                      옵션이 있다는 점을 긍정형 카피로 안내(다회권 개수 명시). 부정형(로그인 후만 가능)
+                      은 인지 부담만 키워서 회피. */}
+                  {!user && (() => {
+                    const hiddenCount = purchasableTickets.filter(t => !isOneTimeTicket(t)).length;
+                    if (hiddenCount === 0) return null;
+                    return (
+                      <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                        <LogIn size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                        <p className="text-xs text-amber-700 dark:text-amber-300">
+                          {language === 'ko'
+                            ? `로그인하면 다회권/기간권 ${hiddenCount}종을 더 구매할 수 있어요.`
+                            : `Sign in to access ${hiddenCount} more multi-use ticket${hiddenCount > 1 ? 's' : ''}.`}
+                        </p>
+                      </div>
+                    );
+                  })()}
 
-                  {/* 결제 방식 선택 — 수강권 목록과 시각적으로 구분 */}
+                  {/* 결제 방식 선택 — 수강권 목록과 시각적으로 구분.
+                      2026-05-10 D6: 선택 항목을 진한 채움(neutral-900/white) + 굵은 글씨로 강조,
+                      비선택은 한 단계 흐려 contrast 명확화. */}
                   <div className="pt-6 mt-6 border-t border-neutral-200 dark:border-neutral-700">
                     <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mb-4">{t('sessionBooking.paymentType')}</p>
                     {ENABLE_TOSS_PAYMENT ? (
                       <div className="flex gap-2 p-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800/80">
                         <button
                           onClick={() => setPurchasePaymentType('card')}
-                          className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          className={`flex-1 py-2.5 rounded-lg text-sm transition-all duration-200 ${
                             purchasePaymentType === 'card'
-                              ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm border border-neutral-200 dark:border-neutral-600'
-                              : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+                              ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold shadow-sm'
+                              : 'text-neutral-500 dark:text-neutral-400 font-medium hover:text-neutral-900 dark:hover:text-white'
                           }`}
                         >
                           {t('sessionBooking.cardPayment')}
                         </button>
                         <button
                           onClick={() => setPurchasePaymentType('account')}
-                          className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          className={`flex-1 py-2.5 rounded-lg text-sm transition-all duration-200 ${
                             purchasePaymentType === 'account'
-                              ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm border border-neutral-200 dark:border-neutral-600'
-                              : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+                              ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold shadow-sm'
+                              : 'text-neutral-500 dark:text-neutral-400 font-medium hover:text-neutral-900 dark:hover:text-white'
                           }`}
                         >
                           {t('sessionBooking.bankTransfer')}
@@ -1540,7 +1566,10 @@ export default function SessionBookingPage() {
             </div>
           )}
 
-          {error && (
+          {/* 2026-05-10 D5: 본문 inline error 는 sticky CTA 영역(line 1577~) 안으로 통합돼
+              사용자가 결제 직전 위치에서 항상 보이도록 변경. 이 본문 영역은 canBook=false 상황
+              (session 로딩 실패, 권한 등) 에서만 노출되는 fallback. */}
+          {!canBook && error && (
             <div className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
               {error}
             </div>
@@ -1548,11 +1577,28 @@ export default function SessionBookingPage() {
         </div>
       )}
 
-      {/* 하단 고정 버튼 (하단 네비게이션 80px 위에 배치) */}
+      {/* 하단 고정 버튼 (하단 네비게이션 80px 위에 배치).
+          2026-05-10 D5/D7/D9/D10: error 메시지 sticky 영역에 함께 노출(스크롤 위에 가려지는 문제 해소),
+          CTA 색을 high-contrast(neutral-900/white)로 강화, 학원·수업 미니 헤더 추가로 결제 직전
+          최종 확인 + bottom-nav 와 분리되는 그림자/separation 강화. */}
       {canBook && (
-        <div className="fixed bottom-[80px] left-1/2 -translate-x-1/2 w-full max-w-[420px] px-4 pt-5 pb-4 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border-t border-neutral-200 dark:border-neutral-700 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] z-50">
+        <div className="fixed bottom-[80px] left-1/2 -translate-x-1/2 w-full max-w-[420px] px-4 pt-3 pb-4 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.4)] z-50">
+          {/* D5: error inline — sticky 위에 우선 노출. drawer 가 떠 있을 땐 drawer 내부 영역에서 별도 노출. */}
+          {error && (
+            <div className="mb-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg break-keep">
+              {error}
+            </div>
+          )}
+          {/* D10/D13: 학원·수업 mini 컨텍스트 — 결제 직전 어디에 결제하는지 한 줄로 재확인 */}
+          {session?.classes && (
+            <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mb-1 truncate">
+              {(session.classes?.academies?.name_kr || session.classes?.academies?.name_en || '')}
+              {' · '}
+              {(session.classes?.title || '')}
+            </div>
+          )}
           {/* 결제 금액 표시 */}
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center mb-3">
             <span className="text-sm text-neutral-500 dark:text-neutral-400">
               {paymentMethod === null
                 ? t('sessionBooking.paymentMethod')
@@ -1562,7 +1608,7 @@ export default function SessionBookingPage() {
                 ? t('sessionBooking.ticketPurchase')
                 : t('sessionBooking.onSitePayment')}
             </span>
-            <span className="text-base font-semibold text-neutral-900 dark:text-white">
+            <span className="text-lg font-bold text-neutral-900 dark:text-white">
               {paymentMethod === null
                 ? ''
                 : paymentMethod === 'purchase' && selectedPurchaseTicket
@@ -1581,7 +1627,7 @@ export default function SessionBookingPage() {
               (paymentMethod === 'ticket' && !selectedUserTicketId) ||
               (paymentMethod === 'purchase' && !selectedPurchaseTicketId)
             }
-            className="w-full bg-primary text-neutral-900 font-semibold py-3.5 rounded-xl text-[15px] shadow-sm hover:opacity-95 active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold py-3.5 rounded-xl text-[15px] shadow-sm hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {submitting ? (
               <>
