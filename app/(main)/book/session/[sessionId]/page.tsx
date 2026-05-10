@@ -1823,7 +1823,7 @@ export default function SessionBookingPage() {
                 {language === 'ko' ? '취소' : 'Cancel'}
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (!guestFormName.trim()) {
                     setError(language === 'ko' ? '이름을 입력해 주세요.' : 'Enter name.');
                     return;
@@ -1837,8 +1837,45 @@ export default function SessionBookingPage() {
                     phone: guestFormPhone.trim(),
                     email: guestFormEmail.trim(),
                   };
-                  setBankTransferGuestFormOpen(false);
 
+                  // 2026-05-10: 입금자명 drawer / 토스 위젯까지 진입한 뒤에야 회원 충돌
+                  // 안내가 나오는 UX 결함을 막기 위해 "다음" 클릭 시점에 사전 검사.
+                  // 이메일/전화가 정식 회원 row 와 매칭되면 즉시 AuthModal 로 분기 →
+                  // 사용자가 비밀번호만 입력하면 결제 흐름이 자동 재진입됨.
+                  let conflict: { conflict: boolean; code?: string } = { conflict: false };
+                  try {
+                    const res = await fetch('/api/auth/check-guest-conflict', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ email: guest.email, phone: guest.phone || undefined }),
+                    });
+                    if (res.ok) conflict = await res.json();
+                  } catch {
+                    // 사전 검사 실패는 무시 — 후속 결제 endpoint 가 다시 잡음.
+                  }
+
+                  if (conflict.conflict) {
+                    setBankTransferGuestFormOpen(false);
+                    // 진행 중 결제 모달들 정리, pending* 은 보존해 자동 재진입에 재사용.
+                    setDepositorModalOpen(false);
+                    setWidgetModalOpen(false);
+                    setWidgetOrder(null);
+                    setGuestOrderer(null);
+                    setAuthConflictNotice(
+                      language === 'ko'
+                        ? '이미 가입된 계정이에요. 비밀번호를 입력하면 결제가 자동으로 이어집니다.'
+                        : 'Account exists. Sign in to continue your purchase automatically.'
+                    );
+                    setAuthPrefillEmail(guest.email);
+                    setAuthLockEmail(true);
+                    setPendingPurchaseResume(true);
+                    setAuthModalInitialTab('login');
+                    setIsAuthModalOpen(true);
+                    setError('');
+                    return;
+                  }
+
+                  setBankTransferGuestFormOpen(false);
                   if (pendingCardPayment) {
                     setGuestOrderer(guest);
                     proceedWithGuestCardPayment(guest);
