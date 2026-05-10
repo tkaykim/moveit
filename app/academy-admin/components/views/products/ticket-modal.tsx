@@ -106,7 +106,7 @@ export function TicketModal({ academyId, ticket, initialCategory, ticketLabels, 
   const [classSearchQuery, setClassSearchQuery] = useState('');
   // 팝업 수강권 수량별 가격: [{ count, price, valid_days? }, ...]
   const [countOptions, setCountOptions] = useState<{ count: number; price: number; valid_days?: number | null }[]>(() =>
-    initialCategory === 'popup' ? [{ count: 1, price: 0, valid_days: null }, { count: 3, price: 0, valid_days: null }, { count: 5, price: 0, valid_days: null }] : []
+    initialCategory === 'popup' ? [{ count: 1, price: 0, valid_days: null }] : []
   );
   
   // 검색 필터링된 클래스 목록
@@ -126,7 +126,7 @@ export function TicketModal({ academyId, ticket, initialCategory, ticketLabels, 
 
   useEffect(() => {
     if (productCategory === 'popup' && countOptions.length === 0 && !ticket) {
-      setCountOptions([{ count: 1, price: 0, valid_days: null }, { count: 3, price: 0, valid_days: null }, { count: 5, price: 0, valid_days: null }]);
+      setCountOptions([{ count: 1, price: 0, valid_days: null }]);
     }
   }, [productCategory]);
 

@@ -1326,7 +1326,7 @@ export default function SessionBookingPage() {
               ) : (
                 <>
                   <div className="space-y-2">
-                    {purchasableTickets.map((ticket) => {
+                    {(user ? purchasableTickets : purchasableTickets.filter(t => isOneTimeTicket(t))).map((ticket) => {
                       const selKey = ticket.productKey ?? ticket.id;
                       const category = ticket.ticket_category || (ticket.is_coupon ? 'popup' : 'regular');
                       const categoryLabel = category === 'regular' ? ticketLabels.regular : category === 'popup' ? ticketLabels.popup : ticketLabels.workshop;
@@ -1374,8 +1374,8 @@ export default function SessionBookingPage() {
                     })}
                   </div>
 
-                  {/* 비회원 + 다회권 선택 시 로그인 안내 */}
-                  {!user && selectedPurchaseTicket && !isOneTimeTicket(selectedPurchaseTicket) && (
+                  {/* 비회원: 다회권/기간권은 list에서 숨기고 존재 시 로그인 안내 */}
+                  {!user && purchasableTickets.some(t => !isOneTimeTicket(t)) && (
                     <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
                       <LogIn size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
                       <p className="text-xs text-amber-700 dark:text-amber-300">
