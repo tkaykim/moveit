@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getTicketById } from '@/lib/db/tickets';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
+import { isPeriodTicket as checkIsPeriodTicket } from '@/lib/utils/ticket-type';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { Database } from '@/types/database';
 import { sendNotification } from '@/lib/notifications';
@@ -124,7 +125,7 @@ export async function POST(request: Request) {
     const originalPrice = optionPrice;
     const finalPrice = Math.max(0, originalPrice - discountAmount);
 
-    const isPeriodTicket = ticket.ticket_type === 'PERIOD';
+    const isPeriodTicket = checkIsPeriodTicket(ticket.ticket_type);
     const remainingCount = isPeriodTicket ? null : optionCount;
 
     // 유효기간 계산 - 사용자가 시작일을 지정한 경우 해당 날짜 사용

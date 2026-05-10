@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { sendNotification } from '@/lib/notifications';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
+import { isCountTicket } from '@/lib/utils/ticket-type';
 
 /**
  * PATCH /api/bookings/[id]/status
@@ -66,7 +67,9 @@ export async function PATCH(
     const oldStatus = currentBooking.status;
     const scheduleId = currentBooking.schedule_id;
     const academyId = (currentBooking as any).classes?.academy_id;
-    const actorId = (await getAuthenticatedUser(request))?.id ?? null;
+    // 인증된 호출자 ID 가 우선이지만, fetch credentials 가 cookie 를 못 잡는 케이스에서는
+    // booking 의 user_id (= 회원 self-cancel 의 정상 actor) 로 fallback 한다.
+    const actorId = (await getAuthenticatedUser(request))?.id ?? currentBooking.user_id ?? null;
     // B-3 (2026-04-21): users.is_guest를 일등시민으로 사용. guest_name은 병합 후에도
     // 보존되므로 is_guest가 false로 바뀌어도(병합 완료) 과거 비회원 주문임을 payload에
     // 남기기 위한 보조 신호로 유지. 둘 중 하나라도 참이면 guest payload 첨부.
@@ -105,7 +108,7 @@ export async function PATCH(
         .eq('id', currentBooking.user_ticket_id)
         .single();
 
-      if (!utError && userTicket?.tickets?.ticket_type === 'COUNT' && typeof userTicket.remaining_count === 'number') {
+      if (!utError && isCountTicket(userTicket?.tickets?.ticket_type) && typeof userTicket.remaining_count === 'number') {
         const newRemaining = userTicket.remaining_count + 1;
         const previousStatus = userTicket.status as string;
         const updateData: any = { remaining_count: newRemaining };

@@ -4,6 +4,7 @@ import { getSchedulesForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { sendNotification } from '@/lib/notifications';
 import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
+import { isPeriodTicket as checkIsPeriodTicket } from '@/lib/utils/ticket-type';
 
 /**
  * PATCH: 연장/일시정지 신청 승인 또는 거절 (관리자) - 쿠키 또는 Authorization Bearer
@@ -89,7 +90,7 @@ export async function PATCH(
 
         // 일시정지(PAUSE)일 때만 기간권 예약 취소 및 재생성
         let cancelledBookingIds: string[] = [];
-        if (reqRow.request_type === 'PAUSE' && ticketType === 'PERIOD' && ticketId && userId) {
+        if (reqRow.request_type === 'PAUSE' && checkIsPeriodTicket(ticketType) && ticketId && userId) {
           const absentStart = reqRow.absent_start_date;
           const absentEnd = reqRow.absent_end_date;
           const schedulesInAbsent = await getSchedulesForPeriodTicket(ticketId, absentStart, absentEnd);

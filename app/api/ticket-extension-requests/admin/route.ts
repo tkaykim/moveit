@@ -3,6 +3,7 @@ import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getSchedulesForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
+import { isPeriodTicket as checkIsPeriodTicket } from '@/lib/utils/ticket-type';
 
 /**
  * POST: 관리자 직접 연장/일시정지 생성 및 즉시 승인 - 쿠키 또는 Authorization Bearer
@@ -107,7 +108,7 @@ export async function POST(request: Request) {
       const userId = userTicket.user_id;
 
       // 일시정지(PAUSE)일 때만 기간권 예약 취소 및 재생성
-      if (request_type === 'PAUSE' && ticketType === 'PERIOD' && ticketId && userId) {
+      if (request_type === 'PAUSE' && checkIsPeriodTicket(ticketType) && ticketId && userId) {
         const schedulesInAbsent = await getSchedulesForPeriodTicket(ticketId, absent_start_date, absent_end_date);
         for (const sch of schedulesInAbsent || []) {
           const { data: toCancel } = await supabase
