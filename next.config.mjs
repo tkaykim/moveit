@@ -60,7 +60,13 @@ const nextConfig = {
         hostname: 'ldb-phinf.pstatic.net',
       },
     ],
-    unoptimized: false,
+    // Vercel 이미지 최적화(_next/image) 월 변환 한도(무료 1000회)에 부딪히면
+    // 학원 이미지가 통째로 깨지는 사고가 반복됐음. 외부 호스트(supabase, pstatic 등)는
+    // 이미 적절한 포맷/크기로 올라오므로 글로벌 unoptimized=true로 원본 URL을
+    // 그대로 서빙해 transform 호출을 0으로 만든다. 데이터 사용량은 약간 증가하지만
+    // 깨짐을 막는 게 우선. 차후 Supabase image transform 또는 외부 프록시 도입 시
+    // 다시 false로 돌려도 됨.
+    unoptimized: true,
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
