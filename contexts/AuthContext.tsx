@@ -228,9 +228,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const normalizedEmail = email.trim().toLowerCase();
     try {
+      // [2026-05-11] handle_new_user trigger 가 raw_user_meta_data 의 name/phone/nickname
+      // 을 읽어 public.users 에 채우도록 v2 로 보강됨. options.data 로 metadata 를 같이
+      // 보내지 않으면 trigger 가 만든 행이 name=null 로 남아 "회원가입 했는데 이름 비어있음"
+      // 사고가 재발. signup_with_guest_merge RPC 가 뒤따라 호출되지만, RPC 가 실패하거나
+      // race 로 멈춰도 최소한 trigger 단계에서 name 이 채워지도록 이중 안전망.
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: normalizedEmail,
         password,
+        options: {
+          data: {
+            name: name || null,
+            name_en: nameEn || null,
+            phone: phone || null,
+            nickname: nickname || null,
+          },
+        },
       });
 
       if (authError) {
