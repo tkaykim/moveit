@@ -64,7 +64,7 @@ function PaymentContent() {
             .single();
 
           if (!classError && classData) {
-            const instructor = classData.instructors?.name_kr || classData.instructors?.name_en || '강사 정보 없음';
+            const instructor = classData.instructor_name || classData.instructors?.name_kr || classData.instructors?.name_en || '강사 정보 없음';
             const genre = classData.genre || 'ALL';
             const level = classData.difficulty_level || '';
             

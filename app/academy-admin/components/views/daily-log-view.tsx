@@ -74,7 +74,8 @@ export function DailyLogView({ academyId }: DailyLogViewProps) {
               genre,
               difficulty_level,
               academy_id,
-              video_url
+              video_url,
+              instructor_name
             ),
             instructors (
               id,
@@ -374,7 +375,7 @@ export function DailyLogView({ academyId }: DailyLogViewProps) {
                             {item.classes?.title || item.title || '-'}
                           </h4>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 break-words">
-                            {item.instructors?.name_kr || item.instructors?.name_en || '-'} 강사
+                            {item.classes?.instructor_name || item.instructor_name_text || item.instructors?.name_kr || item.instructors?.name_en || '-'} 강사
                           </p>
                         </div>
                       </div>

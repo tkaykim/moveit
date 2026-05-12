@@ -80,7 +80,8 @@ export function DailyScheduleModal({
             card_color,
             class_type,
             price,
-            poster_url
+            poster_url,
+            instructor_name
           ),
           instructors (
             id,
@@ -229,7 +230,7 @@ export function DailyScheduleModal({
                           {/* 강사 */}
                           <div className="flex items-center gap-1">
                             <User size={14} />
-                            <span>{session.instructors?.name_kr || session.instructors?.name_en || '강사 미지정'}</span>
+                            <span>{session.instructor_name_text || session.classes?.instructor_name || session.instructors?.name_kr || session.instructors?.name_en || '강사 미지정'}</span>
                           </div>
                           {/* 홀 */}
                           {session.halls?.name && (

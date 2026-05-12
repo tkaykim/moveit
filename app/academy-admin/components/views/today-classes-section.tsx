@@ -27,6 +27,7 @@ interface ScheduleWithDetails {
     genre: string | null;
     difficulty_level: string | null;
     academy_id: string;
+    instructor_name?: string | null;
   } | null;
   instructors: {
     id: string;
@@ -160,7 +161,8 @@ export function TodayClassesSection({ academyId }: TodayClassesSectionProps) {
             title,
             genre,
             difficulty_level,
-            academy_id
+            academy_id,
+            instructor_name
           ),
           instructors (
             id,
@@ -533,7 +535,7 @@ interface ScheduleCellProps {
 }
 
 function ScheduleCell({ schedule, status, onClick }: ScheduleCellProps) {
-  const instructorName = schedule.instructor_name_text || schedule.instructors?.name_kr || schedule.instructors?.name_en || null;
+  const instructorName = schedule.instructor_name_text || schedule.classes?.instructor_name || schedule.instructors?.name_kr || schedule.instructors?.name_en || null;
   const classTitle = schedule.classes?.title || '수업명 없음';
   
   const formatTime = (dateString: string): string => {

@@ -112,7 +112,7 @@ export function ClassMasterModal({ academyId, classData, ticketLabels, onClose }
           : 'regular',
         description: classData.description || '',
         instructor_id: classData.instructor_id || '',
-        instructor_name: '', // 나중에 로드
+        instructor_name: classData.instructor_name || '',
         hall_id: classData.hall_id || '',
         max_students: classData.max_students || 0,
         allowRegularTicket: classData.access_config?.allowRegularTicket !== false,
@@ -126,8 +126,8 @@ export function ClassMasterModal({ academyId, classData, ticketLabels, onClose }
         setPosterUrl(classData.poster_url);
       }
 
-      // instructor_id가 있으면 강사 이름 로드
-      if (classData.instructor_id) {
+      // 백필되지 않은 레거시 데이터 대비: instructor_name이 비고 instructor_id만 있을 때 instructors 테이블에서 보충
+      if (classData.instructor_id && !classData.instructor_name) {
         loadInstructorName(classData.instructor_id);
       }
       
@@ -404,6 +404,7 @@ export function ClassMasterModal({ academyId, classData, ticketLabels, onClose }
           : 'regular',
         description: formData.description || null,
         instructor_id: formData.instructor_id || null, // nullable
+        instructor_name: formData.instructor_name?.trim() || null,
         hall_id: formData.hall_id || null, // nullable
         max_students: formData.max_students > 0 ? formData.max_students : null, // nullable, 0이면 null
         is_active: formData.is_active,
@@ -557,6 +558,7 @@ export function ClassMasterModal({ academyId, classData, ticketLabels, onClose }
           : 'regular',
         description: formData.description || null,
         instructor_id: formData.instructor_id || null, // nullable
+        instructor_name: formData.instructor_name?.trim() || null,
         hall_id: formData.hall_id || null, // nullable
         max_students: formData.max_students > 0 ? formData.max_students : null, // nullable, 0이면 null
         is_active: formData.is_active,

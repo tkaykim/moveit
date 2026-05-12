@@ -59,7 +59,7 @@ export async function getRecentClassVideos(academyId: string, limit: number = 10
   const supabase = await createClient() as any;
   const { data, error } = await supabase
     .from('classes')
-    .select('id, title, video_url, start_time, thumbnail_url, genre, difficulty_level, instructor_id, instructors(name_kr, name_en)')
+    .select('id, title, video_url, start_time, thumbnail_url, genre, difficulty_level, instructor_id, instructor_name, instructors(name_kr, name_en)')
     .eq('academy_id', academyId)
     .not('video_url', 'is', null)
     .neq('video_url', '')

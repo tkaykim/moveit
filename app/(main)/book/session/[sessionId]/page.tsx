@@ -32,6 +32,7 @@ interface SessionData {
     price: number;
     academy_id: string;
     class_type: string | null;
+    instructor_name?: string | null;
     access_config: {
       allowCoupon?: boolean;
       allowRegularTicket?: boolean;
@@ -213,7 +214,7 @@ export default function SessionBookingPage() {
         .select(`
           *,
           classes (
-            id, title, genre, difficulty_level, price, academy_id, class_type, access_config, poster_url,
+            id, title, genre, difficulty_level, price, academy_id, class_type, access_config, poster_url, instructor_name,
             academies (id, name_kr, name_en, address)
           ),
           instructors (name_kr, name_en),
@@ -1070,7 +1071,7 @@ export default function SessionBookingPage() {
         <div className="space-y-3 text-sm text-neutral-600 dark:text-neutral-400">
           <div className="flex items-center gap-3">
             <User size={18} className="text-neutral-400" />
-            <span className="font-medium">{session.instructor_name_text || session.instructors?.name_kr || session.instructors?.name_en || t('sessionBooking.instructorTbd')}</span>
+            <span className="font-medium">{session.instructor_name_text || session.classes?.instructor_name || session.instructors?.name_kr || session.instructors?.name_en || t('sessionBooking.instructorTbd')}</span>
           </div>
           <div className="flex items-center gap-3">
             <Calendar size={18} className="text-neutral-400" />

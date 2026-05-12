@@ -17,7 +17,7 @@ const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 // Schedule을 ClassInfo로 변환
 function transformSchedule(scheduleData: any): ClassInfo & { time?: string; startTime?: string; endTime?: string; hallName?: string; card_color?: string; _colorStyle: ReturnType<typeof getClassColor> } {
   const classInfo = scheduleData.classes;
-  const instructor = scheduleData.instructors?.name_kr || scheduleData.instructors?.name_en || classInfo?.instructors?.name_kr || classInfo?.instructors?.name_en || INSTRUCTOR_TBD;
+  const instructor = scheduleData.instructor_name_text || classInfo?.instructor_name || scheduleData.instructors?.name_kr || scheduleData.instructors?.name_en || classInfo?.instructors?.name_kr || classInfo?.instructors?.name_en || INSTRUCTOR_TBD;
   const genre = classInfo?.genre || '';
   const level = classInfo?.difficulty_level || '';
   const maxStudents = scheduleData.max_students || classInfo?.max_students || 0;

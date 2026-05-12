@@ -72,7 +72,7 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
       // 클래스 마스터 목록 (활성화되고 취소되지 않은 클래스만)
       const { data: classesData } = await supabase
         .from('classes')
-        .select('id, title, genre, difficulty_level, card_color, access_config, instructor_id, instructors(name_kr, name_en)')
+        .select('id, title, genre, difficulty_level, card_color, access_config, instructor_id, instructor_name, instructors(name_kr, name_en)')
         .eq('academy_id', academyId)
         .eq('is_canceled', false)
         .or('is_active.is.null,is_active.eq.true');
@@ -104,7 +104,8 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
               card_color,
               access_config,
               class_type,
-              poster_url
+              poster_url,
+              instructor_name
             ),
             instructors (
               id,
@@ -153,12 +154,14 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
       const matchesSearch = !query || (() => {
         const title = (session.classes?.title || '').toLowerCase();
         const genre = (session.classes?.genre || '').toLowerCase();
+        const instructorText = (session.instructor_name_text || session.classes?.instructor_name || '').toLowerCase();
         const instructorKr = (session.instructors?.name_kr || '').toLowerCase();
         const instructorEn = (session.instructors?.name_en || '').toLowerCase();
         const hallName = (session.halls?.name || '').toLowerCase();
         return (
           title.includes(query) ||
           genre.includes(query) ||
+          instructorText.includes(query) ||
           instructorKr.includes(query) ||
           instructorEn.includes(query) ||
           hallName.includes(query)
@@ -372,7 +375,7 @@ export function ScheduleView({ academyId }: ScheduleViewProps) {
                                 {session.classes?.title || '-'}
                               </div>
                               <div className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 truncate">
-                                {session.instructors?.name_kr || session.instructors?.name_en || ''}
+                                {session.instructor_name_text || session.classes?.instructor_name || session.instructors?.name_kr || session.instructors?.name_en || ''}
                               </div>
                             </div>
                           );

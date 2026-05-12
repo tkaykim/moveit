@@ -677,6 +677,7 @@ export type Database = {
           hall_id: string | null
           id: string
           instructor_id: string | null
+          instructor_name: string | null
           is_active: boolean | null
           is_canceled: boolean | null
           max_students: number | null
@@ -709,6 +710,7 @@ export type Database = {
           hall_id?: string | null
           id?: string
           instructor_id?: string | null
+          instructor_name?: string | null
           is_active?: boolean | null
           is_canceled?: boolean | null
           max_students?: number | null
@@ -741,6 +743,7 @@ export type Database = {
           hall_id?: string | null
           id?: string
           instructor_id?: string | null
+          instructor_name?: string | null
           is_active?: boolean | null
           is_canceled?: boolean | null
           max_students?: number | null

@@ -425,7 +425,7 @@ export function ClassMastersView({ academyId }: ClassMastersViewProps) {
                           )}
                         </div>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {classItem.instructors?.name_kr || classItem.instructors?.name_en || '강사 미지정'}
+                          {classItem.instructor_name || classItem.instructors?.name_kr || classItem.instructors?.name_en || '강사 미지정'}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">

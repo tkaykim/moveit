@@ -32,7 +32,7 @@ const DAY_NAMES = ["월", "화", "수", "목", "금", "토", "일"];
 // Schedule을 ClassInfo로 변환
 function transformSchedule(scheduleData: any): ClassInfo & { academy?: Academy; time?: string; endTimeFormatted?: string; startTime?: string; endTime?: string; maxStudents?: number; currentStudents?: number; _colorStyle: ReturnType<typeof getClassColor> } {
   const classData = scheduleData.classes || {};
-  const instructor = scheduleData.instructors?.name_kr || scheduleData.instructors?.name_en || classData.instructors?.name_kr || '';
+  const instructor = scheduleData.instructor_name_text || classData.instructor_name || scheduleData.instructors?.name_kr || scheduleData.instructors?.name_en || classData.instructors?.name_kr || '';
   const genre = classData.genre || 'ALL';
   const level = classData.difficulty_level || '';
   const maxStudents = scheduleData.max_students || classData.max_students || 0;

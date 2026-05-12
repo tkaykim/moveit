@@ -215,7 +215,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
     if (!classSearchQuery.trim()) return true;
     const query = classSearchQuery.toLowerCase();
     const title = (cls.title || '').toLowerCase();
-    const instructorName = (cls.instructors?.name_kr || cls.instructors?.name_en || '').toLowerCase();
+    const instructorName = (cls.instructor_name || cls.instructors?.name_kr || cls.instructors?.name_en || '').toLowerCase();
     return title.includes(query) || instructorName.includes(query);
   });
 
@@ -750,7 +750,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
                           {cls.title}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                          <span>{cls.instructors?.name_kr || cls.instructors?.name_en || '강사 미지정'}</span>
+                          <span>{cls.instructor_name || cls.instructors?.name_kr || cls.instructors?.name_en || '강사 미지정'}</span>
                           {cls.genre && (
                             <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-neutral-700 rounded text-xs">
                               {cls.genre}
@@ -771,7 +771,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
                   <div>
                     <p className="font-medium text-blue-700 dark:text-blue-400">{selectedClass.title}</p>
                     <p className="text-sm text-blue-600 dark:text-blue-500">
-                      {selectedClass.instructors?.name_kr || selectedClass.instructors?.name_en || '강사 미지정'}
+                      {selectedClass.instructor_name || selectedClass.instructors?.name_kr || selectedClass.instructors?.name_en || '강사 미지정'}
                     </p>
                   </div>
                   <button
@@ -1167,7 +1167,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
                   {selectedClass?.title || '클래스 선택됨'}
                 </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {selectedClass?.instructors?.name_kr || selectedClass?.instructors?.name_en || '강사 미지정'}
+                  {selectedClass?.instructor_name || selectedClass?.instructors?.name_kr || selectedClass?.instructors?.name_en || '강사 미지정'}
                 </p>
               </div>
             </div>
@@ -1302,7 +1302,7 @@ export function RecurringScheduleModal({ academyId, classMasters, halls, initial
                               {cls.title}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {cls.instructors?.name_kr || cls.instructors?.name_en || '강사 미지정'}
+                              {cls.instructor_name || cls.instructors?.name_kr || cls.instructors?.name_en || '강사 미지정'}
                             </p>
                           </div>
                         </div>
