@@ -2,13 +2,14 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, CheckCircle2, Clock, XCircle, UserCheck, UserX, Trash2 } from 'lucide-react';
+import { MoreVertical, CheckCircle2, Clock, XCircle, UserCheck, UserX, Trash2, Landmark } from 'lucide-react';
 
 interface EnrollmentActionMenuProps {
   enrollment: {
     id: string;
     status: string;
     schedule_id: string | null;
+    bank_transfer_order_id?: string | null;
     user_tickets?: { tickets?: { ticket_type?: string } } | null;
   };
   onStatusChange: (bookingId: string, newStatus: string, options?: { restoreTicket?: boolean }) => Promise<void>;
@@ -137,13 +138,23 @@ export function EnrollmentActionMenu({
 
     // PENDING -> CONFIRMED
     if (currentStatus === 'PENDING') {
-      actions.push({
-        label: '확정하기',
-        icon: CheckCircle2,
-        status: 'CONFIRMED',
-        onClick: () => handleStatusChange('CONFIRMED'),
-        className: 'text-green-600 dark:text-green-400',
-      });
+      if (enrollment.bank_transfer_order_id) {
+        // 계좌이체 PENDING 예약: 수동 확정 차단, 안내 항목 표시
+        actions.push({
+          label: '수동 입금확인 탭에서 처리',
+          icon: Landmark,
+          onClick: () => alert('계좌이체 예약은 수동 입금확인 탭에서 입금 확인 후 자동으로 확정됩니다.'),
+          className: 'text-amber-600 dark:text-amber-400',
+        });
+      } else {
+        actions.push({
+          label: '확정하기',
+          icon: CheckCircle2,
+          status: 'CONFIRMED',
+          onClick: () => handleStatusChange('CONFIRMED'),
+          className: 'text-green-600 dark:text-green-400',
+        });
+      }
     }
 
     // CONFIRMED -> COMPLETED (출석) / ABSENT (결석)

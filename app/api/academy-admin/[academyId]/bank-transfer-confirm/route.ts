@@ -307,15 +307,17 @@ export async function POST(
           // 계좌이체 신청 시 선생성된 booking이 있으면 업데이트, 없으면(레거시) 새로 생성
           const { data: existingBooking } = await supabase
             .from('bookings')
-            .select('id')
+            .select('id, status')
             .eq('bank_transfer_order_id', orderId)
             .maybeSingle();
 
           if (existingBooking) {
+            // 이미 출석/결석 처리된 booking은 status를 되돌리지 않음 (역주행 방지)
+            const alreadyAttended = ['COMPLETED', 'ABSENT'].includes(existingBooking.status);
             const { data: updatedRow } = await supabase
               .from('bookings')
               .update({
-                status: 'CONFIRMED',
+                ...(alreadyAttended ? {} : { status: 'CONFIRMED' }),
                 user_ticket_id: userTicket.id,
                 payment_status: 'COMPLETED',
               })

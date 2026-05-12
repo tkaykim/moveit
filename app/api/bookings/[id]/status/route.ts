@@ -79,6 +79,22 @@ export async function PATCH(
       ? { guest_name: currentBooking.guest_name, guest_phone: currentBooking.guest_phone || null }
       : {};
 
+    // 계좌이체 PENDING 주문이 연결된 booking은 수동 확정 차단
+    // (수강권 미발급·매출 미기록 상태로 CONFIRMED 되는 것을 방지)
+    if (status === 'CONFIRMED' && (currentBooking as any).bank_transfer_order_id) {
+      const { data: linkedOrder } = await (supabase as any)
+        .from('bank_transfer_orders')
+        .select('status')
+        .eq('id', (currentBooking as any).bank_transfer_order_id)
+        .single();
+      if (linkedOrder?.status === 'PENDING') {
+        return NextResponse.json(
+          { error: '계좌이체 예약은 수동 입금확인 탭에서 입금 확인 후 자동으로 확정됩니다.' },
+          { status: 400 }
+        );
+      }
+    }
+
     // 상태 변경
     const { error: updateError } = await (supabase as any)
       .from('bookings')
