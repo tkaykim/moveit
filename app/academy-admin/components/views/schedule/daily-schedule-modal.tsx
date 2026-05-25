@@ -6,6 +6,7 @@ import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { formatKSTTime } from '@/lib/utils/kst-time';
 import { RecurringScheduleModal } from './recurring-schedule-modal';
 import { SessionModal } from './session-modal';
+import { DeleteSessionDialog } from './delete-session-dialog';
 import { getClassColor } from '@/lib/constants/class-colors';
 
 interface DailyScheduleModalProps {
@@ -35,7 +36,7 @@ export function DailyScheduleModal({
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedSession, setSelectedSession] = useState<any>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
 
   useEffect(() => {
     loadSessions();
@@ -114,26 +115,7 @@ export function DailyScheduleModal({
     }
   };
 
-  const handleDelete = async (sessionId: string) => {
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
-
-    try {
-      const { error } = await supabase
-        .from('schedules')
-        .update({ is_canceled: true })
-        .eq('id', sessionId);
-
-      if (error) throw error;
-      
-      alert('수업이 삭제되었습니다.');
-      setDeleteConfirm(null);
-      loadSessions();
-    } catch (error: any) {
-      console.error('Error deleting session:', error);
-      alert(`삭제 실패: ${error.message}`);
-    }
-  };
+  // 삭제는 DeleteSessionDialog 에서 처리한다.
 
   const formatDateString = (date: Date) => {
     const year = date.getFullYear();
@@ -275,7 +257,7 @@ export function DailyScheduleModal({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setDeleteConfirm(session.id);
+                            setDeleteTarget(session);
                           }}
                           className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                           title="삭제"
@@ -284,38 +266,6 @@ export function DailyScheduleModal({
                         </button>
                       </div>
                     </div>
-
-                    {/* 삭제 확인 */}
-                    {deleteConfirm === session.id && (
-                      <div 
-                        className="mt-3 pt-3 border-t dark:border-neutral-700 flex items-center justify-between"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <span className="text-sm text-red-600 dark:text-red-400">
-                          정말 삭제하시겠습니까?
-                        </span>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteConfirm(null);
-                            }}
-                            className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded"
-                          >
-                            취소
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(session.id);
-                            }}
-                            className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
-                          >
-                            삭제
-                          </button>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 );
               })
@@ -359,6 +309,22 @@ export function DailyScheduleModal({
           onClose={() => {
             setShowEditModal(false);
             setSelectedSession(null);
+            loadSessions();
+          }}
+        />
+      )}
+
+      {/* 삭제 다이얼로그 */}
+      {deleteTarget && (
+        <DeleteSessionDialog
+          session={{
+            id: deleteTarget.id,
+            start_time: deleteTarget.start_time,
+            recurring_schedule_id: deleteTarget.recurring_schedule_id,
+          }}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={() => {
+            setDeleteTarget(null);
             loadSessions();
           }}
         />

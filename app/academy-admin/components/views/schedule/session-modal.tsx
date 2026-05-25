@@ -9,6 +9,7 @@ import { formatKSTTime, formatKSTDate } from '@/lib/utils/kst-time';
 import { AccessConfig } from '@/types/database';
 import { formatExclusiveClassText } from '@/lib/utils/exclusive-class';
 import { getClassColor, CLASS_CARD_COLOR_KEYS, CLASS_CARD_COLOR_LABELS, CLASS_CARD_COLORS } from '@/lib/constants/class-colors';
+import { DeleteSessionDialog } from './delete-session-dialog';
 
 interface SessionModalProps {
   session: any;
@@ -22,6 +23,7 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
   const [linkCopied, setLinkCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [linkedTicketNames, setLinkedTicketNames] = useState<string[]>([]);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   // 편집 폼 상태
   const [formData, setFormData] = useState({
@@ -317,70 +319,26 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
     }
   };
 
-  const handleDelete = async () => {
-    setLoading(true);
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      alert('데이터베이스 연결에 실패했습니다.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // 먼저 연관된 예약이 있는지 확인
-      const { data: bookings, error: bookingsError } = await supabase
-        .from('bookings')
-        .select('id, status')
-        .eq('schedule_id', session.id);
-
-      if (bookingsError) throw bookingsError;
-
-      const hasBookings = bookings && bookings.length > 0;
-      const confirmedBookings = bookings?.filter((b: any) => b.status === 'CONFIRMED' || b.status === 'PENDING') || [];
-
-      // 예약이 있는 경우 사용자에게 확인
-      if (hasBookings) {
-        const confirmMessage = confirmedBookings.length > 0
-          ? `이 세션에 ${confirmedBookings.length}개의 예약이 있습니다. 예약을 모두 취소하고 세션을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`
-          : `이 세션에 ${bookings.length}개의 예약 기록이 있습니다. 모두 삭제하고 세션을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`;
-        
-        if (!window.confirm(confirmMessage)) {
-          setLoading(false);
-          return;
-        }
-
-        // 연관된 예약 삭제
-        const { error: deleteBookingsError } = await supabase
-          .from('bookings')
-          .delete()
-          .eq('schedule_id', session.id);
-
-        if (deleteBookingsError) throw deleteBookingsError;
-      } else {
-        if (!window.confirm('이 세션을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
-          setLoading(false);
-          return;
-        }
-      }
-
-      // 스케줄 삭제
-      const { error } = await supabase
-        .from('schedules')
-        .delete()
-        .eq('id', session.id);
-
-      if (error) throw error;
-      alert('세션이 삭제되었습니다.');
-      onClose();
-    } catch (error: any) {
-      console.error('Error deleting session:', error);
-      alert(`세션 삭제에 실패했습니다: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
+  const handleDelete = () => {
+    setShowDeleteDialog(true);
   };
 
   return (
+    <>
+    {showDeleteDialog && (
+      <DeleteSessionDialog
+        session={{
+          id: session.id,
+          start_time: session.start_time,
+          recurring_schedule_id: session.recurring_schedule_id,
+        }}
+        onClose={() => setShowDeleteDialog(false)}
+        onDeleted={() => {
+          setShowDeleteDialog(false);
+          onClose();
+        }}
+      />
+    )}
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 dark:bg-black/60 backdrop-blur-sm">
       <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b dark:border-neutral-800 flex justify-between items-center">
@@ -716,5 +674,6 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
         </div>
       </div>
     </div>
+    </>
   );
 }
