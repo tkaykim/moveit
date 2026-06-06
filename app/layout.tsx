@@ -13,9 +13,13 @@ const inter = Inter({
   fallback: ['system-ui', 'arial'],
 });
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://moveit-xi.vercel.app";
+
 export const metadata: Metadata = {
-  title: "MOVE.IT - 댄스 학원 강사 플랫폼",
+  metadataBase: new URL(SITE),
+  title: { default: "MOVE.IT - 댄스 학원·강사 플랫폼", template: "%s · MOVE.IT" },
   description: "댄스 학원, 강사, 수강 클래스를 찾고 예약하는 플랫폼",
+  openGraph: { type: "website", locale: "ko_KR", siteName: "MOVE.IT", title: "MOVE.IT - 댄스 학원·강사 플랫폼", description: "댄스 학원, 강사, 수강 클래스를 찾고 예약하는 플랫폼", url: SITE },
   other: {
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-capable": "yes",
@@ -37,9 +41,17 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      { "@type": "Organization", "@id": `${SITE}/#organization`, name: "MOVE.IT", alternateName: "무브잇", url: SITE, description: "댄스 학원·강사·수강 클래스를 찾고 예약하는 플랫폼.", areaServed: "KR" },
+      { "@type": "WebSite", "@id": `${SITE}/#website`, url: SITE, name: "MOVE.IT", inLanguage: "ko-KR", publisher: { "@id": `${SITE}/#organization` } },
+    ],
+  };
   return (
     <html lang="ko" suppressHydrationWarning>
       <head>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="format-detection" content="telephone=no" />
