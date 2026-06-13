@@ -5,6 +5,7 @@ import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment
 import { Database } from '@/types/database';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { sendNotification } from '@/lib/notifications';
+import { formatKSTDate, formatKSTTime } from '@/lib/utils/kst-time';
 
 export const dynamic = 'force-dynamic';
 
@@ -382,26 +383,23 @@ export async function POST(request: Request) {
         }
       }
 
+      // DB 백스톱(유니크 인덱스/정원 트리거)에서 올라온 경합 에러 매핑 (위에서 차감 롤백 완료 상태)
+      if (bookingError.code === '23505') {
+        return NextResponse.json({ error: '이미 예약된 수업입니다.' }, { status: 409 });
+      }
+      if (typeof bookingError.message === 'string' && bookingError.message.includes('SCHEDULE_FULL')) {
+        return NextResponse.json({ error: '정원이 마감되었습니다.' }, { status: 409 });
+      }
+      if (typeof bookingError.message === 'string' && bookingError.message.includes('SCHEDULE_CANCELED')) {
+        return NextResponse.json({ error: '취소된 수업에는 예약할 수 없습니다.' }, { status: 400 });
+      }
       return NextResponse.json(
         { error: '예약 생성에 실패했습니다.' },
         { status: 500 }
       );
     }
 
-    // 스케줄이 있으면 current_students 재계산 (정확한 수치 보장)
-    if (scheduleId) {
-      const { data: confirmedBookings } = await (supabase as any)
-        .from('bookings')
-        .select('id')
-        .eq('schedule_id', scheduleId)
-        .in('status', ['CONFIRMED', 'COMPLETED']);
-
-      const actualCount = confirmedBookings?.length || 0;
-      await (supabase as any)
-        .from('schedules')
-        .update({ current_students: actualCount })
-        .eq('id', scheduleId);
-    }
+    // current_students 는 bookings 트리거(sync_schedule_student_count)가 자동 재계산한다.
 
     // 활동 로그: 수강신청 (활동로그 탭용) — 표준 envelope: status before/after
     await logTicketEvent({
@@ -443,8 +441,7 @@ export async function POST(request: Request) {
           
           let timeStr = '';
           if (startTime) {
-            const d = new Date(startTime);
-            timeStr = ` ${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+            timeStr = ` ${formatKSTDate(new Date(startTime))} ${formatKSTTime(startTime)}`;
           }
           
           return sendNotification({

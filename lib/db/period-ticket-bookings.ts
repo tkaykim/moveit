@@ -55,8 +55,8 @@ export async function getSchedulesForPeriodTicket(
         .eq('classes.academy_id', ticket.academy_id)
         .eq('classes.class_type', 'regular')
         .eq('is_canceled', false)
-        .gte('start_time', `${startDate}T00:00:00`)
-        .lte('start_time', `${endDate}T23:59:59`)
+        .gte('start_time', `${startDate}T00:00:00+09:00`)
+        .lte('start_time', `${endDate}T23:59:59+09:00`)
         .order('start_time', { ascending: true });
 
       if (error) throw error;
@@ -82,8 +82,8 @@ export async function getSchedulesForPeriodTicket(
     `)
     .in('class_id', classIds)
     .eq('is_canceled', false)
-    .gte('start_time', `${startDate}T00:00:00`)
-    .lte('start_time', `${endDate}T23:59:59`)
+    .gte('start_time', `${startDate}T00:00:00+09:00`)
+    .lte('start_time', `${endDate}T23:59:59+09:00`)
     .order('start_time', { ascending: true });
 
   if (schError) throw schError;
@@ -161,15 +161,7 @@ export async function createBookingsForPeriodTicket(
 
   if (insertError) throw insertError;
 
-  // 6. 각 스케줄의 current_students 증가
-  for (const schedule of schedulesToBook) {
-    await supabase
-      .from('schedules')
-      .update({ 
-        current_students: (schedule.current_students || 0) + 1 
-      })
-      .eq('id', schedule.id);
-  }
+  // current_students 는 bookings 트리거(sync_schedule_student_count)가 자동 동기화한다. (수동 +1 제거)
 
   return {
     created: insertedBookings?.length || 0,
@@ -193,7 +185,10 @@ export async function createBookingsForNewSchedule(
 ): Promise<{ created: number }> {
   const supabase = await createClient() as any;
 
-  const scheduleDate = scheduleStartTime.toISOString().split('T')[0]; // YYYY-MM-DD
+  // KST 기준 날짜로 변환 (UTC 런타임에서 이른 아침/늦은 저녁 수업의 날짜 밀림 방지)
+  const scheduleDate = new Date(scheduleStartTime.getTime() + 9 * 60 * 60 * 1000)
+    .toISOString()
+    .split('T')[0]; // YYYY-MM-DD (KST)
 
   // 1. 해당 클래스와 연결된 ticket_id들 조회
   const { data: ticketClasses, error: tcError } = await supabase
@@ -305,21 +300,7 @@ export async function createBookingsForNewSchedule(
 
   if (insertError) throw insertError;
 
-  // 8. 스케줄의 current_students 증가
-  const { data: currentSchedule } = await supabase
-    .from('schedules')
-    .select('current_students')
-    .eq('id', scheduleId)
-    .single();
-
-  if (currentSchedule) {
-    await supabase
-      .from('schedules')
-      .update({ 
-        current_students: (currentSchedule.current_students || 0) + (insertedBookings?.length || 0)
-      })
-      .eq('id', scheduleId);
-  }
+  // current_students 는 bookings 트리거(sync_schedule_student_count)가 자동 동기화한다. (수동 증가 제거)
 
   return { created: insertedBookings?.length || 0 };
 }

@@ -74,9 +74,13 @@ export function generateSessionDates(
  */
 export function combineDateAndTime(date: Date, timeString: string): string {
   const [hours, minutes] = timeString.split(':').map(Number);
-  const combined = new Date(date);
-  combined.setHours(hours, minutes, 0, 0);
-  return combined.toISOString();
+  // `date` 는 해당 수업이 열리는 'KST 캘린더 일자'를 나타낸다.
+  // 서버(Vercel) 런타임 TZ 가 UTC 이므로 setHours/toISOString 을 쓰면 9시간 어긋난다.
+  // UTC 게터로 Y/M/D 를 읽고 HH:mm 을 KST(UTC+9) 벽시계로 간주해 UTC 로 변환한다. (TZ 무관 결정적)
+  const y = date.getUTCFullYear();
+  const m = date.getUTCMonth();
+  const d = date.getUTCDate();
+  return new Date(Date.UTC(y, m, d, hours - 9, minutes, 0, 0)).toISOString();
 }
 
 /**

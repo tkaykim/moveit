@@ -491,24 +491,17 @@ export async function POST(request: Request) {
           status: 'CONFIRMED',
           payment_status: 'COMPLETED',
         };
-        const { data: bookingRow } = await (supabase as any)
+        const { data: bookingRow, error: bookingInsErr } = await (supabase as any)
           .from('bookings')
           .insert(bookingData)
           .select()
           .single();
-        booking = bookingRow;
-        if (booking) {
-        const { data: confirmedBookings } = await (supabase as any)
-          .from('bookings')
-          .select('id')
-          .eq('schedule_id', order.schedule_id)
-          .in('status', ['CONFIRMED', 'COMPLETED']);
-        const actualCount = confirmedBookings?.length || 0;
-        await (supabase as any)
-          .from('schedules')
-          .update({ current_students: actualCount })
-          .eq('id', order.schedule_id);
+        if (bookingInsErr) {
+          // 결제·수강권 발급은 완료 상태. 예약만 실패 → 거짓 "예약 완료" 방지 위해 booking=null 유지.
+          console.error('payment-confirm booking insert error:', bookingInsErr);
         }
+        booking = bookingRow;
+        // current_students 는 bookings 트리거(sync_schedule_student_count)가 자동 동기화한다.
         if (booking) {
           insertEnrollmentActivityLog({
             academy_id: order.academy_id,

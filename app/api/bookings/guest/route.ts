@@ -151,21 +151,27 @@ export async function POST(request: Request) {
 
     if (bookingError) {
       console.error('Booking error:', bookingError);
+      // DB 백스톱(유니크 인덱스/정원 트리거)에서 올라온 경합 에러를 사용자 메시지로 매핑
+      if (bookingError.code === '23505') {
+        return NextResponse.json(
+          { error: '이미 예약된 수업입니다.' },
+          { status: 409 }
+        );
+      }
+      if (typeof bookingError.message === 'string' && bookingError.message.includes('SCHEDULE_FULL')) {
+        return NextResponse.json({ error: '정원이 마감되었습니다.' }, { status: 409 });
+      }
+      if (typeof bookingError.message === 'string' && bookingError.message.includes('SCHEDULE_CANCELED')) {
+        return NextResponse.json({ error: '취소된 수업입니다.' }, { status: 400 });
+      }
       return NextResponse.json(
         { error: '예약 생성에 실패했습니다.' },
         { status: 500 }
       );
     }
 
-    // 현재 학생 수 증가
-    const { error: updateError } = await (supabase as any)
-      .from('schedules')
-      .update({ current_students: currentStudents + 1 })
-      .eq('id', scheduleId);
-
-    if (updateError) {
-      console.error('Update students count error:', updateError);
-    }
+    // current_students 는 bookings 트리거(sync_schedule_student_count)가 자동 동기화한다.
+    // (기존 수동 +1 은 stale 스냅샷 기반이라 트리거 값을 클로버하므로 제거)
 
     // 활동 로그: 비회원 수강신청
     const academyId = schedule.classes?.academy_id;
