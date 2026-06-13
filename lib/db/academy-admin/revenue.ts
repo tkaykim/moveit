@@ -46,7 +46,7 @@ export async function getRevenueTransactions(academyId: string, startDate?: stri
       ticket_type_snapshot,
       notes,
       created_at,
-      users (
+      users!revenue_transactions_user_id_fkey (
         id,
         name,
         phone

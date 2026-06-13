@@ -92,7 +92,7 @@ export function RevenueView({ academyId }: RevenueViewProps) {
           toss_payment_key,
           notes,
           created_at,
-          users (
+          users!revenue_transactions_user_id_fkey (
             id,
             name,
             nickname
