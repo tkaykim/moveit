@@ -188,11 +188,30 @@ export async function cancelSchedule(id: string) {
 
 /**
  * 세션 삭제 (연관된 예약도 함께 삭제)
+ *
+ * 중요: 예약을 하드 삭제하기 전에, 아직 진행되지 않은(CONFIRMED/PENDING) 예약이 소비한
+ * 횟수권 차감분을 회원에게 복구한다. (출석완료(COMPLETED) 예약은 실제로 수업을 받았으므로 복구 안 함)
+ * 복구 없이 삭제하면 회원이 결제한 횟수가 영구 소실된다. restore_ticket_count RPC 는
+ * 기간권(remaining_count=null)에는 자동 no-op.
  */
 export async function deleteSchedule(id: string) {
   const supabase = await createClient() as any;
-  
-  // 먼저 연관된 예약 삭제
+
+  // 0) 복구 대상 예약 조회 (미래/대기 예약 + 수강권 연결)
+  const { data: toRestore } = await supabase
+    .from('bookings')
+    .select('id, user_ticket_id')
+    .eq('schedule_id', id)
+    .in('status', ['CONFIRMED', 'PENDING'])
+    .not('user_ticket_id', 'is', null);
+
+  for (const b of (toRestore || [])) {
+    if (b.user_ticket_id) {
+      await supabase.rpc('restore_ticket_count', { p_user_ticket_id: b.user_ticket_id, p_count: 1 }).then(() => {}, () => {});
+    }
+  }
+
+  // 1) 연관된 예약 삭제
   const { error: bookingsError } = await supabase
     .from('bookings')
     .delete()
@@ -200,7 +219,7 @@ export async function deleteSchedule(id: string) {
 
   if (bookingsError) throw bookingsError;
 
-  // 스케줄 삭제
+  // 2) 스케줄 삭제
   const { error } = await supabase
     .from('schedules')
     .delete()

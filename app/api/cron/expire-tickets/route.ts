@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { logTicketEvent } from '@/lib/db/enrollment-activity-log';
+import { getKSTTodayString } from '@/lib/utils/kst-time';
 
 /**
  * GET /api/cron/expire-tickets
@@ -24,7 +25,8 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createServiceClient() as any;
-  const today = new Date().toISOString().split('T')[0];
+  // KST 기준 오늘 (UTC 자정 cron 실행 시 전날로 계산되던 off-by-one 방지)
+  const today = getKSTTodayString();
   const results = { expired: 0, skipped: 0, errors: [] as string[] };
 
   try {

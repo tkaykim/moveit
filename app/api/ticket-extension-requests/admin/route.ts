@@ -142,8 +142,7 @@ export async function POST(request: Request) {
             }
             cancelledBookingIds.push(...toCancel.map((b: any) => b.id));
             await supabase.from('bookings').update({ status: 'CANCELLED' }).in('id', toCancel.map((b: any) => b.id));
-            const cur = (sch as any).current_students ?? 0;
-            await supabase.from('schedules').update({ current_students: Math.max(0, cur - toCancel.length) }).eq('id', sch.id);
+            // current_students 는 sync_schedule_student_count 트리거가 자동 재계산 — 수동 차감 시 이중 차감되어 제거.
           }
         }
         const extendStart = new Date(currentExpiry);

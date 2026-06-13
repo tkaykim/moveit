@@ -48,6 +48,7 @@ export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
   const { user } = useAuth();
   const [tickets, setTickets] = useState<UserTicketDetail[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [activeTab, setActiveTab] = useState<TicketCategory>('all');
   const academyIds = useMemo(() => [...new Set(tickets.map((t) => t.tickets?.academy_id).filter(Boolean))] as string[], [tickets]);
   const { labelsMap } = useTicketLabelsMap(academyIds);
@@ -65,16 +66,20 @@ export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
 
     try {
       setLoading(true);
+      setLoadError(false);
       const response = await fetchWithAuth('/api/user-tickets');
       if (response.ok) {
         const result = await response.json();
         setTickets(result.data || []);
       } else {
+        // 빈 목록으로 보이면 "수강권 없음"으로 오인됨 → 명시적 에러 상태
         setTickets([]);
+        setLoadError(true);
       }
     } catch (error) {
       console.error('Error loading tickets:', error);
       setTickets([]);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -181,6 +186,23 @@ export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
       <div className="mb-6">
         <h3 className="text-lg font-bold text-black dark:text-white mb-4">보유 수강권</h3>
         <div className="text-center py-8 text-neutral-500">로딩 중...</div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="mb-6">
+        <h3 className="text-lg font-bold text-black dark:text-white mb-4">보유 수강권</h3>
+        <div className="text-center py-8 px-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl">
+          <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-3">수강권을 불러오지 못했습니다.</p>
+          <button
+            onClick={loadTickets}
+            className="px-4 py-2 rounded-lg bg-black dark:bg-white text-white dark:text-black text-sm font-medium"
+          >
+            다시 시도
+          </button>
+        </div>
       </div>
     );
   }

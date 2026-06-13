@@ -128,8 +128,8 @@ export async function PATCH(
               }
               cancelledBookingIds.push(...toCancel.map((b: any) => b.id));
               await supabase.from('bookings').update({ status: 'CANCELLED' }).in('id', toCancel.map((b: any) => b.id));
-              const cur = (sch as any).current_students ?? 0;
-              await supabase.from('schedules').update({ current_students: Math.max(0, cur - toCancel.length) }).eq('id', sch.id);
+              // current_students 는 bookings 업데이트 시 sync_schedule_student_count 트리거가 자동 재계산.
+              // 수동으로 또 빼면 이중 차감되어 정원 카운트가 음수 방향으로 드리프트하므로 제거.
             }
           }
           const extendStart = new Date(currentExpiry);

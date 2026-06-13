@@ -360,24 +360,11 @@ export async function POST(request: Request) {
     if (bookingError) {
       console.error('Booking creation error:', bookingError);
       // 예약 생성 실패 시 수강권 차감 롤백 (횟수권만, 기간권은 차감하지 않았으므로 롤백 불필요)
+      // 원자적 RPC로 복구 — read-then-write 경합으로 인한 횟수 유실/과복구 방지.
       if (!isImmediatePayment && selectedUserTicketId) {
         try {
-          const ticketBeforeUse = await (supabase as any)
-            .from('user_tickets')
-            .select('remaining_count, status')
-            .eq('id', selectedUserTicketId)
-            .single();
-
-          if (ticketBeforeUse.data && ticketBeforeUse.data.remaining_count != null) {
-            // 기간권(remaining_count=null)은 consumeUserTicket에서 차감하지 않았으므로 롤백 제외
-            const newRemainingCount = ticketBeforeUse.data.remaining_count + 1;
-            const newStatus = newRemainingCount > 0 ? 'ACTIVE' : ticketBeforeUse.data.status;
-
-            await updateUserTicket(selectedUserTicketId, {
-              remaining_count: newRemainingCount,
-              status: newStatus,
-            });
-          }
+          await (supabase as any)
+            .rpc('restore_ticket_count', { p_user_ticket_id: selectedUserTicketId, p_count: 1 });
         } catch (rollbackError) {
           console.error('Rollback failed:', rollbackError);
         }

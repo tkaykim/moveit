@@ -59,14 +59,25 @@ export async function deleteRecurringSessions(params: {
   }
 
   // 2) 연관 예약 카운트 및 삭제
+  //    하드 삭제 전, 미래/대기(CONFIRMED/PENDING) 예약이 소비한 횟수권 차감분을 회원에게 복구한다.
+  //    (출석완료 예약은 실제 수강했으므로 복구 안 함) — 복구 없이 삭제하면 결제 횟수가 소실됨.
+  //    restore_ticket_count 는 기간권(remaining_count=null)에는 자동 no-op.
   const { data: bookings, error: bookingsSelectError } = await (supabase as any)
     .from('bookings')
-    .select('id')
+    .select('id, status, user_ticket_id')
     .in('schedule_id', targetIds);
   if (bookingsSelectError) throw bookingsSelectError;
   const bookingCount = bookings?.length ?? 0;
 
   if (bookingCount > 0) {
+    for (const b of bookings) {
+      if (b.user_ticket_id && (b.status === 'CONFIRMED' || b.status === 'PENDING')) {
+        await (supabase as any)
+          .rpc('restore_ticket_count', { p_user_ticket_id: b.user_ticket_id, p_count: 1 })
+          .then(() => {}, () => {});
+      }
+    }
+
     const { error: bookingsDeleteError } = await (supabase as any)
       .from('bookings')
       .delete()

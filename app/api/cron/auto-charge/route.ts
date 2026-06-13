@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { calculateAmount } from '@/lib/billing/calculate-amount';
+import { getKSTTodayString } from '@/lib/utils/kst-time';
 
 // Vercel Cron: 매일 KST 자정 (UTC 15:00) 실행
 // vercel.json: { "crons": [{ "path": "/api/cron/auto-charge", "schedule": "0 15 * * *" }] }
@@ -18,7 +19,8 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
-  const today = new Date().toISOString().split('T')[0];
+  // KST 기준 오늘 (UTC 자정 cron 실행 시 전날로 계산되던 off-by-one 방지)
+  const today = getKSTTodayString();
   const results = { charged: 0, failed: 0, trialExpired: 0, errors: [] as string[] };
 
   try {

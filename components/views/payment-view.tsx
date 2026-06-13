@@ -149,13 +149,14 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
           </div>
           <div className="text-right">
             <div className="text-xs text-neutral-500 dark:text-neutral-500">시간</div>
-            <div className="text-black dark:text-white font-bold">{classInfo?.time || "18:00"}</div>
+            <div className="text-black dark:text-white font-bold">{classInfo?.time || "-"}</div>
           </div>
         </div>
         <div className="flex justify-between items-center text-sm">
           <span className="text-neutral-600 dark:text-neutral-400">결제 금액</span>
           <span className="text-xl font-bold text-primary">
-            {classInfo?.price?.toLocaleString() || "35,000"}원
+            {/* 금액은 절대 가짜 기본값을 보여주지 않는다(잘못된 금액 결제 방지). 데이터 없으면 '-' */}
+            {classInfo?.price != null ? `${classInfo.price.toLocaleString()}원` : "-"}
           </span>
         </div>
       </div>

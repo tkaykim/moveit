@@ -117,22 +117,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // schedules.current_students 업데이트 (CONFIRMED + COMPLETED 합산)
-    if (booking.schedule_id) {
-      const { data: activeBookings, error: countError } = await (supabase as any)
-        .from('bookings')
-        .select('id')
-        .eq('schedule_id', booking.schedule_id)
-        .in('status', ['CONFIRMED', 'COMPLETED']);
-
-      if (!countError) {
-        const totalCount = activeBookings?.length || 0;
-        await (supabase as any)
-          .from('schedules')
-          .update({ current_students: totalCount })
-          .eq('id', booking.schedule_id);
-      }
-    }
+    // current_students 는 bookings 상태 변경 시 sync_schedule_student_count 트리거가 자동 재계산.
+    // 여기서 수동으로 또 쓰면 stale 스냅샷이 트리거 값을 덮어쓸 수 있어 제거(앱 전반에서 제거한 패턴과 통일).
 
     // 활동 로그: QR 출석 체크 — G10: 잔여 스냅샷 포함 (출석은 잔여 변동 없으므로 before == after)
     const qrAcademyId = booking.classes?.academy_id;

@@ -128,19 +128,13 @@ export async function PATCH(
         .single();
 
       if (!utError && isCountTicket(userTicket?.tickets?.ticket_type) && typeof userTicket.remaining_count === 'number') {
-        const newRemaining = userTicket.remaining_count + 1;
         const previousStatus = userTicket.status as string;
-        const updateData: any = { remaining_count: newRemaining };
-
-        // USED 상태였다면 복원 시 ACTIVE로 변경
-        if (userTicket.status === 'USED' && newRemaining > 0) {
-          updateData.status = 'ACTIVE';
-        }
-
-        await (supabase as any)
-          .from('user_tickets')
-          .update(updateData)
-          .eq('id', currentBooking.user_ticket_id);
+        // 원자적 복구(read-then-write 경합 제거): 같은 수강권의 동시 취소에도 횟수 유실/과복구 없음
+        const { data: restored } = await (supabase as any)
+          .rpc('restore_ticket_count', { p_user_ticket_id: currentBooking.user_ticket_id, p_count: 1 });
+        const restoredRow = Array.isArray(restored) ? restored[0] : restored;
+        const newRemaining = restoredRow?.remaining_count ?? (userTicket.remaining_count + 1);
+        const newStatus = restoredRow?.status ?? previousStatus;
 
         // 활동 로그: 횟수 복구 (표준 envelope: before/after 포함)
         if (academyId) {
@@ -151,7 +145,7 @@ export async function PATCH(
             booking_id: id,
             action: 'COUNT_RESTORE',
             before: { remaining_count: userTicket.remaining_count, status: previousStatus },
-            after: { remaining_count: newRemaining, status: updateData.status ?? previousStatus },
+            after: { remaining_count: newRemaining, status: newStatus },
             via: 'cancel',
             reason: 'booking_cancelled',
             context: guestPayload,

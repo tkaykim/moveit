@@ -179,3 +179,13 @@ export function getKSTDayOfMonth(date: Date): number {
   return getKSTDateParts(date).day;
 }
 
+/**
+ * KST 기준 "오늘" 날짜 문자열(YYYY-MM-DD).
+ * 서버(UTC)에서 `new Date().toISOString().split('T')[0]` 을 쓰면 KST 00:00~09:00 구간에
+ * 전날로 계산돼 만료/정산이 하루 어긋나므로, 날짜 경계 계산에는 반드시 이 함수를 사용한다.
+ */
+export function getKSTTodayString(date: Date = new Date()): string {
+  const { year, month, day } = getKSTDateParts(date);
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+

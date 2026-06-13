@@ -218,7 +218,7 @@ export async function POST(request: Request) {
         : ticket.name;
 
       const transactionDate = new Date().toISOString().split('T')[0];
-      await (supabase as any)
+      const { error: revInsertError } = await (supabase as any)
         .from('revenue_transactions')
         .insert({
           academy_id: ticket.academy_id,
@@ -240,6 +240,16 @@ export async function POST(request: Request) {
           // 본인이 직접 구매하는 경로 → actor = 구매자 본인
           actor_user_id: user.id,
         });
+
+      // 매출 기록 실패는 묵살하면 회계 누락(silent revenue loss) → 발급한 user_ticket 롤백 후 에러 반환
+      if (revInsertError) {
+        console.error('[tickets/purchase] revenue insert failed, rolling back user_ticket:', revInsertError);
+        await (supabase as any).from('user_tickets').delete().eq('id', userTicket.id).then(() => {}, () => {});
+        return NextResponse.json(
+          { error: '결제 기록 저장에 실패했습니다. 다시 시도해 주세요.', detail: revInsertError.message },
+          { status: 500 }
+        );
+      }
 
       // 학원 학생으로 자동 등록 (중복 방지: 이미 등록된 경우 무시)
       const { data: existingStudent } = await (supabase as any)
