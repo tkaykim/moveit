@@ -102,7 +102,6 @@ export function computeRefund(input: RefundCalcInput): RefundCalcResult {
   }
 
   if (isPeriod) {
-    // 진행률 = 경과일 / 총유효일
     const now = dayStart(input.nowISO);
     let totalDays = input.validDays && input.validDays > 0 ? input.validDays : null;
     if (!totalDays && input.startDate && input.expiryDate) {
@@ -110,29 +109,56 @@ export function computeRefund(input: RefundCalcInput): RefundCalcResult {
     }
     const start = input.startDate ? dayStart(input.startDate) : now;
     const elapsedDays = Math.floor((now - start) / 86400000);
-
-    let ratio: number;
-    let bracket: string;
-    if (!totalDays) {
-      // 유효일 정보 없음 → 시작 여부만으로 보수적 판단
-      ratio = elapsedDays <= 0 ? 1 : 0.5;
-      bracket = elapsedDays <= 0 ? '시작 전(전액)' : '진행 중(유효기간 불명 — 1/2 적용)';
-    } else if (elapsedDays <= 0) {
-      ratio = 1; bracket = '교습 시작 전(전액)';
-    } else {
-      const progress = elapsedDays / totalDays;
-      if (progress < 1 / 3) { ratio = 2 / 3; bracket = '총 기간 1/3 경과 전(2/3)'; }
-      else if (progress < 1 / 2) { ratio = 1 / 2; bracket = '총 기간 1/2 경과 전(1/2)'; }
-      else { ratio = 0; bracket = '총 기간 1/2 경과 후(반환 없음)'; }
-    }
-    const suggested = clampMoney(paid * ratio, paid);
     const rem = remainingPeriod(input.expiryDate, input.nowISO);
+
+    // 학원법 구간 비율: 진행률<1/3→2/3, <1/2→1/2, 이후→0
+    const bracketRatio = (p: number) => (p < 1 / 3 ? 2 / 3 : p < 1 / 2 ? 1 / 2 : 0);
+
+    let suggested: number;
+    let bracket: string;
+    let basisNote: string;
+
+    if (!totalDays) {
+      const ratio = elapsedDays <= 0 ? 1 : 0.5;
+      bracket = elapsedDays <= 0 ? '시작 전(전액)' : '진행 중(유효기간 불명 — 1/2 적용)';
+      suggested = clampMoney(paid * ratio, paid);
+      basisNote = '유효기간 정보가 없어 보수적으로 적용했습니다. 직접 조정하세요.';
+    } else if (elapsedDays <= 0) {
+      bracket = '교습 시작 전(전액)';
+      suggested = paid;
+      basisNote = '';
+    } else if (totalDays <= 31) {
+      // 1개월 이내 단기: 총 기간 기준 단일 구간
+      const p = elapsedDays / totalDays;
+      const ratio = bracketRatio(p);
+      bracket = ratio === 2 / 3 ? '총 기간 1/3 경과 전(2/3)' : ratio === 1 / 2 ? '총 기간 1/2 경과 전(1/2)' : '총 기간 1/2 경과 후(반환 없음)';
+      suggested = clampMoney(paid * ratio, paid);
+      basisNote = '';
+    } else {
+      // 1개월 초과 장기: 학원법 월할 — 지난 달 전액소진, 당월은 구간비율, 잔여 달 전액환급
+      const months = Math.max(1, Math.round(totalDays / 30));
+      const perMonthDays = totalDays / months;
+      const monthlyFee = paid / months;
+      const fullElapsed = Math.floor(elapsedDays / perMonthDays); // 완전히 지난 달 수
+      if (fullElapsed >= months) {
+        suggested = 0;
+        bracket = `${months}개월 전부 경과(반환 없음)`;
+      } else {
+        const withinProgress = (elapsedDays - fullElapsed * perMonthDays) / perMonthDays;
+        const curRatio = bracketRatio(withinProgress);
+        const remainingFullMonths = months - fullElapsed - 1;
+        suggested = clampMoney(monthlyFee * (remainingFullMonths + curRatio), paid);
+        const curBracketLabel = curRatio === 2 / 3 ? '당월 1/3 전(2/3)' : curRatio === 1 / 2 ? '당월 1/2 전(1/2)' : '당월 반환없음';
+        bracket = `${months}개월 중 ${fullElapsed + 1}개월차 · 잔여 ${remainingFullMonths}개월 전액 + ${curBracketLabel}`;
+      }
+      basisNote = `월 교습비 약 ${Math.round(monthlyFee).toLocaleString()}원 기준 월할 계산.`;
+    }
 
     return {
       kind: 'PERIOD',
       paidAmount: paid,
       suggestedRefund: suggested,
-      basis: `기간제 · 학원법 시행령 반환기준(${bracket}). 장기 수강권은 월할 계산이 더 정확하므로 필요 시 직접 조정하세요.`,
+      basis: `기간제 · 학원법 시행령 반환기준(${bracket}).${basisNote ? ' ' + basisNote : ''} 학원 재량으로 조정 가능합니다.`,
       breakdown: [
         { label: '결제액', value: `${paid.toLocaleString()}원` },
         { label: '경과/총일수', value: `${Math.max(0, elapsedDays)}일 / ${totalDays ?? '?'}일` },
