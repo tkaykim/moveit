@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { normalizePhone } from '@/lib/utils/phone';
 import { isNativePlatform } from '@/lib/capacitor/platform';
+import { ModalPortal } from '@/components/common/modal-portal';
 
 const TOSS_SCRIPT = 'https://js.tosspayments.com/v2/standard';
 
@@ -161,6 +162,7 @@ export function TicketTossPaymentModal({
   if (!isOpen) return null;
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden />
       {/* 토스 결제위젯은 흰색 고정 iframe이므로 모달 전체를 항상 라이트로 둔다(다크모드에서도). */}
@@ -211,5 +213,6 @@ export function TicketTossPaymentModal({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
