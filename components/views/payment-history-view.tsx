@@ -20,6 +20,12 @@ interface PaymentRecord {
   amount: number;
   status: string;
   payment_method?: string;
+  ticket_type?: string;
+  quantity?: number;
+  valid_days?: number;
+  remaining_count?: number | null;
+  ticket_status?: string;
+  expiry_date?: string;
 }
 
 export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
@@ -72,6 +78,9 @@ export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
   };
 
   const getStatusIcon = (status: string) => {
+    if (status === 'REFUNDED' || status === 'PARTIALLY_REFUNDED') {
+      return <XCircle className="text-red-500" size={16} />;
+    }
     if (status === 'CONFIRMED' || status === 'COMPLETED') {
       return <CheckCircle className="text-primary" size={16} />;
     }
@@ -82,6 +91,8 @@ export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
   };
 
   const getStatusText = (status: string) => {
+    if (status === 'REFUNDED') return '환불됨';
+    if (status === 'PARTIALLY_REFUNDED') return '부분환불';
     if (status === 'CONFIRMED' || status === 'COMPLETED') return '완료';
     if (status === 'CANCELLED') return '취소';
     return '대기중';
@@ -173,7 +184,7 @@ export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
               key={payment.id}
               className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4"
             >
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     {getStatusIcon(payment.status)}
@@ -198,14 +209,43 @@ export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-lg font-black text-black dark:text-white mb-1">
+                  <div className={`text-lg font-black mb-1 ${
+                    payment.status === 'REFUNDED' || payment.status === 'PARTIALLY_REFUNDED'
+                      ? 'text-red-500 line-through'
+                      : 'text-black dark:text-white'
+                  }`}>
                     {payment.amount > 0 ? `${payment.amount.toLocaleString()}원` : '수강권 사용'}
                   </div>
-                  <div className="text-[10px] text-neutral-500 dark:text-neutral-400">
+                  <div className={`text-[10px] font-medium ${
+                    payment.status === 'REFUNDED' || payment.status === 'PARTIALLY_REFUNDED'
+                      ? 'text-red-500'
+                      : 'text-neutral-500 dark:text-neutral-400'
+                  }`}>
                     {getStatusText(payment.status)}
                   </div>
                 </div>
               </div>
+              {/* 수강권 상세 정보 (구매 건만) */}
+              {payment.type === 'PURCHASE' && payment.ticket_type && (
+                <div className="flex items-center gap-2 text-[11px] text-neutral-400 dark:text-neutral-500 mt-1">
+                  <span className={`px-1.5 py-0.5 rounded font-medium ${
+                    payment.ticket_type === 'COUNT'
+                      ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                      : 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400'
+                  }`}>
+                    {payment.ticket_type === 'COUNT' ? `${payment.quantity || 1}회` : '기간권'}
+                  </span>
+                  {payment.valid_days != null && payment.valid_days > 0 && (
+                    <span>{payment.valid_days}일</span>
+                  )}
+                  {payment.ticket_type === 'COUNT' && payment.remaining_count != null && payment.status === 'COMPLETED' && (
+                    <span>· 잔여 {payment.remaining_count}회</span>
+                  )}
+                  {payment.expiry_date && (
+                    <span>· ~{payment.expiry_date}</span>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

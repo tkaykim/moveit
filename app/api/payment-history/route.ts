@@ -21,21 +21,33 @@ export async function GET(request: Request) {
     const userId = user.id;
     const supabase = await getAuthenticatedSupabase(request);
 
-    // revenue_transactions: 수강권 구매 결제
+    // revenue_transactions: 수강권 구매 결제 (환불 건 포함)
     const { data: transactions, error: txError } = await (supabase as any)
       .from('revenue_transactions')
       .select(`
         id,
         ticket_name,
+        ticket_type_snapshot,
+        quantity,
+        valid_days,
         final_price,
         payment_method,
         payment_status,
         transaction_date,
         created_at,
         academy_id,
-        academies (name_kr, name_en)
+        user_ticket_id,
+        academies (name_kr, name_en),
+        user_tickets (
+          id,
+          remaining_count,
+          status,
+          start_date,
+          expiry_date
+        )
       `)
       .eq('user_id', userId)
+      .in('payment_status', ['COMPLETED', 'REFUNDED', 'PARTIALLY_REFUNDED'])
       .order('transaction_date', { ascending: false })
       .limit(100);
 
@@ -86,10 +98,18 @@ export async function GET(request: Request) {
       amount: number;
       status: string;
       payment_method?: string;
+      ticket_type?: string;
+      quantity?: number;
+      valid_days?: number;
+      remaining_count?: number | null;
+      ticket_status?: string;
+      expiry_date?: string;
     }> = [];
 
     (transactions || []).forEach((t: any) => {
       const academy = t.academies;
+      const ut = t.user_tickets;
+      const typeStr = (t.ticket_type_snapshot || '').toUpperCase();
       payments.push({
         id: t.id,
         type: 'PURCHASE',
@@ -99,6 +119,12 @@ export async function GET(request: Request) {
         amount: t.final_price || 0,
         status: t.payment_status || 'COMPLETED',
         payment_method: t.payment_method,
+        ticket_type: typeStr === 'COUNT' ? 'COUNT' : 'PERIOD',
+        quantity: t.quantity || 1,
+        valid_days: t.valid_days,
+        remaining_count: ut?.remaining_count ?? null,
+        ticket_status: ut?.status ?? null,
+        expiry_date: ut?.expiry_date ?? null,
       });
     });
 

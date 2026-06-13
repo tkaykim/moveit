@@ -37,6 +37,7 @@ export function getPaymentMethodDisplayLabel(code: string | null | undefined): s
     TOSS_EASYPAY_TOSSPAY: '토스페이',
     TOSS_EASYPAY_NAVER: '네이버페이',
     TOSS_EASYPAY_PAYCO: '페이코',
+    BANK_TRANSFER: '계좌이체(수기)',
     CARD_DEMO: '카드(테스트)',
     TEST: '테스트',
     CASH: '현금',

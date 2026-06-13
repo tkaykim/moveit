@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { SectionHeader } from '../common/section-header';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { formatCurrency } from './utils/format-currency';
 import { getPaymentMethodDisplayLabel } from '@/lib/toss/payment-method';
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 
 interface RevenueViewProps {
   academyId: string;
@@ -20,6 +21,10 @@ export function RevenueView({ academyId }: RevenueViewProps) {
   });
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refundTarget, setRefundTarget] = useState<any | null>(null);
+  const [refundReason, setRefundReason] = useState('');
+  const [refundProcessing, setRefundProcessing] = useState(false);
+  const [refundResult, setRefundResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -84,6 +89,7 @@ export function RevenueView({ academyId }: RevenueViewProps) {
           valid_days,
           ticket_name,
           ticket_type_snapshot,
+          toss_payment_key,
           notes,
           created_at,
           users (
@@ -101,9 +107,9 @@ export function RevenueView({ academyId }: RevenueViewProps) {
           )
         `)
         .eq('academy_id', academyId)
-        .eq('payment_status', 'COMPLETED')
+        .in('payment_status', ['COMPLETED', 'REFUNDED', 'PARTIALLY_REFUNDED'])
         .order('transaction_date', { ascending: false })
-        .limit(20);
+        .limit(50);
 
       if (error) throw error;
       setTransactions(transactionsData || []);
@@ -113,6 +119,33 @@ export function RevenueView({ academyId }: RevenueViewProps) {
       setLoading(false);
     }
   };
+
+  const handleRefund = useCallback(async () => {
+    if (!refundTarget) return;
+    setRefundProcessing(true);
+    setRefundResult(null);
+    try {
+      const res = await fetchWithAuth(`/api/academy-admin/${academyId}/ticket-refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          revenueTransactionId: refundTarget.id,
+          cancelReason: refundReason || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRefundResult({ success: false, message: data.error || '환불에 실패했습니다.' });
+        return;
+      }
+      setRefundResult({ success: true, message: data.message || '환불 처리 완료' });
+      loadData();
+    } catch {
+      setRefundResult({ success: false, message: '네트워크 오류가 발생했습니다.' });
+    } finally {
+      setRefundProcessing(false);
+    }
+  }, [refundTarget, refundReason, academyId]);
 
   if (loading) {
     return (
@@ -174,7 +207,8 @@ export function RevenueView({ academyId }: RevenueViewProps) {
                   <th className="px-3 py-3 text-center">유효기간</th>
                   <th className="px-3 py-3">결제 금액</th>
                   <th className="px-3 py-3">결제 수단</th>
-                  <th className="px-3 py-3 text-right">영수증</th>
+                  <th className="px-3 py-3 text-center">상태</th>
+                  <th className="px-3 py-3 text-right">관리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-neutral-800">
@@ -239,10 +273,32 @@ export function RevenueView({ academyId }: RevenueViewProps) {
                       <td className="px-3 py-3 text-gray-600 dark:text-gray-400">
                         {rev.payment_method ? getPaymentMethodDisplayLabel(rev.payment_method) : '-'}
                       </td>
+                      <td className="px-3 py-3 text-center">
+                        {rev.payment_status === 'REFUNDED' ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                            환불됨
+                          </span>
+                        ) : rev.payment_status === 'PARTIALLY_REFUNDED' ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">
+                            부분환불
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
+                            완료
+                          </span>
+                        )}
+                      </td>
                       <td className="px-3 py-3 text-right">
-                        <button className="text-xs border dark:border-neutral-700 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-800 text-gray-700 dark:text-gray-300 transition-colors">
-                          보기
-                        </button>
+                        {rev.payment_status === 'COMPLETED' ? (
+                          <button
+                            onClick={() => { setRefundTarget(rev); setRefundReason(''); setRefundResult(null); }}
+                            className="text-xs border border-red-200 dark:border-red-800 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors"
+                          >
+                            환불
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-400">-</span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -252,6 +308,107 @@ export function RevenueView({ academyId }: RevenueViewProps) {
           </div>
         )}
       </div>
+      {/* 환불 확인 모달 */}
+      {refundTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => !refundProcessing && setRefundTarget(null)} />
+          <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">환불 처리</h3>
+
+            {refundResult ? (
+              <div className="space-y-4">
+                <div className={`p-4 rounded-xl text-sm font-medium ${
+                  refundResult.success
+                    ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'
+                    : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                }`}>
+                  {refundResult.message}
+                </div>
+                <button
+                  onClick={() => { setRefundTarget(null); setRefundResult(null); }}
+                  className="w-full py-2.5 rounded-xl bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-neutral-700 transition-colors"
+                >
+                  닫기
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-gray-50 dark:bg-neutral-800 rounded-xl p-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">상품명</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {refundTarget.ticket_name || refundTarget.tickets?.name || '-'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">회원</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {refundTarget.users?.name || refundTarget.users?.nickname || '-'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">결제 금액</span>
+                    <span className="font-bold text-gray-900 dark:text-white">
+                      {formatCurrency(refundTarget.final_price)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">결제 수단</span>
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {getPaymentMethodDisplayLabel(refundTarget.payment_method)}
+                    </span>
+                  </div>
+                  {refundTarget.toss_payment_key && (
+                    <div className="pt-1 text-xs text-blue-600 dark:text-blue-400">
+                      토스 결제 취소 API가 자동 호출됩니다
+                    </div>
+                  )}
+                  {!refundTarget.toss_payment_key && (
+                    <div className="pt-1 text-xs text-amber-600 dark:text-amber-400">
+                      PG 환불 없음 — 계좌이체/현금 건은 별도 환불 필요
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    환불 사유 (선택)
+                  </label>
+                  <input
+                    type="text"
+                    value={refundReason}
+                    onChange={(e) => setRefundReason(e.target.value)}
+                    placeholder="예: 고객 요청, 중복 결제"
+                    className="w-full border dark:border-neutral-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white placeholder-gray-400"
+                  />
+                </div>
+
+                <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl p-3 text-xs text-red-600 dark:text-red-400">
+                  환불 시 해당 수강권이 비활성화되고, 연결된 예약이 모두 취소됩니다.
+                  이 작업은 되돌릴 수 없습니다.
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setRefundTarget(null)}
+                    disabled={refundProcessing}
+                    className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-40"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={handleRefund}
+                    disabled={refundProcessing}
+                    className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition-colors disabled:opacity-40"
+                  >
+                    {refundProcessing ? '처리 중…' : '환불 확인'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
