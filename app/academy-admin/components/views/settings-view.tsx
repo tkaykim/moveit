@@ -337,6 +337,7 @@ export function SettingsView({ academyId }: SettingsViewProps) {
           <button
             key={id}
             type="button"
+            data-onboarding={`page-settings-tab-${id}`}
             onClick={() => setActiveSettingsTab(id)}
             className={cn(
               'flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors',
