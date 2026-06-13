@@ -10,6 +10,8 @@ import { AccessConfig } from '@/types/database';
 import { formatExclusiveClassText } from '@/lib/utils/exclusive-class';
 import { getClassColor, CLASS_CARD_COLOR_KEYS, CLASS_CARD_COLOR_LABELS, CLASS_CARD_COLORS } from '@/lib/constants/class-colors';
 import { DeleteSessionDialog } from './delete-session-dialog';
+import { ShareLinkModal } from '../share-link-modal';
+import { useAcademy } from '../../../contexts/academy-context';
 
 interface SessionModalProps {
   session: any;
@@ -19,8 +21,16 @@ interface SessionModalProps {
 
 export function SessionModal({ session, academyId, onClose }: SessionModalProps) {
   const router = useRouter();
+  const { academySlug: slug } = useAcademy();
   const [loading, setLoading] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+
+  // 짧은 공유 링크: /book/{slug}/{6자리코드}. 코드 없으면 기존 UUID 링크로 폴백.
+  const bookingPath = session.share_code
+    ? `/book/${slug}/${session.share_code}`
+    : `/book/session/${session.id}`;
+  const bookingUrl = typeof window !== 'undefined' ? `${window.location.origin}${bookingPath}` : '';
   const [isEditing, setIsEditing] = useState(false);
   const [linkedTicketNames, setLinkedTicketNames] = useState<string[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -202,7 +212,6 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
   };
 
   const handleCopyLink = async () => {
-    const bookingUrl = `${window.location.origin}/book/session/${session.id}`;
     try {
       await navigator.clipboard.writeText(bookingUrl);
       setLinkCopied(true);
@@ -339,6 +348,13 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
         }}
       />
     )}
+    <ShareLinkModal
+      open={shareOpen}
+      onClose={() => setShareOpen(false)}
+      url={bookingUrl}
+      kind="session"
+      contextName={session.classes?.name}
+    />
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 dark:bg-black/60 backdrop-blur-sm">
       <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b dark:border-neutral-800 flex justify-between items-center">
@@ -623,26 +639,13 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
                 </div>
               </div>
 
-              {/* 결제 링크 복사 */}
+              {/* 홍보 링크 공유 (링크 + 문구 템플릿) */}
               <button
-                onClick={handleCopyLink}
-                className={`w-full px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all ${
-                  linkCopied
-                    ? 'bg-green-500 text-white'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
+                onClick={() => setShareOpen(true)}
+                className="w-full px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all bg-blue-600 hover:bg-blue-700 text-white"
               >
-                {linkCopied ? (
-                  <>
-                    <Check size={18} />
-                    링크가 복사되었습니다!
-                  </>
-                ) : (
-                  <>
-                    <Link2 size={18} />
-                    결제 링크 복사
-                  </>
-                )}
+                <Link2 size={18} />
+                홍보 링크 공유
               </button>
 
               {/* 버튼 */}

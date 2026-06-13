@@ -13,7 +13,6 @@ import { usePathname } from 'next/navigation';
 import {
   GLOBAL_STEPS,
   PAGE_STEPS,
-  SIDEBAR_STEP_TO_PAGE_KEY,
   getPageKeyFromPathname,
   type OnboardingPhase,
   type PageStepDef,
@@ -135,9 +134,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!state.run || state.phase !== 'sidebar' || !pathname) return;
+    const step = GLOBAL_STEPS[state.currentStep];
+    if (!step || step.type !== 'sidebar') return;
     const pageKey = getPageKeyFromPathname(pathname);
-    const expectedKey = SIDEBAR_STEP_TO_PAGE_KEY[state.currentStep];
-    if (pageKey && expectedKey && pageKey === expectedKey && PAGE_STEPS[pageKey]?.length) {
+    if (pageKey && pageKey === step.pageKey && PAGE_STEPS[pageKey]?.length) {
       setState((prev) => ({ ...prev, phase: 'page', pageStepIndex: 0 }));
     }
   }, [pathname, state.run, state.phase, state.currentStep]);

@@ -175,7 +175,7 @@ export function AcademyAdminHeader({ academyId, onMenuClick }: AcademyAdminHeade
               className="flex items-center gap-2 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors font-medium text-sm"
             >
               <BookOpen size={18} />
-              <span>온보딩 튜토리얼</span>
+              <span>둘러보기</span>
             </button>
           )}
 

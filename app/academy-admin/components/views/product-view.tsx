@@ -5,6 +5,8 @@ import { Ticket, TrendingUp, Settings, Plus, Tag, Zap, ChevronDown, ChevronUp, S
 import { SectionHeader } from '../common/section-header';
 import { TicketModal } from './products/ticket-modal';
 import { DiscountModal } from './products/discount-modal';
+import { ShareLinkModal } from './share-link-modal';
+import { useAcademy } from '../../contexts/academy-context';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { DEFAULT_TICKET_LABELS, TICKET_LABEL_MAX_LENGTH } from '@/lib/constants/ticket-labels';
 import { formatCurrency } from './utils/format-currency';
@@ -17,6 +19,7 @@ interface ProductViewProps {
 type TicketCategoryFilter = 'all' | 'regular' | 'popup' | 'workshop';
 
 export function ProductView({ academyId }: ProductViewProps) {
+  const { academySlug: slug } = useAcademy();
   const { labels, descriptions, raw, refetch } = useAcademyTicketLabels(academyId);
   const [tickets, setTickets] = useState<any[]>([]);
   const [discounts, setDiscounts] = useState<any[]>([]);
@@ -38,6 +41,7 @@ export function ProductView({ academyId }: ProductViewProps) {
   const [editLabelValue, setEditLabelValue] = useState('');
   const [editDescriptionValue, setEditDescriptionValue] = useState('');
   const [savingLabel, setSavingLabel] = useState(false);
+  const [shareTarget, setShareTarget] = useState<{ url: string; name: string } | null>(null);
 
   const categoryToDescriptionDbField = (category: 'regular' | 'popup' | 'workshop') =>
     ({ regular: 'ticket_description_regular', popup: 'ticket_description_popup', workshop: 'ticket_description_workshop' } as const);
@@ -586,11 +590,15 @@ export function ProductView({ academyId }: ProductViewProps) {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/book/ticket?ticketId=${product.id}&academyId=${product.academy_id || academyId || ''}`;
-                                    navigator.clipboard.writeText(url).then(() => alert('구매 링크가 복사되었습니다.')).catch(() => alert('복사에 실패했습니다.'));
+                                    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                                    // 짧은 공유 링크: /book/{slug}/{6자리코드}. 코드 없으면 기존 링크로 폴백.
+                                    const path = product.share_code
+                                      ? `/book/${slug}/${product.share_code}`
+                                      : `/book/ticket?ticketId=${product.id}&academyId=${product.academy_id || academyId || ''}`;
+                                    setShareTarget({ url: `${origin}${path}`, name: product.name || '수강권' });
                                   }}
                                   className="text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 p-2 rounded-lg"
-                                  title="구매 링크 복사"
+                                  title="홍보 링크 공유"
                                 >
                                   <Link2 size={16} />
                                 </button>
@@ -724,6 +732,14 @@ export function ProductView({ academyId }: ProductViewProps) {
           }}
         />
       )}
+
+      <ShareLinkModal
+        open={!!shareTarget}
+        onClose={() => setShareTarget(null)}
+        url={shareTarget?.url ?? ''}
+        kind="ticket"
+        contextName={shareTarget?.name}
+      />
     </>
   );
 }

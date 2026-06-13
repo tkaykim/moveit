@@ -23,6 +23,7 @@ import {
   QrCode,
   Bell,
   Landmark,
+  HelpCircle,
   type LucideIcon,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -38,10 +39,11 @@ interface SidebarItemProps {
   dataOnboarding?: string;
 }
 
-const SidebarItem = ({ icon: Icon, label, href, active, onClick }: SidebarItemProps) => (
+const SidebarItem = ({ icon: Icon, label, href, active, onClick, dataOnboarding }: SidebarItemProps) => (
   <Link
     href={href}
     onClick={onClick}
+    {...(dataOnboarding ? { 'data-onboarding': dataOnboarding } : {})}
     className={`flex items-center gap-3 px-4 py-2.5 lg:py-3 cursor-pointer transition-all duration-200 rounded-lg mx-2 mb-0.5 ${
       active
         ? 'bg-neutral-200/10 text-neutral-900 font-semibold shadow-sm'
@@ -60,6 +62,17 @@ interface AcademyAdminSidebarProps {
   academyId: string;
   isOpen: boolean;
   onClose: () => void;
+}
+
+/**
+ * 온보딩 하이라이트용 안정적 타겟 키.
+ * 사이드바 항목 순서가 바뀌어도 라우트 기준으로 매칭되도록 href의 마지막 세그먼트를 사용한다.
+ * 대시보드(루트)는 'sidebar-dashboard'.
+ */
+function sidebarOnboardingKey(href: string, baseHref: string): string {
+  if (href === baseHref) return 'sidebar-dashboard';
+  const seg = href.slice(baseHref.length).replace(/^\//, '').split(/[/?#]/)[0];
+  return `sidebar-${seg || 'dashboard'}`;
 }
 
 export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdminSidebarProps) {
@@ -213,6 +226,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
               href={item.href}
               active={isActive(item.href)}
               onClick={handleLinkClick}
+              dataOnboarding={sidebarOnboardingKey(item.href, `/academy-admin/${slug}`)}
             />
           ))}
 
@@ -227,6 +241,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
               href={item.href}
               active={isActive(item.href)}
               onClick={handleLinkClick}
+              dataOnboarding={sidebarOnboardingKey(item.href, `/academy-admin/${slug}`)}
             />
           ))}
 
@@ -241,12 +256,21 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
               href={item.href}
               active={isActive(item.href)}
               onClick={handleLinkClick}
+              dataOnboarding={sidebarOnboardingKey(item.href, `/academy-admin/${slug}`)}
             />
           ))}
 
           <div className="px-6 pt-3 lg:pt-6 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             기타
           </div>
+          <SidebarItem
+            icon={HelpCircle}
+            label="사용 가이드"
+            href={`/academy-admin/${slug}/guide`}
+            active={isActive(`/academy-admin/${slug}/guide`)}
+            onClick={handleLinkClick}
+            dataOnboarding="sidebar-guide"
+          />
           <SidebarItem
             icon={AlertTriangle}
             label="고장신고/개발요청"

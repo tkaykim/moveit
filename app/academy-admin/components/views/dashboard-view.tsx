@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { authFetch } from '@/lib/supabase/auth-fetch';
 import { SubscribeModal } from '../subscribe-modal';
+import { SetupChecklist } from './setup-checklist';
 import { TodayClassesSection } from './today-classes-section';
 import type { AcademySubscription } from '@/types/billing';
 import { useAcademy } from '../../contexts/academy-context';
@@ -154,6 +155,9 @@ export function DashboardView({ academyId, showWelcomeBanner, onDismissWelcomeBa
         isOpen={subscribeModalOpen}
         onClose={() => setSubscribeModalOpen(false)}
       />
+
+      {/* 학원 오픈 준비 체크리스트 (모든 단계 완료/닫기 시 자동 숨김) */}
+      <SetupChecklist academyId={academyId} />
 
       {/* 주요 관리 버튼 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6" data-onboarding="page-dashboard-1">

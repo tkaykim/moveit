@@ -1,23 +1,47 @@
 /**
  * 관리자 온보딩 튜토리얼 단계 정의
- * - 전역: 환영 + 사이드바 7개 메뉴 + 수강권 간편결제
- * - 페이지별: 각 페이지에서 실제로 눌러볼 수 있는 버튼/영역별 디테일 스텝
+ *
+ * 설계 원칙
+ * - 메뉴 나열이 아니라 "학원장이 실제로 밟는 여정" 순서로 안내한다.
+ *   (홈 꾸미기 → 수강권 → 수업 → 일정 → 신청관리 → 간편결제 → 홍보)
+ * - 사이드바 타겟은 깨지기 쉬운 DOM 인덱스가 아니라 안정적인
+ *   data-onboarding="sidebar-<key>" 속성으로 지정한다.
+ * - 각 사이드바 스텝은 이동 경로(path/query)와 페이지 키(pageKey)를 스스로 들고 있어,
+ *   별도 인덱스 매핑 테이블에 의존하지 않는다.
  */
 
-export type OnboardingPhase = 'welcome' | 'sidebar' | 'page' | 'done';
-
-export interface SidebarStep {
-  type: 'sidebar';
-  target: string;
-  label: string;
-  message: string;
-}
+export type OnboardingPhase = 'welcome' | 'sidebar' | 'page' | 'info' | 'done';
 
 export interface WelcomeStep {
   type: 'welcome';
   target: null;
   title: string;
   body: string;
+}
+
+export interface SidebarStep {
+  type: 'sidebar';
+  /** data-onboarding 속성값 (예: 'sidebar-settings') 또는 'header-quick-pay' */
+  target: string;
+  label: string;
+  message: string;
+  /** 이동 후 머무를 페이지 키 (PAGE_STEPS의 키, getPageKeyFromPathname 결과와 일치) */
+  pageKey: string;
+  /** academyId 뒤에 붙일 경로. 빈 문자열이면 대시보드(루트) */
+  path: string;
+  /** 선택 쿼리스트링 (예: 'tab=sales') */
+  query?: string;
+}
+
+/** 하이라이트 대상이 없는 안내 카드(센터 표시). 선택적으로 CTA 버튼 제공 */
+export interface InfoStep {
+  type: 'info';
+  target: null;
+  title: string;
+  body: string;
+  /** CTA 버튼 클릭 시 이동할 경로(academyId 뒤). 없으면 버튼 미표시 */
+  ctaPath?: string;
+  ctaLabel?: string;
 }
 
 export interface PageStepDef {
@@ -30,62 +54,103 @@ export interface PageStepDef {
   tip?: string;
 }
 
-export type GlobalStep = WelcomeStep | SidebarStep;
+export type GlobalStep = WelcomeStep | SidebarStep | InfoStep;
 
 export const GLOBAL_STEPS: GlobalStep[] = [
   {
     type: 'welcome',
     target: null,
     title: 'MOVE IT 관리자 둘러보기',
-    body: '대시보드, 클래스·스케줄·수강권 관리, 수강권 간편결제까지 주요 기능을 순서대로 안내합니다. 각 메뉴로 이동한 뒤, 실제로 사용하는 버튼을 눌러 보시면 바로 활용하실 수 있습니다.',
+    body:
+      '학원을 처음 여실 때 밟게 되는 순서대로 안내해 드릴게요.\n' +
+      '학원 홈 꾸미기 → 수강권 만들기 → 수업 만들기 → 일정 배치 → 신청 관리 → 간편결제, 그리고 마지막으로 "홍보"까지.\n' +
+      '각 단계에서 "이동하기"를 누르면 실제 화면으로 데려다 드립니다.',
   },
   {
     type: 'sidebar',
-    target: 'sidebar-0',
-    label: '대시보드',
-    message: '"이동하기"를 누르면 대시보드 페이지로 이동합니다. 오늘 수업 일정과 클래스·스케줄·신청인원·수강권 바로가기를 보면서 설명을 진행합니다.',
+    target: 'sidebar-settings',
+    label: '① 학원 홈 꾸미기',
+    message:
+      '가장 먼저 우리 학원 페이지를 채워요.\n' +
+      '"이동하기"를 누르면 설정 화면으로 이동합니다.\n' +
+      '학원 정보·소개글·대표사진과 페이지 구성을 여기서 꾸밉니다.',
+    pageKey: 'settings',
+    path: 'settings',
   },
   {
     type: 'sidebar',
-    target: 'sidebar-2',
-    label: '클래스(반) 관리',
-    message: '"이동하기"를 누르면 클래스(반) 관리 페이지로 이동합니다. 반 추가·수강권 연결 화면을 보면서 기능을 안내합니다.',
+    target: 'sidebar-products',
+    label: '② 수강권 만들기',
+    message:
+      '"이동하기"를 누르면 수강권/상품 페이지로 이동합니다.\n' +
+      '기간제·횟수제(쿠폰)·워크샵(특강) 수강권과 가격, 할인을 만듭니다.',
+    pageKey: 'products',
+    path: 'products',
   },
   {
     type: 'sidebar',
-    target: 'sidebar-3',
-    label: '스케줄 관리',
-    message: '"이동하기"를 누르면 스케줄 관리 페이지로 이동합니다. 반복 일정 등록·달력 화면을 보면서 설명합니다.',
+    target: 'sidebar-class-masters',
+    label: '③ 수업(클래스) 만들기',
+    message:
+      '"이동하기"를 누르면 클래스(반) 관리 페이지로 이동합니다.\n' +
+      '반 이름·장르·난이도·강사를 정하고, 어떤 수강권을 쓸 수 있는지 연결합니다.',
+    pageKey: 'class-masters',
+    path: 'class-masters',
   },
   {
     type: 'sidebar',
-    target: 'sidebar-4',
-    label: '신청인원 관리',
-    message: '"이동하기"를 누르면 신청인원 관리 페이지로 이동합니다. 수업별 신청·수기 추가 화면을 보면서 안내합니다.',
+    target: 'sidebar-schedule',
+    label: '④ 수업 일정 배치',
+    message:
+      '"이동하기"를 누르면 스케줄 관리 페이지로 이동합니다.\n' +
+      '요일·시간 반복 일정을 등록하면 달력에 수업이 자동으로 채워집니다.',
+    pageKey: 'schedule',
+    path: 'schedule',
   },
   {
     type: 'sidebar',
-    target: 'sidebar-5',
-    label: '수강권/상품',
-    message: '"이동하기"를 누르면 수강권/상품 페이지로 이동합니다. 기간제·쿠폰제(횟수제)·워크샵(특강) 수강권과 할인 설정 화면을 보면서 설명합니다.',
-  },
-  {
-    type: 'sidebar',
-    target: 'sidebar-6',
-    label: '업무/수업 일지',
-    message: '"이동하기"를 누르면 업무/수업 일지 페이지로 이동합니다. 날짜별 일지·운영 메모 화면을 보면서 안내합니다.',
+    target: 'sidebar-enrollments',
+    label: '⑤ 신청인원 관리',
+    message:
+      '"이동하기"를 누르면 신청인원 관리 페이지로 이동합니다.\n' +
+      '수업별 신청자를 보고, 앱으로 신청하지 않은 회원을 수기로 추가할 수 있습니다.',
+    pageKey: 'enrollments',
+    path: 'enrollments',
   },
   {
     type: 'sidebar',
     target: 'header-quick-pay',
-    label: '수강권 간편결제',
-    message: '"이동하기"를 누르면 매출/정산(판매) 페이지로 이동합니다. 회원에게 수강권을 바로 판매하는 화면을 보면서 설명합니다.',
+    label: '⑥ 수강권 간편결제',
+    message:
+      '"이동하기"를 누르면 매출/정산(판매) 화면으로 이동합니다.\n' +
+      '학원에 방문한 회원에게 수강권을 즉시 판매·결제할 수 있습니다.',
+    pageKey: 'revenue',
+    path: 'revenue',
+    query: 'tab=sales',
+  },
+  {
+    type: 'info',
+    target: null,
+    title: '🎉 마지막 — 홍보로 회원 모으기',
+    body:
+      '수업과 수강권을 만들었다면, 이제 알릴 차례예요.\n' +
+      '스케줄에서 세션을 누르면 "결제 링크 복사", 수강권/상품에서는 "구매 링크 복사" 버튼이 있어요.\n' +
+      '이 링크를 인스타그램·카카오톡·오픈채팅에 올리면, 회원이 링크만 누르고 바로 결제·신청합니다.\n' +
+      '자세한 홍보 방법은 가이드북에서 언제든 다시 볼 수 있어요.',
+    ctaPath: 'guide#promote',
+    ctaLabel: '홍보 가이드 열기',
   },
 ];
 
 /** 페이지별 스텝: 실제로 이동·클릭해 보는 요소 중심, 디테일한 설명 */
 export const PAGE_STEPS: Record<string, PageStepDef[]> = {
   dashboard: [
+    {
+      target: 'page-dashboard-setup',
+      title: '오픈 준비 체크리스트',
+      body: '신규 학원이라면 여기 "학원 오픈 준비" 카드가 가장 먼저 보입니다. 6단계를 차례로 누르면 각 화면으로 이동하고, 실제로 만들면 자동으로 ✓ 체크됩니다. 모두 끝내면 카드는 사라집니다.',
+      tip: '각 단계의 완료 여부는 실제 등록 데이터로 판정됩니다.',
+    },
     {
       target: 'page-dashboard-0',
       title: '오늘의 수업',
@@ -98,28 +163,24 @@ export const PAGE_STEPS: Record<string, PageStepDef[]> = {
       actionHint: 'click',
       tip: '자주 쓰는 메뉴는 대시보드에서 바로 들어가면 편합니다.',
     },
+  ],
+  settings: [
     {
-      target: 'page-dashboard-card-0',
-      title: '클래스 관리 바로가기',
-      body: '이 카드를 누르면 클래스(반) 관리 페이지로 이동합니다. 반 추가·수정, 수강권 연결을 여기서 시작할 수 있습니다.',
-      actionHint: 'click',
+      target: 'page-settings-0',
+      title: '학원 홈 꾸미기',
+      body: '여기서 우리 학원 페이지를 꾸밉니다. 위쪽 탭(학원 정보 / 페이지 구성 / 상담)으로 항목을 나눠서 설정할 수 있어요.',
     },
     {
-      target: 'page-dashboard-card-1',
-      title: '스케줄 관리 바로가기',
-      body: '스케줄 관리 페이지로 이동합니다. 반복 일정 생성, 일별 수업 확인·수정을 할 수 있습니다.',
+      target: 'page-settings-tab-academy',
+      title: '학원 정보',
+      body: '학원 이름·주소·연락처·소개글, 인스타그램·유튜브·네이버지도·카카오 채널 링크, 그리고 계좌이체 입금 계좌를 입력합니다. 입력 후 꼭 "저장"을 눌러 주세요.',
       actionHint: 'click',
+      tip: '소개글과 대표 링크를 채우면 회원에게 보이는 학원 페이지가 풍성해집니다.',
     },
     {
-      target: 'page-dashboard-card-2',
-      title: '신청인원 관리 바로가기',
-      body: '신청인원 관리 페이지로 이동합니다. 수업별 예약·등록 현황과 수기 추가를 관리합니다.',
-      actionHint: 'click',
-    },
-    {
-      target: 'page-dashboard-card-3',
-      title: '수강권 관리 바로가기',
-      body: '수강권/상품 페이지로 이동합니다. 기간제·쿠폰제(횟수제)·워크샵(특강) 수강권과 할인 설정을 여기서 합니다.',
+      target: 'page-settings-tab-page',
+      title: '페이지 구성',
+      body: '회원에게 보이는 학원 홈 화면의 섹션 순서를 바꾸거나, 보이기/숨기기를 토글하고, 커스텀 섹션(공지·이벤트 등)을 추가할 수 있습니다. 여기를 한 번이라도 저장하면 "홈 꾸미기" 단계가 완료됩니다.',
       actionHint: 'click',
     },
   ],
@@ -150,6 +211,12 @@ export const PAGE_STEPS: Record<string, PageStepDef[]> = {
       actionHint: 'click',
       tip: '클래스(반)를 먼저 만들어 두어야 스케줄에 선택할 수 있습니다.',
     },
+    {
+      target: 'page-schedule-0',
+      title: '세션 링크로 홍보하기',
+      body: '달력에서 개별 수업(세션)을 누르면 상세 창이 열리고, 그 안에 "결제 링크 복사" 버튼이 있습니다. 이 링크를 인스타·카톡에 공유하면 회원이 바로 그 수업을 결제·신청할 수 있어요.',
+      tip: '특정 워크샵·특강을 홍보할 때 특히 유용합니다.',
+    },
   ],
   enrollments: [
     {
@@ -176,7 +243,7 @@ export const PAGE_STEPS: Record<string, PageStepDef[]> = {
       title: '새 상품 추가',
       body: '"새 상품 추가" 버튼을 누르면 수강권(이름, 가격, 횟수/기간, 적용 클래스)을 등록하는 모달이 열립니다. 할인은 별도 "할인 추가"로 설정할 수 있습니다. 버튼을 눌러 보세요.',
       actionHint: 'click',
-      tip: '수강권은 클래스(반)와 연결해 두면, 해당 반 수업 출석 시에만 사용 가능합니다.',
+      tip: '만든 수강권 옆 링크 아이콘을 누르면 "구매 링크"가 복사돼, 그대로 홍보에 쓸 수 있습니다.',
     },
   ],
   logs: [
@@ -185,23 +252,12 @@ export const PAGE_STEPS: Record<string, PageStepDef[]> = {
       title: '업무/수업 일지 화면',
       body: '날짜를 선택하면 그날 스케줄된 수업 목록이 나옵니다. 수업별로 "일지 작성하기"를 누르면 출석·메모를 기록하고, 오른쪽 "운영 메모"에는 센터 운영 특이사항을 적을 수 있습니다.',
     },
-    {
-      target: 'page-logs-date',
-      title: '날짜 선택',
-      body: '위에서 날짜를 바꾸면 해당 날짜의 수업과 일지가 로드됩니다. 오늘 날짜를 선택한 뒤, 아래 수업 목록에서 "일지 작성하기"를 눌러 보세요.',
-      tip: '미작성 일지는 노란색으로 표시됩니다.',
-    },
-    {
-      target: 'page-logs-note',
-      title: '운영 메모',
-      body: '오늘 센터 운영 관련 특이사항(예: 시설 점검, 비품 구매)을 자유롭게 적을 수 있습니다. "메모 저장"으로 저장되며, 날짜별로 유지됩니다.',
-    },
   ],
   students: [
     { target: 'page-students-0', title: '학생 관리', body: '등록된 회원 목록을 확인하고, 신규 회원을 등록할 수 있습니다.' },
   ],
   instructors: [
-    { target: 'page-instructors-0', title: '강사 관리', body: '강사 프로필을 등록하고 학원에 연결합니다.' },
+    { target: 'page-instructors-0', title: '강사 관리', body: '강사 프로필을 등록하고 학원에 연결합니다. 등록한 강사는 클래스(반)와 스케줄에서 선택할 수 있습니다.' },
   ],
   consultations: [
     { target: 'page-consultations-0', title: '상담 관리', body: '상담·문의 내용을 등록하고 진행 상황을 관리합니다.' },
@@ -209,12 +265,9 @@ export const PAGE_STEPS: Record<string, PageStepDef[]> = {
   revenue: [
     {
       target: 'page-revenue-0',
-      title: '매출/정산',
-      body: '매출 현황을 확인하고, 수강권 간편결제로 판매할 수 있습니다. 헤더의 "수강권 간편결제"와 동일한 판매 화면으로 이동합니다.',
+      title: '매출/정산 · 수강권 간편결제',
+      body: '매출 현황을 확인하고, "판매" 탭에서 회원에게 수강권을 바로 판매·결제할 수 있습니다. 헤더의 "수강권 간편결제"와 동일한 화면입니다.',
     },
-  ],
-  settings: [
-    { target: 'page-settings-0', title: '설정', body: '학원 정보와 운영 설정을 변경합니다.' },
   ],
 };
 
@@ -225,40 +278,12 @@ export function getPageKeyFromPathname(pathname: string): string | null {
   return null;
 }
 
-export const SIDEBAR_STEP_TO_PAGE_KEY: Record<number, string> = {
-  1: 'dashboard',
-  2: 'class-masters',
-  3: 'schedule',
-  4: 'enrollments',
-  5: 'products',
-  6: 'logs',
-  7: 'revenue',
-};
-
-/** 사이드바 단계(1~7)별 이동 경로. 빈 문자열이면 대시보드(루트) */
-const SIDEBAR_STEP_PATH: Record<number, string> = {
-  1: '',
-  2: 'class-masters',
-  3: 'schedule',
-  4: 'enrollments',
-  5: 'products',
-  6: 'logs',
-  7: 'revenue',
-};
-
-/** 사이드바 단계별 쿼리 (수강권 간편결제 = 매출/정산 판매 탭) */
-const SIDEBAR_STEP_QUERY: Record<number, string> = {
-  7: 'tab=sales',
-};
-
 /**
- * 사이드바 단계에서 "이동하기" 클릭 시 실제로 이동할 URL
- * 이동 후 pathname 변경으로 context가 phase를 'page'로 바꾸고 해당 페이지 뷰 + 스텝 설명 표시
+ * 사이드바 스텝에서 "이동하기" 클릭 시 실제로 이동할 URL.
+ * 스텝 객체가 path/query를 직접 들고 있으므로 별도 매핑 테이블이 필요 없다.
  */
-export function getSidebarStepUrl(academyId: string, stepIndex: number): string {
+export function getSidebarStepUrl(academyId: string, step: SidebarStep): string {
   const base = `/academy-admin/${academyId}`;
-  const path = SIDEBAR_STEP_PATH[stepIndex] ?? '';
-  const query = SIDEBAR_STEP_QUERY[stepIndex] ?? '';
-  const pathPart = path ? `${base}/${path}` : base;
-  return query ? `${pathPart}?${query}` : pathPart;
+  const pathPart = step.path ? `${base}/${step.path}` : base;
+  return step.query ? `${pathPart}?${step.query}` : pathPart;
 }
