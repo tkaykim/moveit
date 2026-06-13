@@ -55,6 +55,9 @@ export function TicketTossPaymentModal({
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [cancelMsg, setCancelMsg] = useState('');
+  // 결제수단 미선택·약관 미동의 등 "사용자가 고칠 수 있는" 오류는 모달을 닫지 않고
+  // 여기 인라인으로 안내한다(부모 onError 는 위젯 로드/렌더 실패 같은 치명적 경우 전용).
+  const [inlineError, setInlineError] = useState('');
   const widgetsRef = useRef<any>(null);
 
   useEffect(() => {
@@ -115,6 +118,8 @@ export function TicketTossPaymentModal({
   const handleRequestPayment = async () => {
     if (!widgetsRef.current) return;
     setPaying(true);
+    setInlineError('');
+    setCancelMsg('');
     try {
       const customerMobilePhone = toTossPhone(customerMobilePhoneProp);
       const isApp = isNativePlatform();
@@ -147,12 +152,16 @@ export function TicketTossPaymentModal({
         const rawMsg = (typeof e?.message === 'string' && e.message.trim()) ? e.message : '';
         const isPhoneFormatError =
           rawMsg && (rawMsg.includes('전화번호') && (rawMsg.includes('특수문자') || rawMsg.includes('형식')));
+        const isSelectMethod = rawMsg && (rawMsg.includes('선택') || /method|payment/i.test(code));
         const friendly = isPhoneFormatError
           ? '전화번호는 하이픈(-) 없이 숫자만 입력해주세요.'
-          : (rawMsg || (code
-              ? `결제 요청 중 오류가 발생했습니다 (${code}). 잠시 후 다시 시도해주세요.`
-              : '결제 요청에 실패했습니다. 결제 수단을 다시 선택하고 시도해주세요.'));
-        onError(friendly);
+          : isSelectMethod
+            ? '결제 수단을 선택한 뒤 결제하기를 눌러주세요.'
+            : (rawMsg || (code
+                ? `결제 요청 중 오류가 발생했습니다 (${code}). 잠시 후 다시 시도해주세요.`
+                : '결제 요청에 실패했습니다. 결제 수단을 다시 선택하고 시도해주세요.'));
+        // 모달을 닫지 않고 인라인으로 안내 — 사용자가 결제 수단을 고른 뒤 바로 재시도 가능.
+        setInlineError(friendly);
       }
     } finally {
       setPaying(false);
@@ -192,7 +201,10 @@ export function TicketTossPaymentModal({
         </div>
 
         <div className="px-5 pt-3 pb-5">
-          {cancelMsg && (
+          {inlineError && (
+            <p className="mb-2 text-center text-sm font-medium text-red-500">{inlineError}</p>
+          )}
+          {cancelMsg && !inlineError && (
             <p className="mb-2 text-center text-sm text-neutral-500">{cancelMsg}</p>
           )}
           <button
