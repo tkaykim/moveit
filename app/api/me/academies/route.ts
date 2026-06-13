@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
 
     const { data: newAcademy, error: acError } = await supabase
       .from('academies')
-      .insert([academyInsert])
+      .insert([academyInsert] as never)
       .select('id, slug')
       .single();
 

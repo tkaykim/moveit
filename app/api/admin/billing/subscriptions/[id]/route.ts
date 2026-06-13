@@ -78,7 +78,7 @@ export async function PATCH(
 
     const { error } = await supabase
       .from('academy_subscriptions')
-      .update(updateData)
+      .update(updateData as never)
       .eq('id', id);
 
     if (error) throw error;

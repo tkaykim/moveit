@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
 
     await supabase
       .from('academy_subscriptions')
-      .update(updateData)
+      .update(updateData as never)
       .eq('id', (subscription as any).id);
 
     return NextResponse.json({
