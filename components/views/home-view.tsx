@@ -321,7 +321,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             .from('instructor_favorites')
             .select('instructor_id')
             .in('instructor_id', instructorIds)
-            .catch(() => ({ data: [] })),
+            .then((r: any) => r, () => ({ data: [] })),
           (supabase as any)
             .from('classes')
             .select('instructor_id, academy_id')
