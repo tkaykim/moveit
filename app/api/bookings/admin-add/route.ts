@@ -93,19 +93,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // 스케줄 current_students 증가
-    const { data: currentSchedule } = await supabase
-      .from('schedules')
-      .select('current_students')
-      .eq('id', scheduleId)
-      .single();
-
-    if (currentSchedule) {
-      await supabase
-        .from('schedules')
-        .update({ current_students: (currentSchedule.current_students || 0) + 1 })
-        .eq('id', scheduleId);
-    }
+    // current_students 는 bookings 트리거(sync_schedule_student_count)가 자동 동기화한다.
+    // (기존 수동 +1 은 stale 스냅샷 기반이라 트리거 값을 클로버하므로 제거)
 
     // 활동 로그: 관리자 수기 추가
     insertEnrollmentActivityLog({

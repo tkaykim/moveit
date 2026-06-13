@@ -50,6 +50,20 @@ export async function POST(
       return NextResponse.json({ error: '이미 처리되었거나 대기 중인 주문이 아닙니다.' }, { status: 400 });
     }
 
+    // 멱등성: PENDING → CONFIRMED 원자적 claim.
+    // 관리자 더블클릭/요청 재시도로 동시에 두 번 들어와도 하나만 통과 → 수강권·매출 이중발급 차단.
+    // (이후 단계 실패 시 아래 에러 분기에서 PENDING 으로 되돌려 재시도 가능하게 함)
+    const { data: claimed } = await supabase
+      .from('bank_transfer_orders')
+      .update({ status: 'CONFIRMED', confirmed_at: new Date().toISOString(), confirmed_by: user.id })
+      .eq('id', orderId)
+      .eq('status', 'PENDING')
+      .select('id')
+      .maybeSingle();
+    if (!claimed) {
+      return NextResponse.json({ error: '이미 처리 중이거나 처리된 주문입니다.' }, { status: 409 });
+    }
+
     const customerUserId = order.user_id;
 
     // Legacy fallback: B-2 (2026-04-21) 이전에 생성된 주문은 user_id가 null일 수 있음.
@@ -79,16 +93,7 @@ export async function POST(
             .from('bookings')
             .update({ status: 'CONFIRMED', payment_status: 'COMPLETED' })
             .eq('id', pendingBooking.id);
-          const { data: confirmedBookings } = await supabase
-            .from('bookings')
-            .select('id')
-            .eq('schedule_id', order.schedule_id)
-            .in('status', ['CONFIRMED', 'COMPLETED']);
-          const actualCount = confirmedBookings?.length || 0;
-          await supabase
-            .from('schedules')
-            .update({ current_students: actualCount })
-            .eq('id', order.schedule_id);
+          // current_students 는 bookings 트리거(sync_schedule_student_count)가 자동 동기화한다.
         }
       }
 
@@ -164,6 +169,10 @@ export async function POST(
 
     if (insertError) {
       console.error('user_tickets insert error:', insertError);
+      // claim 되돌리기 → 재시도 가능
+      await supabase.from('bank_transfer_orders')
+        .update({ status: 'PENDING', confirmed_at: null, confirmed_by: null })
+        .eq('id', orderId);
       return NextResponse.json({ error: '수강권 발급에 실패했습니다.' }, { status: 500 });
     }
 
@@ -231,6 +240,10 @@ export async function POST(
     if (revInsertError) {
       console.error('revenue_transactions insert error:', revInsertError);
       await supabase.from('user_tickets').delete().eq('id', userTicket.id);
+      // claim 되돌리기 → 재시도 가능
+      await supabase.from('bank_transfer_orders')
+        .update({ status: 'PENDING', confirmed_at: null, confirmed_by: null })
+        .eq('id', orderId);
       return NextResponse.json({ error: '결제 기록 저장에 실패했습니다.' }, { status: 500 });
     }
 
@@ -340,24 +353,19 @@ export async function POST(
               status: 'CONFIRMED',
               payment_status: 'COMPLETED',
             };
-            const { data: bookingRow } = await supabase
+            const { data: bookingRow, error: bookingInsErr } = await supabase
               .from('bookings')
               .insert(bookingData)
               .select()
               .single();
+            if (bookingInsErr) {
+              // 수강권은 이미 발급됨(유효). 예약만 실패 → 거짓 "예약 확정" 메시지 방지 위해 booking=null 유지.
+              console.error('bank-transfer booking insert error:', bookingInsErr);
+            }
             booking = bookingRow;
           }
           if (booking) {
-            const { data: confirmedBookings } = await supabase
-              .from('bookings')
-              .select('id')
-              .eq('schedule_id', order.schedule_id)
-              .in('status', ['CONFIRMED', 'COMPLETED']);
-            const actualCount = confirmedBookings?.length || 0;
-            await supabase
-              .from('schedules')
-              .update({ current_students: actualCount })
-              .eq('id', order.schedule_id);
+            // current_students 는 bookings 트리거(sync_schedule_student_count)가 자동 동기화한다.
 
             // 활동 로그: 수강신청 (계좌이체 확인)
             insertEnrollmentActivityLog({

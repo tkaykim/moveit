@@ -341,34 +341,29 @@ export async function consumeUserTicket(
     return currentTicket;
   }
 
-  // 6. 횟수권(COUNT)인 경우: remaining_count 차감
-  const newRemainingCount = (currentTicket.remaining_count || 0) - count;
-
-  if (newRemainingCount < 0) {
+  // 6. 횟수권(COUNT)인 경우: 원자적 차감 RPC 호출
+  //    (기존 read-then-update 는 동시 요청 시 차감이 손실되어 1회권으로 2회 사용되는 버그가 있었음.
+  //     consume_ticket_count 는 단일 UPDATE 안에서 remaining_count >= count 조건을 원자적으로 검사·차감)
+  if ((currentTicket.remaining_count || 0) < count) {
     throw new Error('수강권 잔여 횟수가 부족합니다.');
   }
 
-  // remaining_count 차감 및 상태 업데이트
-  const updates: Database['public']['Tables']['user_tickets']['Update'] = {
-    remaining_count: newRemainingCount,
-  };
+  const { data, error } = await supabase.rpc('consume_ticket_count', {
+    p_user_ticket_id: userTicketId,
+    p_count: count,
+  });
 
-  // remaining_count가 0이 되면 USED 상태로 변경
-  if (newRemainingCount === 0) {
-    updates.status = 'USED';
+  if (error) {
+    // INSUFFICIENT_TICKET_COUNT (동시성 충돌 또는 잔여 부족)
+    if (typeof error.message === 'string' && error.message.includes('INSUFFICIENT_TICKET_COUNT')) {
+      throw new Error('수강권 잔여 횟수가 부족합니다.');
+    }
+    throw error;
   }
-
-  const { data, error } = await supabase
-    .from('user_tickets')
-    .update(updates)
-    .eq('id', userTicketId)
-    .eq('status', 'ACTIVE') // 동시성 보호: ACTIVE 상태인 경우에만 업데이트
-    .select()
-    .single();
-
-  if (error) throw error;
-  if (!data) throw new Error('수강권 차감에 실패했습니다. 다시 시도해주세요.');
-  return data;
+  // rpc 가 단일 행(record) 또는 배열로 반환될 수 있어 정규화
+  const updated = Array.isArray(data) ? data[0] : data;
+  if (!updated) throw new Error('수강권 차감에 실패했습니다. 다시 시도해주세요.');
+  return updated;
 }
 
 /**

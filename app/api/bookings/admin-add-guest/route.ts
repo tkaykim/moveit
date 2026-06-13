@@ -113,10 +113,7 @@ export async function POST(request: Request) {
       );
     }
 
-    await supabase
-      .from('schedules')
-      .update({ current_students: currentStudents + 1 })
-      .eq('id', scheduleId);
+    // current_students 는 bookings 트리거(sync_schedule_student_count)가 자동 동기화한다.
 
     // 활동 로그: 관리자 게스트 수기 추가
     insertEnrollmentActivityLog({

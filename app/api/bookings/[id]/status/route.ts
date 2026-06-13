@@ -4,6 +4,7 @@ import { sendNotification } from '@/lib/notifications';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
 import { isCountTicket } from '@/lib/utils/ticket-type';
+import { formatKSTDate, formatKSTTime } from '@/lib/utils/kst-time';
 
 /**
  * PATCH /api/bookings/[id]/status
@@ -117,7 +118,9 @@ export async function PATCH(
       .single();
 
     // 취소 시 쿠폰제(COUNT) 수강권 횟수 반환
-    if (status === 'CANCELLED' && restoreTicket && currentBooking.user_ticket_id) {
+    // 멱등성 가드: 이미 CANCELLED 였던 예약을 다시 취소해도 횟수를 중복 복원하지 않는다.
+    // (운영자 더블클릭/요청 재시도로 remaining_count 가 무한 증가하던 버그 차단)
+    if (status === 'CANCELLED' && oldStatus !== 'CANCELLED' && restoreTicket && currentBooking.user_ticket_id) {
       const { data: userTicket, error: utError } = await (supabase as any)
         .from('user_tickets')
         .select('id, remaining_count, status, tickets(ticket_type, total_count)')
@@ -174,30 +177,10 @@ export async function PATCH(
       }).catch(() => {});
     }
 
-    // schedules.current_students 업데이트
-    if (updateScheduleCount && scheduleId) {
-      // 해당 스케줄의 CONFIRMED + COMPLETED 예약 수 계산 (출석완료와 구입승인 모두 합산)
-      const { data: confirmedBookings, error: confirmedError } = await (supabase as any)
-        .from('bookings')
-        .select('id')
-        .eq('schedule_id', scheduleId)
-        .in('status', ['CONFIRMED', 'COMPLETED']);
-
-      if (!confirmedError) {
-        const totalCount = confirmedBookings?.length || 0;
-        
-        // 스케줄의 current_students 업데이트
-        const { error: scheduleUpdateError } = await (supabase as any)
-          .from('schedules')
-          .update({ current_students: totalCount })
-          .eq('id', scheduleId);
-
-        if (scheduleUpdateError) {
-          console.error('Schedule update error:', scheduleUpdateError);
-          // 예약은 업데이트되었으므로 에러를 무시하고 진행
-        }
-      }
-    }
+    // schedules.current_students 는 bookings 트리거(sync_schedule_student_count)가
+    // 상태 변경 시 자동 재계산한다. 여기서 수동 갱신하면 트리거 값과 충돌하므로 제거.
+    // updateScheduleCount 파라미터는 하위 호환을 위해 수용만 하고 무시한다.
+    void updateScheduleCount;
 
     // 취소 알림 발송 (비동기)
     if (status === 'CANCELLED' && updatedBooking?.user_id) {
@@ -220,8 +203,7 @@ export async function PATCH(
           
           let timeStr = '';
           if (startTime) {
-            const d = new Date(startTime);
-            timeStr = ` (${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')})`;
+            timeStr = ` (${formatKSTDate(new Date(startTime))} ${formatKSTTime(startTime)})`;
           }
           
           return sendNotification({
@@ -317,8 +299,7 @@ export async function PATCH(
           
           let timeStr = '';
           if (startTime) {
-            const d = new Date(startTime);
-            timeStr = ` ${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+            timeStr = ` ${formatKSTDate(new Date(startTime))} ${formatKSTTime(startTime)}`;
           }
           
           return sendNotification({
