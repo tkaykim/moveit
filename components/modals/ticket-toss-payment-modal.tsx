@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useId } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { normalizePhone } from '@/lib/utils/phone';
 import { isNativePlatform } from '@/lib/capacitor/platform';
@@ -59,6 +59,10 @@ export function TicketTossPaymentModal({
   // 여기 인라인으로 안내한다(부모 onError 는 위젯 로드/렌더 실패 같은 치명적 경우 전용).
   const [inlineError, setInlineError] = useState('');
   const widgetsRef = useRef<any>(null);
+  // 위젯 컨테이너 id를 인스턴스마다 고유하게 — 모달 재오픈/중복 마운트 시 "위젯 중복 렌더" 오류 방지.
+  const uid = useId().replace(/:/g, '');
+  const payAreaId = `toss-widget-payment-${uid}`;
+  const agreeAreaId = `toss-widget-agreement-${uid}`;
 
   useEffect(() => {
     if (!isOpen || !clientKey || amount <= 0) return;
@@ -87,7 +91,7 @@ export function TicketTossPaymentModal({
         });
 
         if (cancelled) return;
-        if (!document.querySelector('#toss-widget-payment') || !document.querySelector('#toss-widget-agreement')) {
+        if (!document.querySelector(`#${payAreaId}`) || !document.querySelector(`#${agreeAreaId}`)) {
           throw new Error('결제 영역을 찾을 수 없습니다.');
         }
 
@@ -99,8 +103,8 @@ export function TicketTossPaymentModal({
         await widgets.setAmount({ currency: 'KRW', value: amount });
 
         await Promise.all([
-          widgets.renderPaymentMethods({ selector: '#toss-widget-payment', variantKey: 'DEFAULT' }),
-          widgets.renderAgreement({ selector: '#toss-widget-agreement', variantKey: 'AGREEMENT' }),
+          widgets.renderPaymentMethods({ selector: `#${payAreaId}`, variantKey: 'DEFAULT' }),
+          widgets.renderAgreement({ selector: `#${agreeAreaId}`, variantKey: 'AGREEMENT' }),
         ]);
       } catch (e: any) {
         if (!cancelled) onError(e?.message || '결제 위젯을 불러올 수 없습니다.');
@@ -190,8 +194,8 @@ export function TicketTossPaymentModal({
 
         <div className="overflow-y-auto flex-1 px-5 min-h-0 relative">
           {/* selector 대상 요소는 DOM에 항상 있어야 함(공식: "DOM 생성된 이후에 호출") */}
-          <div id="toss-widget-payment" className="min-h-[120px]" />
-          <div id="toss-widget-agreement" className="min-h-[80px]" />
+          <div id={payAreaId} className="min-h-[120px]" />
+          <div id={agreeAreaId} className="min-h-[80px]" />
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white">
               <Loader2 size={28} className="text-neutral-400 animate-spin" />
