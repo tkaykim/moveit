@@ -118,6 +118,7 @@ export async function POST(
 
     const userTicketId = rev.user_ticket_id;
     let utRow: any = null;
+    let attendedCount: number | null = null;
     if (userTicketId) {
       const { data } = await supabase
         .from('user_tickets')
@@ -125,6 +126,14 @@ export async function POST(
         .eq('id', userTicketId)
         .maybeSingle();
       utRow = data;
+
+      // 실제 출석(COMPLETED) 회차 — 횟수제 부과 기준
+      const { count: attended } = await supabase
+        .from('bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_ticket_id', userTicketId)
+        .eq('status', 'COMPLETED');
+      attendedCount = attended ?? 0;
     }
 
     // ── 2. 권장 환불액 산정 (서버 단일 소스) ──
@@ -133,6 +142,7 @@ export async function POST(
       ticketCategory,
       quantity: rev.quantity,
       remainingCount: utRow?.remaining_count ?? null,
+      attendedCount,
       startDate: utRow?.start_date ?? null,
       expiryDate: utRow?.expiry_date ?? null,
       validDays: rev.valid_days,

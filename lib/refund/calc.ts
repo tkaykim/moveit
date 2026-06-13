@@ -11,6 +11,8 @@
  *     1/2 경과 후      → 0
  *   (교습기간 1개월 이내 기준. 장기 수강권은 월할 계산이 더 정확 — 권장값은 근사이며 관리자 조정 전제)
  * - 횟수제/워크샵(COUNT·popup): 결제액 − (사용회차 × 정가 1회 단가),  정가단가 = original_price / 총수량
+ *     사용회차 = "실제 출석(COMPLETED) 회차". 미래 예약(취소 예정)·취소된 예약은 부과하지 않음.
+ *     (remaining_count 는 예약 시점에 차감되고 취소 복구가 누락될 수 있어, 출석 기준이 정확.)
  *     (1회 워크샵은 미참석→전액, 참석→0 으로 자연 수렴)
  * - 만료(EXPIRED): 권장 0 (관리자 override 가능)
  *
@@ -23,7 +25,8 @@ export interface RefundCalcInput {
   ticketTypeSnapshot?: string | null; // revenue_transactions.ticket_type_snapshot ('COUNT'|'PERIOD'|...)
   ticketCategory?: string | null;     // tickets.ticket_category ('regular'|'popup')
   quantity?: number | null;           // 구매 총 회차(횟수제) — revenue.quantity
-  remainingCount?: number | null;     // user_tickets.remaining_count
+  remainingCount?: number | null;     // user_tickets.remaining_count (현재 잔여 — 표시용)
+  attendedCount?: number | null;      // 실제 출석(COMPLETED) 예약 수 — 부과 기준. null이면 (총-잔여) fallback
   startDate?: string | null;          // user_tickets.start_date (YYYY-MM-DD)
   expiryDate?: string | null;         // user_tickets.expiry_date (YYYY-MM-DD)
   validDays?: number | null;          // revenue.valid_days (총 유효일)
@@ -47,9 +50,12 @@ export interface RefundCalcResult {
   }[];
   /** 기간제 진행률(0~1) — 표시용, 해당 시에만 */
   progress?: number;
-  /** 횟수제 사용/총 — 표시용, 해당 시에만 */
+  /** 횟수제 사용(출석)/총/잔여 — 표시용, 해당 시에만 */
   usedCount?: number;
   totalCount?: number;
+  remainingCount?: number;
+  /** 잔여 기간(일). null=무기한 */
+  remainingDays?: number | null;
   expired: boolean;
 }
 
@@ -62,6 +68,14 @@ function clampMoney(v: number, max: number): number {
 function dayStart(value: string): number {
   const d = new Date(value);
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+/** 만료일까지 잔여 일수(음수면 0). 표시용 문자열 함께 반환. */
+function remainingPeriod(expiryDate: string | null | undefined, nowISO: string): { days: number | null; label: string } {
+  if (!expiryDate) return { days: null, label: '무기한' };
+  const days = Math.round((dayStart(expiryDate) - dayStart(nowISO)) / 86400000);
+  if (days < 0) return { days: 0, label: `만료 ${expiryDate} (기간 지남)` };
+  return { days, label: `${expiryDate}까지 (잔여 ${days}일)` };
 }
 
 export function computeRefund(input: RefundCalcInput): RefundCalcResult {
@@ -112,6 +126,7 @@ export function computeRefund(input: RefundCalcInput): RefundCalcResult {
       else { ratio = 0; bracket = '총 기간 1/2 경과 후(반환 없음)'; }
     }
     const suggested = clampMoney(paid * ratio, paid);
+    const rem = remainingPeriod(input.expiryDate, input.nowISO);
 
     return {
       kind: 'PERIOD',
@@ -121,10 +136,12 @@ export function computeRefund(input: RefundCalcInput): RefundCalcResult {
       breakdown: [
         { label: '결제액', value: `${paid.toLocaleString()}원` },
         { label: '경과/총일수', value: `${Math.max(0, elapsedDays)}일 / ${totalDays ?? '?'}일` },
+        { label: '잔여 기간', value: rem.label },
         { label: '반환 구간', value: bracket },
         { label: '권장 환불액', value: `${suggested.toLocaleString()}원` },
       ],
       progress: totalDays ? elapsedDays / totalDays : undefined,
+      remainingDays: rem.days,
       expired: false,
     };
   }
@@ -132,27 +149,35 @@ export function computeRefund(input: RefundCalcInput): RefundCalcResult {
   // COUNT / WORKSHOP — 사용분 정가 차감
   const total = input.quantity && input.quantity > 0 ? input.quantity : 1;
   const remaining = input.remainingCount != null ? Math.max(0, input.remainingCount) : 0;
-  const used = Math.max(0, total - remaining);
+  // 부과 기준 = 실제 출석(COMPLETED) 회차. 없으면 (총-잔여) fallback.
+  // 미래 예약은 환불 시 취소되어 부과하지 않고, 취소된 예약도 부과하지 않으므로 출석 기준이 정확.
+  const attended = input.attendedCount != null ? Math.max(0, input.attendedCount) : Math.max(0, total - remaining);
+  const used = Math.min(attended, total);
   // 정가 1회 단가 (할인 전 기준). original 없으면 결제액 기준 fallback.
   const baseForUnit = input.originalPrice && input.originalPrice > 0 ? input.originalPrice : paid;
   const unitPrice = Math.round(baseForUnit / total);
   const suggested = clampMoney(paid - used * unitPrice, paid);
+  const rem = remainingPeriod(input.expiryDate, input.nowISO);
 
   const kindLabel = isWorkshop ? '워크샵/팝업' : '횟수제';
   return {
     kind: isWorkshop ? 'WORKSHOP' : 'COUNT',
     paidAmount: paid,
     suggestedRefund: suggested,
-    basis: `${kindLabel} · 결제액 − (사용 ${used}회 × 정가 1회 ${unitPrice.toLocaleString()}원). 정가 차감 기준이며 학원 재량으로 조정 가능합니다.`,
+    basis: `${kindLabel} · 결제액 − (출석 ${used}회 × 정가 1회 ${unitPrice.toLocaleString()}원). 출석완료 회차만 차감(미래·취소 예약 미부과), 정가 기준이며 학원 재량 조정 가능.`,
     breakdown: [
       { label: '결제액', value: `${paid.toLocaleString()}원` },
-      { label: '사용/총 회차', value: `${used}회 / ${total}회 (잔여 ${remaining}회)` },
+      { label: '출석(사용) 회차', value: `${used}회 / 총 ${total}회` },
+      { label: '잔여 횟수', value: `${remaining}회` },
+      { label: '잔여 기간', value: rem.label },
       { label: '정가 1회 단가', value: `${unitPrice.toLocaleString()}원` },
       { label: '차감액', value: `−${(used * unitPrice).toLocaleString()}원` },
       { label: '권장 환불액', value: `${suggested.toLocaleString()}원` },
     ],
     usedCount: used,
     totalCount: total,
+    remainingCount: remaining,
+    remainingDays: rem.days,
     expired: false,
   };
 }
