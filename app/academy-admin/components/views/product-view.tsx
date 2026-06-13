@@ -6,6 +6,7 @@ import { SectionHeader } from '../common/section-header';
 import { TicketModal } from './products/ticket-modal';
 import { DiscountModal } from './products/discount-modal';
 import { ShareLinkModal } from './share-link-modal';
+import { useAcademy } from '../../contexts/academy-context';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { DEFAULT_TICKET_LABELS, TICKET_LABEL_MAX_LENGTH } from '@/lib/constants/ticket-labels';
 import { formatCurrency } from './utils/format-currency';
@@ -18,6 +19,7 @@ interface ProductViewProps {
 type TicketCategoryFilter = 'all' | 'regular' | 'popup' | 'workshop';
 
 export function ProductView({ academyId }: ProductViewProps) {
+  const { academySlug: slug } = useAcademy();
   const { labels, descriptions, raw, refetch } = useAcademyTicketLabels(academyId);
   const [tickets, setTickets] = useState<any[]>([]);
   const [discounts, setDiscounts] = useState<any[]>([]);
@@ -588,8 +590,12 @@ export function ProductView({ academyId }: ProductViewProps) {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/book/ticket?ticketId=${product.id}&academyId=${product.academy_id || academyId || ''}`;
-                                    setShareTarget({ url, name: product.name || '수강권' });
+                                    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                                    // 짧은 공유 링크: /book/{slug}/{6자리코드}. 코드 없으면 기존 링크로 폴백.
+                                    const path = product.share_code
+                                      ? `/book/${slug}/${product.share_code}`
+                                      : `/book/ticket?ticketId=${product.id}&academyId=${product.academy_id || academyId || ''}`;
+                                    setShareTarget({ url: `${origin}${path}`, name: product.name || '수강권' });
                                   }}
                                   className="text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 p-2 rounded-lg"
                                   title="홍보 링크 공유"

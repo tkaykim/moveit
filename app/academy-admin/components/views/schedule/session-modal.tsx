@@ -11,6 +11,7 @@ import { formatExclusiveClassText } from '@/lib/utils/exclusive-class';
 import { getClassColor, CLASS_CARD_COLOR_KEYS, CLASS_CARD_COLOR_LABELS, CLASS_CARD_COLORS } from '@/lib/constants/class-colors';
 import { DeleteSessionDialog } from './delete-session-dialog';
 import { ShareLinkModal } from '../share-link-modal';
+import { useAcademy } from '../../../contexts/academy-context';
 
 interface SessionModalProps {
   session: any;
@@ -20,9 +21,16 @@ interface SessionModalProps {
 
 export function SessionModal({ session, academyId, onClose }: SessionModalProps) {
   const router = useRouter();
+  const { academySlug: slug } = useAcademy();
   const [loading, setLoading] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+
+  // 짧은 공유 링크: /book/{slug}/{6자리코드}. 코드 없으면 기존 UUID 링크로 폴백.
+  const bookingPath = session.share_code
+    ? `/book/${slug}/${session.share_code}`
+    : `/book/session/${session.id}`;
+  const bookingUrl = typeof window !== 'undefined' ? `${window.location.origin}${bookingPath}` : '';
   const [isEditing, setIsEditing] = useState(false);
   const [linkedTicketNames, setLinkedTicketNames] = useState<string[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -204,7 +212,6 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
   };
 
   const handleCopyLink = async () => {
-    const bookingUrl = `${window.location.origin}/book/session/${session.id}`;
     try {
       await navigator.clipboard.writeText(bookingUrl);
       setLinkCopied(true);
@@ -344,7 +351,7 @@ export function SessionModal({ session, academyId, onClose }: SessionModalProps)
     <ShareLinkModal
       open={shareOpen}
       onClose={() => setShareOpen(false)}
-      url={typeof window !== 'undefined' ? `${window.location.origin}/book/session/${session.id}` : ''}
+      url={bookingUrl}
       kind="session"
       contextName={session.classes?.name}
     />
