@@ -267,7 +267,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
         
         {/* academyId가 있을 때 헤더 표시 */}
         {academyId && (
-          <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 bg-primary/5/5">
+          <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 bg-primary/5">
             <div className="text-sm font-bold text-black dark:text-white mb-1">
               {t('ticketRecharge.academyTicketsFor', { name: academyName || selectedAcademy?.name_kr || selectedAcademy?.name_en || '' })}
             </div>
@@ -326,7 +326,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
 
               {/* 선택된 학원 */}
               {selectedAcademy && (
-                <div className="p-3 bg-primary/10/10 rounded-xl flex items-center justify-between">
+                <div className="p-3 bg-primary/10 rounded-xl flex items-center justify-between">
                   <div>
                     <div className="font-bold text-black dark:text-white">
                       {selectedAcademy.name_kr || selectedAcademy.name_en || t('ticketRecharge.noName')}
@@ -388,7 +388,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
                       key={ticket.id}
                       className={`bg-neutral-100 dark:bg-neutral-800 rounded-2xl p-4 border ${
                         isPriority && isAvailableForClass
-                          ? 'border-primary border-2 bg-primary/5/5'
+                          ? 'border-primary border-2 bg-primary/5'
                           : 'border-neutral-200 dark:border-neutral-700'
                       }`}
                     >

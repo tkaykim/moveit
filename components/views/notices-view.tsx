@@ -175,7 +175,7 @@ export const NoticesView = ({ onBack }: NoticesViewProps) => {
               key={notice.id}
               className={`bg-white dark:bg-neutral-900 border rounded-2xl p-4 ${
                 notice.is_important
-                  ? 'border-primary bg-primary/5/5'
+                  ? 'border-primary bg-primary/5'
                   : 'border-neutral-200 dark:border-neutral-800'
               }`}
             >
@@ -187,7 +187,7 @@ export const NoticesView = ({ onBack }: NoticesViewProps) => {
                   />
                   <span className={`text-[10px] font-bold px-2 py-1 rounded ${
                     notice.type === 'EVENT'
-                      ? 'bg-primary/10/10 text-primary'
+                      ? 'bg-primary/10 text-primary'
                       : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'
                   }`}>
                     {notice.type === 'EVENT' ? '이벤트' : '공지'}

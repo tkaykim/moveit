@@ -215,7 +215,7 @@ export function FeatureCalendar() {
 
           {/* 수업 클릭 시 상세 + 예약하기 */}
           {selectedClass && !booked && (
-            <div className="mb-3 p-3 rounded-xl bg-primary/10/5 border border-primary/20 space-y-3 animate-in fade-in duration-200">
+            <div className="mb-3 p-3 rounded-xl bg-primary/10 border border-primary/20 space-y-3 animate-in fade-in duration-200">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-neutral-900 dark:text-white">수업 정보</span>
                 <button type="button" onClick={() => setSelectedClass(null)} className="p-1 rounded hover:bg-black/5">

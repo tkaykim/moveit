@@ -365,7 +365,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
               className="w-full bg-white dark:bg-neutral-900 rounded-2xl p-5 shadow-sm border border-neutral-200 dark:border-neutral-800 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
             >
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-primary/20/20 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
                   <BookOpen className="w-6 h-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -459,7 +459,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-bold text-black dark:text-white">{t('my.myBookings')}</h2>
                   {totalUpcoming > 0 && (
-                    <span className="px-2 py-0.5 text-xs font-bold bg-primary/10/20 text-primary rounded-full">
+                    <span className="px-2 py-0.5 text-xs font-bold bg-primary/10 text-primary rounded-full">
                       {totalUpcoming}{language === 'ko' ? '건' : ''}
                     </span>
                   )}
@@ -564,7 +564,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                             className={`
                               flex flex-col items-center py-2 rounded-lg transition-colors
                               ${day.isToday 
-                                ? 'bg-primary/10/20 ring-2 ring-primary' 
+                                ? 'bg-primary/10 ring-2 ring-primary' 
                                 : 'bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700'
                               }
                             `}

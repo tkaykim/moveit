@@ -225,7 +225,7 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
                     onClick={() => setShowVideo(true)}
                     className="w-full h-full flex items-center justify-center group"
                   >
-                    <div className="w-16 h-16 rounded-full bg-primary/10/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                       <Play size={28} className="text-primary ml-1" />
                     </div>
                   </button>
@@ -311,7 +311,7 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
                 {instructorSpecialties && (
                   <div className="flex flex-wrap gap-1 mb-2">
                     {instructorSpecialties.split(',').map((specialty: string, idx: number) => (
-                      <span key={idx} className="text-[10px] px-2 py-0.5 bg-primary/10/10 text-primary rounded-full">
+                      <span key={idx} className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary rounded-full">
                         {specialty.trim()}
                       </span>
                     ))}

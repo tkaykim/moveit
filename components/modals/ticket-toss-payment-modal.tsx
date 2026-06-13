@@ -163,40 +163,41 @@ export function TicketTossPaymentModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden />
-      <div className="relative bg-white dark:bg-neutral-900 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-h-[90vh] flex flex-col max-w-lg animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 border border-neutral-200 dark:border-neutral-800">
-        <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800 dark:border-b-primary/30">
-          <h3 className="text-lg font-bold text-black dark:text-white">결제</h3>
+      {/* 토스 결제위젯은 흰색 고정 iframe이므로 모달 전체를 항상 라이트로 둔다(다크모드에서도). */}
+      <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-h-[90vh] flex flex-col max-w-lg animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3">
+          <h3 className="text-base font-bold text-neutral-900">결제</h3>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 rounded-lg"
+            className="p-1.5 -mr-1.5 text-neutral-400 hover:text-neutral-600 rounded-lg"
             aria-label="닫기"
           >
             <X size={20} />
           </button>
         </div>
 
-        <div className="overflow-y-auto flex-1 p-4 min-h-0 relative">
+        <div className="overflow-y-auto flex-1 px-5 min-h-0 relative">
           {/* selector 대상 요소는 DOM에 항상 있어야 함(공식: "DOM 생성된 이후에 호출") */}
           <div id="toss-widget-payment" className="min-h-[120px]" />
-          <div id="toss-widget-agreement" className="mt-4 min-h-[80px]" />
+          <div id="toss-widget-agreement" className="min-h-[80px]" />
           {loading && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white dark:bg-neutral-900 rounded-b-2xl sm:rounded-b-2xl">
-              <Loader2 size={32} className="text-primary animate-spin" />
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">결제 UI를 불러오는 중…</p>
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white">
+              <Loader2 size={28} className="text-neutral-400 animate-spin" />
+              <p className="text-sm text-neutral-500">결제 수단을 불러오는 중…</p>
             </div>
           )}
         </div>
 
-        <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 dark:border-t-primary/20">
+        <div className="px-5 pt-3 pb-5">
           {cancelMsg && (
-            <p className="mb-2 text-center text-sm text-amber-500 dark:text-amber-400">{cancelMsg}</p>
+            <p className="mb-2 text-center text-sm text-neutral-500">{cancelMsg}</p>
           )}
           <button
             type="button"
             disabled={loading || paying}
             onClick={handleRequestPayment}
-            className="w-full bg-primary text-black font-bold py-3 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+            className="w-full bg-neutral-900 text-white font-bold py-3.5 rounded-xl disabled:opacity-40 flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors"
           >
             {paying ? (
               <>

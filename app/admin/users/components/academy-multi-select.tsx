@@ -152,7 +152,7 @@ export default function AcademyMultiSelect({
                     }}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors border-b border-neutral-100 dark:border-neutral-700 last:border-b-0 ${
                       selected
-                        ? 'bg-primary/10/10'
+                        ? 'bg-primary/10'
                         : 'hover:bg-neutral-50 dark:hover:bg-neutral-700'
                     }`}
                   >

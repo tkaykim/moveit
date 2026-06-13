@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef, useCallback, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { setReturnToCookie } from '@/lib/auth/return-to';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import type { Database } from '@/types/database';
 
@@ -358,6 +359,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
       // returnTo는 callback에서 query param으로 받아 최종 redirect 시 사용.
+      // + Supabase OAuth 왕복 중 ?next= 쿼리가 유실돼 /home 으로 튕기는 사고 대비,
+      //   같은 returnTo를 쿠키로도 백업한다(콜백 서버가 쿼리 없을 때 쿠키로 복원).
+      if (redirectTo) setReturnToCookie(redirectTo);
       const callback = `${origin}/auth/callback${redirectTo ? `?next=${encodeURIComponent(redirectTo)}` : ''}`;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',

@@ -12,10 +12,28 @@ import { createClient } from '@/lib/supabase/server';
  * - Supabase Auth → Providers → Google 활성화
  * - Redirect URL `<origin>/auth/callback` 등록
  */
+/** 오픈 리다이렉트 방지: 내부 경로만 허용. */
+function safeNext(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (!value.startsWith('/')) return null;
+  if (value.startsWith('//')) return null;
+  if (value.startsWith('/auth')) return null;
+  return value;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
-  const next = url.searchParams.get('next') || '/home';
+
+  // 1) ?next= 쿼리 우선. 2) Supabase 왕복 중 쿼리가 유실되면 쿠키(login_return_to)로 복원.
+  //    (둘 다 없을 때만 /home) — "홈으로 튕김" 사고 방지.
+  const cookieHeader = request.headers.get('cookie') || '';
+  const cookieReturn = (() => {
+    const m = cookieHeader.match(/(?:^|;\s*)login_return_to=([^;]+)/);
+    if (!m) return null;
+    try { return decodeURIComponent(m[1]); } catch { return null; }
+  })();
+  const next = safeNext(url.searchParams.get('next')) || safeNext(cookieReturn) || '/home';
 
   if (!code) {
     return NextResponse.redirect(new URL('/my?error=oauth_no_code', url.origin));
@@ -50,7 +68,10 @@ export async function GET(request: Request) {
       // ignore
     }
 
-    return NextResponse.redirect(new URL(next, url.origin));
+    const res = NextResponse.redirect(new URL(next, url.origin));
+    // 사용한 returnTo 쿠키 정리(다음 OAuth에 영향 주지 않게).
+    res.cookies.set('login_return_to', '', { path: '/', maxAge: 0 });
+    return res;
   } catch (err) {
     console.error('OAuth callback error:', err);
     return NextResponse.redirect(new URL('/my?error=oauth_unknown', url.origin));

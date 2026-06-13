@@ -352,7 +352,7 @@ export function PushSendForm({ usersWithTokens, totalTokens, onSent }: PushSendF
                     onClick={() => applyPreset(preset)}
                     className={`text-left p-2.5 rounded-xl border transition-all ${
                       isActive
-                        ? 'border-primary bg-primary/5/10 ring-1 ring-primary'
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
                         : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500'
                     }`}
                   >

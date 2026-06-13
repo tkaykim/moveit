@@ -177,7 +177,7 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
             >
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  paymentMethod === 'card' ? 'bg-primary/20/20' : 'bg-neutral-200 dark:bg-neutral-800'
+                  paymentMethod === 'card' ? 'bg-primary/20' : 'bg-neutral-200 dark:bg-neutral-800'
                 }`}>
                   <CreditCard className={paymentMethod === 'card' ? 'text-primary' : 'text-neutral-500'} size={20} />
                 </div>
@@ -201,7 +201,7 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
             >
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  paymentMethod === 'account' ? 'bg-primary/20/20' : 'bg-neutral-200 dark:bg-neutral-800'
+                  paymentMethod === 'account' ? 'bg-primary/20' : 'bg-neutral-200 dark:bg-neutral-800'
                 }`}>
                   <Building2 className={paymentMethod === 'account' ? 'text-primary' : 'text-neutral-500'} size={20} />
                 </div>
@@ -232,7 +232,7 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
             >
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  paymentMethod === 'general_ticket' ? 'bg-primary/20/20' : 'bg-neutral-200 dark:bg-neutral-800'
+                  paymentMethod === 'general_ticket' ? 'bg-primary/20' : 'bg-neutral-200 dark:bg-neutral-800'
                 }`}>
                   <Wallet className={paymentMethod === 'general_ticket' ? 'text-primary' : 'text-neutral-500'} size={20} />
                 </div>
@@ -264,7 +264,7 @@ export const PaymentView = ({ academy, classInfo, onBack, onPayment }: PaymentVi
             >
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  paymentMethod === 'academy_ticket' ? 'bg-primary/20/20' : 'bg-neutral-200 dark:bg-neutral-800'
+                  paymentMethod === 'academy_ticket' ? 'bg-primary/20' : 'bg-neutral-200 dark:bg-neutral-800'
                 }`}>
                   <Wallet className={paymentMethod === 'academy_ticket' ? 'text-primary' : 'text-neutral-500'} size={20} />
                 </div>

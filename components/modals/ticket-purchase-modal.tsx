@@ -660,11 +660,9 @@ function TicketListContent({ displayTickets, selectedTicket, selectedDiscount, d
   return (
     <div className="space-y-3">
       {!user && (
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-          <LogIn size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
-          <p className="text-sm text-amber-700 dark:text-amber-300">
-            {language === 'ko' ? '수강권 구매를 위해서는 로그인이 필요합니다.' : 'Login is required to purchase tickets.'}
-          </p>
+        <div className="flex items-center gap-2 px-1 text-xs text-neutral-500 dark:text-neutral-400">
+          <LogIn size={14} className="shrink-0" />
+          <p>{language === 'ko' ? '수강권 구매는 로그인이 필요합니다.' : 'Sign in to purchase tickets.'}</p>
         </div>
       )}
 
