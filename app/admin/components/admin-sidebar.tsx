@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   Bell,
   CreditCard,
+  Bug,
   type LucideIcon,
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
@@ -76,6 +77,11 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       title: '고장신고/개발요청',
       icon: AlertTriangle,
       href: '/admin/support-requests',
+    },
+    {
+      title: '에러 감지',
+      icon: Bug,
+      href: '/admin/errors',
     },
   ], []);
 

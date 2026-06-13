@@ -8,8 +8,21 @@
  * - 요청 타임아웃 (15초)
  */
 import { createClient } from '@/lib/supabase/client';
+import { reportError } from '@/lib/error-reporting/report';
 
 const FETCH_TIMEOUT_MS = 15000; // 15초
+
+/** 서버 오류(5xx) 응답을 관리자 에러 감지로 보고. 4xx(검증/권한)는 정상 흐름이라 제외. */
+function reportApiFailure(url: string | URL, status: number, bodyText?: string) {
+  if (status < 500) return;
+  reportError({
+    source: 'api',
+    level: status >= 500 ? 'error' : 'warning',
+    message: `API ${status} ${String(url)}`,
+    statusCode: status,
+    context: { url: String(url), body: bodyText?.slice(0, 500) },
+  });
+}
 
 export async function getAuthHeaders(): Promise<Record<string, string>> {
   if (typeof window === 'undefined') return {};
@@ -87,12 +100,21 @@ export async function fetchWithAuth(
       }
     }
 
+    // 서버 오류(5xx)는 관리자 에러 감지로 보고
+    if (response.status >= 500) {
+      const clone = response.clone();
+      clone.text().then((t) => reportApiFailure(url, response.status, t)).catch(() => reportApiFailure(url, response.status));
+    }
+
     return response;
   } catch (error: any) {
     // AbortError (타임아웃)를 보다 명확한 에러로 변환
     if (error?.name === 'AbortError') {
+      reportError({ source: 'api', message: `Request timeout: ${String(url)}`, context: { url: String(url) } });
       throw new Error(`Request timeout after ${FETCH_TIMEOUT_MS}ms: ${url}`);
     }
+    // 네트워크 단절 등 fetch 자체 실패도 보고
+    reportError({ source: 'api', message: `Network error: ${error?.message || 'fetch failed'} ${String(url)}`, stack: error?.stack, context: { url: String(url) } });
     throw error;
   } finally {
     clearTimeout(timeoutId);

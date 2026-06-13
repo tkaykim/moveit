@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PushNotificationProvider } from "@/contexts/PushNotificationContext";
 import { CapacitorSafeArea } from "@/components/common/capacitor-safe-area";
+import { GlobalErrorReporter, AppErrorBoundary } from "@/components/common/error-reporter";
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -145,8 +146,11 @@ export default function RootLayout({
         >
           <AuthProvider>
             <PushNotificationProvider>
+              <GlobalErrorReporter />
               <CapacitorSafeArea />
-              {children}
+              <AppErrorBoundary>
+                {children}
+              </AppErrorBoundary>
             </PushNotificationProvider>
           </AuthProvider>
         </ThemeProvider>
