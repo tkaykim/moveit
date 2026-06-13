@@ -82,11 +82,12 @@ export async function getRevenueTransactions(academyId: string, startDate?: stri
 
 export async function getRevenueStats(academyId: string, startDate?: string, endDate?: string) {
   const supabase = await createClient() as any;
+  // 순매출 = 결제액 − 환불액. 부분환불은 번 돈만 집계, 전액환불은 0으로 자연 제외.
   let query = supabase
     .from('revenue_transactions')
-    .select('final_price, discount_amount, original_price')
+    .select('final_price, discount_amount, original_price, refunded_amount')
     .eq('academy_id', academyId)
-    .eq('payment_status', 'COMPLETED');
+    .in('payment_status', ['COMPLETED', 'PARTIALLY_REFUNDED']);
 
   if (startDate) {
     query = query.gte('transaction_date', startDate);
@@ -99,7 +100,7 @@ export async function getRevenueStats(academyId: string, startDate?: string, end
 
   if (error) throw error;
 
-  const totalRevenue = data.reduce((sum: number, t: any) => sum + (t.final_price || 0), 0);
+  const totalRevenue = data.reduce((sum: number, t: any) => sum + ((t.final_price || 0) - (t.refunded_amount || 0)), 0);
   const totalDiscount = data.reduce((sum: number, t: any) => sum + (t.discount_amount || 0), 0);
   const totalOriginal = data.reduce((sum: number, t: any) => sum + (t.original_price || 0), 0);
 

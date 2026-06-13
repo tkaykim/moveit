@@ -135,10 +135,10 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
   };
 
   const getStatusBadge = (status: string, expiryDate: string | null) => {
-    if (status === 'EXPIRED' || status === 'USED') {
+    if (status === 'EXPIRED' || status === 'USED' || status === 'REFUNDED') {
       return (
         <span className="text-[10px] font-bold px-2 py-1 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400">
-          {status === 'EXPIRED' ? '만료' : '사용완료'}
+          {status === 'EXPIRED' ? '만료' : status === 'REFUNDED' ? '환불됨' : '사용완료'}
         </span>
       );
     }

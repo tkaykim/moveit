@@ -94,7 +94,7 @@ export async function POST(
     // ── 1. revenue_transaction + 티켓 카테고리 조회 ──
     const { data: rev, error: revErr } = await supabase
       .from('revenue_transactions')
-      .select('id, academy_id, user_id, user_ticket_id, ticket_id, original_price, final_price, payment_method, payment_status, toss_payment_key, toss_order_id, ticket_name, ticket_type_snapshot, quantity, valid_days, notes')
+      .select('id, academy_id, user_id, user_ticket_id, ticket_id, original_price, final_price, refunded_amount, payment_method, payment_status, toss_payment_key, toss_order_id, ticket_name, ticket_type_snapshot, quantity, valid_days, notes')
       .eq('id', resolvedRevId)
       .eq('academy_id', academyId)
       .single();
@@ -168,46 +168,95 @@ export async function POST(
       });
     }
 
-    // ── 실행: 최종 환불액 결정 (관리자 입력 > 권장값), [0, 결제액] clamp ──
+    // ── 실행: 최종 환불액 결정 (관리자 입력 > 권장값) ──
+    // 이미 일부 환불된 건의 재환불도 안전하도록 누적 기준으로 계산.
     const paid = calc.paidAmount;
-    let finalRefund = refundAmount != null ? Math.round(refundAmount) : calc.suggestedRefund;
-    finalRefund = Math.max(0, Math.min(finalRefund, paid));
-    const isPartial = finalRefund < paid;
+    const prevRefunded = Math.max(0, Math.min(rev.refunded_amount ?? 0, paid));
+    const remainingRefundable = Math.max(0, paid - prevRefunded);
+    let thisRefund = refundAmount != null ? Math.round(refundAmount) : calc.suggestedRefund;
+    thisRefund = Math.max(0, Math.min(thisRefund, remainingRefundable));
+    const totalRefunded = prevRefunded + thisRefund;
+    const isPartial = totalRefunded < paid;
+    const newStatus = isPartial ? 'PARTIALLY_REFUNDED' : 'REFUNDED';
+    const reason = (cancelReason ?? '').toString().trim().slice(0, 190);
+    const refundNote = [
+      rev.notes,
+      `[환불 ${thisRefund.toLocaleString()}원 / 누적 ${totalRefunded.toLocaleString()}원 / 결제 ${paid.toLocaleString()}원] ${new Date().toISOString()} by ${user.id}`,
+      reason ? `사유: ${reason}` : null,
+      `산정: ${calc.basis}`,
+    ].filter(Boolean).join(' | ');
 
-    // ── 3. 토스 PG 취소 (금액 > 0 인 경우만) ──
+    // ── 3. 멱등 claim: COMPLETED/PARTIALLY_REFUNDED 상태일 때만 단 한 요청이 차지(동시 더블클릭 차단). ──
+    //     revenue 상태를 먼저 갱신해 락 역할을 시킨 뒤 토스를 호출하고, 토스 실패 시 원복한다.
+    const { data: claimed, error: claimErr } = await supabase
+      .from('revenue_transactions')
+      .update({ payment_status: newStatus, refunded_amount: totalRefunded, notes: refundNote })
+      .eq('id', rev.id)
+      .in('payment_status', ['COMPLETED', 'PARTIALLY_REFUNDED'])
+      .select('id');
+    if (claimErr) {
+      console.error('[ticket-refund] claim update failed:', claimErr);
+      return NextResponse.json({ error: '환불 기록 갱신에 실패했습니다. 잠시 후 다시 시도해 주세요.' }, { status: 500 });
+    }
+    if (!claimed || claimed.length === 0) {
+      return NextResponse.json({ error: '이미 환불 처리 중이거나 완료된 결제입니다.' }, { status: 409 });
+    }
+
+    // ── 4. 토스 PG 취소 (금액 > 0 인 경우만). 실패 시 revenue 상태 원복. ──
     let tossRefundResult: any = null;
-    if (rev.toss_payment_key && finalRefund > 0) {
+    if (rev.toss_payment_key && thisRefund > 0) {
       const secretKey = process.env.TOSS_SECRET_KEY;
+      const rollback = async () => {
+        await supabase
+          .from('revenue_transactions')
+          .update({ payment_status: rev.payment_status, refunded_amount: prevRefunded, notes: rev.notes })
+          .eq('id', rev.id);
+      };
       if (!secretKey) {
+        await rollback();
         return NextResponse.json({ error: '결제 설정(TOSS_SECRET_KEY)이 없습니다.' }, { status: 500 });
       }
+      // 전액 단건 취소면 cancelAmount 생략, 그 외(부분/재환불)는 이번 회차 금액 지정
+      const fullSingleCancel = prevRefunded === 0 && thisRefund === paid;
       const cancelBody: { cancelReason: string; cancelAmount?: number } = {
-        cancelReason: cancelReason ?? '학원 관리자 환불',
+        cancelReason: reason || '학원 관리자 환불',
       };
-      if (isPartial) cancelBody.cancelAmount = finalRefund; // 부분취소
+      if (!fullSingleCancel) cancelBody.cancelAmount = thisRefund;
 
-      const tossRes = await fetch(
-        `https://api.tosspayments.com/v1/payments/${rev.toss_payment_key}/cancel`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Basic ${Buffer.from(secretKey + ':').toString('base64')}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(cancelBody),
-        }
-      );
+      let tossRes: Response;
+      try {
+        tossRes = await fetch(
+          `https://api.tosspayments.com/v1/payments/${rev.toss_payment_key}/cancel`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Basic ${Buffer.from(secretKey + ':').toString('base64')}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(cancelBody),
+          }
+        );
+      } catch (netErr) {
+        console.error('[ticket-refund] Toss network error:', netErr);
+        await rollback();
+        return NextResponse.json({ error: '토스 결제 취소 요청 중 네트워크 오류가 발생했습니다. 다시 시도해 주세요.' }, { status: 502 });
+      }
       if (!tossRes.ok) {
         const errData = await tossRes.json().catch(() => ({}));
         console.error('[ticket-refund] Toss cancel failed:', errData);
-        return NextResponse.json({ error: errData.message ?? '토스 결제 취소에 실패했습니다.' }, { status: 400 });
+        await rollback();
+        return NextResponse.json({ error: (errData as any).message ?? '토스 결제 취소에 실패했습니다.' }, { status: 400 });
       }
       tossRefundResult = await tossRes.json().catch(() => null);
     }
 
-    // ── 4. 미래 예약(PENDING/CONFIRMED)만 취소 — 출석완료·결석은 보존 ──
+    // 토스 취소까지 성공(또는 PG 미연동/0원) → 이제 수강권·예약 정리.
+    // 여기서부터 실패하면 "토스는 환불됐는데 시스템 미반영" 상태이므로 에러를 surface 한다.
+    const postWarnings: string[] = [];
+
+    // ── 5. 미래 예약(PENDING/CONFIRMED)만 취소 — 출석완료·결석은 보존 ──
+    //     스케줄 current_students 는 bookings 트리거(sync_schedule_student_count)가 자동 갱신하므로 수동 재계산 안 함.
     let cancelledBookingIds: string[] = [];
-    const affectedScheduleIds = new Set<string>();
     if (userTicketId) {
       const { data: cancellable } = await supabase
         .from('bookings')
@@ -218,7 +267,6 @@ export async function POST(
       cancelledBookingIds = (cancellable || []).map((b: any) => b.id);
 
       for (const b of (cancellable || []) as any[]) {
-        if (b.schedule_id) affectedScheduleIds.add(b.schedule_id);
         await logTicketEvent({
           academy_id: academyId,
           user_id: rev.user_id ?? null,
@@ -235,27 +283,25 @@ export async function POST(
       }
 
       if (cancelledBookingIds.length > 0) {
-        await supabase
+        const { error: bkErr } = await supabase
           .from('bookings')
           .update({ status: 'CANCELLED', user_ticket_id: null })
           .in('id', cancelledBookingIds);
-
-        // 스케줄 인원수 재계산
-        for (const sid of affectedScheduleIds) {
-          const { data: confirmed } = await supabase
-            .from('bookings')
-            .select('id')
-            .eq('schedule_id', sid)
-            .in('status', ['CONFIRMED', 'COMPLETED']);
-          await supabase.from('schedules').update({ current_students: confirmed?.length || 0 }).eq('id', sid);
+        if (bkErr) {
+          console.error('[ticket-refund] booking cancel failed:', bkErr);
+          postWarnings.push('일부 예약 취소에 실패했습니다. 예약 상태를 확인해 주세요.');
         }
       }
 
-      // user_ticket → REFUNDED (해지)
-      await supabase
+      // user_ticket → REFUNDED (해지). 전액 환불이 아닌 경우에도 해지(부분환불=중도해지).
+      const { error: utErr } = await supabase
         .from('user_tickets')
         .update({ status: 'REFUNDED', remaining_count: 0 })
         .eq('id', userTicketId);
+      if (utErr) {
+        console.error('[ticket-refund] user_ticket update failed:', utErr);
+        postWarnings.push('수강권 상태 갱신에 실패했습니다. 수강권을 확인해 주세요.');
+      }
 
       await logTicketEvent({
         academy_id: academyId,
@@ -269,13 +315,14 @@ export async function POST(
         },
         after: { remaining_count: 0, status: 'REFUNDED' },
         via: rev.toss_payment_key ? 'toss_payment' : 'bank_transfer',
-        reason: cancelReason ?? 'admin_refund',
+        reason: reason || 'admin_refund',
         context: {
           revenue_transaction_id: rev.id,
           toss_payment_key: rev.toss_payment_key ?? null,
           toss_order_id: rev.toss_order_id ?? null,
           paid_amount: paid,
-          refund_amount: finalRefund,
+          refund_amount: thisRefund,
+          total_refunded: totalRefunded,
           is_partial: isPartial,
           suggested_refund: calc.suggestedRefund,
           calc_basis: calc.basis,
@@ -289,34 +336,23 @@ export async function POST(
       }, supabase).catch(() => {});
     }
 
-    // ── 5. revenue_transactions 상태/기록 ──
-    await supabase
-      .from('revenue_transactions')
-      .update({
-        payment_status: isPartial ? 'PARTIALLY_REFUNDED' : 'REFUNDED',
-        notes: [
-          rev.notes,
-          `[환불 ${finalRefund.toLocaleString()}원/${paid.toLocaleString()}원] ${new Date().toISOString()} by ${user.id}`,
-          cancelReason ? `사유: ${cancelReason}` : null,
-          `산정: ${calc.basis}`,
-        ].filter(Boolean).join(' | '),
-      })
-      .eq('id', rev.id);
-
     const offlineNote = !rev.toss_payment_key
       ? ' (계좌이체/현금/수기 건 — 시스템 처리만 완료, 실제 금액은 현장에서 환불해 주세요)'
-      : finalRefund === 0
+      : thisRefund === 0
         ? ' (환불액 0원 — PG 취소 없이 수강권만 해지)'
         : '';
+    const warnNote = postWarnings.length ? ` ⚠️ ${postWarnings.join(' ')}` : '';
 
     return NextResponse.json({
       success: true,
-      message: `환불 처리가 완료되었습니다.${offlineNote}`,
+      message: `환불 처리가 완료되었습니다.${offlineNote}${warnNote}`,
       paidAmount: paid,
-      refundedAmount: finalRefund,
+      refundedAmount: thisRefund,
+      totalRefunded,
       isPartialRefund: isPartial,
       cancelledBookings: cancelledBookingIds.length,
       tossRefund: !!tossRefundResult,
+      warnings: postWarnings,
     });
   } catch (e: unknown) {
     if (e && typeof e === 'object' && 'message' in e && e.message === '학원 관리자 권한이 필요합니다.') {

@@ -109,7 +109,7 @@ export const MyTicketsSection = ({ onAcademyClick }: MyTicketsSectionProps) => {
     if (ticket.status !== 'ACTIVE') {
       return (
         <span className="text-xs px-2 py-0.5 bg-neutral-200 dark:bg-neutral-700 text-neutral-500 rounded-full">
-          {ticket.status === 'EXPIRED' ? '만료됨' : ticket.status === 'USED' ? '소진됨' : ticket.status}
+          {ticket.status === 'EXPIRED' ? '만료됨' : ticket.status === 'USED' ? '소진됨' : ticket.status === 'REFUNDED' ? '환불됨' : ticket.status}
         </span>
       );
     }

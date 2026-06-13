@@ -38,15 +38,15 @@ export function RevenueView({ academyId }: RevenueViewProps) {
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-      // 이번 달 매출 통계
+      // 이번 달 매출 통계 (순매출 = 결제액 − 환불액. 부분환불도 번 돈은 집계)
       const { data: revenueData } = await supabase
         .from('revenue_transactions')
-        .select('final_price, discount_amount, original_price')
+        .select('final_price, discount_amount, original_price, refunded_amount')
         .eq('academy_id', academyId)
-        .eq('payment_status', 'COMPLETED')
+        .in('payment_status', ['COMPLETED', 'PARTIALLY_REFUNDED'])
         .gte('transaction_date', startOfMonth);
 
-      const totalRevenue = revenueData?.reduce((sum: number, t: any) => sum + (t.final_price || 0), 0) || 0;
+      const totalRevenue = revenueData?.reduce((sum: number, t: any) => sum + ((t.final_price || 0) - (t.refunded_amount || 0)), 0) || 0;
 
       // 미정산 금액 (강사 정산)
       const { data: salariesData } = await supabase

@@ -1040,7 +1040,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                                       ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' 
                                       : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
                                   }`}>
-                                    {enrollment.user_tickets.status === 'EXPIRED' ? '만료' : enrollment.user_tickets.status === 'USED' ? '소진' : enrollment.user_tickets.status}
+                                    {enrollment.user_tickets.status === 'EXPIRED' ? '만료' : enrollment.user_tickets.status === 'USED' ? '소진' : enrollment.user_tickets.status === 'REFUNDED' ? '환불됨' : enrollment.user_tickets.status}
                                   </span>
                                 )}
                               </div>

@@ -206,12 +206,13 @@ export function SalesForm({ academyId, onPaymentComplete, onViewLogs }: SalesFor
       }
 
       // 신규/재등록 판별: 해당 학원에서 이전 결제 기록이 있으면 재등록
+      // (환불·부분환불 건도 '과거 고객'이므로 재등록으로 본다)
       const { data: prevTransactions } = await supabase
         .from('revenue_transactions')
         .select('id')
         .eq('academy_id', academyId)
         .eq('user_id', selectedStudent.id)
-        .eq('payment_status', 'COMPLETED')
+        .in('payment_status', ['COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED'])
         .limit(1);
 
       const registrationType = (prevTransactions && prevTransactions.length > 0) ? 'RE_REGISTRATION' : 'NEW';
