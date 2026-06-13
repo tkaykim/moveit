@@ -9,6 +9,7 @@ import { BookingStatusBadge } from '@/components/common/booking-status-badge';
 import { EnrollmentActionMenu } from './enrollments/enrollment-action-menu';
 import { AdminAddEnrollmentModal } from './enrollments/admin-add-enrollment-modal';
 import { ActivityLogSection } from './enrollments/activity-log-section';
+import { RefundModal } from './refund-modal';
 import { convertKSTInputToUTC } from '@/lib/utils/kst-time';
 
 interface EnrollmentsViewProps {
@@ -62,6 +63,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
     ABSENT: 0,
   });
   const [isAdminAddModalOpen, setIsAdminAddModalOpen] = useState(false);
+  const [refundTarget, setRefundTarget] = useState<{ bookingId: string; userTicketId: string | null; name?: string } | null>(null);
   const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
   const [classSearchTerm, setClassSearchTerm] = useState('');
   const [mainTab, setMainTab] = useState<'enrollments' | 'activity-log'>('enrollments');
@@ -1064,6 +1066,9 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                             enrollment={enrollment}
                             onStatusChange={handleStatusChange}
                             onDelete={handleDelete}
+                            onRefund={({ id, user_ticket_id }) =>
+                              setRefundTarget({ bookingId: id, userTicketId: user_ticket_id ?? null, name: displayName })
+                            }
                           />
                         </td>
                       </tr>
@@ -1143,6 +1148,17 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
         initialScheduleId={selectedScheduleId}
         dateFilter={selectedDate || undefined}
       />
+
+      {refundTarget && (
+        <RefundModal
+          academyId={academyId}
+          bookingId={refundTarget.bookingId}
+          userTicketId={refundTarget.userTicketId}
+          fallbackUserName={refundTarget.name}
+          onClose={() => setRefundTarget(null)}
+          onDone={() => loadEnrollments()}
+        />
+      )}
     </div>
   );
 }

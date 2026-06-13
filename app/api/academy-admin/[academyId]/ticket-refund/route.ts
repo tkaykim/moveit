@@ -33,23 +33,55 @@ export async function POST(
     await assertAcademyAdmin(academyId, user.id);
 
     const body = await request.json();
-    const { revenueTransactionId, cancelReason, cancelAmount } = body as {
-      revenueTransactionId: string;
+    const { revenueTransactionId, userTicketId: inputUserTicketId, bookingId, cancelReason, cancelAmount } = body as {
+      revenueTransactionId?: string;
+      userTicketId?: string;
+      bookingId?: string;
       cancelReason?: string;
       cancelAmount?: number;
     };
 
-    if (!revenueTransactionId) {
-      return NextResponse.json({ error: 'revenueTransactionId가 필요합니다.' }, { status: 400 });
+    if (!revenueTransactionId && !inputUserTicketId && !bookingId) {
+      return NextResponse.json({ error: 'revenueTransactionId, userTicketId, bookingId 중 하나가 필요합니다.' }, { status: 400 });
     }
 
     const supabase = createServiceClient() as any;
 
+    // ── 0. 결제건 식별: revenueTransactionId 우선, 없으면 bookingId→user_ticket→revenue 역추적 ──
+    let resolvedRevId: string | null = revenueTransactionId ?? null;
+    let resolvedUserTicketId: string | null = inputUserTicketId ?? null;
+
+    if (!resolvedRevId && bookingId) {
+      const { data: bk } = await supabase
+        .from('bookings')
+        .select('user_ticket_id')
+        .eq('id', bookingId)
+        .maybeSingle();
+      if (bk?.user_ticket_id) resolvedUserTicketId = bk.user_ticket_id;
+    }
+
+    if (!resolvedRevId && resolvedUserTicketId) {
+      const { data: revByTicket } = await supabase
+        .from('revenue_transactions')
+        .select('id')
+        .eq('user_ticket_id', resolvedUserTicketId)
+        .eq('academy_id', academyId)
+        .in('payment_status', ['COMPLETED', 'PARTIALLY_REFUNDED'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (revByTicket?.id) resolvedRevId = revByTicket.id;
+    }
+
+    if (!resolvedRevId) {
+      return NextResponse.json({ error: '환불할 결제 내역을 찾을 수 없습니다. (수기 발급 등 결제 기록이 없는 건일 수 있습니다)' }, { status: 404 });
+    }
+
     // ── 1. revenue_transaction 조회 ──
     const { data: rev, error: revErr } = await supabase
       .from('revenue_transactions')
-      .select('id, academy_id, user_id, user_ticket_id, ticket_id, final_price, payment_method, payment_status, toss_payment_key, toss_order_id, ticket_name, quantity, valid_days')
-      .eq('id', revenueTransactionId)
+      .select('id, academy_id, user_id, user_ticket_id, ticket_id, final_price, payment_method, payment_status, toss_payment_key, toss_order_id, ticket_name, quantity, valid_days, notes')
+      .eq('id', resolvedRevId)
       .eq('academy_id', academyId)
       .single();
 

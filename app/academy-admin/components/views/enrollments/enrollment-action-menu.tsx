@@ -2,24 +2,28 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, CheckCircle2, Clock, XCircle, UserCheck, UserX, Trash2, Landmark } from 'lucide-react';
+import { MoreVertical, CheckCircle2, Clock, XCircle, UserCheck, UserX, Trash2, Landmark, RotateCcw } from 'lucide-react';
 
 interface EnrollmentActionMenuProps {
   enrollment: {
     id: string;
     status: string;
     schedule_id: string | null;
+    user_ticket_id?: string | null;
     bank_transfer_order_id?: string | null;
     user_tickets?: { tickets?: { ticket_type?: string } } | null;
   };
   onStatusChange: (bookingId: string, newStatus: string, options?: { restoreTicket?: boolean }) => Promise<void>;
   onDelete?: (bookingId: string) => Promise<void>;
+  /** 환불 모달 열기 (수강권 결제건 역추적해 환불) */
+  onRefund?: (enrollment: { id: string; user_ticket_id?: string | null }) => void;
 }
 
 export function EnrollmentActionMenu({
   enrollment,
   onStatusChange,
   onDelete,
+  onRefund,
 }: EnrollmentActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -280,6 +284,20 @@ export function EnrollmentActionMenu({
             <div className="px-4 py-2 text-sm text-neutral-500 dark:text-neutral-400">
               사용 가능한 작업이 없습니다
             </div>
+          )}
+
+          {onRefund && enrollment.user_ticket_id && (
+            <>
+              <div className="border-t border-neutral-200 dark:border-neutral-700 my-1" />
+              <button
+                onClick={() => { onRefund({ id: enrollment.id, user_ticket_id: enrollment.user_ticket_id }); setIsOpen(false); }}
+                disabled={isLoading}
+                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RotateCcw size={16} />
+                결제 환불
+              </button>
+            </>
           )}
 
           {onDelete && (
