@@ -7,6 +7,7 @@ import { LanguageToggle } from '@/components/common/language-toggle';
 import { useLocale, Language } from '@/contexts/LocaleContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProfileImageUpload } from '@/components/common/profile-image-upload';
+import { PLATFORM_BUSINESS_ITEMS } from '@/lib/constants/business';
 
 interface SettingsViewProps {
   onBack: () => void;
@@ -187,6 +188,24 @@ export const SettingsView = ({ onBack }: SettingsViewProps) => {
           </div>
           <span className="text-xs text-neutral-500 dark:text-neutral-400">1.0.0</span>
         </button>
+      </div>
+
+      {/* 사업자 정보 (플랫폼 — 결제는 토스페이먼츠 피스코프 가맹점을 통해 처리됨) */}
+      <div className="mb-2">
+        <h3 className="text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-2 px-1">사업자 정보</h3>
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
+          <ul className="space-y-1.5">
+            {PLATFORM_BUSINESS_ITEMS.map((item) => (
+              <li key={item.label} className="flex gap-2 text-[11px] leading-relaxed">
+                <span className="shrink-0 w-24 text-neutral-400 dark:text-neutral-500">{item.label}</span>
+                <span className="text-neutral-600 dark:text-neutral-300">{item.value}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800 text-[10px] text-neutral-400 dark:text-neutral-500 leading-relaxed">
+            결제는 토스페이먼츠를 통해 피스코프 가맹점으로 안전하게 처리됩니다.
+          </p>
+        </div>
       </div>
     </div>
   );
