@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { X } from 'lucide-react';
+import { ModalPortal } from '@/components/common/modal-portal';
 
 // B-4 (2026-04-27): Google OAuth는 환경변수 가드. 콘솔 미설정 시 버튼 숨김.
 const GOOGLE_OAUTH_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_OAUTH === 'true';
@@ -171,6 +172,7 @@ export function MyTab({ isOpen, onClose, initialTab = 'login', initialEmail, ini
 
   // B-4 (2026-04-27): 중앙정렬 → 하단 시트로 변경. 모바일 표준 패턴 + 시선 추적 명확.
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm">
       <div
         className="w-full max-w-[420px] bg-white dark:bg-neutral-900 rounded-t-3xl sm:rounded-3xl p-6 max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200"
@@ -368,6 +370,7 @@ export function MyTab({ isOpen, onClose, initialTab = 'login', initialEmail, ini
         )}
       </div>
     </div>
+    </ModalPortal>
   );
 }
 

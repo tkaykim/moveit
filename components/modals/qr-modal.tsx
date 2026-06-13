@@ -5,6 +5,7 @@ import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, RefreshCw, Loader2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { ModalPortal } from '@/components/common/modal-portal';
 
 interface QrModalProps {
   isOpen: boolean;
@@ -119,8 +120,9 @@ export const QrModal = ({ isOpen, onClose, bookingId, bookingInfo }: QrModalProp
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-sm animate-in fade-in" 
+    <ModalPortal>
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-sm animate-in fade-in"
       onClick={onClose}
     >
       {/* 모달 전체를 다크 테마로: 화면 빛 출력 최소화 */}
@@ -211,5 +213,6 @@ export const QrModal = ({ isOpen, onClose, bookingId, bookingInfo }: QrModalProp
         </p>
       </div>
     </div>
+    </ModalPortal>
   );
 };

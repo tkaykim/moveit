@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { X } from 'lucide-react';
+import { ModalPortal } from '@/components/common/modal-portal';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -44,6 +45,7 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
   if (!isOpen) return null;
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="w-full max-w-[420px] bg-white dark:bg-neutral-900 rounded-2xl p-6 mx-4 shadow-xl">
         <div className="flex items-center justify-between mb-6">
@@ -104,5 +106,6 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 }

@@ -5,6 +5,7 @@ import { X, Plus } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { Academy, Hall, Instructor, Class } from '@/lib/supabase/types';
 import { convertKSTInputToUTC } from '@/lib/utils/kst-time';
+import { ModalPortal } from '@/components/common/modal-portal';
 
 const GENRES = ['Choreography(코레오그래피)', 'Hiphop(힙합)', 'Locking(락킹)', 'Waacking(왁킹)', 'Popping(팝핑)', 'Krump(크럼프)', 'Voguing(보깅)', 'Breaking(브레이킹)', 'Afro Dance(아프로댄스)', 'DanceHall(댄스홀)', 'Tutting(터팅)', 'Girlish(걸리시)', 'Heels(힐스)', 'Kpop(케이팝)', 'House(하우스)', '기타'] as const;
 
@@ -437,10 +438,11 @@ export const AddClassModal = ({ isOpen, onClose, onSubmit, academy, day, time, w
   const dayName = dayIndex !== -1 ? DAY_NAMES[dayIndex] : day;
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-50 flex items-end justify-center">
-      <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in" 
-        onClick={onClose} 
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in"
+        onClick={onClose}
       />
       <div className="relative w-full max-w-[420px] bg-white dark:bg-neutral-900 rounded-t-3xl p-6 animate-in slide-in-from-bottom duration-300 border-t border-neutral-200 dark:border-neutral-800 shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="w-12 h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full mx-auto mb-6" />
@@ -692,6 +694,7 @@ export const AddClassModal = ({ isOpen, onClose, onSubmit, academy, day, time, w
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 

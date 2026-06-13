@@ -4,6 +4,7 @@ import { fetchWithAuth } from '@/lib/api/auth-fetch';
 
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import { ModalPortal } from '@/components/common/modal-portal';
 
 interface TicketExtensionRequestModalProps {
   isOpen: boolean;
@@ -136,6 +137,7 @@ export function TicketExtensionRequestModal({
   if (!isOpen) return null;
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70">
       <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="p-4 border-b dark:border-neutral-800 flex justify-between items-center">
@@ -279,5 +281,6 @@ export function TicketExtensionRequestModal({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 }

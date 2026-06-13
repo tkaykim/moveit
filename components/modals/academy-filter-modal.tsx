@@ -2,6 +2,7 @@
 
 import { X } from 'lucide-react';
 import { useState } from 'react';
+import { ModalPortal } from '@/components/common/modal-portal';
 
 export interface AcademyFilter {
   tags: string[];
@@ -63,6 +64,7 @@ export const AcademyFilterModal = ({
   const hasActiveFilters = selectedTags.length > 0 || selectedPriceRange.min !== null || selectedPriceRange.max !== null;
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-[60] flex items-end justify-center">
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in" 
@@ -150,6 +152,7 @@ export const AcademyFilterModal = ({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 

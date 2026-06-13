@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Search, User } from 'lucide-react';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
+import { ModalPortal } from '@/components/common/modal-portal';
 
 interface ScheduleSummary {
   id: string;
@@ -125,6 +126,7 @@ export function InstructorSubstituteRequestModal({
       : '(검색 후 선택 또는 직접 입력)';
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
       <div
         className="bg-white dark:bg-neutral-900 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl shadow-xl"
@@ -243,5 +245,6 @@ export function InstructorSubstituteRequestModal({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 }

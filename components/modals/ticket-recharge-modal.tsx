@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import { X, Search, Ticket as TicketIcon, Loader2 } from 'lucide-react';
 import { useLocale } from '@/contexts/LocaleContext';
+import { ModalPortal } from '@/components/common/modal-portal';
 
 interface Ticket {
   id: string;
@@ -220,8 +221,9 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
   if (!isOpen) return null;
 
   return (
-    <div 
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in" 
+    <ModalPortal>
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in"
       onClick={handleClose}
     >
       <div 
@@ -448,6 +450,7 @@ export const TicketRechargeModal = ({ isOpen, onClose, onPurchaseSuccess, academ
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 

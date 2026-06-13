@@ -7,6 +7,7 @@ import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import { ClassInfo } from '@/types';
 import { useRouter } from 'next/navigation';
 import { useLocale } from '@/contexts/LocaleContext';
+import { ModalPortal } from '@/components/common/modal-portal';
 
 interface UserTicketInfo {
   id: string;
@@ -158,7 +159,8 @@ export const BookingConfirmModal = ({
   if (!isOpen || !classInfo) return null;
 
   return (
-    <div 
+    <ModalPortal>
+    <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in"
       onClick={handleClose}
     >
@@ -318,5 +320,6 @@ export const BookingConfirmModal = ({
         )}
       </div>
     </div>
+    </ModalPortal>
   );
 };

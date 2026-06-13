@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
+import { ModalPortal } from '@/components/common/modal-portal';
 
 interface ScheduleSummary {
   id: string;
@@ -75,6 +76,7 @@ export function InstructorCancelRequestModal({
   if (!isOpen) return null;
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
       <div
         className="bg-white dark:bg-neutral-900 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl shadow-xl"
@@ -131,5 +133,6 @@ export function InstructorCancelRequestModal({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 }

@@ -5,6 +5,7 @@ import { X, Calendar, Clock, MapPin, UserPlus, Ban } from 'lucide-react';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import { InstructorSubstituteRequestModal } from './instructor-substitute-request-modal';
 import { InstructorCancelRequestModal } from './instructor-cancel-request-modal';
+import { ModalPortal } from '@/components/common/modal-portal';
 
 interface InstructorScheduleDetailModalProps {
   scheduleId: string;
@@ -88,6 +89,7 @@ export function InstructorScheduleDetailModal({
   const percent = maxStudents > 0 ? Math.round((confirmed / maxStudents) * 100) : 0;
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
       <div
         className="bg-white dark:bg-neutral-900 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl shadow-xl"
@@ -244,5 +246,6 @@ export function InstructorScheduleDetailModal({
         </>
       )}
     </div>
+    </ModalPortal>
   );
 }
