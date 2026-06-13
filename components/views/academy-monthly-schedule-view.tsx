@@ -299,7 +299,7 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
             <span className="text-base font-bold text-black dark:text-white">{t('schedule.monthYear', { year: String(year), month: String(month + 1) })}</span>
             <button
               onClick={goToToday}
-              className="text-xs px-3 py-1.5 bg-primary/10/10 text-primary rounded-full font-medium hover:bg-primary/20 dark:hover:bg-primary/20 transition-colors"
+              className="text-xs px-3 py-1.5 bg-primary/10 text-primary rounded-full font-medium hover:bg-primary/20 dark:hover:bg-primary/20 transition-colors"
             >
               {t('schedule.thisMonth')}
             </button>

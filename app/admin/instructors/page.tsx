@@ -424,7 +424,7 @@ export default function InstructorsPage() {
                     {formData.selectedGenres.map((genre) => (
                       <span
                         key={genre}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-primary/20/20 text-primary rounded-full text-sm"
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-primary/20 text-primary rounded-full text-sm"
                       >
                         {genre}
                         <button
@@ -499,7 +499,7 @@ export default function InstructorsPage() {
                             {genres.map((genre) => (
                               <span
                                 key={genre}
-                                className="px-2 py-1 bg-primary/10/10 text-primary rounded-full text-xs font-medium"
+                                className="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium"
                               >
                                 {genre}
                               </span>

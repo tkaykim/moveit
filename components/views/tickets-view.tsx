@@ -156,7 +156,7 @@ export const TicketsView = ({ onBack, onTicketsRefresh, academyId, classId }: Ti
     }
     
     return (
-      <span className="text-[10px] font-bold px-2 py-1 rounded bg-primary/10/10 text-primary">
+      <span className="text-[10px] font-bold px-2 py-1 rounded bg-primary/10 text-primary">
         사용가능
       </span>
     );

@@ -14,6 +14,7 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { ENABLE_TOSS_PAYMENT } from '@/lib/constants/payment';
 import { useTicketLabels } from '@/lib/hooks/useTicketLabels';
 import { isGuestEligibleTicket } from '@/lib/utils/ticket-policy';
+import { savePurchaseIntent, readPurchaseIntent, clearPurchaseIntent, setReturnToCookie } from '@/lib/auth/return-to';
 
 interface SessionData {
   id: string;
@@ -312,6 +313,7 @@ export default function SessionBookingPage() {
   useEffect(() => {
     if (user && pendingPurchaseResume) {
       setPendingPurchaseResume(false);
+      clearPurchaseIntent(); // 인메모리 재개 경로 — 저장된 의도도 함께 정리(중복 재개 방지)
       // 로그인 시점에 보유 수강권은 아직 로딩 전. handlePurchaseBooking 은 selectedPurchaseTicket
       // (구매할 수강권) 기반이라 보유와 무관하므로 즉시 호출 가능.
       // useTossPayment 분기는 '카드결제' 그대로 따라가고, '계좌이체'는 회원이므로 입금자명 prefill 후 drawer 진입.
@@ -321,6 +323,28 @@ export default function SessionBookingPage() {
     // 트리거 시점의 최신 함수 참조를 사용.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, pendingPurchaseResume]);
+
+  // Google OAuth 복귀 등 "페이지를 떠났다 돌아온" 경우: in-memory state 가 전부 날아갔으므로
+  // 저장해둔 구매 의도(localStorage)를 읽어 선택을 복원하고 결제를 자동 재개한다.
+  // (이메일 로그인은 위 effect 가 처리하므로 여기서는 pendingPurchaseResume 가 false 일 때만 동작)
+  const purchaseIntentConsumedRef = useRef(false);
+  useEffect(() => {
+    if (purchaseIntentConsumedRef.current) return;
+    if (!user || pendingPurchaseResume) return;
+    if (purchasableTickets.length === 0) return; // 구매 가능 수강권 로드 대기
+    const intent = readPurchaseIntent(sessionId);
+    if (!intent) return;
+    const exists = purchasableTickets.some(t => (t.productKey ?? t.id) === intent.ticketId);
+    if (!exists) { clearPurchaseIntent(); return; }
+    purchaseIntentConsumedRef.current = true;
+    clearPurchaseIntent();
+    setSelectedPurchaseTicketId(intent.ticketId);
+    if (intent.paymentType === 'card' || intent.paymentType === 'account') {
+      setPurchasePaymentType(intent.paymentType);
+    }
+    // 선택 복원이 반영된 다음 렌더에서 결제 재개.
+    setPendingPurchaseResume(true);
+  }, [user, purchasableTickets, pendingPurchaseResume, sessionId]);
 
   // 사용자 보유 수강권 로드 - 클라이언트 Supabase에서 직접 조회 (서버 API 인증 문제 방지)
   const loadUserTickets = async () => {
@@ -682,6 +706,16 @@ export default function SessionBookingPage() {
     // 비로그인: 1회성 수강권이면 비회원 결제 플로우, 아니면 로그인 강제
     if (!user) {
       if (!isOneTimeTicket(selectedPurchaseTicket)) {
+        // 로그인 후(이메일=인메모리 / Google OAuth=스토리지·쿠키 복원) 같은 화면에서
+        // 같은 수강권·결제수단으로 결제를 자동 재개하도록 의도를 보존한다.
+        savePurchaseIntent({
+          sessionId,
+          ticketId: selectedPurchaseTicketId,
+          paymentType: purchasePaymentType,
+          countOptionIndex: selectedPurchaseTicket.countOptionIndex,
+        });
+        setReturnToCookie(`/book/session/${sessionId}`);
+        setPendingPurchaseResume(true);
         setAuthModalInitialTab('login');
         setIsAuthModalOpen(true);
         return;
@@ -701,6 +735,9 @@ export default function SessionBookingPage() {
       setPendingBankTransfer(payload);
       setPendingCardPayment(null);
       if (!user) {
+        // 게스트가 로그인/가입을 택하면(이메일·OAuth) 돌아와 같은 결제를 자동 재개하도록 의도 보존.
+        savePurchaseIntent({ sessionId, ticketId: selectedPurchaseTicketId, paymentType: purchasePaymentType, countOptionIndex: selectedPurchaseTicket.countOptionIndex });
+        setReturnToCookie(`/book/session/${sessionId}`);
         setBankTransferAuthModalOpen(true);
         return;
       }
@@ -732,6 +769,9 @@ export default function SessionBookingPage() {
       };
       setPendingCardPayment(payload);
       setPendingBankTransfer(null);
+      // 게스트가 로그인/가입을 택하면(이메일·OAuth) 돌아와 같은 결제를 자동 재개하도록 의도 보존.
+      savePurchaseIntent({ sessionId, ticketId: selectedPurchaseTicketId, paymentType: purchasePaymentType, countOptionIndex: selectedPurchaseTicket.countOptionIndex });
+      setReturnToCookie(`/book/session/${sessionId}`);
       setBankTransferAuthModalOpen(true);
       return;
     }
@@ -1111,7 +1151,7 @@ export default function SessionBookingPage() {
 
           {/* 종료된 수업일 때만: 다음 날짜 예약 유도 */}
           {isPast && session?.classes?.id && (
-            <div className="bg-primary/5/5 border border-primary/30/30 rounded-xl p-4">
+            <div className="bg-primary/5 border border-primary/30 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
                 <CalendarDays className="text-primary flex-shrink-0" size={20} />
                 <h4 className="font-bold text-black dark:text-white">{t('sessionBooking.otherDates')}</h4>
@@ -1137,7 +1177,7 @@ export default function SessionBookingPage() {
                         className={`w-full flex items-center justify-between gap-3 rounded-xl p-3 text-left border-2 transition-colors ${
                           full
                             ? 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 opacity-60 cursor-not-allowed'
-                            : 'bg-white dark:bg-neutral-900 border-primary/40/40 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/5'
+                            : 'bg-white dark:bg-neutral-900 border-primary/40 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/5'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
@@ -1215,7 +1255,7 @@ export default function SessionBookingPage() {
                   disabled={userTickets.length === 0}
                   className={`w-full rounded-2xl p-4 flex justify-between items-center border transition-all duration-200 text-left shadow-sm ${
                     paymentMethod === 'ticket'
-                      ? 'border-primary bg-primary/5/5 ring-2 ring-primary/20/20'
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
                       : userTickets.length === 0
                       ? 'border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 opacity-60 cursor-not-allowed'
                       : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-600 active:scale-[0.99]'
@@ -1223,7 +1263,7 @@ export default function SessionBookingPage() {
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
-                      paymentMethod === 'ticket' ? 'bg-primary/15/15 text-primary' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
+                      paymentMethod === 'ticket' ? 'bg-primary/15 text-primary' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
                     }`}>
                       <Wallet size={22} strokeWidth={1.5} />
                     </div>
@@ -1251,13 +1291,13 @@ export default function SessionBookingPage() {
                   onClick={() => setPaymentMethod('purchase')}
                   className={`w-full rounded-2xl p-4 flex justify-between items-center border transition-all duration-200 text-left shadow-sm ${
                     paymentMethod === 'purchase'
-                      ? 'border-primary bg-primary/5/5 ring-2 ring-primary/20/20'
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
                       : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-600 active:scale-[0.99]'
                   }`}
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
-                      paymentMethod === 'purchase' ? 'bg-primary/15/15 text-primary' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
+                      paymentMethod === 'purchase' ? 'bg-primary/15 text-primary' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
                     }`}>
                       <CreditCard size={22} strokeWidth={1.5} />
                     </div>
@@ -1287,13 +1327,13 @@ export default function SessionBookingPage() {
                 onClick={() => setShowOnsiteWarning(true)}
                 className={`w-full rounded-2xl p-4 flex justify-between items-center border transition-all duration-200 text-left shadow-sm ${
                   paymentMethod === 'onsite'
-                    ? 'border-primary bg-primary/5/5 ring-2 ring-primary/20/20'
+                    ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
                     : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-600 active:scale-[0.99]'
                 }`}
               >
                 <div className="flex items-center gap-4">
                   <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
-                    paymentMethod === 'onsite' ? 'bg-primary/15/15 text-primary' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
+                    paymentMethod === 'onsite' ? 'bg-primary/15 text-primary' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
                   }`}>
                     <Building2 size={22} strokeWidth={1.5} />
                   </div>
@@ -1333,7 +1373,7 @@ export default function SessionBookingPage() {
                       onClick={() => setSelectedUserTicketId(ut.id)}
                       className={`w-full rounded-2xl p-4 flex justify-between items-center border transition-all duration-200 text-left shadow-sm ${
                         selected
-                          ? 'border-primary bg-primary/5/5 ring-2 ring-primary/20/20'
+                          ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
                           : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-600 active:scale-[0.99]'
                       }`}
                     >
@@ -1452,14 +1492,18 @@ export default function SessionBookingPage() {
                     const hiddenCount = purchasableTickets.filter(t => !isOneTimeTicket(t)).length;
                     if (hiddenCount === 0) return null;
                     return (
-                      <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                        <LogIn size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
-                        <p className="text-xs text-amber-700 dark:text-amber-300">
+                      <button
+                        type="button"
+                        onClick={() => { setAuthModalInitialTab('login'); setIsAuthModalOpen(true); }}
+                        className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                      >
+                        <LogIn size={14} className="shrink-0" />
+                        <span>
                           {language === 'ko'
-                            ? `로그인하면 다회권/기간권 ${hiddenCount}종을 더 구매할 수 있어요.`
-                            : `Sign in to access ${hiddenCount} more multi-use ticket${hiddenCount > 1 ? 's' : ''}.`}
-                        </p>
-                      </div>
+                            ? `로그인하면 다회권·기간권 ${hiddenCount}종을 더 살 수 있어요`
+                            : `Sign in for ${hiddenCount} more ticket type${hiddenCount > 1 ? 's' : ''}`}
+                        </span>
+                      </button>
                     );
                   })()}
 
@@ -1492,7 +1536,7 @@ export default function SessionBookingPage() {
                         </button>
                       </div>
                     ) : (
-                      <div className="rounded-xl py-3 px-4 bg-primary/10/10 border border-primary/20/20 text-center">
+                      <div className="rounded-xl py-3 px-4 bg-primary/10 border border-primary/20 text-center">
                         <span className="text-sm font-medium text-primary">
                           {t('sessionBooking.bankTransfer')} ({language === 'ko' ? '입금 확인 후 예약 확정' : 'Confirm after transfer'})
                         </span>
@@ -1965,7 +2009,7 @@ export default function SessionBookingPage() {
                       setBankCopyFeedback(true);
                       setTimeout(() => setBankCopyFeedback(false), 2000);
                     }}
-                    className="w-full py-3 rounded-xl border-2 border-primary bg-primary/10/10 text-black dark:text-white font-medium flex items-center justify-center gap-2 mb-3"
+                    className="w-full py-3 rounded-xl border-2 border-primary bg-primary/10 text-black dark:text-white font-medium flex items-center justify-center gap-2 mb-3"
                   >
                     <Copy size={18} />
                     {bankCopyFeedback
@@ -2050,7 +2094,7 @@ export default function SessionBookingPage() {
       {showBankTransferSuccessThenRedirect && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center animate-in zoom-in-95 duration-200">
-            <div className="w-14 h-14 rounded-full bg-primary/20/20 flex items-center justify-center mx-auto mb-4">
+            <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="text-primary" size={32} strokeWidth={2} />
             </div>
             <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">
@@ -2132,6 +2176,8 @@ export default function SessionBookingPage() {
           // 사용자가 X·배경 클릭으로 닫음(취소). 회원충돌-자동재진입 보류 상태가 남아 있으면
           // 다음 흐름에 영향 주지 않게 정리.
           setPendingPurchaseResume(false);
+          clearPurchaseIntent(); // 로그인 취소 → 저장된 구매 의도도 폐기
+          purchaseIntentConsumedRef.current = false;
           setAuthConflictNotice('');
           setAuthLockEmail(false);
           setAuthPrefillEmail('');

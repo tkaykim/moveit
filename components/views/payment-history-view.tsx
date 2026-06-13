@@ -181,7 +181,7 @@ export const PaymentHistoryView = ({ onBack }: PaymentHistoryViewProps) => {
                       {payment.title}
                     </h3>
                     {payment.type === 'BOOKING' && (
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-primary/10/20 text-primary font-bold">
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary font-bold">
                         출석
                       </span>
                     )}

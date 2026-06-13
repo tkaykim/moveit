@@ -351,7 +351,7 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
           <span className="text-sm font-bold text-black dark:text-white">{getMonthDisplay()}</span>
           <button
             onClick={goToToday}
-            className="text-xs px-3 py-1.5 bg-primary/10/10 text-primary rounded-full font-medium hover:bg-primary/20 dark:hover:bg-primary/20 transition-colors"
+            className="text-xs px-3 py-1.5 bg-primary/10 text-primary rounded-full font-medium hover:bg-primary/20 dark:hover:bg-primary/20 transition-colors"
           >
             {t('schedule.today')}
           </button>
@@ -385,7 +385,7 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
                 isSelected
                   ? 'bg-primary text-white dark:text-black shadow-lg'
                   : isToday
-                    ? 'bg-primary/20/20 text-primary'
+                    ? 'bg-primary/20 text-primary'
                     : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
               }`}
             >

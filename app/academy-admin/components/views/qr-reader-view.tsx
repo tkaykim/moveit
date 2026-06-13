@@ -349,7 +349,7 @@ export function QrReaderView({ academyId }: QrReaderViewProps) {
       <div className="flex-shrink-0 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
               <QrCode size={24} className="text-primary" />
             </div>
             <div>

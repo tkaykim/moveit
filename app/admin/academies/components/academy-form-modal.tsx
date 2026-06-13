@@ -479,7 +479,7 @@ export function AcademyFormModal({
                         {formData.tags.map((tag) => (
                           <span
                             key={tag}
-                            className="inline-flex items-center gap-1 px-3 py-1 bg-primary/20/20 text-primary rounded-full text-sm"
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-primary/20 text-primary rounded-full text-sm"
                           >
                             {tag}
                             <button

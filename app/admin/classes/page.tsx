@@ -545,7 +545,7 @@ export default function ClassesPage() {
                     {formData.selectedGenres.map((genre) => (
                       <span
                         key={genre}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-primary/20/20 text-primary rounded-full text-sm"
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-primary/20 text-primary rounded-full text-sm"
                       >
                         {genre}
                         <button

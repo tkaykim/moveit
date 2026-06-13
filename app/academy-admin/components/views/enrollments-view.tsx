@@ -761,7 +761,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                           router.push(`/academy-admin/${academyId}/enrollments${queryString ? `?${queryString}` : ''}`);
                         }}
                         className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors ${
-                          !selectedClassId ? 'bg-primary/10/10 font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'
+                          !selectedClassId ? 'bg-primary/10 font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'
                         }`}
                       >
                         전체 수업
@@ -796,7 +796,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                             }}
                             className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors ${
                               selectedClassId === c.id
-                                ? 'bg-primary/10/10 font-medium text-gray-900 dark:text-white'
+                                ? 'bg-primary/10 font-medium text-gray-900 dark:text-white'
                                 : 'text-gray-700 dark:text-gray-300'
                             }`}
                           >

@@ -248,7 +248,7 @@ export function ScheduleSelector({ value, onChange, className = '', academyId, d
                     setSearchTerm('');
                   }}
                   className={`w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors ${
-                    !value ? 'bg-primary/10/10 font-medium' : 'text-neutral-700 dark:text-neutral-300'
+                    !value ? 'bg-primary/10 font-medium' : 'text-neutral-700 dark:text-neutral-300'
                   }`}
                 >
                   전체
@@ -266,7 +266,7 @@ export function ScheduleSelector({ value, onChange, className = '', academyId, d
                       }}
                       className={`w-full px-4 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors ${
                         value === schedule.id
-                          ? 'bg-primary/10/10 font-medium'
+                          ? 'bg-primary/10 font-medium'
                           : 'text-neutral-700 dark:text-neutral-300'
                       }`}
                     >
