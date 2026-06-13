@@ -44,6 +44,8 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
   const [initialLoading, setInitialLoading] = useState(true); // 초기 로딩 (전체 화면 로딩)
   const [isRefreshing, setIsRefreshing] = useState(false); // 필터 변경 시 로딩 (인라인 로딩)
   const [searchTerm, setSearchTerm] = useState('');
+  // 입력값(searchTerm)과 분리된 디바운스 검색어 — 한 글자마다 쿼리가 나가 깜빡이는 현상 방지
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(initialScheduleId);
   const [scheduleSummary, setScheduleSummary] = useState<any>(null);
@@ -80,6 +82,12 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // 검색어 디바운스(350ms): 입력이 멈춘 뒤에만 실제 조회 → 깜빡임 제거
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearchTerm(searchTerm.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
 
   // 학원의 전체 클래스(반) 목록 로드
   useEffect(() => {
@@ -181,9 +189,9 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
       // 검색어 사전 처리: PostgREST .or() 는 부모 테이블 컬럼만 직접 인식하므로,
       // users.name / classes.title 같은 임베디드 컬럼은 사전 조회해 ID 목록으로 환원한다.
       let searchOrClause: string | null = null;
-      if (searchTerm) {
+      if (debouncedSearchTerm) {
         // PostgREST or() 파서가 의미를 두는 문자(쉼표·괄호·퍼센트)는 제거
-        const sanitized = searchTerm.toLowerCase().replace(/[(),%*]/g, '').trim();
+        const sanitized = debouncedSearchTerm.toLowerCase().replace(/[(),%*]/g, '').trim();
         if (sanitized) {
           const like = `%${sanitized}%`;
 
@@ -370,7 +378,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
       setIsRefreshing(false);
       isFirstLoad.current = false;
     }
-  }, [academyId, selectedScheduleId, selectedClassId, statusFilter, searchTerm, currentPage, itemsPerPage, selectedDate]);
+  }, [academyId, selectedScheduleId, selectedClassId, statusFilter, debouncedSearchTerm, currentPage, itemsPerPage, selectedDate]);
 
   useEffect(() => {
     loadEnrollments();
