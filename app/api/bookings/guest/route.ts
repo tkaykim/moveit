@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 
@@ -15,7 +15,9 @@ import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
  */
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
+    // 게스트(비회원)는 세션이 없어 anon 역할이 됨 → bookings RLS를 로그인 전용으로 잠그기 위해
+    // 이 라우트는 service-role로 동작(서버측 검증으로 안전). anon은 bookings에 직접 접근 불가.
+    const supabase = createServiceClient();
     const { scheduleId, guestName, guestPhone, guestEmail } = await request.json();
 
     // 필수 값 검증
