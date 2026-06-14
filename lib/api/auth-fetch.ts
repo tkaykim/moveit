@@ -12,13 +12,15 @@ import { reportError } from '@/lib/error-reporting/report';
 
 const FETCH_TIMEOUT_MS = 15000; // 15초
 
-/** 서버 오류(5xx) 응답을 관리자 에러 감지로 보고. 4xx(검증/권한)는 정상 흐름이라 제외. */
+/** 서버 오류(5xx)와 권한 거부(403, RLS/인가 의심)를 관리자 에러 감지로 보고.
+ *  (401은 토큰 갱신/로그인 유도라 정상 흐름 → 제외. 그 외 4xx 검증 오류도 제외) */
 function reportApiFailure(url: string | URL, status: number, bodyText?: string) {
-  if (status < 500) return;
+  const isPermission = status === 403;
+  if (status < 500 && !isPermission) return;
   reportError({
     source: 'api',
-    level: status >= 500 ? 'error' : 'warning',
-    message: `API ${status} ${String(url)}`,
+    level: isPermission ? 'warning' : 'error',
+    message: `API ${status}${isPermission ? ' (권한/RLS 의심)' : ''} ${String(url)}`,
     statusCode: status,
     context: { url: String(url), body: bodyText?.slice(0, 500) },
   });
@@ -100,8 +102,8 @@ export async function fetchWithAuth(
       }
     }
 
-    // 서버 오류(5xx)는 관리자 에러 감지로 보고
-    if (response.status >= 500) {
+    // 서버 오류(5xx) + 권한 거부(403)는 관리자 에러 감지로 보고
+    if (response.status >= 500 || response.status === 403) {
       const clone = response.clone();
       clone.text().then((t) => reportApiFailure(url, response.status, t)).catch(() => reportApiFailure(url, response.status));
     }
