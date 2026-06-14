@@ -86,3 +86,89 @@ CREATE POLICY rt_self_read ON public.revenue_transactions FOR SELECT TO authenti
 2. 학원 관리자: 대시보드·매출·출석/신청·수강권·일정 CRUD 정상.
 3. 슈퍼 관리자: /admin 정상.
 4. 음성 테스트: anon 키로 REST 직접 호출 시 타 학원/타 사용자 데이터 read/write 차단 확인.
+
+---
+
+# 적용 완료 현황 (2026-06, 무인 자율 작업)
+- ✅ Phase1: bank_transfer_orders, user_ticket_payment_orders, instructor_salaries, academy_user_roles (SELECT 본인/스태프/슈퍼, 쓰기 service-role)
+- ✅ Phase2: revenue_transactions, user_tickets (SELECT 본인/스태프/슈퍼 + INSERT/UPDATE WITH CHECK)
+- ✅ Phase3: consultation_categories, schedule_change_requests, daily_logs, operation_notes
+- ✅ catalog 쓰기-탬퍼링 차단(읽기 USING(true) 공개 + 쓰기 스태프/슈퍼): tickets, classes, halls, academies, schedules(class조인), ticket_classes(class조인)
+- 헬퍼: is_academy_staff(uuid), is_super_admin() (SECURITY DEFINER). 쓰기정책엔 항상 is_super_admin() 포함.
+- 권한상승 차단: users.role 변경 트리거(service-role만), academy_user_roles 쓰기 REVOKE.
+
+# 남은 테이블 — 감독 하 적용용 (무인 적용 금지: 공개 흐름/다중 write 경로/전체 조인)
+
+## instructors (공개 강사·댄서 프로필 read 다수)
+```sql
+alter table public.instructors enable row level security;
+create policy instr_select_public on public.instructors for select to anon, authenticated using (true);
+-- 쓰기: 본인(instructors.user_id=auth.uid()) + 해당 학원 스태프(academy_instructors 조인) + 슈퍼
+create policy instr_write on public.instructors for all to authenticated
+  using (
+    user_id = auth.uid() or public.is_super_admin()
+    or exists (select 1 from public.academy_instructors ai
+               where ai.instructor_id = instructors.id and public.is_academy_staff(ai.academy_id))
+  )
+  with check ( /* 동일 */ user_id = auth.uid() or public.is_super_admin()
+    or exists (select 1 from public.academy_instructors ai
+               where ai.instructor_id = instructors.id and public.is_academy_staff(ai.academy_id)));
+```
+E2E: 공개 강사목록/댄서목록/학원상세(강사명) 로그아웃 상태 표시 + 강사 본인 프로필 수정 + 학원관리 강사 등록/수정. academy_instructors 컬럼명(instructor_id/academy_id) 사전 확인 필수.
+
+## academy_students (공개 홈/학원목록이 카운트로 read)
+- 먼저 home-view/academy-list-view가 academy_students에서 무엇을 읽는지 확인(카운트면 RLS로 0될 수 있음).
+- 쓰기 다수: sales-form/student-register/admin-add-enrollment/consultation-modal(브라우저 스태프) + purchase(user-token self) + payment-confirm/link-guest(service).
+```sql
+alter table public.academy_students enable row level security;
+-- 읽기: 본인 + 학원 스태프 + 슈퍼 (공개 카운트가 필요하면 별도 공개 RPC/뷰로 분리)
+create policy as_select on public.academy_students for select to authenticated
+  using (user_id = auth.uid() or public.is_academy_staff(academy_id) or public.is_super_admin());
+-- 쓰기: 본인 등록(user_id=auth.uid()) + 학원 스태프 + 슈퍼
+create policy as_write on public.academy_students for all to authenticated
+  using (user_id = auth.uid() or public.is_academy_staff(academy_id) or public.is_super_admin())
+  with check (user_id = auth.uid() or public.is_academy_staff(academy_id) or public.is_super_admin());
+```
+⚠️ 공개 storefront가 academy_students를 직접 읽으면 위 SELECT(authenticated)로 로그아웃 카운트가 깨짐 → 공개 카운트는 서버 RPC(SECURITY DEFINER)나 academies 컬럼 캐시로 이전 후 적용할 것.
+
+## bookings (게스트 anon INSERT 포함 — 공개 예약 흐름)
+- 읽기: enrollments-view(스태프), 본인(my-bookings는 API), admin.
+- 쓰기: bookings/route(user-token self), bookings/guest(anon!), admin-add(staff), [id]/status(service/staff), delete(staff browser).
+```sql
+alter table public.bookings enable row level security;
+-- 읽기: 본인 + 해당 학원 스태프(class→academy) + 슈퍼
+create policy bk_select on public.bookings for select to authenticated
+  using (user_id = auth.uid() or public.is_super_admin()
+    or public.is_academy_staff((select c.academy_id from public.classes c where c.id = bookings.class_id)));
+-- INSERT: 회원 본인 + 학원 스태프 + (게스트 anon: user_id null 인 비회원 예약 허용 정책 별도 to anon)
+create policy bk_insert_member on public.bookings for insert to authenticated
+  with check (user_id = auth.uid() or public.is_super_admin()
+    or public.is_academy_staff((select c.academy_id from public.classes c where c.id = bookings.class_id)));
+create policy bk_insert_guest on public.bookings for insert to anon
+  with check (user_id is null and guest_name is not null);  -- 게스트 비회원 예약
+-- UPDATE/DELETE: 학원 스태프(취소/출석) — service-role도 가능. 본인 취소는 API(서버)로.
+create policy bk_update_staff on public.bookings for update to authenticated
+  using (public.is_academy_staff((select c.academy_id from public.classes c where c.id = bookings.class_id)) or public.is_super_admin())
+  with check (public.is_academy_staff((select c.academy_id from public.classes c where c.id = bookings.class_id)) or public.is_super_admin());
+```
+⚠️ 게스트 예약(anon INSERT) 정책이 핵심 — 빠지면 비회원 예약/회원가입 흐름이 막힌다. 적용 후 반드시: 로그아웃 상태에서 게스트 예약, 회원 예약, 관리자 출석/취소, my-bookings 표시 전부 E2E. class_id null booking 존재 여부 사전 확인(있으면 정책 보정).
+
+## users (PII 573명 — 현재 'view all USING(true)'로 전면 공개, 최대 잔여 리스크)
+- 공개로 읽혀야 하는 건 '강사/댄서 프로필'뿐. 일반 회원 PII는 self+같은학원스태프만.
+```sql
+-- 기존 과대 정책 교체
+drop policy if exists "Authenticated users can view all profiles" on public.users; -- 실제 정책명 확인 후
+create policy users_select_scoped on public.users for select to authenticated
+  using (
+    id = auth.uid()
+    or public.is_super_admin()
+    or exists (select 1 from public.instructors i where i.user_id = users.id)  -- 공개 강사 프로필
+    or exists (select 1 from public.academy_students s
+               join public.academy_user_roles r on r.academy_id = s.academy_id
+               where s.user_id = users.id and r.user_id = auth.uid()
+                 and r.role in ('ACADEMY_OWNER','ACADEMY_MANAGER'))  -- 내 학원 학생
+  );
+-- 강사/댄서 공개 프로필이 anon(로그아웃)에도 필요하면 anon 정책 별도 또는 공개 컬럼만 뷰로.
+-- UPDATE: 본인 프로필만(역할 변경은 트리거가 차단). users_update_self.
+```
+⚠️ 가장 위험: revenue/enrollments/instructor-search/dancer-list 등 users 임베드 조인이 많아 잘못 좁히면 다수 화면이 빈다. 적용 전 users 임베드 read 지점 전수 grep + 각 화면 E2E + 에러감지망(/admin/errors) 모니터링. anon 공개 프로필(강사/댄서) 경로 반드시 보존.
