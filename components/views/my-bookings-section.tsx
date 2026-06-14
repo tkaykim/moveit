@@ -2,7 +2,7 @@
 
 import { Calendar, Clock, MapPin, User, ChevronRight } from 'lucide-react';
 import { BookingStatusBadge } from '@/components/common/booking-status-badge';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -69,35 +69,39 @@ export const MyBookingsSection = ({ onAcademyClick, initialTab = 'upcoming', sec
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>(initialTab);
 
-  useEffect(() => {
-    const loadBookings = async () => {
-      if (!user) {
+  const loadBookings = useCallback(async () => {
+    if (!user) {
+      setBookings([]);
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      setLoadError(false);
+      const response = await fetchWithAuth('/api/bookings');
+      if (response.ok) {
+        const result = await response.json();
+        setBookings(result.data || []);
+      } else {
+        // 빈 목록으로 보이면 "예약 없음"으로 오인 → 명시적 에러 상태
         setBookings([]);
-        setLoading(false);
-        return;
+        setLoadError(true);
       }
-
-      try {
-        setLoading(true);
-        const response = await fetchWithAuth('/api/bookings');
-        if (response.ok) {
-          const result = await response.json();
-          setBookings(result.data || []);
-        } else {
-          setBookings([]);
-        }
-      } catch (error) {
-        console.error('Error loading bookings:', error);
-        setBookings([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadBookings();
+    } catch (error) {
+      console.error('Error loading bookings:', error);
+      setBookings([]);
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
+
+  useEffect(() => {
+    loadBookings();
+  }, [loadBookings]);
 
   useEffect(() => {
     if (initialTab) {
@@ -155,6 +159,19 @@ export const MyBookingsSection = ({ onAcademyClick, initialTab = 'upcoming', sec
       <div className="mb-6" ref={sectionRef}>
         <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
           <div className="text-neutral-500 text-center py-4">로딩 중...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="mb-6" ref={sectionRef}>
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 text-center">
+          <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-3">예약 내역을 불러오지 못했습니다.</p>
+          <button onClick={loadBookings} className="px-4 py-2 rounded-lg bg-black dark:bg-white text-white dark:text-black text-sm font-medium">
+            다시 시도
+          </button>
         </div>
       </div>
     );
