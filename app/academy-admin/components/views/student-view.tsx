@@ -40,6 +40,7 @@ const ITEMS_PER_PAGE_OPTIONS = [30, 50, 100];
 export function StudentView({ academyId }: StudentViewProps) {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | '수강중' | '만료예정' | '휴면'>('ALL');
@@ -70,6 +71,7 @@ export function StudentView({ academyId }: StudentViewProps) {
     if (!supabase) { setLoading(false); return; }
 
     setLoading(true);
+    setLoadError(false);
     try {
       const offset = (currentPage - 1) * itemsPerPage;
 
@@ -86,7 +88,9 @@ export function StudentView({ academyId }: StudentViewProps) {
       setTotalCount(result.total_count);
       setStudents(result.students || []);
     } catch (error) {
+      // 조회 실패를 빈 명단으로 두면 "학생 없음"으로 오인 → 명시적 에러 상태
       console.error('Error loading students:', error);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -148,6 +152,17 @@ export function StudentView({ academyId }: StudentViewProps) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-gray-500 dark:text-gray-400">로딩 중...</div>
+      </div>
+    );
+  }
+
+  if (loadError && students.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <p className="text-sm text-gray-600 dark:text-gray-300">학생 명단을 불러오지 못했습니다.</p>
+        <button onClick={reloadAll} className="px-4 py-2 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-black text-sm font-medium">
+          다시 시도
+        </button>
       </div>
     );
   }
