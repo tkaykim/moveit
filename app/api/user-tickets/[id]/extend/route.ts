@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
+import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 
 /**
  * POST: 관리자 임의 연장
@@ -15,6 +16,9 @@ export async function POST(
     const { id: userTicketId } = await params;
     const supabase = await createClient() as any;
     const authUser = await getAuthenticatedUser(request);
+    if (!authUser) {
+      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+    }
     const body = await request.json();
     const { extend_days, new_expiry_date } = body;
 
@@ -25,6 +29,17 @@ export async function POST(
       .single();
     if (fetchErr || !ut) {
       return NextResponse.json({ error: '수강권을 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    // 인가: 대상 수강권이 속한 학원의 관리자만 임의 연장 가능
+    const ticketAcademyId = ut.tickets?.academy_id;
+    if (!ticketAcademyId) {
+      return NextResponse.json({ error: '수강권의 학원 정보를 찾을 수 없습니다.' }, { status: 404 });
+    }
+    try {
+      await assertAcademyAdmin(ticketAcademyId, authUser.id);
+    } catch {
+      return NextResponse.json({ error: '학원 관리자 권한이 필요합니다.' }, { status: 403 });
     }
 
     let nextExpiry: string;
@@ -49,7 +64,7 @@ export async function POST(
     if (updateErr) throw updateErr;
 
     // 활동 로그: 관리자 임의 연장
-    const academyId = ut.tickets?.academy_id;
+    const academyId = ticketAcademyId;
     if (academyId) {
       insertEnrollmentActivityLog({
         academy_id: academyId,

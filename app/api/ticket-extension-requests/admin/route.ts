@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getSchedulesForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
+import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
 import { isPeriodTicket as checkIsPeriodTicket } from '@/lib/utils/ticket-type';
 
@@ -23,6 +24,13 @@ export async function POST(request: Request) {
 
     if (!academyId || !user_ticket_id || !request_type) {
       return NextResponse.json({ error: 'academyId, user_ticket_id, request_type가 필요합니다.' }, { status: 400 });
+    }
+
+    // 인가: 호출자가 해당 학원의 관리자여야 함
+    try {
+      await assertAcademyAdmin(academyId, adminUser.id);
+    } catch {
+      return NextResponse.json({ error: '학원 관리자 권한이 필요합니다.' }, { status: 403 });
     }
     if (!['EXTENSION', 'PAUSE'].includes(request_type)) {
       return NextResponse.json({ error: 'request_type는 EXTENSION 또는 PAUSE 여야 합니다.' }, { status: 400 });

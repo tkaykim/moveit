@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
+import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { generateUniqueSlug } from '@/lib/utils/slug-server';
 
@@ -14,6 +15,13 @@ export async function POST(
     }
 
     const { id: academyId } = await params;
+
+    try {
+      await assertAcademyAdmin(academyId, user.id);
+    } catch {
+      return NextResponse.json({ error: '학원 관리자 권한이 필요합니다.' }, { status: 403 });
+    }
+
     const body = await request.json();
     const nameEn = body?.name_en?.trim();
 

@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
+import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
+import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { NextResponse } from 'next/server';
 
 const PRESETS = [
@@ -17,6 +19,15 @@ export async function POST(request: Request) {
     const academyId = searchParams.get('academyId');
     if (!academyId) {
       return NextResponse.json({ error: 'academyId 필요' }, { status: 400 });
+    }
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+    }
+    try {
+      await assertAcademyAdmin(academyId, user.id);
+    } catch {
+      return NextResponse.json({ error: '학원 관리자 권한이 필요합니다.' }, { status: 403 });
     }
     const supabase = await createClient() as any;
     const existing = await supabase

@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
+import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
+import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { NextResponse } from 'next/server';
 
 /**
@@ -28,12 +30,21 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient() as any;
     const body = await request.json();
     const { academy_id, name, duration_minutes } = body;
     if (!academy_id || !name?.trim()) {
       return NextResponse.json({ error: 'academy_id, name 필요' }, { status: 400 });
     }
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+    }
+    try {
+      await assertAcademyAdmin(academy_id, user.id);
+    } catch {
+      return NextResponse.json({ error: '학원 관리자 권한이 필요합니다.' }, { status: 403 });
+    }
+    const supabase = await createClient() as any;
     const { data, error } = await supabase
       .from('consultation_categories')
       .insert({

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
+import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 
 /**
  * POST /api/bookings/admin-add-guest
@@ -18,6 +19,12 @@ export async function POST(request: Request) {
   try {
     const supabase = await createClient() as any;
     const authUser = await getAuthenticatedUser(request);
+    if (!authUser) {
+      return NextResponse.json(
+        { error: '로그인이 필요합니다.' },
+        { status: 401 }
+      );
+    }
     const body = await request.json();
     const { scheduleId, academyId, guestName, guestPhone, adminNote } = body;
 
@@ -25,6 +32,16 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'scheduleId, academyId가 필요합니다.' },
         { status: 400 }
+      );
+    }
+
+    // 인가: 해당 학원의 관리자(또는 SUPER_ADMIN)만 게스트 수기 추가 가능
+    try {
+      await assertAcademyAdmin(academyId, authUser.id);
+    } catch {
+      return NextResponse.json(
+        { error: '학원 관리자 권한이 필요합니다.' },
+        { status: 403 }
       );
     }
 

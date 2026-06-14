@@ -2,6 +2,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { sendNotification } from '@/lib/notifications';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
+import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
 import { isCountTicket } from '@/lib/utils/ticket-type';
 import { formatKSTDate, formatKSTTime } from '@/lib/utils/kst-time';
@@ -68,9 +69,30 @@ export async function PATCH(
     const oldStatus = currentBooking.status;
     const scheduleId = currentBooking.schedule_id;
     const academyId = (currentBooking as any).classes?.academy_id;
+
+    // 인증/인가 (IDOR 차단)
+    // 1) 반드시 로그인된 호출자여야 한다.
+    const authUser = await getAuthenticatedUser(request);
+    if (!authUser) {
+      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+    }
+    // 2) 본인 예약 + 'CANCELLED'로의 변경만 회원 self-cancel로 허용.
+    //    그 외(출석/확정/결석 등 관리 액션) 또는 타인 예약은 학원 관리자만 가능.
+    const isSelfCancel = currentBooking.user_id === authUser.id && status === 'CANCELLED';
+    if (!isSelfCancel) {
+      if (!academyId) {
+        return NextResponse.json({ error: '학원 관리자 권한이 필요합니다.' }, { status: 403 });
+      }
+      try {
+        await assertAcademyAdmin(academyId, authUser.id);
+      } catch {
+        return NextResponse.json({ error: '학원 관리자 권한이 필요합니다.' }, { status: 403 });
+      }
+    }
+
     // 인증된 호출자 ID 가 우선이지만, fetch credentials 가 cookie 를 못 잡는 케이스에서는
     // booking 의 user_id (= 회원 self-cancel 의 정상 actor) 로 fallback 한다.
-    const actorId = (await getAuthenticatedUser(request))?.id ?? currentBooking.user_id ?? null;
+    const actorId = authUser.id ?? currentBooking.user_id ?? null;
     // B-3 (2026-04-21): users.is_guest를 일등시민으로 사용. guest_name은 병합 후에도
     // 보존되므로 is_guest가 false로 바뀌어도(병합 완료) 과거 비회원 주문임을 payload에
     // 남기기 위한 보조 신호로 유지. 둘 중 하나라도 참이면 guest payload 첨부.

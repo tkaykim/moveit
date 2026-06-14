@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { Database } from '@/types/database';
 import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
+import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 
 /**
  * POST /api/bookings/admin-add
@@ -20,6 +21,24 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'scheduleId, userId, academyId가 필요합니다.' },
         { status: 400 }
+      );
+    }
+
+    // 인증: 로그인 필수
+    if (!authUser) {
+      return NextResponse.json(
+        { error: '로그인이 필요합니다.' },
+        { status: 401 }
+      );
+    }
+
+    // 인가: 해당 학원의 관리자만 수기 등록 가능
+    try {
+      await assertAcademyAdmin(academyId, authUser.id);
+    } catch {
+      return NextResponse.json(
+        { error: '학원 관리자 권한이 필요합니다.' },
+        { status: 403 }
       );
     }
 

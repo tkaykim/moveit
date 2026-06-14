@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getSchedulesForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
+import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { sendNotification } from '@/lib/notifications';
 import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
 import { isPeriodTicket as checkIsPeriodTicket } from '@/lib/utils/ticket-type';
@@ -45,11 +46,24 @@ export async function PATCH(
     if (fetchErr || !reqRow) {
       return NextResponse.json({ error: '신청을 찾을 수 없습니다.' }, { status: 404 });
     }
+
+    // 인가: 대상 요청 → user_ticket → ticket.academy_id 로 해당 학원의 관리자인지 검증.
+    const academyId = (reqRow.user_tickets as any)?.tickets?.academy_id;
+    if (!academyId) {
+      return NextResponse.json({ error: '신청을 찾을 수 없습니다.' }, { status: 404 });
+    }
+    try {
+      await assertAcademyAdmin(academyId, adminUser.id);
+    } catch {
+      return NextResponse.json({ error: '학원 관리자 권한이 필요합니다.' }, { status: 403 });
+    }
+
     if (reqRow.status !== 'PENDING') {
       return NextResponse.json({ error: '이미 처리된 신청입니다.' }, { status: 400 });
     }
 
-    const { error: updateErr } = await supabase
+    // 원자적 claim: status='PENDING' 인 행만 갱신. 0행이면 이미 처리됨(더블클릭 등) → 중단.
+    const { data: claimedRows, error: updateErr } = await supabase
       .from('ticket_extension_requests')
       .update({
         status,
@@ -57,8 +71,13 @@ export async function PATCH(
         processed_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
-      .eq('id', id);
+      .eq('id', id)
+      .eq('status', 'PENDING')
+      .select('id');
     if (updateErr) throw updateErr;
+    if (!claimedRows || claimedRows.length === 0) {
+      return NextResponse.json({ error: '이미 처리된 신청입니다.' }, { status: 400 });
+    }
 
     if (status === 'APPROVED' && reqRow.user_tickets?.expiry_date) {
       // 연장 일수 계산: EXTENSION은 extension_days, PAUSE는 absent 기간
