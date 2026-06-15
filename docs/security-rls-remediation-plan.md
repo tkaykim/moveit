@@ -172,3 +172,17 @@ create policy users_select_scoped on public.users for select to authenticated
 -- UPDATE: 본인 프로필만(역할 변경은 트리거가 차단). users_update_self.
 ```
 ⚠️ 가장 위험: revenue/enrollments/instructor-search/dancer-list 등 users 임베드 조인이 많아 잘못 좁히면 다수 화면이 빈다. 적용 전 users 임베드 read 지점 전수 grep + 각 화면 E2E + 에러감지망(/admin/errors) 모니터링. anon 공개 프로필(강사/댄서) 경로 반드시 보존.
+
+---
+
+## 적용완료 추가 (2026-06-15) — users SELECT 스코핑
+
+위 "users" 설계 중 **same-academy 단위 정밀 스코핑은 보류**하고(스태프 회원검색/등록/수정이 클라이언트에서 전체 users를 읽고/써서 same-academy로 좁히면 다수 마찰), 대신 **마찰 0 + 리팩터 0**으로 핵심 구멍을 닫는 절충안을 적용함.
+
+마이그레이션: `rls_users_scope_select_staff_update`
+- `users_select_scoped` (SELECT, authenticated): `id = auth.uid() OR is_any_academy_staff() OR is_super_admin()`
+  → **일반 로그인 사용자는 본인 프로필만**, 학원 스태프(OWNER/MANAGER)·슈퍼만 전체. "아무 가입자나 전체 회원 PII 덤프" 차단.
+- `users_update_staff` (UPDATE): 스태프/슈퍼가 회원 프로필 수정 가능(student-register/detail 잠복버그 해소). role 변경은 `trg_prevent_role_change`가 계속 차단.
+- 검증: 일반 사용자 시뮬 = 본인 1명만, 스태프 = 573 전체. 마이페이지 등 일반 사용자 화면 정상, 에러감지망 권한오류 0.
+
+**잔여(허용, 베타 후 하드닝)**: 스태프는 타 학원 회원 PII까지 조회 가능. 학원 단위로 더 좁히려면 스태프 회원검색(student-register-modal phone/email, enrollments-view name/email/phone, admin-extension)·수정(student-detail)을 service-role API로 이전 후 `users_select_scoped`를 same-academy(academy_students/roles 조인) 조건으로 교체. (참고: anon은 users 정책 없음=차단, 공개 강사/댄서 프로필은 별도 instructors 테이블 사용이라 영향 없음.)
