@@ -47,7 +47,7 @@ export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
   // 항목 높이가 가변이라 실제 50~55px 만 차지 → main layout 의 paddingBottom:64px 와
   // sticky CTA bottom-[64px] 가 nav 상단보다 위로 떠 보이는 사고. h-16 으로 통일.
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] h-16 bg-white/90 dark:bg-neutral-950/90 backdrop-blur-xl border-t border-neutral-200 dark:border-neutral-800 px-6 flex justify-around items-center z-40">
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] h-16 bg-white dark:bg-neutral-950 border-t border-neutral-200 dark:border-neutral-800 px-6 flex justify-around items-center z-40">
       {tabConfig.map((tab) => {
         const Icon = tab.icon;
         const active = isActive(tab.id, tab.href);

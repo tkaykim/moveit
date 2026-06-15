@@ -257,7 +257,6 @@ export default function IntroPage() {
               <h3 className={`text-lg md:text-xl font-bold ${isLight ? 'text-neutral-900' : 'text-white'}`}>날짜 클릭 → 그날 수업 한눈에</h3>
             </div>
             <div className="relative">
-              <div className={`absolute -inset-3 bg-gradient-to-tr rounded-3xl blur-2xl opacity-50 ${isLight ? 'from-purple-50 to-blue-50' : 'from-purple-900/20 to-blue-900/20'}`} />
               <div className="relative"><FeatureCalendar /></div>
             </div>
           </div>
@@ -269,7 +268,6 @@ export default function IntroPage() {
               <h3 className={`text-lg md:text-xl font-bold ${isLight ? 'text-neutral-900' : 'text-white'}`}>명단 자동 · 터치 한 번 출석</h3>
             </div>
             <div className="relative md:order-first">
-              <div className={`absolute -inset-3 bg-gradient-to-tr rounded-3xl blur-2xl opacity-50 ${isLight ? 'from-blue-50 to-indigo-50' : 'from-blue-900/20 to-indigo-900/20'}`} />
               <div className="relative"><FeatureAttendance /></div>
             </div>
           </div>
@@ -281,7 +279,6 @@ export default function IntroPage() {
               <h3 className={`text-lg md:text-xl font-bold ${isLight ? 'text-neutral-900' : 'text-white'}`}>스캔 한 번 → 출석 자동 처리</h3>
             </div>
             <div className="relative flex justify-center">
-              <div className={`absolute -inset-3 bg-gradient-to-tr rounded-3xl blur-2xl opacity-50 ${isLight ? 'from-emerald-50 to-teal-50' : 'from-emerald-900/20 to-teal-900/20'}`} />
               <div className="relative w-full max-w-[280px]"><FeatureQr /></div>
             </div>
           </div>
@@ -293,7 +290,6 @@ export default function IntroPage() {
               <h3 className={`text-lg md:text-xl font-bold ${isLight ? 'text-neutral-900' : 'text-white'}`}>예약 시 자동 차감 · 실수 없음</h3>
             </div>
             <div className="relative md:order-first">
-              <div className={`absolute -inset-3 bg-gradient-to-tr rounded-3xl blur-2xl opacity-50 ${isLight ? 'from-primary/20 to-green-50' : 'from-primary/10 to-green-900/20'}`} />
               <div className="relative"><FeatureTicket /></div>
             </div>
           </div>
@@ -319,7 +315,6 @@ export default function IntroPage() {
               </div>
             </div>
             <div className="relative">
-              <div className={`absolute -inset-3 bg-gradient-to-tr rounded-3xl blur-2xl opacity-50 ${isLight ? 'from-orange-50 to-amber-50' : 'from-orange-900/20 to-amber-900/20'}`} />
               <div className="relative"><FeaturePush /></div>
             </div>
           </div>

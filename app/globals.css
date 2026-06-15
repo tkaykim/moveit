@@ -107,10 +107,10 @@
   }
 }
 
-/* 인트로 CTA 박스 펄스 (키프레임은 레이어 밖에) */
+/* 인트로 CTA 박스 펄스 — 네온 글로우(box-shadow) 제거, 은은한 스케일만(플랫) */
 @keyframes intro-cta-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--primary-rgb), 0.35); transform: scale(1); }
-  50% { box-shadow: 0 0 20px 4px rgba(var(--primary-rgb), 0.2); transform: scale(1.02); }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
 }
 
 /* TipTap 에디터 스타일 */

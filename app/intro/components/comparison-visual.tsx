@@ -34,8 +34,7 @@ export function ComparisonVisual() {
         </div>
 
         {/* 무빗 카드 - 강조 */}
-        <div className="relative rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 overflow-hidden border-2 border-primary/40 bg-gradient-to-b from-primary/15 to-primary/5 shadow-[0_0_40px_-12px_rgba(var(--primary-rgb),0.35)] min-w-0">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="relative rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 overflow-hidden border-2 border-primary/40 bg-primary/5 min-w-0">
           <p className="relative text-center text-primary text-xs sm:text-sm font-bold mb-3 sm:mb-5">무빗</p>
           <div className="relative space-y-2 sm:space-y-4">
             {ROWS.map((row, idx) => (
