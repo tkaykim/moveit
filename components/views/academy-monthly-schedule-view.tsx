@@ -341,6 +341,12 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
               const isSaturday = dayOfWeek === 6;
               const daySchedules = getSchedulesForDate(date);
               const hasSchedules = daySchedules.length > 0;
+              // 지난 날짜는 흐리게 — 예약 불가(종료)임을 시각적으로 구분 (오늘 제외)
+              const isPast = !isToday && (
+                dateParts.year < todayParts.year ||
+                (dateParts.year === todayParts.year && dateParts.month < todayParts.month) ||
+                (dateParts.year === todayParts.year && dateParts.month === todayParts.month && dateParts.day < todayParts.day)
+              );
 
               return (
                 <button
@@ -353,7 +359,7 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
                         ? 'bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer'
                         : 'bg-white dark:bg-neutral-900'
                       : 'bg-neutral-50 dark:bg-neutral-950'
-                  } ${isToday ? 'ring-2 ring-inset ring-primary' : ''}`}
+                  } ${isToday ? 'ring-2 ring-inset ring-primary' : ''} ${isPast && isCurrentMonth ? 'opacity-50' : ''}`}
                 >
                   {/* 날짜 숫자 */}
                   <div

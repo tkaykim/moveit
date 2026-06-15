@@ -368,7 +368,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
           <div className="absolute top-12 left-5 right-5 z-20 flex justify-between items-center">
             <button 
               onClick={onBack} 
-              className="p-2 bg-black/30 backdrop-blur rounded-full text-white"
+              className="p-2 bg-black/40 rounded-full text-white"
             >
               <ChevronLeft />
             </button>
@@ -377,7 +377,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                 <button
                   onClick={handleToggleFavorite}
                   disabled={favoriteLoading}
-                  className="p-2 bg-black/30 backdrop-blur rounded-full text-white hover:bg-black/50 transition-colors disabled:opacity-50"
+                  className="p-2 bg-black/40 rounded-full text-white hover:bg-black/50 transition-colors disabled:opacity-50"
                 >
                   <Heart 
                     size={20} 
@@ -386,8 +386,11 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
                   />
                 </button>
               )}
-              <LanguageToggle />
-              <ThemeToggle />
+              {/* 히어로 사진 위 가독성·일관성 위해 토글에 어두운 backing + 흰 아이콘(back/하트와 통일) */}
+              <div className="flex items-center gap-1 rounded-full bg-black/40 px-1 [&_button]:!bg-transparent [&_button]:!text-white">
+                <LanguageToggle />
+                <ThemeToggle />
+              </div>
             </div>
           </div>
           <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white dark:from-neutral-950 to-transparent" />
@@ -648,7 +651,7 @@ export const AcademyDetailView = ({ academy, onBack, onClassBook }: AcademyDetai
       {/* 유튜브 영상 모달 */}
       {selectedVideo && (
         <div 
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 animate-in fade-in"
           onClick={() => setSelectedVideo(null)}
         >
           <div 
