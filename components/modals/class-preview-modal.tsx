@@ -115,7 +115,9 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
   if (!classInfo) return null;
 
   const isFull = classInfo.status === 'FULL';
-  
+  // 이미 종료된 수업은 예약 불가 — 서버도 막지만 과거 날짜를 눌렀을 때 버튼을 비활성+안내(헛클릭→에러 방지)
+  const isPast = classInfo.endTime ? new Date(classInfo.endTime).getTime() < Date.now() : false;
+
   // 포스터
   const posterUrl = classDetails?.poster_url || (classInfo as any).poster_url;
 
@@ -370,14 +372,14 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
               </button>
               <button 
                 onClick={() => onBook(classInfo)}
-                disabled={isFull}
+                disabled={isFull || isPast}
                 className={`flex-[2] font-black py-4 rounded-xl text-lg transition-all ${
-                  isFull 
-                    ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 cursor-not-allowed' 
+                  isFull || isPast
+                    ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
                     : 'bg-primary text-neutral-900 hover:opacity-90 active:scale-[0.98]'
                 }`}
               >
-                {isFull ? '예약 마감' : '예약하기'}
+                {isPast ? '종료된 수업' : isFull ? '예약 마감' : '예약하기'}
               </button>
             </div>
           </div>
