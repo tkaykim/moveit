@@ -459,7 +459,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
       <header className="px-5 pt-8 pb-4 sticky top-0 bg-white dark:bg-neutral-950 border-b border-neutral-100 dark:border-neutral-900 z-30">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-black italic tracking-tighter">
-            MOVE<span className="text-neutral-800">.</span>IT
+            MOVE<span className="text-neutral-800 dark:text-neutral-100">.</span>IT
           </h1>
           <div className="flex gap-3 items-center">
             <LanguageToggle />

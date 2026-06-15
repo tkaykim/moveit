@@ -383,7 +383,7 @@ export const AcademyWeeklyScheduleView = ({ academyId, onClassClick }: AcademyWe
               onClick={() => setSelectedDayIndex(index)}
               className={`flex-shrink-0 flex flex-col items-center py-2 px-4 rounded-xl transition-all ${
                 isSelected
-                  ? 'bg-primary text-white dark:text-black shadow-lg'
+                  ? 'bg-primary text-neutral-900'
                   : isToday
                     ? 'bg-primary/20 text-primary'
                     : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'

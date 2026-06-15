@@ -144,7 +144,7 @@ export function ProfileImageUpload({
       <div className="relative group">
         {/* 프로필 이미지 원형 */}
         <div
-          className="rounded-full overflow-hidden bg-gradient-to-tr from-primary to-green-500 p-[2px]"
+          className="rounded-full overflow-hidden bg-neutral-200 dark:bg-neutral-800 p-[2px]"
           style={{ width: size, height: size }}
         >
           <div className="w-full h-full rounded-full bg-white dark:bg-neutral-900 flex items-center justify-center overflow-hidden">

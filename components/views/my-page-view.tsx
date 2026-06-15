@@ -544,7 +544,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
                           });
                           setIsQrModalOpen(true);
                         }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white dark:text-black text-xs font-bold rounded-lg hover:opacity-90 transition-opacity flex-shrink-0"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-neutral-900 text-xs font-bold rounded-lg hover:opacity-90 transition-opacity flex-shrink-0"
                       >
                         <QrCode size={14} />
                         QR 출석

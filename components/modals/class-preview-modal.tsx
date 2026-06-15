@@ -374,7 +374,7 @@ export const ClassPreviewModal = ({ classInfo, onClose, onBook }: ClassPreviewMo
                 className={`flex-[2] font-black py-4 rounded-xl text-lg transition-all ${
                   isFull 
                     ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 cursor-not-allowed' 
-                    : 'bg-primary text-white dark:text-black shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95'
+                    : 'bg-primary text-neutral-900 hover:opacity-90 active:scale-[0.98]'
                 }`}
               >
                 {isFull ? '예약 마감' : '예약하기'}

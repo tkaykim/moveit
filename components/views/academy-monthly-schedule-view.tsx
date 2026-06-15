@@ -359,7 +359,7 @@ export const AcademyMonthlyScheduleView = ({ academyId, onClassClick }: AcademyM
                   <div
                     className={`text-xs font-bold mb-1 w-6 h-6 flex items-center justify-center rounded-full ${
                       isToday
-                        ? 'bg-primary text-white dark:text-black'
+                        ? 'bg-primary text-neutral-900'
                         : isCurrentMonth
                           ? isSunday
                             ? 'text-rose-500'
