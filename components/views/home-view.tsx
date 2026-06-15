@@ -456,7 +456,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
   return (
     <div className="pb-24 animate-in fade-in duration-300">
       {/* 헤더 */}
-      <header className="px-5 pt-8 pb-4 sticky top-0 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md z-30">
+      <header className="px-5 pt-8 pb-4 sticky top-0 bg-white dark:bg-neutral-950 border-b border-neutral-100 dark:border-neutral-900 z-30">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-black italic tracking-tighter">
             MOVE<span className="text-neutral-800">.</span>IT
@@ -473,6 +473,9 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             </button>
           </div>
         </div>
+        {/* 통합 검색은 단일학원 모드에서 비활성(/search→/home 리다이렉트)이므로 검색바도 함께 숨김
+            — 동작하지 않는 '죽은 검색바' 노출 방지 (B-4 후속, UX 감사) */}
+        {!hidePublicAcademies && (
         <form onSubmit={handleSearch} className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none z-10" size={18} />
           <Input
@@ -483,6 +486,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
             className="h-11 w-full pl-10 rounded-xl bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 focus-visible:ring-neutral-400"
           />
         </form>
+        )}
       </header>
 
       {/* 배너 캐러셀 */}
@@ -726,7 +730,7 @@ export const HomeView = ({ onNavigate, onAcademyClick, onDancerClick }: HomeView
                 </div>
                 {academy.price && (
                   <div className="flex-shrink-0 self-center">
-                    <span className="text-sm font-bold text-neutral-800">
+                    <span className="text-sm font-bold text-neutral-800 dark:text-neutral-100">
                       {academy.price.toLocaleString()}원~
                     </span>
                   </div>

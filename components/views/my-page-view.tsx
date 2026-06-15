@@ -324,7 +324,7 @@ export const MyPageView = ({ onNavigate }: MyPageViewProps) => {
               onClick={() => onNavigate?.('SETTINGS')}
               className="w-full flex items-center gap-4 hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-2xl p-2 -mx-2 transition-colors"
             >
-              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-primary to-green-500 p-[2px]">
+              <div className="w-16 h-16 rounded-full bg-neutral-200 dark:bg-neutral-800 p-[2px]">
                 <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center overflow-hidden">
                   {profileImage ? (
                     <img src={profileImage} alt={displayName} className="w-full h-full object-cover" />

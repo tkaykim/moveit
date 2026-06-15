@@ -77,7 +77,7 @@ export const SettingsView = ({ onBack }: SettingsViewProps) => {
               displayName={userName}
             />
           ) : (
-            <div className="w-[88px] h-[88px] rounded-full bg-gradient-to-tr from-primary to-green-500 p-[2px]">
+            <div className="w-[88px] h-[88px] rounded-full bg-neutral-200 dark:bg-neutral-800 p-[2px]">
               <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center">
                 <User className="text-black dark:text-white" size={32} />
               </div>
