@@ -34,8 +34,8 @@ export function FeatureQr() {
 
   return (
     <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-sm">
-      {/* QR Scanner Area — 아이콘·프레임 모두 가운데, 잘림 방지 */}
-      <div className="relative aspect-square max-h-[200px] bg-neutral-950 overflow-hidden flex items-center justify-center p-4">
+      {/* QR Scanner Area — 카드 폭 꽉 채움(aspect-square+max-h 가 정사각형으로 줄어 우측 흰띠 생기던 것 수정) */}
+      <div className="relative w-full h-[200px] bg-neutral-950 overflow-hidden flex items-center justify-center p-4">
         <div className="absolute inset-0 flex items-center justify-center p-4">
           {/* Scan Lines (중앙 정렬, 컨테이너 안에 완전히 수용) */}
           <div className="relative w-[min(140px,65%)] aspect-square max-w-full border-2 border-primary/40 rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
