@@ -3,6 +3,8 @@ import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/s
 import { sendBulkNotification } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase/server';
 import type { NotificationType } from '@/types/notifications';
+export const dynamic = 'force-dynamic';
+
 
 /**
  * GET /api/academy-admin/[academyId]/push

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createClient } from '@/lib/supabase/server';
+export const dynamic = 'force-dynamic';
+
 
 /**
  * PATCH /api/notifications/[id]

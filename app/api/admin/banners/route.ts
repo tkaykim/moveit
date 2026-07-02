@@ -7,6 +7,8 @@ import {
   updateBannerSettings,
 } from '@/lib/db/banners';
 
+export const dynamic = 'force-dynamic';
+
 async function requireSuperAdmin(request?: NextRequest | Request) {
   const auth = await requireSuperAdminAuth(request);
   if (auth.error) {

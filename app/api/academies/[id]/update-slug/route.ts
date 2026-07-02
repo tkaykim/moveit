@@ -3,6 +3,8 @@ import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { generateUniqueSlug } from '@/lib/utils/slug-server';
+export const dynamic = 'force-dynamic';
+
 
 export async function POST(
   request: NextRequest,

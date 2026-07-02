@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   const slug = request.nextUrl.searchParams.get('slug');
   if (!slug) {
@@ -12,6 +14,7 @@ export async function GET(request: NextRequest) {
     .from('academies')
     .select('id, slug')
     .eq('slug', slug)
+    .eq('is_active', true)
     .single();
 
   if (error || !data) {

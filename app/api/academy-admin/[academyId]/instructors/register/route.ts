@@ -6,6 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
+export const dynamic = 'force-dynamic';
+
 
 function normalizeEmail(email: string | null | undefined): string | null {
   if (email == null || typeof email !== 'string') return null;

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSuperAdmin } from '@/lib/supabase/admin-auth';
 import { getDashboardStats } from '@/lib/db/stats';
+export const dynamic = 'force-dynamic';
+
 
 export async function GET(request: NextRequest) {
   try {

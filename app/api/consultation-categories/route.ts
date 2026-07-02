@@ -3,6 +3,8 @@ import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET ?academyId=xxx - 목록
  * POST - 생성 { academy_id, name, duration_minutes }

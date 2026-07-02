@@ -16,6 +16,8 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { getTicketById } from '@/lib/db/tickets';
 import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 import { isPeriodTicket as checkIsPeriodTicket } from '@/lib/utils/ticket-type';
+export const dynamic = 'force-dynamic';
+
 
 function normalizePhone(value: string | null | undefined): string {
   if (value == null || typeof value !== 'string') return '';

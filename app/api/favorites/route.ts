@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { toggleAcademyFavorite, toggleInstructorFavorite, getAcademyFavorites, getInstructorFavorites } from '@/lib/db/favorites';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 
+export const dynamic = 'force-dynamic';
+
 // 찜 추가/삭제 (토글) - 쿠키 또는 Authorization Bearer
 export async function POST(request: Request) {
   try {

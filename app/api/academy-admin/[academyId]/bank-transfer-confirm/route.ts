@@ -280,9 +280,10 @@ export async function POST(
       if (resolvedClassId) {
         const { consumeUserTicket } = await import('@/lib/db/user-tickets');
         let consumeOk = false;
+        let consumedTicket: any = null;
         try {
           const beforeRemaining = remainingCount;
-          const consumedTicket = await consumeUserTicket(userTicket.id, resolvedClassId, 1, supabase);
+          consumedTicket = await consumeUserTicket(userTicket.id, resolvedClassId, 1, supabase);
           consumeOk = true;
           // 활동 로그: 횟수 차감 (PERIOD 권은 차감이 없으므로 로그 생략)
           if (!isPeriodTicket && consumedTicket && typeof beforeRemaining === 'number') {
@@ -327,7 +328,7 @@ export async function POST(
           if (existingBooking) {
             // 이미 출석/결석 처리된 booking은 status를 되돌리지 않음 (역주행 방지)
             const alreadyAttended = ['COMPLETED', 'ABSENT'].includes(existingBooking.status);
-            const { data: updatedRow } = await supabase
+            const { data: updatedRow, error: updateBookingErr } = await supabase
               .from('bookings')
               .update({
                 ...(alreadyAttended ? {} : { status: 'CONFIRMED' }),
@@ -337,6 +338,33 @@ export async function POST(
               .eq('id', existingBooking.id)
               .select()
               .single();
+            if (updateBookingErr) {
+              console.error('bank-transfer booking update error:', updateBookingErr);
+              if (!isPeriodTicket) {
+                try {
+                  const { data: restored } = await supabase
+                    .rpc('restore_ticket_count', { p_user_ticket_id: userTicket.id, p_count: 1 });
+                  const restoredRow = Array.isArray(restored) ? restored[0] : restored;
+                  await logTicketEvent({
+                    academy_id: academyId,
+                    user_id: customerUserId,
+                    user_ticket_id: userTicket.id,
+                    action: 'COUNT_RESTORE',
+                    before: { remaining_count: consumedTicket?.remaining_count ?? null, status: consumedTicket?.status ?? null },
+                    after: {
+                      remaining_count: restoredRow?.remaining_count ?? remainingCount,
+                      status: restoredRow?.status ?? 'ACTIVE',
+                    },
+                    via: 'bank_transfer',
+                    reason: 'booking_update_failed',
+                    context: { class_id: resolvedClassId, schedule_id: order.schedule_id, order_id: orderId },
+                    actor_user_id: user.id,
+                  }, supabase).catch(() => {});
+                } catch (rollbackError) {
+                  console.error('bank-transfer ticket restore after booking update error failed:', rollbackError);
+                }
+              }
+            }
             booking = updatedRow;
           } else {
             const { data: scheduleRow } = await supabase
@@ -361,6 +389,30 @@ export async function POST(
             if (bookingInsErr) {
               // 수강권은 이미 발급됨(유효). 예약만 실패 → 거짓 "예약 확정" 메시지 방지 위해 booking=null 유지.
               console.error('bank-transfer booking insert error:', bookingInsErr);
+              if (!isPeriodTicket) {
+                try {
+                  const { data: restored } = await supabase
+                    .rpc('restore_ticket_count', { p_user_ticket_id: userTicket.id, p_count: 1 });
+                  const restoredRow = Array.isArray(restored) ? restored[0] : restored;
+                  await logTicketEvent({
+                    academy_id: academyId,
+                    user_id: customerUserId,
+                    user_ticket_id: userTicket.id,
+                    action: 'COUNT_RESTORE',
+                    before: { remaining_count: consumedTicket?.remaining_count ?? null, status: consumedTicket?.status ?? null },
+                    after: {
+                      remaining_count: restoredRow?.remaining_count ?? remainingCount,
+                      status: restoredRow?.status ?? 'ACTIVE',
+                    },
+                    via: 'bank_transfer',
+                    reason: 'booking_insert_failed',
+                    context: { class_id: resolvedClassId, schedule_id: order.schedule_id, order_id: orderId },
+                    actor_user_id: user.id,
+                  }, supabase).catch(() => {});
+                } catch (rollbackError) {
+                  console.error('bank-transfer ticket restore after booking insert error failed:', rollbackError);
+                }
+              }
             }
             booking = bookingRow;
           }

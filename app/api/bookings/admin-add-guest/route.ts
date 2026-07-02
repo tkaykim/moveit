@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
+export const dynamic = 'force-dynamic';
+
 
 /**
  * POST /api/bookings/admin-add-guest

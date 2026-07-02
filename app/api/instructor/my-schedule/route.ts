@@ -9,6 +9,8 @@ import { getInstructorByUserId } from '@/lib/db/instructors';
 import { getSchedules } from '@/lib/db/schedules';
 import { getScheduleEnrollmentStats } from '@/lib/db/bookings';
 
+export const dynamic = 'force-dynamic';
+
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 

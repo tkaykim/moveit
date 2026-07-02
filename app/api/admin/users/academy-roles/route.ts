@@ -2,6 +2,8 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { requireSuperAdmin } from '@/lib/supabase/admin-auth';
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 // GET: 학원-유저 역할 매핑 목록 조회
 export async function GET(request: Request) {
   try {

@@ -6,6 +6,8 @@ import { isPeriodTicket as checkIsPeriodTicket } from '@/lib/utils/ticket-type';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { Database } from '@/types/database';
 import { sendNotification } from '@/lib/notifications';
+export const dynamic = 'force-dynamic';
+
 
 // 수강권 구매 (쿠키 또는 Authorization Bearer 토큰)
 export async function POST(request: Request) {

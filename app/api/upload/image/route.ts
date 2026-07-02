@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
+export const dynamic = 'force-dynamic';
+
 
 /**
  * POST /api/upload/image

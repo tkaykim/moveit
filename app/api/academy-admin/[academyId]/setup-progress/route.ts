@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { createServiceClient } from '@/lib/supabase/server';
+export const dynamic = 'force-dynamic';
+
 
 /**
  * GET /api/academy-admin/[academyId]/setup-progress

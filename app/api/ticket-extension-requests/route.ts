@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { insertEnrollmentActivityLog } from '@/lib/db/enrollment-activity-log';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST: 사용자 연장/일시정지 신청 - 쿠키 또는 Authorization Bearer
  * GET: ?academyId=xxx → 해당 학원 신청 목록(관리자), 없으면 현재 사용자 신청 목록

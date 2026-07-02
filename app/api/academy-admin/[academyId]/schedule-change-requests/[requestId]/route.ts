@@ -8,6 +8,8 @@ import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { updateSchedule } from '@/lib/db/schedules';
+export const dynamic = 'force-dynamic';
+
 
 export async function PATCH(
   request: NextRequest,

@@ -6,6 +6,8 @@ import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
 import { isCountTicket } from '@/lib/utils/ticket-type';
 import { formatKSTDate, formatKSTTime } from '@/lib/utils/kst-time';
+export const dynamic = 'force-dynamic';
+
 
 /**
  * PATCH /api/bookings/[id]/status

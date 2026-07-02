@@ -5,6 +5,8 @@ import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { normalizeGuestEmail, normalizeGuestPhone } from '@/lib/utils/guest-normalize';
 import { isGuestEligibleTicket } from '@/lib/utils/ticket-policy';
+export const dynamic = 'force-dynamic';
+
 
 /**
  * 계좌이체 신청 주문 생성 (입금 대기).

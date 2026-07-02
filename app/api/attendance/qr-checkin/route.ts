@@ -1,8 +1,11 @@
 import { verifyQrToken, verifyQrTokenSignature } from '@/lib/qr-token';
 import { NextResponse } from 'next/server';
-import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
+import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { logTicketEvent } from '@/lib/db/enrollment-activity-log';
+import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
+export const dynamic = 'force-dynamic';
+
 
 /**
  * POST /api/attendance/qr-checkin
@@ -19,8 +22,6 @@ export async function POST(request: Request) {
         { status: 401 }
       );
     }
-
-    const supabase = await getAuthenticatedSupabase(request);
 
     const body = await request.json();
     const { token, academyId } = body;
@@ -49,9 +50,10 @@ export async function POST(request: Request) {
     }
 
     const { bookingId } = verification;
+    const serviceSupabase = createServiceClient() as any;
 
     // 2단계: 예약 정보 조회 (user_ticket_id 포함 — G10: 잔여 스냅샷용)
-    const { data: booking, error: bookingError } = await (supabase as any)
+    const { data: booking, error: bookingError } = await serviceSupabase
       .from('bookings')
       .select(`
         id, user_id, status, schedule_id, class_id, user_ticket_id,
@@ -86,6 +88,15 @@ export async function POST(request: Request) {
     }
 
     // 이미 출석 처리된 예약인지 확인
+    try {
+      await assertAcademyAdmin(academyId, authUser.id);
+    } catch {
+      return NextResponse.json(
+        { error: '출석 체크는 학원 관리자 권한이 필요합니다.' },
+        { status: 403 }
+      );
+    }
+
     if (booking.status === 'COMPLETED') {
       return NextResponse.json(
         { error: '이미 출석 처리된 예약입니다.', alreadyCheckedIn: true },
@@ -102,7 +113,7 @@ export async function POST(request: Request) {
     }
 
     // 출석 처리: 상태를 COMPLETED로 변경
-    const { data: updatedBooking, error: updateError } = await (supabase as any)
+    const { data: updatedBooking, error: updateError } = await serviceSupabase
       .from('bookings')
       .update({ status: 'COMPLETED' })
       .eq('id', bookingId)

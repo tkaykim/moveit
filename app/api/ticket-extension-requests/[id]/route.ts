@@ -6,6 +6,8 @@ import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { sendNotification } from '@/lib/notifications';
 import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
 import { isPeriodTicket as checkIsPeriodTicket } from '@/lib/utils/ticket-type';
+export const dynamic = 'force-dynamic';
+
 
 /**
  * PATCH: 연장/일시정지 신청 승인 또는 거절 (관리자) - 쿠키 또는 Authorization Bearer

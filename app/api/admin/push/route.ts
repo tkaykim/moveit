@@ -10,6 +10,8 @@ import { requireSuperAdmin } from '@/lib/supabase/admin-auth';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { sendNotification, sendBulkNotification } from '@/lib/notifications/send-notification';
 import type { NotificationType } from '@/types/notifications';
+export const dynamic = 'force-dynamic';
+
 
 /** GET: 디바이스 토큰 현황 조회 */
 export async function GET(request: NextRequest) {

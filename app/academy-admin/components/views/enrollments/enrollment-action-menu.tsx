@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, CheckCircle2, Clock, XCircle, UserCheck, UserX, Trash2, Landmark, RotateCcw } from 'lucide-react';
+import { MoreVertical, CheckCircle2, Clock, XCircle, UserCheck, UserX, Landmark, RotateCcw } from 'lucide-react';
 
 interface EnrollmentActionMenuProps {
   enrollment: {
@@ -14,7 +14,6 @@ interface EnrollmentActionMenuProps {
     user_tickets?: { tickets?: { ticket_type?: string } } | null;
   };
   onStatusChange: (bookingId: string, newStatus: string, options?: { restoreTicket?: boolean }) => Promise<void>;
-  onDelete?: (bookingId: string) => Promise<void>;
   /** 환불 모달 열기 (수강권 결제건 역추적해 환불) */
   onRefund?: (enrollment: { id: string; user_ticket_id?: string | null }) => void;
 }
@@ -22,7 +21,6 @@ interface EnrollmentActionMenuProps {
 export function EnrollmentActionMenu({
   enrollment,
   onStatusChange,
-  onDelete,
   onRefund,
 }: EnrollmentActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -105,24 +103,6 @@ export function EnrollmentActionMenu({
     } catch (error) {
       console.error('Error changing status:', error);
       alert('상태 변경에 실패했습니다.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!onDelete) return;
-    if (!confirm('정말로 이 예약을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await onDelete(enrollment.id);
-      setIsOpen(false);
-    } catch (error) {
-      console.error('Error deleting booking:', error);
-      alert('삭제에 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -300,19 +280,6 @@ export function EnrollmentActionMenu({
             </>
           )}
 
-          {onDelete && (
-            <>
-              <div className="border-t border-neutral-200 dark:border-neutral-700 my-1" />
-              <button
-                onClick={handleDelete}
-                disabled={isLoading}
-                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Trash2 size={16} />
-                삭제하기
-              </button>
-            </>
-          )}
         </div>,
         document.body
       )}

@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/tickets
  * 판매 중인 티켓 목록 조회

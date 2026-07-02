@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import type { RegisterDeviceTokenRequest } from '@/types/notifications';
+export const dynamic = 'force-dynamic';
+
 
 /**
  * POST /api/notifications/device-token

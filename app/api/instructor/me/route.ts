@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { getInstructorByUserId } from '@/lib/db/instructors';
+export const dynamic = 'force-dynamic';
+
 
 export async function GET(request: NextRequest) {
   try {

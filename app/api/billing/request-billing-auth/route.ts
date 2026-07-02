@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getTrialEndsAt } from '@/lib/billing/constants';
+export const dynamic = 'force-dynamic';
+
 
 const VALID_PLAN_IDS = ['starter', 'growth', 'pro'] as const;
 const VALID_BILLING_CYCLES = ['monthly', 'annual'] as const;

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
+export const dynamic = 'force-dynamic';
+
 
 export async function POST(request: NextRequest) {
   try {

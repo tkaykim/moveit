@@ -11,6 +11,7 @@ import { AdminAddEnrollmentModal } from './enrollments/admin-add-enrollment-moda
 import { ActivityLogSection } from './enrollments/activity-log-section';
 import { RefundModal } from './refund-modal';
 import { convertKSTInputToUTC } from '@/lib/utils/kst-time';
+import { fetchWithAuth } from '@/lib/api/auth-fetch';
 
 interface EnrollmentsViewProps {
   academyId: string;
@@ -414,7 +415,7 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
     try {
       const body: { status: string; restoreTicket?: boolean } = { status: newStatus };
       if (options?.restoreTicket !== undefined) body.restoreTicket = options.restoreTicket;
-      const response = await fetch(`/api/bookings/${bookingId}/status`, {
+      const response = await fetchWithAuth(`/api/bookings/${bookingId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -439,49 +440,6 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
       await loadEnrollments();
     } catch (error: any) {
       console.error('Error changing booking status:', error);
-      throw error;
-    }
-  };
-
-  const handleDelete = async (bookingId: string) => {
-    try {
-      const supabase = getSupabaseClient() as any;
-      if (!supabase) {
-        throw new Error('Supabase 클라이언트를 초기화할 수 없습니다.');
-      }
-
-      const { data: booking } = await supabase
-        .from('bookings')
-        .select('schedule_id, status')
-        .eq('id', bookingId)
-        .single();
-
-      const { error: deleteError } = await supabase
-        .from('bookings')
-        .delete()
-        .eq('id', bookingId);
-
-      if (deleteError) throw deleteError;
-
-      if (booking?.schedule_id) {
-        const { data: confirmedBookings } = await supabase
-          .from('bookings')
-          .select('id')
-          .eq('schedule_id', booking.schedule_id)
-          .in('status', ['CONFIRMED', 'COMPLETED']);
-
-        const totalCount = confirmedBookings?.length || 0;
-
-        await supabase
-          .from('schedules')
-          .update({ current_students: totalCount })
-          .eq('id', booking.schedule_id);
-      }
-
-      alert('예약이 삭제되었습니다.');
-      await loadEnrollments();
-    } catch (error: any) {
-      console.error('Error deleting booking:', error);
       throw error;
     }
   };
@@ -1073,7 +1031,6 @@ export function EnrollmentsView({ academyId }: EnrollmentsViewProps) {
                           <EnrollmentActionMenu
                             enrollment={enrollment}
                             onStatusChange={handleStatusChange}
-                            onDelete={handleDelete}
                             onRefund={({ id, user_ticket_id }) =>
                               setRefundTarget({ bookingId: id, userTicketId: user_ticket_id ?? null, name: displayName })
                             }

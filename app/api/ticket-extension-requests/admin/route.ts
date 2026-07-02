@@ -5,6 +5,8 @@ import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/s
 import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
 import { isPeriodTicket as checkIsPeriodTicket } from '@/lib/utils/ticket-type';
+export const dynamic = 'force-dynamic';
+
 
 /**
  * POST: 관리자 직접 연장/일시정지 생성 및 즉시 승인 - 쿠키 또는 Authorization Bearer

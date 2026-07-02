@@ -443,10 +443,11 @@ export async function POST(request: Request) {
       } else {
         const { consumeUserTicket } = await import('@/lib/db/user-tickets');
         let consumeOk = false;
+        let consumedTicket: any = null;
         try {
           // 차감 전 스냅샷 (PERIOD 인 경우 remaining_count 는 null 그대로 유지)
           const beforeRemaining = remainingCount;
-          const consumedTicket = await consumeUserTicket(userTicket.id, resolvedClassId, 1, supabase);
+          consumedTicket = await consumeUserTicket(userTicket.id, resolvedClassId, 1, supabase);
           consumeOk = true;
           // 활동 로그: 횟수 차감 (PERIOD 권은 차감이 발생하지 않으므로 로그도 생략)
           if (!isPeriodTicket && consumedTicket && typeof beforeRemaining === 'number') {
@@ -499,6 +500,30 @@ export async function POST(request: Request) {
         if (bookingInsErr) {
           // 결제·수강권 발급은 완료 상태. 예약만 실패 → 거짓 "예약 완료" 방지 위해 booking=null 유지.
           console.error('payment-confirm booking insert error:', bookingInsErr);
+          if (!isPeriodTicket) {
+            try {
+              const { data: restored } = await (supabase as any)
+                .rpc('restore_ticket_count', { p_user_ticket_id: userTicket.id, p_count: 1 });
+              const restoredRow = Array.isArray(restored) ? restored[0] : restored;
+              await logTicketEvent({
+                academy_id: order.academy_id,
+                user_id: order.user_id,
+                user_ticket_id: userTicket.id,
+                action: 'COUNT_RESTORE',
+                before: { remaining_count: consumedTicket?.remaining_count ?? null, status: consumedTicket?.status ?? null },
+                after: {
+                  remaining_count: restoredRow?.remaining_count ?? remainingCount,
+                  status: restoredRow?.status ?? 'ACTIVE',
+                },
+                via: 'toss_payment',
+                reason: 'booking_insert_failed',
+                context: { class_id: resolvedClassId, schedule_id: order.schedule_id, order_id: orderId },
+                actor_user_id: order.user_id,
+              }, supabase).catch(() => {});
+            } catch (rollbackError) {
+              console.error('payment-confirm ticket restore after booking insert error failed:', rollbackError);
+            }
+          }
         }
         booking = bookingRow;
         // current_students 는 bookings 트리거(sync_schedule_student_count)가 자동 동기화한다.

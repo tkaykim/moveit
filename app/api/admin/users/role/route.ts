@@ -1,6 +1,8 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import { requireSuperAdmin } from '@/lib/supabase/admin-auth';
 import { NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
+
 
 export async function POST(request: Request) {
   try {

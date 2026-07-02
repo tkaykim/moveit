@@ -3,6 +3,8 @@ import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import type { Database } from '@/types/database';
 import { generateUniqueSlug } from '@/lib/utils/slug-server';
+export const dynamic = 'force-dynamic';
+
 
 type UserRole = Database['public']['Enums']['user_role'];
 

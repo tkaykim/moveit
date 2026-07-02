@@ -7,6 +7,8 @@ import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ academyId: string }> }

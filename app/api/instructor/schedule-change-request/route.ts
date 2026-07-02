@@ -13,6 +13,8 @@ import {
   type ScheduleChangeRequestType,
 } from '@/lib/db/schedule-change-requests';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser(request);

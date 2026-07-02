@@ -7,6 +7,8 @@ import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/s
 import { getInstructorByUserId } from '@/lib/db/instructors';
 import { getScheduleById } from '@/lib/db/schedules';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ scheduleId: string }> }

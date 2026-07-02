@@ -3,6 +3,8 @@ import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 const PRESETS = [
   { name: '입시반', duration_minutes: 30 },
   { name: '오디션반', duration_minutes: 30 },

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSuperAdmin } from '@/lib/supabase/admin-auth';
 import { createServiceClient } from '@/lib/supabase/server';
+export const dynamic = 'force-dynamic';
+
 
 // Admin: 구독 결제 건 환불 (토스 결제 취소 API 호출 후 subscription_payments refunded 처리)
 export async function POST(

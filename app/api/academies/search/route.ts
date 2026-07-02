@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/academies/search
  * 학원 검색 (수강권 구매용)
@@ -21,6 +23,7 @@ export async function GET(request: Request) {
     const { data, error } = await supabase
       .from('academies')
       .select('id, name_kr, name_en')
+      .eq('is_active', true)
       .or(`name_kr.ilike.%${searchTerm}%,name_en.ilike.%${searchTerm}%`)
       .limit(20)
       .order('name_kr', { ascending: true });

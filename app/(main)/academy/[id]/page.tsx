@@ -32,6 +32,7 @@ export default function AcademyDetailPage() {
             )
           `)
           .eq(column, slugOrId)
+          .eq('is_active', true)
           .single();
 
         if (error) {

@@ -121,7 +121,7 @@ export async function POST(request: Request) {
     }
 
     const supabase = await getAuthenticatedSupabase(request);
-    const { classId, scheduleId, userTicketId, paymentMethod, paymentStatus } = await request.json();
+    const { classId, scheduleId, userTicketId, paymentMethod } = await request.json();
 
     if (!classId && !scheduleId) {
       return NextResponse.json(
@@ -130,10 +130,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // 즉시 결제인 경우 수강권 없이 예약 생성
-    // 카드결제 데모도 포함 (CARD_DEMO는 수강권 구매 후 예약이지만 데모 결제로 처리)
-    const isImmediatePayment = paymentMethod === 'card' || paymentMethod === 'account' || paymentMethod === 'CARD_DEMO';
-    const isCardDemoPayment = paymentMethod === 'CARD_DEMO' || paymentMethod === 'card';
+    // Legacy clients may still send paymentMethod, but this endpoint must not
+    // trust client-declared payment completion. It only books with a real ticket.
+    const legacyDirectPaymentMethod =
+      paymentMethod === 'card' || paymentMethod === 'account' || paymentMethod === 'CARD_DEMO';
+    if (legacyDirectPaymentMethod && !userTicketId) {
+      return NextResponse.json(
+        { error: '결제 완료 예약은 결제 승인 API를 통해서만 생성할 수 있습니다.' },
+        { status: 400 }
+      );
+    }
 
     let academyId: string;
     let resolvedClassId = classId;
@@ -227,7 +233,7 @@ export async function POST(request: Request) {
 
     // 수강권 사용인 경우에만 수강권 처리 (카드결제 데모는 수강권을 사용하지만 결제 상태는 별도 처리)
     let selectedUserTicketId = userTicketId;
-    if (!isImmediatePayment || isCardDemoPayment) {
+    {
       // 수강권 자동 선택 (userTicketId가 제공되지 않은 경우)
       if (!selectedUserTicketId) {
         // 클래스 ID를 포함하여 해당 클래스에 사용 가능한 수강권만 조회
@@ -334,19 +340,15 @@ export async function POST(request: Request) {
       }
     }
 
-    // 예약 생성
-    // 카드결제 데모인 경우: 수강권을 사용하지만 결제 상태는 COMPLETED로 설정
-    const finalPaymentStatus = isCardDemoPayment 
-      ? (paymentStatus || 'COMPLETED')  // 카드결제 데모는 즉시 완료
-      : isImmediatePayment 
-        ? (paymentStatus || 'PENDING') 
-        : 'PAID'; // 수강권 사용은 PAID
+    // 예약 생성. /api/bookings는 이미 보유한 수강권 사용만 처리한다.
+    // 카드/계좌 결제 완료 예약은 payment-confirm 또는 bank-transfer-confirm에서만 만든다.
+    const finalPaymentStatus = 'PAID';
     
     const bookingData: Database['public']['Tables']['bookings']['Insert'] = {
       user_id: user.id,
       class_id: resolvedClassId,
       schedule_id: scheduleId || null,
-      user_ticket_id: isImmediatePayment && !isCardDemoPayment ? null : selectedUserTicketId,
+      user_ticket_id: selectedUserTicketId,
       status: 'CONFIRMED',
       payment_status: finalPaymentStatus,
     };
@@ -361,7 +363,7 @@ export async function POST(request: Request) {
       console.error('Booking creation error:', bookingError);
       // 예약 생성 실패 시 수강권 차감 롤백 (횟수권만, 기간권은 차감하지 않았으므로 롤백 불필요)
       // 원자적 RPC로 복구 — read-then-write 경합으로 인한 횟수 유실/과복구 방지.
-      if (!isImmediatePayment && selectedUserTicketId) {
+      if (selectedUserTicketId) {
         try {
           await (supabase as any)
             .rpc('restore_ticket_count', { p_user_ticket_id: selectedUserTicketId, p_count: 1 });

@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 const GOOGLE_TRANSLATE_API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY;
 const GOOGLE_TRANSLATE_URL = 'https://translation.googleapis.com/language/translate/v2';
 

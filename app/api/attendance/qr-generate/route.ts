@@ -1,6 +1,8 @@
 import { generateQrToken } from '@/lib/qr-token';
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
+export const dynamic = 'force-dynamic';
+
 
 /**
  * POST /api/attendance/qr-generate
@@ -45,6 +47,13 @@ export async function POST(request: Request) {
     }
 
     // 예약 상태 확인 (CONFIRMED 상태만 QR 생성 가능)
+    if (!booking.user_id || booking.user_id !== user.id) {
+      return NextResponse.json(
+        { error: '본인 예약만 QR 코드를 생성할 수 있습니다.' },
+        { status: 403 }
+      );
+    }
+
     if (booking.status !== 'CONFIRMED') {
       const statusMessages: Record<string, string> = {
         COMPLETED: '이미 출석완료된 수업입니다. QR 출석이 불필요합니다.',
@@ -59,7 +68,7 @@ export async function POST(request: Request) {
     }
 
     // QR 토큰 생성 (booking의 실제 user_id 사용)
-    const tokenUserId = booking.user_id || user.id;
+    const tokenUserId = booking.user_id;
     const token = generateQrToken(bookingId, tokenUserId);
 
     return NextResponse.json({

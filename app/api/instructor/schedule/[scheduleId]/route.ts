@@ -8,6 +8,8 @@ import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { getInstructorByUserId } from '@/lib/db/instructors';
 import { getScheduleEnrollmentSummary } from '@/lib/db/bookings';
 import { createClient } from '@/lib/supabase/server';
+export const dynamic = 'force-dynamic';
+
 
 export async function GET(
   request: NextRequest,

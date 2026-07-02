@@ -6,6 +6,8 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { normalizeGuestEmail, normalizeGuestPhone } from '@/lib/utils/guest-normalize';
 import { isGuestEligibleTicket } from '@/lib/utils/ticket-policy';
 import { logTicketEvent } from '@/lib/db/enrollment-activity-log';
+export const dynamic = 'force-dynamic';
+
 
 /**
  * 수강권 결제용 주문 생성 (Toss Payments 결제창 연동)
