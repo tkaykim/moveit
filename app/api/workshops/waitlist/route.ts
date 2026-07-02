@@ -38,7 +38,8 @@ export async function POST(request: NextRequest) {
 
     const user = await getAuthenticatedUser(request);
 
-    const { error } = await supabase.from('workshop_waitlist').insert({
+    // workshop_waitlist는 신규 테이블 — 생성 타입 미반영이라 캐스팅 (types/database.ts 재생성 시 제거)
+    const { error } = await (supabase as any).from('workshop_waitlist').insert({
       academy_id: sc.classes.academy_id,
       schedule_id: scheduleId,
       user_id: user?.id ?? null,

@@ -195,8 +195,8 @@ export default function StartWizardPage() {
           {[1, 2, 3].map((n) => (
             <div
               key={n}
-              className="h-1.5 flex-1 rounded-full transition-colors"
-              style={{ backgroundColor: n <= step ? brandColor : 'var(--tw-empty, #e5e5e5)' }}
+              className="h-1.5 flex-1 rounded-full transition-colors bg-neutral-200 dark:bg-neutral-800"
+              style={n <= step ? { backgroundColor: brandColor } : undefined}
             />
           ))}
           <span className="text-xs text-neutral-400 ml-1 tabular-nums">{step}/3</span>

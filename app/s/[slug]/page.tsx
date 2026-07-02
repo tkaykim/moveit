@@ -26,7 +26,10 @@ export default async function MiniHomePage({ params }: { params: Promise<{ slug:
   const todayEnd = new Date(todayStart);
   todayEnd.setDate(todayEnd.getDate() + 1);
   const todayClasses = weekSchedules.filter(
-    (s) => new Date(s.start_time) >= now && new Date(s.start_time) < todayEnd && s.classes?.class_type !== 'WORKSHOP',
+    (s) =>
+      new Date(s.start_time) >= now &&
+      new Date(s.start_time) < todayEnd &&
+      !['workshop', 'popup'].includes((s.classes?.class_type || '').toLowerCase()),
   );
 
   const sns = [

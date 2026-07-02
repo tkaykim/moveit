@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
           hall_id: (hall as { id: string } | null)?.id ?? null,
           max_students: 20,
           is_active: true,
-          status: 'ACTIVE',
+          status: '정상', // classes_status_check: '정상'|'연기됨'|'취소됨'
         } as never)
         .select('id')
         .single();
@@ -153,19 +153,24 @@ export async function POST(request: NextRequest) {
         endDate.setDate(endDate.getDate() + 7 * 8); // 8주
 
         const toDateStr = (d: Date) => d.toISOString().slice(0, 10);
-        const { data: rec } = await supabase
+        const { data: rec, error: recError } = await supabase
           .from('recurring_schedules')
           .insert({
             class_id: classId,
+            academy_id: academyId,
             days_of_week: firstClass.days_of_week,
             start_date: toDateStr(startDate),
             end_date: toDateStr(endDate),
             start_time: firstClass.start_time,
             end_time: firstClass.end_time,
             interval_weeks: 1,
+            hall_id: (hall as { id: string } | null)?.id ?? null,
+            max_students: 20,
+            is_active: true,
           } as never)
           .select('id')
           .single();
+        if (recError) console.error('[onboarding/setup] recurring insert:', recError);
 
         // 세션 생성 (8주치)
         const sessions: Record<string, unknown>[] = [];

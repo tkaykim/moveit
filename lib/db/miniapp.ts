@@ -97,7 +97,8 @@ export interface MiniTicket {
 
 export async function getPublicTickets(academyId: string): Promise<MiniTicket[]> {
   const supabase = createServiceClient();
-  const { data } = await supabase
+  // auto_start_days/refund_policy/pause_policy는 신규 컬럼 — 생성 타입 미반영이라 캐스팅
+  const { data } = await (supabase as any)
     .from('tickets')
     .select('id, name, price, ticket_type, total_count, valid_days, ticket_category, description, auto_start_days, refund_policy, pause_policy')
     .eq('academy_id', academyId)
@@ -127,7 +128,8 @@ export async function getUpcomingWorkshops(academyId: string): Promise<MiniWorks
     .select('id, title, genre, description, poster_url, thumbnail_url, instructor_name, price, class_type, is_active, schedules(id, start_time, end_time, max_students, current_students, is_canceled)')
     .eq('academy_id', academyId)
     .eq('is_active', true)
-    .in('class_type', ['WORKSHOP', 'POPUP']);
+    // classes_class_type_check 실제 허용값: 소문자 workshop/popup (+레거시 대문자 혼재 대비)
+    .in('class_type', ['workshop', 'popup', 'WORKSHOP', 'POPUP', 'ONE_DAY']);
 
   const now = new Date().toISOString();
   const rows = (data ?? []) as unknown as (MiniWorkshop & { schedules: (MiniWorkshop['sessions'][number] & { is_canceled: boolean | null })[] })[];

@@ -4,11 +4,13 @@ import type { RefundPolicy, PausePolicy } from '@/lib/policy/ticket-policy';
  * 운영방식 프리셋 — 실제 학원 사례 기반 수강권 템플릿.
  * 온보딩 위저드에서 하나를 고르면 tickets 행이 이 정의대로 생성된다.
  *
- * 근거(2026-07 실사):
- * - 1MILLION: 순수 회차권 1회 3만~40회 50만, 유효 60일, 미사용 30일 후 자동개시, 일할 환불(10일 2/3 → 15일 50% → 불가)
- * - MID: 쿠폰 1장 3만/5장 13만/10장 25만 + 월 정규(주1회) 12만 + 올패스(무제한 30일) 50만
- * - 하이비트(입시): 월 고정 55만/70만, 상담 후 등록, 가격 비공개 관례
- * 8개 학원(DFS·Urban Play·Play The Urban·Project Lee·Maju·Feedback·IMNEW·NYDance) 추가 실사 반영 지점: PRESET 배열 하단 주석 참조.
+ * 근거 (2026-07-03 실사 — 8개 학원 + 보조 검증):
+ * - 쿠폰제 표준 수렴: 프로젝트리(로우그래피)·MID·YGX·피드백 전부 「1회 3만 / 5회 13만 / 10회 24~25만 + 무제한 50만, 30일 소진」
+ * - 어반플레이: 1회 3만 / 4회 10만 / 8회 18만 / 15회 30만, 등록일 기준 4주 소진, 양도 불가
+ * - MID: 월등록 12만(주1회 80분), 3개월 4만 할인(연장 불가 조건), 환불=최초 수강 후 2주 내 미사용분만
+ * - 하이비트·어반플레이 입시: 월 55만(기본)/70만(심화)/100만(고급), 상담·선발 등록, 가격 비공개 관행(DFS·NYDance·IMNEW)
+ * - 1MILLION: 일할 스텝 환불(10일 2/3 → 15일 1/2 → 이후 불가) 명문화
+ * - 관찰된 전 사례가 "구매일 즉시 개시"(auto_start는 옵션 필드로만 유지)
  */
 
 export interface PresetTicketDef {
@@ -41,7 +43,7 @@ export interface AcademyPreset {
   hiddenMenus: string[];
 }
 
-/** 1MILLION식 일할 스텝 환불 */
+/** 1MILLION식 일할 스텝 환불 (개시 10일 내 2/3 → 15일 내 1/2 → 이후 불가) */
 const STEP_REFUND: RefundPolicy = {
   mode: 'step',
   steps: [
@@ -51,49 +53,53 @@ const STEP_REFUND: RefundPolicy = {
   ],
 };
 
-const PRORATA_REFUND: RefundPolicy = { mode: 'prorata', deduct_used: true };
+/** 기본 — 서버 계산 엔진의 학원법 반환기준 적용 */
+const DEFAULT_REFUND: RefundPolicy = { mode: 'prorata', deduct_used: true };
+/** 원데이·워크샵 관행 — 환불 불가 */
 const NO_REFUND: RefundPolicy = { mode: 'none' };
 const STANDARD_PAUSE: PausePolicy = { max_days: 30, max_times: 2 };
+const MONTHLY_PAUSE: PausePolicy = { max_days: 14, max_times: 1 };
 
 export const ACADEMY_PRESETS: AcademyPreset[] = [
   {
     key: 'count_pack',
-    name: '회차권형',
-    tagline: '원하는 만큼 회수를 사서 아무 수업이나 듣는 방식',
-    example: '예: 원밀리언 — 1회 3만원부터 묶음 구매, 유효기간 60일',
+    name: '쿠폰제 표준형',
+    tagline: '쿠폰을 사서 30일 안에 원하는 수업을 골라 듣는 방식',
+    example: '예: 프로젝트리·MID·YGX — 1회 3만 / 5회 13만 / 10회 25만 + 무제한 50만, 30일',
     emoji: '🎟️',
-    hiddenMenus: ['deposit-confirm'],
+    hiddenMenus: [],
     tickets: [
-      { name: '1회권', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 1, valid_days: 60, price: 30000, is_general: true, refund_policy: NO_REFUND, description: '모든 정규 수업 1회 수강' },
-      { name: '5회권', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 5, valid_days: 60, price: 130000, is_general: true, auto_start_days: 30, refund_policy: STEP_REFUND, pause_policy: STANDARD_PAUSE },
-      { name: '10회권', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 10, valid_days: 60, price: 240000, is_general: true, auto_start_days: 30, refund_policy: STEP_REFUND, pause_policy: STANDARD_PAUSE },
-      { name: '20회권', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 20, valid_days: 90, price: 380000, is_general: true, auto_start_days: 30, refund_policy: STEP_REFUND, pause_policy: STANDARD_PAUSE },
+      { name: '1회권', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 1, valid_days: 30, price: 30000, is_general: true, refund_policy: NO_REFUND, description: '모든 수업 1회 수강 (당일 환불 불가)' },
+      { name: '5회권', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 5, valid_days: 30, price: 130000, is_general: true, refund_policy: STEP_REFUND, pause_policy: STANDARD_PAUSE },
+      { name: '10회권', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 10, valid_days: 30, price: 250000, is_general: true, refund_policy: STEP_REFUND, pause_policy: STANDARD_PAUSE },
+      { name: '무제한 패스 (30일)', ticket_type: 'PERIOD', ticket_category: 'regular', valid_days: 30, price: 500000, is_general: true, refund_policy: DEFAULT_REFUND, description: '기간 내 모든 수업 무제한' },
     ],
   },
   {
     key: 'coupon_allpass',
-    name: '쿠폰 + 올패스형',
-    tagline: '쿠폰(회수제)과 무제한 올패스를 함께 파는 방식',
-    example: '예: MID — 쿠폰 1장 3만원, 올패스(30일 무제한) 50만원',
+    name: '쿠폰 촘촘형 (4주)',
+    tagline: '쿠폰 단계를 잘게 나눠 4주 안에 소진하는 방식',
+    example: '예: 어반플레이 — 1회 3만 / 4회 10만 / 8회 18만 / 15회 30만, 4주 소진',
     emoji: '💳',
     hiddenMenus: [],
     tickets: [
-      { name: '쿠폰 1장', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 1, valid_days: 90, price: 30000, is_general: true, refund_policy: NO_REFUND },
-      { name: '쿠폰 5장', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 5, valid_days: 90, price: 130000, is_general: true, refund_policy: PRORATA_REFUND, pause_policy: STANDARD_PAUSE },
-      { name: '쿠폰 10장', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 10, valid_days: 90, price: 250000, is_general: true, refund_policy: PRORATA_REFUND, pause_policy: STANDARD_PAUSE },
-      { name: '올패스 (30일 무제한)', ticket_type: 'PERIOD', ticket_category: 'regular', valid_days: 30, price: 500000, is_general: true, refund_policy: PRORATA_REFUND, description: '기간 내 모든 수업 무제한 수강' },
+      { name: '1쿠폰', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 1, valid_days: 28, price: 30000, is_general: true, refund_policy: NO_REFUND },
+      { name: '4쿠폰', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 4, valid_days: 28, price: 100000, is_general: true, refund_policy: DEFAULT_REFUND, pause_policy: STANDARD_PAUSE },
+      { name: '8쿠폰', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 8, valid_days: 28, price: 180000, is_general: true, refund_policy: DEFAULT_REFUND, pause_policy: STANDARD_PAUSE },
+      { name: '15쿠폰', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 15, valid_days: 28, price: 300000, is_general: true, refund_policy: DEFAULT_REFUND, pause_policy: STANDARD_PAUSE },
     ],
   },
   {
     key: 'monthly',
     name: '월 정규형',
-    tagline: '매월 등록하고 정해진 반에 다니는 방식',
-    example: '예: 주 1회 반 월 12만원, 주 2회 반 월 20만원',
+    tagline: '매월 등록하고 정해진 요일의 반에 다니는 방식',
+    example: '예: MID 월등록·NY댄스 취미반 — 주 1회 월 12만원, 3개월 32만원',
     emoji: '📅',
     hiddenMenus: [],
     tickets: [
-      { name: '월 정규 (주 1회)', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 4, valid_days: 31, price: 120000, is_general: false, refund_policy: PRORATA_REFUND, pause_policy: { max_days: 14, max_times: 1 }, description: '한 달 4회, 등록한 반 수강' },
-      { name: '월 정규 (주 2회)', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 8, valid_days: 31, price: 200000, is_general: false, refund_policy: PRORATA_REFUND, pause_policy: { max_days: 14, max_times: 1 } },
+      { name: '월 정규 (주 1회)', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 4, valid_days: 31, price: 120000, is_general: false, refund_policy: DEFAULT_REFUND, pause_policy: MONTHLY_PAUSE, description: '한 달 4회, 등록한 반 수강' },
+      { name: '월 정규 (주 2회)', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 8, valid_days: 31, price: 200000, is_general: false, refund_policy: DEFAULT_REFUND, pause_policy: MONTHLY_PAUSE },
+      { name: '3개월 정규 (할인)', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 12, valid_days: 92, price: 320000, is_general: false, refund_policy: DEFAULT_REFUND, description: '3개월 일괄 등록 할인 (연장 불가)' },
       { name: '원데이 (체험)', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 1, valid_days: 30, price: 30000, is_general: true, refund_policy: NO_REFUND },
     ],
   },
@@ -101,12 +107,13 @@ export const ACADEMY_PRESETS: AcademyPreset[] = [
     key: 'exam_track',
     name: '입시·전문반형',
     tagline: '상담과 선발을 거쳐 월 고정으로 다니는 방식',
-    example: '예: 하이비트 — 입시 기본 월 55만원, 심화 월 70만원 (상담 후 등록)',
+    example: '예: 하이비트·어반플레이 — 기본 월 55만 / 심화 70만 / 고급 100만 (상담 후 등록)',
     emoji: '🎯',
-    hiddenMenus: ['deposit-confirm'],
+    hiddenMenus: [],
     tickets: [
-      { name: '입시반 기본 (월)', ticket_type: 'PERIOD', ticket_category: 'regular', valid_days: 31, price: 550000, is_general: false, is_public: false, refund_policy: PRORATA_REFUND, description: '월 고정 커리큘럼 + 연습실 이용. 상담 후 등록' },
-      { name: '입시반 심화 (월)', ticket_type: 'PERIOD', ticket_category: 'regular', valid_days: 31, price: 700000, is_general: false, is_public: false, refund_policy: PRORATA_REFUND, description: '전 과목 수강 + 연습실 이용. 상담 후 등록' },
+      { name: '입시반 기본 (월 12회)', ticket_type: 'PERIOD', ticket_category: 'regular', valid_days: 31, price: 550000, is_general: false, is_public: false, refund_policy: DEFAULT_REFUND, description: '월 고정 커리큘럼 + 서브 1과목. 상담 후 등록' },
+      { name: '입시반 심화 (월 12회+전과목)', ticket_type: 'PERIOD', ticket_category: 'regular', valid_days: 31, price: 700000, is_general: false, is_public: false, refund_policy: DEFAULT_REFUND, description: '서브 전 과목 수강. 상담 후 등록' },
+      { name: '전문반 (풀 커리큘럼)', ticket_type: 'PERIOD', ticket_category: 'regular', valid_days: 31, price: 1000000, is_general: false, is_public: false, refund_policy: DEFAULT_REFUND, description: '풀 커리큘럼 + 연습실 이용. 선발제' },
       { name: '원데이 (체험)', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 1, valid_days: 30, price: 30000, is_general: true, refund_policy: NO_REFUND },
     ],
   },
@@ -114,20 +121,16 @@ export const ACADEMY_PRESETS: AcademyPreset[] = [
     key: 'mixed',
     name: '혼합형',
     tagline: '쿠폰·월 정규·원데이를 모두 운영하는 방식',
-    example: '가장 흔한 형태 — 취미반은 쿠폰, 고정반은 월 등록',
+    example: '가장 흔한 형태 — 취미 원데이는 쿠폰, 고정반은 월 등록',
     emoji: '🎨',
     hiddenMenus: [],
     tickets: [
       { name: '원데이 (1회)', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 1, valid_days: 30, price: 30000, is_general: true, refund_policy: NO_REFUND },
-      { name: '쿠폰 10장', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 10, valid_days: 90, price: 250000, is_general: true, refund_policy: PRORATA_REFUND, pause_policy: STANDARD_PAUSE },
-      { name: '월 정규 (주 1회)', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 4, valid_days: 31, price: 120000, is_general: false, refund_policy: PRORATA_REFUND, pause_policy: { max_days: 14, max_times: 1 } },
+      { name: '10회권', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 10, valid_days: 30, price: 250000, is_general: true, refund_policy: STEP_REFUND, pause_policy: STANDARD_PAUSE },
+      { name: '월 정규 (주 1회)', ticket_type: 'COUNT', ticket_category: 'regular', total_count: 4, valid_days: 31, price: 120000, is_general: false, refund_policy: DEFAULT_REFUND, pause_policy: MONTHLY_PAUSE },
     ],
   },
 ];
-
-// 8개 학원 실사 반영 지점 —
-// 리서치 결과(가격·유효기간·환불 조항)가 위 기본값과 다르면 이 배열의 금액/일수만 조정한다.
-// 프리셋 키·구조는 온보딩 위저드·admin 숨김 로직과 결합돼 있으므로 변경 금지.
 
 export function getPreset(key: string | null | undefined): AcademyPreset | undefined {
   return ACADEMY_PRESETS.find((p) => p.key === key);

@@ -201,15 +201,21 @@ const nextConfig = {
           },
         ],
       },
-      {
-        source: '/_next/static/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
+      // ⚠ dev에서는 청크 파일명이 해시되지 않으므로 immutable 캐시가 옛 번들을 1년간 서빙함
+      // (env 플래그 변경이 브라우저에 반영 안 되던 원인). 프로덕션만 immutable 적용.
+      ...(process.env.NODE_ENV === 'production'
+        ? [
+            {
+              source: '/_next/static/:path*',
+              headers: [
+                {
+                  key: 'Cache-Control',
+                  value: 'public, max-age=31536000, immutable',
+                },
+              ],
+            },
+          ]
+        : []),
       {
         source: '/_next/image',
         headers: [

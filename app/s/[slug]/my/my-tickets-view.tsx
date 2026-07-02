@@ -62,11 +62,14 @@ export function MyTicketsView({ academyId, academyName }: { academyId: string; a
     setLoading(true);
     try {
       const [tRes, bRes] = await Promise.all([
-        fetchWithAuth(`/api/user-tickets?academyId=${academyId}`),
+        // includeAll: 잔여 0이어도 내 수강권 현황엔 보여야 함 (이 학원 것만 클라이언트 필터)
+        fetchWithAuth('/api/user-tickets?includeAll=true'),
         fetchWithAuth('/api/bookings'),
       ]);
       const tData = await tRes.json();
-      if (tRes.ok) setTickets(tData.data || []);
+      if (tRes.ok) {
+        setTickets(((tData.data || []) as UserTicketRow[]).filter((t) => t.tickets?.academy_id === academyId));
+      }
       const bData = await bRes.json();
       if (bRes.ok) {
         const now = new Date().toISOString();

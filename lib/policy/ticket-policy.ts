@@ -68,10 +68,12 @@ export function describePolicies(opts: {
   if (r) {
     if (r.mode === 'none') lines.push('환불 불가 상품입니다');
     else if (r.mode === 'step' && r.steps?.length) {
-      const parts = [...r.steps]
-        .sort((a, b) => a.until_days - b.until_days)
-        .map((s) => (s.rate > 0 ? `${s.until_days}일 이내 ${Math.round(s.rate * 100)}%` : `${s.until_days}일 초과 환불 불가`));
-      lines.push(`환불: 개시 후 ${parts.join(' · ')}`);
+      const sorted = [...r.steps].sort((a, b) => a.until_days - b.until_days);
+      const parts = sorted
+        .filter((s) => s.rate > 0)
+        .map((s) => `${s.until_days}일 이내 ${Math.round(s.rate * 100)}%`);
+      const hasCutoff = sorted.some((s) => s.rate === 0);
+      lines.push(`환불: 개시 후 ${parts.join(' · ')}${hasCutoff ? ' · 이후 환불 불가' : ''}`);
     } else lines.push('환불: 사용분(회차/일할) 공제 후 잔액 환불');
   }
   if (opts.pause) lines.push(`일시정지: 최대 ${opts.pause.max_times}회, 회당 ${opts.pause.max_days}일`);
