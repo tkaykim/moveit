@@ -111,9 +111,11 @@ export async function POST(
 
     // 티켓 카테고리(워크샵/팝업 판별) + user_ticket 사용 현황
     let ticketCategory: string | null = null;
+    let customRefundPolicy: any = null;
     if (rev.ticket_id) {
-      const { data: tk } = await supabase.from('tickets').select('ticket_category').eq('id', rev.ticket_id).maybeSingle();
+      const { data: tk } = await supabase.from('tickets').select('ticket_category, refund_policy').eq('id', rev.ticket_id).maybeSingle();
       ticketCategory = tk?.ticket_category ?? null;
+      customRefundPolicy = tk?.refund_policy ?? null;
     }
 
     const userTicketId = rev.user_ticket_id;
@@ -140,6 +142,7 @@ export async function POST(
     const calc = computeRefund({
       ticketTypeSnapshot: rev.ticket_type_snapshot,
       ticketCategory,
+      customPolicy: customRefundPolicy,
       quantity: rev.quantity,
       remainingCount: utRow?.remaining_count ?? null,
       attendedCount,

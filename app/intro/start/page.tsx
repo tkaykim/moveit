@@ -120,7 +120,8 @@ export default function IntroStartPage() {
     );
   }
 
-  const setupAcademyUrl = `/intro/setup-academy${planId || cycle ? `?${new URLSearchParams({ ...(planId && { planId }), ...(cycle && { cycle }) }).toString()}` : ''}`;
+  // 학원 개설은 새 3스텝 위저드(/start)로 — 기존 setup-academy 폼 대체
+  const setupAcademyUrl = '/start';
 
   return (
     <div className="min-h-[50vh] flex flex-col items-center justify-center px-4 py-12 relative">

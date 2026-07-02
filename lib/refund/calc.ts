@@ -21,9 +21,17 @@
 
 export type RefundTicketKind = 'PERIOD' | 'COUNT' | 'WORKSHOP';
 
+/** 학원별 커스텀 환불 규칙 (tickets.refund_policy jsonb). 미지정/prorata = 아래 기본(학원법) 로직. */
+export interface CustomRefundPolicy {
+  mode: 'step' | 'prorata' | 'none';
+  /** mode=step: 개시 후 경과일 상한별 환불율 (예: 1MILLION식 10일 2/3 → 15일 1/2 → 이후 0) */
+  steps?: { until_days: number; rate: number }[];
+}
+
 export interface RefundCalcInput {
   ticketTypeSnapshot?: string | null; // revenue_transactions.ticket_type_snapshot ('COUNT'|'PERIOD'|...)
   ticketCategory?: string | null;     // tickets.ticket_category ('regular'|'popup')
+  customPolicy?: CustomRefundPolicy | null; // tickets.refund_policy — 학원이 상품에 지정한 규칙(있으면 우선)
   quantity?: number | null;           // 구매 총 회차(횟수제) — revenue.quantity
   remainingCount?: number | null;     // user_tickets.remaining_count (현재 잔여 — 표시용)
   attendedCount?: number | null;      // 실제 출석(COMPLETED) 예약 수 — 부과 기준. null이면 (총-잔여) fallback
@@ -98,6 +106,60 @@ export function computeRefund(input: RefundCalcInput): RefundCalcResult {
         { label: '상태', value: '만료(EXPIRED)' },
       ],
       expired: true,
+    };
+  }
+
+  // ── 학원별 커스텀 규칙(tickets.refund_policy) 우선 적용 ──
+  const custom = input.customPolicy;
+  if (custom?.mode === 'none') {
+    return {
+      kind,
+      paidAmount: paid,
+      suggestedRefund: 0,
+      basis: '이 상품은 학원이 지정한 "환불 불가" 상품입니다(구매 시 고지). 필요 시 재량으로 금액을 직접 입력하세요.',
+      breakdown: [
+        { label: '결제액', value: `${paid.toLocaleString()}원` },
+        { label: '상품 규칙', value: '환불 불가' },
+      ],
+      expired: false,
+    };
+  }
+  if (custom?.mode === 'step' && custom.steps?.length) {
+    const now = dayStart(input.nowISO);
+    const started = !!input.startDate && dayStart(input.startDate) <= now;
+    if (!started) {
+      return {
+        kind,
+        paidAmount: paid,
+        suggestedRefund: paid,
+        basis: '개시 전 수강권 — 학원 지정 규칙상 전액 환불.',
+        breakdown: [
+          { label: '결제액', value: `${paid.toLocaleString()}원` },
+          { label: '상태', value: '개시 전(전액)' },
+        ],
+        expired: false,
+      };
+    }
+    const elapsed = Math.floor((now - dayStart(input.startDate!)) / 86400000);
+    const sorted = [...custom.steps].sort((a, b) => a.until_days - b.until_days);
+    const hit = sorted.find((s) => elapsed <= s.until_days);
+    const rate = hit ? Math.max(0, Math.min(1, hit.rate)) : 0;
+    const suggested = clampMoney(paid * rate, paid);
+    const bracket = hit
+      ? `개시 ${hit.until_days}일 이내 구간 → ${Math.round(rate * 100)}%`
+      : `환불 가능 기간(${sorted[sorted.length - 1].until_days}일) 초과 → 0%`;
+    return {
+      kind,
+      paidAmount: paid,
+      suggestedRefund: suggested,
+      basis: `학원 지정 단계별 규칙 · 개시 후 ${elapsed}일 경과, ${bracket}. 재량 조정 가능합니다.`,
+      breakdown: [
+        { label: '결제액', value: `${paid.toLocaleString()}원` },
+        { label: '개시 후 경과', value: `${elapsed}일` },
+        { label: '적용 구간', value: bracket },
+        { label: '권장 환불액', value: `${suggested.toLocaleString()}원` },
+      ],
+      expired: false,
     };
   }
 

@@ -104,6 +104,11 @@ export function TicketModal({ academyId, ticket, initialCategory, ticketLabels, 
   const [useCustomPopupValidity, setUseCustomPopupValidity] = useState(false);
   const [popupValidDays, setPopupValidDays] = useState<number | null>(initialCategory === 'popup' ? 30 : null); // 팝업 쿠폰 기본 유효기간 30일
   const [classSearchQuery, setClassSearchQuery] = useState('');
+  // 환불·이용 규칙 (tickets.refund_policy / auto_start_days / pause_policy)
+  const [refundMode, setRefundMode] = useState<'default' | 'step' | 'none'>('default');
+  const [autoStartDays, setAutoStartDays] = useState<number | ''>('');
+  const [pauseMaxDays, setPauseMaxDays] = useState<number | ''>('');
+  const [pauseMaxTimes, setPauseMaxTimes] = useState<number | ''>('');
   // 팝업 수강권 수량별 가격: [{ count, price, valid_days? }, ...]
   const [countOptions, setCountOptions] = useState<{ count: number; price: number; valid_days?: number | null }[]>(() =>
     initialCategory === 'popup' ? [{ count: 1, price: 0, valid_days: null }] : []
@@ -183,6 +188,15 @@ export function TicketModal({ academyId, ticket, initialCategory, ticketLabels, 
         setCountOptions([{ count: 1, price: ticket.price ?? 0, valid_days: null }, { count: 3, price: 0, valid_days: null }, { count: 5, price: 0, valid_days: null }]);
       }
       
+      // 환불·이용 규칙 로드
+      const rp = (ticket as { refund_policy?: { mode?: string } | null }).refund_policy;
+      setRefundMode(rp?.mode === 'step' ? 'step' : rp?.mode === 'none' ? 'none' : 'default');
+      const asd = (ticket as { auto_start_days?: number | null }).auto_start_days;
+      setAutoStartDays(typeof asd === 'number' ? asd : '');
+      const pp = (ticket as { pause_policy?: { max_days?: number; max_times?: number } | null }).pause_policy;
+      setPauseMaxDays(typeof pp?.max_days === 'number' ? pp.max_days : '');
+      setPauseMaxTimes(typeof pp?.max_times === 'number' ? pp.max_times : '');
+
       // 기존 연결된 클래스 로드 (정규 수강권인 경우에만)
       if (ticket.id && category === 'regular') {
         loadLinkedClasses(ticket.id);
@@ -312,6 +326,19 @@ export function TicketModal({ academyId, ticket, initialCategory, ticketLabels, 
       } else {
         ticketData.count_options = null;
       }
+
+      // 환불·이용 규칙 저장 (계산은 서버 lib/refund/calc.ts 단일 소스)
+      ticketData.refund_policy =
+        refundMode === 'step'
+          ? { mode: 'step', steps: [{ until_days: 10, rate: 2 / 3 }, { until_days: 15, rate: 0.5 }, { until_days: 99999, rate: 0 }] }
+          : refundMode === 'none'
+            ? { mode: 'none' }
+            : null;
+      ticketData.auto_start_days = autoStartDays === '' ? null : Number(autoStartDays);
+      ticketData.pause_policy =
+        pauseMaxDays !== '' && pauseMaxTimes !== ''
+          ? { max_days: Number(pauseMaxDays), max_times: Number(pauseMaxTimes) }
+          : null;
 
       let ticketId: string;
 
@@ -972,6 +999,69 @@ export function TicketModal({ academyId, ticket, initialCategory, ticketLabels, 
             <p className="text-xs text-gray-500 dark:text-gray-400 pl-6">
               비공개 시 사용자 직접 구매 불가. 학원에서만 판매·지급 가능.
             </p>
+          </div>
+
+          {/* 환불·이용 규칙 */}
+          <div className="border dark:border-neutral-700 rounded-xl p-4 space-y-4">
+            <p className="text-sm font-bold text-gray-800 dark:text-white">환불·이용 규칙</p>
+            <div>
+              <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">환불 기준</label>
+              <select
+                value={refundMode}
+                onChange={(e) => setRefundMode(e.target.value as 'default' | 'step' | 'none')}
+                className="w-full border dark:border-neutral-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
+              >
+                <option value="default">기본 — 학원법 반환 기준 (권장)</option>
+                <option value="step">단계별 — 개시 10일 내 2/3 · 15일 내 1/2 · 이후 불가</option>
+                <option value="none">환불 불가 상품 (원데이·워크샵 관행)</option>
+              </select>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                환불 처리 화면의 권장 금액 계산에 반영되고, 학생 구매 화면에도 고지됩니다.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
+                미사용 자동 개시 <span className="text-gray-400">(선택)</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">구매 후</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={autoStartDays}
+                  onChange={(e) => setAutoStartDays(e.target.value === '' ? '' : Math.max(1, Number(e.target.value)))}
+                  placeholder="예: 30"
+                  className="w-24 border dark:border-neutral-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
+                />
+                <span className="text-sm text-gray-500">일이 지나면 자동 개시 (비우면 없음)</span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
+                일시정지(홀딩) <span className="text-gray-400">(선택)</span>
+              </label>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-gray-500">최대</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={pauseMaxTimes}
+                  onChange={(e) => setPauseMaxTimes(e.target.value === '' ? '' : Math.max(1, Number(e.target.value)))}
+                  placeholder="2"
+                  className="w-16 border dark:border-neutral-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
+                />
+                <span className="text-sm text-gray-500">회 · 회당</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={pauseMaxDays}
+                  onChange={(e) => setPauseMaxDays(e.target.value === '' ? '' : Math.max(1, Number(e.target.value)))}
+                  placeholder="30"
+                  className="w-16 border dark:border-neutral-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
+                />
+                <span className="text-sm text-gray-500">일까지 (둘 다 입력해야 적용)</span>
+              </div>
+            </div>
           </div>
 
           {/* 버튼 */}

@@ -24,11 +24,15 @@ import {
   Bell,
   Landmark,
   HelpCircle,
+  Smartphone,
+  Sparkles,
+  ChevronDown,
   type LucideIcon,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAcademy } from '../contexts/academy-context';
+import { getPreset } from '@/lib/presets/academy-presets';
 
 interface SidebarItemProps {
   icon: LucideIcon;
@@ -37,12 +41,14 @@ interface SidebarItemProps {
   active: boolean;
   onClick?: () => void;
   dataOnboarding?: string;
+  external?: boolean;
 }
 
-const SidebarItem = ({ icon: Icon, label, href, active, onClick, dataOnboarding }: SidebarItemProps) => (
+const SidebarItem = ({ icon: Icon, label, href, active, onClick, dataOnboarding, external }: SidebarItemProps) => (
   <Link
     href={href}
     onClick={onClick}
+    {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
     {...(dataOnboarding ? { 'data-onboarding': dataOnboarding } : {})}
     className={`flex items-center gap-3 px-4 py-2.5 lg:py-3 cursor-pointer transition-all duration-200 rounded-lg mx-2 mb-0.5 ${
       active
@@ -75,48 +81,88 @@ function sidebarOnboardingKey(href: string, baseHref: string): string {
   return `sidebar-${seg || 'dashboard'}`;
 }
 
+interface MenuItem {
+  icon: LucideIcon;
+  label: string;
+  /** 라우트 마지막 세그먼트. ''=대시보드 루트 */
+  seg: string;
+  hidden?: boolean;
+}
+
+interface MenuGroup {
+  title: string;
+  items: MenuItem[];
+}
+
+/**
+ * 원장 눈높이 4그룹 IA — 오늘 / 수업 / 회원 / 우리 학원 (+더보기).
+ * 라우트·페이지는 그대로 두고 네비 레이어만 재편.
+ * 운영방식 프리셋(academies.preset_type)의 hiddenMenus에 있는 세그먼트는 숨긴다.
+ */
+const MENU_GROUPS: MenuGroup[] = [
+  {
+    title: '오늘',
+    items: [
+      { icon: LayoutDashboard, label: '오늘 현황', seg: '' },
+      { icon: QrCode, label: 'QR 출석 체크', seg: 'qr-reader' },
+    ],
+  },
+  {
+    title: '수업',
+    items: [
+      { icon: CalendarDays, label: '시간표', seg: 'schedule' },
+      { icon: BookOpen, label: '수업(반) 관리', seg: 'class-masters' },
+      { icon: Sparkles, label: '워크샵·팝업', seg: 'classes' },
+      { icon: Replace, label: '대강/취소 신청', seg: 'schedule-change-requests', hidden: true },
+    ],
+  },
+  {
+    title: '회원',
+    items: [
+      { icon: Users, label: '학원생 관리', seg: 'students' },
+      { icon: UserCog, label: '신청·출석 확인', seg: 'enrollments' },
+      { icon: Pause, label: '연장·일시정지 요청', seg: 'extension-requests' },
+      { icon: MessageSquare, label: '상담 문의', seg: 'consultations' },
+      { icon: Bell, label: '학원생 알림 보내기', seg: 'push' },
+    ],
+  },
+  {
+    title: '우리 학원',
+    items: [
+      { icon: Ticket, label: '수강권 가격표', seg: 'products' },
+      { icon: Settings, label: '학원 앱 꾸미기', seg: 'settings' },
+    ],
+  },
+];
+
+const MORE_GROUP: MenuGroup = {
+  title: '더보기',
+  items: [
+    { icon: Landmark, label: '입금 확인', seg: 'deposit-confirm' },
+    { icon: CreditCard, label: '매출', seg: 'revenue' },
+    { icon: UserCheck, label: '강사·급여', seg: 'instructors' },
+    { icon: ClipboardList, label: '수업 일지', seg: 'logs' },
+    { icon: Calendar, label: '무빗 구독 관리', seg: 'billing' },
+  ],
+};
+
 export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdminSidebarProps) {
   const pathname = usePathname();
   const [academyName, setAcademyName] = useState<string | null>(null);
-  
+  const [presetType, setPresetType] = useState<string | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+
   const { academySlug } = useAcademy();
   const slug = academySlug;
-  
+  const baseHref = `/academy-admin/${slug}`;
+
   // AuthContext에서 직접 프로필/역할 정보를 가져옴 (별도 Supabase 쿼리 불필요)
   const { profile, loading: authLoading } = useAuth();
 
   // 최고관리자(SUPER_ADMIN)는 어떤 학원이든 무조건 모든 메뉴를 볼 수 있음
   const isSuperAdmin = profile?.role === 'SUPER_ADMIN';
-  
-  // SUPER_ADMIN이면 무조건 true, 그 외에는 ACADEMY_OWNER만 설정 접근 가능
-  const canAccessSettings = isSuperAdmin || profile?.role === 'ACADEMY_OWNER';
+  const canAccessSettings = isSuperAdmin || authLoading || profile?.role === 'ACADEMY_OWNER';
 
-  // hidden:true 항목은 라우트·코드는 유지하되 사이드바 노출만 막는다.
-  // 그룹 슬라이스(0..6 / 6..10 / 10..) 의 인덱스 정합을 보존하기 위해 배열에서 제거하지 않고 플래그만 부여.
-  const menuItems: { icon: LucideIcon; label: string; href: string; hidden?: boolean }[] = [
-    { icon: LayoutDashboard, label: '대시보드', href: `/academy-admin/${slug}` },
-    { icon: Users, label: '학생 관리', href: `/academy-admin/${slug}/students` },
-    { icon: BookOpen, label: '클래스(반) 관리', href: `/academy-admin/${slug}/class-masters` },
-    { icon: CalendarDays, label: '스케줄 관리', href: `/academy-admin/${slug}/schedule` },
-    { icon: UserCog, label: '출석/신청 관리', href: `/academy-admin/${slug}/enrollments` },
-    { icon: Landmark, label: '수동 입금확인', href: `/academy-admin/${slug}/deposit-confirm` },
-    { icon: QrCode, label: 'QR 출석 리더', href: `/academy-admin/${slug}/qr-reader` },
-    { icon: Pause, label: '연장/일시정지 관리', href: `/academy-admin/${slug}/extension-requests` },
-    { icon: Replace, label: '대강/취소 신청 관리', href: `/academy-admin/${slug}/schedule-change-requests`, hidden: true },
-    { icon: Ticket, label: '수강권/상품', href: `/academy-admin/${slug}/products` },
-    { icon: ClipboardList, label: '업무/수업 일지', href: `/academy-admin/${slug}/logs` },
-    { icon: UserCheck, label: '강사 관리', href: `/academy-admin/${slug}/instructors` },
-    { icon: MessageSquare, label: '상담 관리', href: `/academy-admin/${slug}/consultations` },
-    { icon: Bell, label: '알림 발송', href: `/academy-admin/${slug}/push` },
-    { icon: CreditCard, label: '매출/정산', href: `/academy-admin/${slug}/revenue` },
-    { icon: Calendar, label: '구독/결제 관리', href: `/academy-admin/${slug}/billing`, hidden: true },
-  ];
-
-  // 설정 메뉴: SUPER_ADMIN이면 무조건 표시, auth 로딩 중이면 일단 표시, 그 외 ACADEMY_OWNER만 표시
-  if (isSuperAdmin || authLoading || canAccessSettings) {
-    menuItems.push({ icon: Settings, label: '설정', href: `/academy-admin/${slug}/settings` });
-  }
-  
   // 모바일에서 메뉴 클릭 시 드로어 닫기
   useEffect(() => {
     if (isOpen) {
@@ -129,48 +175,69 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
     };
   }, [isOpen]);
 
-  // 학원 이름 가져오기
+  // 학원 이름·운영방식 프리셋 가져오기
   useEffect(() => {
-    async function loadAcademyName() {
+    async function loadAcademy() {
       try {
         const supabase = getSupabaseClient();
         if (!supabase) return;
 
         const { data, error } = await supabase
           .from('academies')
-          .select('name_kr, name_en')
+          .select('name_kr, name_en, preset_type')
           .eq('id', academyId)
           .single();
 
         if (error) throw error;
 
         if (data) {
-          const name = data.name_kr || data.name_en || null;
-          setAcademyName(name);
+          setAcademyName((data as { name_kr?: string; name_en?: string }).name_kr || (data as { name_en?: string }).name_en || null);
+          setPresetType((data as { preset_type?: string | null }).preset_type ?? null);
         }
       } catch (error) {
-        console.error('Error loading academy name:', error);
+        console.error('Error loading academy:', error);
       }
     }
 
     if (academyId) {
-      loadAcademyName();
+      loadAcademy();
     }
   }, [academyId]);
 
+  const preset = getPreset(presetType);
+  const presetHidden = new Set(preset?.hiddenMenus ?? []);
+
   const isActive = (href: string) => {
-    if (href === `/academy-admin/${slug}`) {
+    if (href === baseHref) {
       return pathname === href;
     }
     return pathname?.startsWith(href);
   };
 
   const handleLinkClick = () => {
-    // 모바일에서 링크 클릭 시 드로어 닫기
     if (window.innerWidth < 1024) {
       onClose();
     }
   };
+
+  const renderItems = (items: MenuItem[]) =>
+    items
+      .filter((item) => !item.hidden && !presetHidden.has(item.seg))
+      .filter((item) => (item.seg === 'settings' || item.seg === 'billing' ? canAccessSettings : true))
+      .map((item) => {
+        const href = item.seg ? `${baseHref}/${item.seg}` : baseHref;
+        return (
+          <SidebarItem
+            key={href}
+            icon={item.icon}
+            label={item.label}
+            href={href}
+            active={isActive(href)}
+            onClick={handleLinkClick}
+            dataOnboarding={sidebarOnboardingKey(href, baseHref)}
+          />
+        );
+      });
 
   return (
     <>
@@ -189,7 +256,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
         }`}
       >
         <div className="px-6 py-3 lg:py-4 border-b border-neutral-200 dark:border-neutral-800 relative flex-shrink-0">
-          <Link href={`/academy-admin/${slug}`} className="flex flex-col gap-1.5 lg:gap-2" onClick={handleLinkClick}>
+          <Link href={baseHref} className="flex flex-col gap-1.5 lg:gap-2" onClick={handleLinkClick}>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-black font-bold italic">
                 M
@@ -214,68 +281,59 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-2 lg:py-4 space-y-0.5 min-h-0">
-          <div className="px-6 pt-3 lg:pt-6 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
-            수업 관리
-          </div>
-          {menuItems.slice(0, 6).filter((item) => !item.hidden).map((item, idx) => (
-            <SidebarItem
-              key={item.href}
-              icon={item.icon}
-              label={item.label}
-              href={item.href}
-              active={isActive(item.href)}
-              onClick={handleLinkClick}
-              dataOnboarding={sidebarOnboardingKey(item.href, `/academy-admin/${slug}`)}
-            />
-          ))}
+        <nav className="flex-1 overflow-y-auto py-2 lg:py-3 space-y-0.5 min-h-0">
+          {/* 내 학원 앱 바로가기 — 화이트라벨 1급 동선 */}
+          <SidebarItem
+            icon={Smartphone}
+            label="내 학원 앱 보기"
+            href={`/s/${slug}`}
+            active={false}
+            onClick={handleLinkClick}
+            dataOnboarding="sidebar-miniapp"
+            external
+          />
 
-          <div className="px-6 pt-3 lg:pt-6 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
-            운영 관리
-          </div>
-          {menuItems.slice(6, 10).filter((item) => !item.hidden).map((item, idx) => (
-            <SidebarItem
-              key={item.href}
-              icon={item.icon}
-              label={item.label}
-              href={item.href}
-              active={isActive(item.href)}
-              onClick={handleLinkClick}
-              dataOnboarding={sidebarOnboardingKey(item.href, `/academy-admin/${slug}`)}
-            />
-          ))}
+          {MENU_GROUPS.map((group) => {
+            const items = renderItems(group.items);
+            if (items.length === 0) return null;
+            return (
+              <div key={group.title}>
+                <div className="px-6 pt-3 lg:pt-5 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+                  {group.title}
+                </div>
+                {items}
+              </div>
+            );
+          })}
 
-          <div className="px-6 pt-3 lg:pt-6 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
-            매출 및 설정
+          {/* 더보기 (매출·정산·구독 등 저빈도 메뉴) */}
+          <div>
+            <button
+              onClick={() => setMoreOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-6 pt-3 lg:pt-5 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider"
+            >
+              더보기
+              <ChevronDown size={14} className={`transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {(moreOpen || MORE_GROUP.items.some((i) => isActive(`${baseHref}/${i.seg}`))) && renderItems(MORE_GROUP.items)}
           </div>
-          {menuItems.slice(10).filter((item) => !item.hidden).map((item, idx) => (
-            <SidebarItem
-              key={item.href}
-              icon={item.icon}
-              label={item.label}
-              href={item.href}
-              active={isActive(item.href)}
-              onClick={handleLinkClick}
-              dataOnboarding={sidebarOnboardingKey(item.href, `/academy-admin/${slug}`)}
-            />
-          ))}
 
-          <div className="px-6 pt-3 lg:pt-6 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+          <div className="px-6 pt-3 lg:pt-5 pb-1.5 lg:pb-2 text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             기타
           </div>
           <SidebarItem
             icon={HelpCircle}
             label="사용 가이드"
-            href={`/academy-admin/${slug}/guide`}
-            active={isActive(`/academy-admin/${slug}/guide`)}
+            href={`${baseHref}/guide`}
+            active={isActive(`${baseHref}/guide`)}
             onClick={handleLinkClick}
             dataOnboarding="sidebar-guide"
           />
           <SidebarItem
             icon={AlertTriangle}
             label="고장신고/개발요청"
-            href={`/academy-admin/${slug}/support`}
-            active={isActive(`/academy-admin/${slug}/support`)}
+            href={`${baseHref}/support`}
+            active={isActive(`${baseHref}/support`)}
             onClick={handleLinkClick}
           />
 
@@ -287,4 +345,3 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
     </>
   );
 }
-
