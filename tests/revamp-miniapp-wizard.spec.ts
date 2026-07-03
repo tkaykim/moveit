@@ -64,13 +64,13 @@ test.describe('워크샵 · 대기열', () => {
 test.describe('온보딩 위저드 (/start)', () => {
   test('비로그인 시 로그인 게이트가 보인다', async ({ page }) => {
     await page.goto('/start');
-    await expect(page.getByText('5분 만에 만들어 드릴게요')).toBeVisible();
-    await expect(page.getByRole('button', { name: '로그인하고 시작하기' })).toBeVisible();
+    await expect(page.getByText('5분이면 만들어져요')).toBeVisible();
+    await expect(page.getByRole('button', { name: '시작하기', exact: true })).toBeVisible();
   });
 
-  test('로그인하면 3스텝 위저드가 열리고 프리셋에 실사 가격이 보인다', async ({ page }) => {
+  test('로그인하면 3스텝 위저드 — 운영방식 다중 선택 시 수강권이 조합된다', async ({ page }) => {
     await page.goto('/start');
-    await page.getByRole('button', { name: '로그인하고 시작하기' }).click();
+    await page.getByRole('button', { name: '시작하기', exact: true }).click();
     await page.getByPlaceholder('이메일을 입력하세요').fill(OWNER.email);
     await page.getByPlaceholder('비밀번호를 입력하세요').fill(OWNER.password);
     await page.locator('form:has(input[placeholder="이메일을 입력하세요"])').evaluate((f: HTMLFormElement) => f.requestSubmit());
@@ -79,21 +79,25 @@ test.describe('온보딩 위저드 (/start)', () => {
 
     // Step 1
     await page.getByPlaceholder('예: 무브잇 댄스 스튜디오').fill('플레이라이트 스튜디오');
-    await page.getByRole('button', { name: '다음' }).click();
+    await page.getByRole('button', { name: /다음/ }).click();
 
-    // Step 2 — 프리셋 카드 + 실사 기반 수강권 미리보기
-    await expect(page.getByRole('heading', { name: '수강권은 어떤 방식인가요?' })).toBeVisible();
-    await page.getByRole('button', { name: /쿠폰제 표준형/ }).click();
-    await expect(page.getByText('5회권 130,000원')).toBeVisible();
-    await expect(page.getByText('무제한 패스 (30일) 500,000원')).toBeVisible();
-    // 여기서 실제 생성은 하지 않는다 (E2E 데이터 남발 방지) — 생성 완주는 API 스펙에서 검증
+    // Step 2 — 다중 선택: 쿠폰제 + 기간제 동시 운영 학원
+    await expect(page.getByRole('heading', { name: '어떤 수업을 운영하세요?' })).toBeVisible();
+    await page.getByRole('button', { name: /쿠폰제/ }).click();
+    await page.getByRole('button', { name: /기간제/ }).click();
+    // 조합 미리보기에 두 유형의 수강권이 함께 보인다
+    await expect(page.getByText(/이 수강권 \d+종이 만들어져요/)).toBeVisible();
+    await expect(page.getByText('쿠폰 5회')).toBeVisible();
+    await expect(page.getByText('월 정규 (주 1회)')).toBeVisible();
+    await expect(page.getByText('무제한 패스 (30일)')).toBeVisible();
+    // 여기서 실제 생성은 하지 않는다 (E2E 데이터 남발 방지) — 생성 완주는 API로 별도 검증
   });
 });
 
 test.describe('관리자 IA', () => {
   test('사이드바가 4그룹 + 내 학원 앱 바로가기로 재편됐다', async ({ page }) => {
     await page.goto('/start');
-    await page.getByRole('button', { name: '로그인하고 시작하기' }).click();
+    await page.getByRole('button', { name: '시작하기', exact: true }).click();
     await page.getByPlaceholder('이메일을 입력하세요').fill(OWNER.email);
     await page.getByPlaceholder('비밀번호를 입력하세요').fill(OWNER.password);
     await page.locator('form:has(input[placeholder="이메일을 입력하세요"])').evaluate((f: HTMLFormElement) => f.requestSubmit());

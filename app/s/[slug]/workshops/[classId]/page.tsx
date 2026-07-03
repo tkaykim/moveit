@@ -25,14 +25,17 @@ export default async function MiniWorkshopDetailPage({
           className="w-full max-h-[420px] object-cover"
         />
       )}
-      <div className="px-5 pt-5">
-        <h1 className="text-xl font-bold leading-snug">{workshop.title}</h1>
-        <p className="text-sm text-neutral-500 mt-1">
+      <div className="px-6 pt-6">
+        <p className="text-[11px] font-bold tracking-widest uppercase" style={{ color: 'var(--primary)' }}>
+          Workshop
+        </p>
+        <h1 className="text-[22px] font-extrabold tracking-tight leading-snug mt-0.5">{workshop.title}</h1>
+        <p className="text-[13px] text-neutral-500 mt-1.5">
           {[workshop.genre, workshop.instructor_name].filter(Boolean).join(' · ')}
         </p>
         {typeof workshop.price === 'number' && workshop.price > 0 && (
-          <p className="text-lg font-extrabold mt-2 tabular-nums" style={{ color: 'var(--primary)' }}>
-            {workshop.price.toLocaleString('ko-KR')}원
+          <p className="text-[20px] font-extrabold mt-2.5 tabular-nums tracking-tight" style={{ color: 'var(--primary)' }}>
+            {workshop.price.toLocaleString('ko-KR')}<span className="text-[14px]">원</span>
           </p>
         )}
         {workshop.description && (
@@ -41,7 +44,7 @@ export default async function MiniWorkshopDetailPage({
           </p>
         )}
 
-        <h2 className="text-sm font-bold mt-7 mb-2.5">일정 선택</h2>
+        <h2 className="text-[13px] font-bold text-neutral-400 mt-8 mb-3">일정 선택</h2>
         <WorkshopSessionList sessions={workshop.sessions} />
 
         <p className="mt-5 text-[11px] text-neutral-400 leading-relaxed">

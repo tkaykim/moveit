@@ -32,7 +32,6 @@ import {
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAcademy } from '../contexts/academy-context';
-import { getPreset } from '@/lib/presets/academy-presets';
 
 interface SidebarItemProps {
   icon: LucideIcon;
@@ -149,7 +148,6 @@ const MORE_GROUP: MenuGroup = {
 export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdminSidebarProps) {
   const pathname = usePathname();
   const [academyName, setAcademyName] = useState<string | null>(null);
-  const [presetType, setPresetType] = useState<string | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
 
   const { academySlug } = useAcademy();
@@ -175,7 +173,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
     };
   }, [isOpen]);
 
-  // 학원 이름·운영방식 프리셋 가져오기
+  // 학원 이름 가져오기
   useEffect(() => {
     async function loadAcademy() {
       try {
@@ -184,7 +182,7 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
 
         const { data, error } = await supabase
           .from('academies')
-          .select('name_kr, name_en, preset_type')
+          .select('name_kr, name_en')
           .eq('id', academyId)
           .single();
 
@@ -192,7 +190,6 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
 
         if (data) {
           setAcademyName((data as { name_kr?: string; name_en?: string }).name_kr || (data as { name_en?: string }).name_en || null);
-          setPresetType((data as { preset_type?: string | null }).preset_type ?? null);
         }
       } catch (error) {
         console.error('Error loading academy:', error);
@@ -204,8 +201,8 @@ export function AcademyAdminSidebar({ academyId, isOpen, onClose }: AcademyAdmin
     }
   }, [academyId]);
 
-  const preset = getPreset(presetType);
-  const presetHidden = new Set(preset?.hiddenMenus ?? []);
+  // 운영 유형이 다중 선택으로 바뀌어 유형별 메뉴 숨김은 폐기 (조합 학원에선 전 메뉴가 유효)
+  const presetHidden = new Set<string>();
 
   const isActive = (href: string) => {
     if (href === baseHref) {

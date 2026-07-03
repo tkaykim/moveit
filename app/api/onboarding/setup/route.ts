@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { generateUniqueSlug } from '@/lib/utils/slug-server';
-import { getPreset } from '@/lib/presets/academy-presets';
+import { composeTickets, serializeOperationKeys } from '@/lib/presets/academy-presets';
 import type { Database } from '@/types/database';
 
 export const dynamic = 'force-dynamic';
@@ -35,10 +35,15 @@ export async function POST(request: NextRequest) {
     if (!name_kr) {
       return NextResponse.json({ error: '학원 이름을 입력해 주세요.' }, { status: 400 });
     }
-    const presetKey: string = body?.preset_key;
-    const preset = getPreset(presetKey);
-    if (!preset) {
-      return NextResponse.json({ error: '운영 방식을 선택해 주세요.' }, { status: 400 });
+    // 운영 유형 다중 선택 (기간제+쿠폰제 병행 학원 등). 하위호환: preset_key 단일도 수용.
+    const presetKeys: string[] = Array.isArray(body?.preset_keys)
+      ? body.preset_keys
+      : body?.preset_key
+        ? [body.preset_key]
+        : [];
+    const composedTickets = composeTickets(presetKeys);
+    if (composedTickets.length === 0) {
+      return NextResponse.json({ error: '운영 방식을 하나 이상 선택해 주세요.' }, { status: 400 });
     }
 
     const brandColor: string | null =
@@ -64,7 +69,7 @@ export async function POST(request: NextRequest) {
           slug: slug || null,
           is_active: true,
           brand_color: brandColor,
-          preset_type: preset.key,
+          preset_type: serializeOperationKeys(presetKeys),
           logo_url: logoUrl,
           contact_number: body?.contact_number?.trim() || null,
           instagram_handle: body?.instagram_handle?.trim()?.replace(/^@/, '') || null,
@@ -103,8 +108,8 @@ export async function POST(request: NextRequest) {
       await supabase.from('users').update({ role: 'ACADEMY_OWNER' } as never).eq('id', user.id);
     }
 
-    // 프리셋 수강권 생성
-    const ticketRows = preset.tickets.map((t) => ({
+    // 선택된 운영 유형 조합의 수강권 생성
+    const ticketRows = composedTickets.map((t) => ({
       academy_id: academyId,
       name: t.name,
       ticket_type: t.ticket_type,
