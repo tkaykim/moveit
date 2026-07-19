@@ -169,8 +169,13 @@ test.afterAll(async () => {
     const ticketIds = ((await svc.from('tickets').select('id').eq('academy_id', aid)).data || []).map((r: any) => r.id);
     const membershipIds = ((await svc.from('memberships').select('id').eq('academy_id', aid)).data || []).map((r: any) => r.id);
 
-    if (classIds.length) await svc.from('bookings').delete().in('class_id', classIds);
+    // membership_review_actions 는 bookings 를 참조한다 → 가장 먼저.
     await svc.from('membership_review_actions').delete().eq('academy_id', aid);
+    // classes → memberships(audience) → tickets(bundled) → classes 로 FK 가 순환한다.
+    // 먼저 순환 참조를 NULL 로 끊고 나서 지운다.
+    if (classIds.length) await svc.from('bookings').delete().in('class_id', classIds);
+    if (classIds.length) await svc.from('classes').update({ audience_membership_id: null }).in('id', classIds);
+    if (ticketIds.length) await svc.from('tickets').update({ class_id: null }).in('id', ticketIds);
     // 교차링크를 먼저 끊어야 user_tickets 를 지울 수 있다
     await svc.from('student_memberships').update({ bundled_user_ticket_id: null }).eq('academy_id', aid);
     if (ticketIds.length) {
@@ -183,10 +188,10 @@ test.afterAll(async () => {
       await svc.from('membership_discounts').delete().in('membership_id', membershipIds);
     }
     await svc.from('discounts').delete().eq('academy_id', aid);
+    await svc.from('memberships').delete().eq('academy_id', aid);
     if (ticketIds.length) await svc.from('tickets').delete().in('id', ticketIds);
     if (classIds.length) await svc.from('schedules').delete().in('class_id', classIds);
     if (classIds.length) await svc.from('classes').delete().in('id', classIds);
-    await svc.from('memberships').delete().eq('academy_id', aid);
     await svc.from('class_groups').delete().eq('academy_id', aid);
     await svc.from('academies').delete().eq('id', aid);
   }
