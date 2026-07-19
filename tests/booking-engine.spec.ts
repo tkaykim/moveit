@@ -548,6 +548,62 @@ test('B12 보안: anon 은 예약 엔진 트랜잭션을 호출할 수 없다', 
   expect(cancel.error).not.toBeNull();
 });
 
+test('B13 보안(FINDING2): 학생이 cancel_my_booking 을 직접 호출해도 COUNT 티켓이 정확히 1회만 복구된다', async () => {
+  // cancel_my_booking 은 authenticated 에게 직접 노출된 SECURITY DEFINER 함수다.
+  // 예전 정의는 예약만 CANCELLED 로 바꾸고 차감분을 복구하지 않아, 학생이 PostgREST 로
+  // 직접 호출하면 횟수가 환불 없이 소실됐다. 이제 cancel_booking_tx 에 위임하므로
+  // 마감 이내면 +1 복구, 재호출은 상태전이 거부(중복복구 없음)여야 한다.
+  const student = createClient(env.NEXT_PUBLIC_SUPABASE_URL!, env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  }) as any;
+  const signIn = await student.auth.signInWithPassword({
+    email: 'e2e-moveit-student@modoogoods.com',
+    password: 'Test1234!e2e',
+  });
+  expect(signIn.error, `학생 로그인 실패: ${signIn.error?.message}`).toBeNull();
+  expect(signIn.data.user?.id).toBe(STUDENT_ID);
+
+  // 마감 이내 스케줄에 COUNT 티켓으로 예약 → 차감
+  const ut = await grantTicket(F.tCancel, { remaining_count: 5 });
+  const booked = await callCreate(F.schedCancel.id, ut.id);
+  expect(booked.error).toBeNull();
+  const bookingId = booked.data.booking_id;
+  track('bookings', bookingId);
+
+  const afterBook = await svc.from('user_tickets').select('remaining_count').eq('id', ut.id).single();
+  expect(afterBook.data.remaining_count).toBe(4);
+
+  // 학생 JWT 로 직접 cancel_my_booking 호출
+  const c1 = await student.rpc('cancel_my_booking', { p_booking_id: bookingId });
+  expect(c1.error, `cancel_my_booking 실패: ${c1.error?.message}`).toBeNull();
+  expect(c1.data.status).toBe('CANCELLED');
+
+  const afterCancel = await svc
+    .from('user_tickets')
+    .select('remaining_count')
+    .eq('id', ut.id)
+    .single();
+  expect(afterCancel.data.remaining_count).toBe(5); // 정확히 1회 복구
+
+  // 재호출은 이미 CANCELLED → 상태전이 거부(복구 재발 없음)
+  const c2 = await student.rpc('cancel_my_booking', { p_booking_id: bookingId });
+  expect(c2.error).not.toBeNull();
+  const afterRetry = await svc
+    .from('user_tickets')
+    .select('remaining_count')
+    .eq('id', ut.id)
+    .single();
+  expect(afterRetry.data.remaining_count).toBe(5); // 중복 복구 없음
+
+  // 남의 예약은 취소 불가 (소유자 가드)
+  const otherUt = await grantTicket(F.tCancel, { remaining_count: 5 }, OTHER_ID);
+  const otherBooked = await callCreate(F.schedCancelLate.id, otherUt.id, OTHER_ID);
+  expect(otherBooked.error).toBeNull();
+  track('bookings', otherBooked.data.booking_id);
+  const cOther = await student.rpc('cancel_my_booking', { p_booking_id: otherBooked.data.booking_id });
+  expect(cOther.error).not.toBeNull(); // NOT_BOOKING_OWNER
+});
+
 // =========================================================================
 // C. 회귀: 기존 수강권의 만료 의미가 바뀌지 않았는가
 // =========================================================================

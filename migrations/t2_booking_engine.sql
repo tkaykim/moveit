@@ -8,6 +8,11 @@
 --   20260719142013 t2_lock_down_engine_functions  (+ 두 tx 함수 재정의: anon 차단)
 --
 -- 이 파일은 위 마이그레이션 적용 후의 최종 상태를 재현하는 idempotent 스냅샷이다.
+--
+-- ⚠ 권위 있는 정본은 `migrations/applied/` 이다 (라이브 schema_migrations 를 그대로 export 한 34개).
+--   특히 booking_is_service_role() 은 t3(20260719144018 t3_fix_service_role_detection)에서
+--   current_user → session_user 로 수정되었다. 아래 정의는 그 라이브-정합 버전으로 갱신했다
+--   (SECURITY DEFINER 안에서 current_user 는 항상 소유자 postgres 가 되어 오너십 가드가 무력화되는 문제).
 
 alter table public.classes
   add column if not exists class_group_id uuid references public.class_groups(id) on delete set null;
@@ -184,7 +189,10 @@ AS $function$
     nullif(current_setting('request.jwt.claims', true), '')::jsonb->>'role',
     ''
   ) = 'service_role'
-     or current_user in ('postgres', 'supabase_admin');
+     or (
+          session_user in ('postgres', 'supabase_admin')
+          and nullif(current_setting('request.jwt.claims', true), '') is null
+        );
 $function$
 ;
 
