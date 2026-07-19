@@ -3,6 +3,10 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { logTicketEvent } from '@/lib/db/enrollment-activity-log';
 import { getKSTTodayString } from '@/lib/utils/kst-time';
 import { expireStudentMemberships } from '@/lib/db/memberships';
+import {
+  processClassCanceledEvents,
+  dispatchClassCancelNotifications,
+} from '@/lib/booking/class-cancel';
 
 /**
  * GET /api/cron/expire-tickets
@@ -146,7 +150,24 @@ export async function GET(request: NextRequest) {
     return (data ?? {}) as Record<string, unknown>;
   });
 
-  const concerns = [ticketConcern, membershipConcern, bankHoldConcern, fixedWeeklyConcern];
+  // --- concern 5: 휴강 전파 (앞의 concern 들과 독립) -------------------------
+  // 외부 일정툴이 service_role 로 뒤집은 schedules.is_canceled 를 DB 트리거가 이벤트로 남긴다.
+  // 여기서 소비해 예약 취소 + 횟수 복구 / 기간 연장 / 고정 주1회 대체 배치를 수행하고,
+  // 이어서 미발송 건만 골라 학생에게 알린다.
+  // 멱등 — 복구는 예약당 1회(UNIQUE), 알림도 1회(notified_at 원자 스탬프).
+  const classCancelConcern = await runConcern('class_cancel_propagation', async () => {
+    const res = await processClassCanceledEvents(supabase as never, 500);
+    const notified = await dispatchClassCancelNotifications(supabase as never, 500);
+    return { ...res, notified_sent: notified.sent, notified_failed: notified.failed };
+  });
+
+  const concerns = [
+    ticketConcern,
+    membershipConcern,
+    bankHoldConcern,
+    fixedWeeklyConcern,
+    classCancelConcern,
+  ];
   const allOk = concerns.every((c) => c.ok);
 
   return NextResponse.json(

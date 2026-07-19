@@ -3012,6 +3012,113 @@ export type Database = {
           },
         ]
       }
+      // T7 추가 (부분 수정 — 재생성 금지)
+      class_cancel_restorations: {
+        Row: {
+          academy_id: string
+          booking_id: string
+          created_at: string
+          detail: string | null
+          event_id: string
+          id: string
+          notified_at: string | null
+          restore_kind: string
+          schedule_id: string
+          user_id: string
+          user_ticket_id: string | null
+        }
+        Insert: {
+          academy_id: string
+          booking_id: string
+          created_at?: string
+          detail?: string | null
+          event_id: string
+          id?: string
+          notified_at?: string | null
+          restore_kind: string
+          schedule_id: string
+          user_id: string
+          user_ticket_id?: string | null
+        }
+        Update: {
+          academy_id?: string
+          booking_id?: string
+          created_at?: string
+          detail?: string | null
+          event_id?: string
+          id?: string
+          notified_at?: string | null
+          restore_kind?: string
+          schedule_id?: string
+          user_id?: string
+          user_ticket_id?: string | null
+        }
+        Relationships: []
+      }
+      // T7 추가 (부분 수정 — 재생성 금지)
+      refund_proposals: {
+        Row: {
+          academy_id: string
+          adjusted_amount: number | null
+          basis: string | null
+          breakdown: Json | null
+          computed_amount: number
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          id: string
+          paid_amount: number
+          preset_key: string
+          preset_source: string
+          proposed_by: string | null
+          reason: string | null
+          revenue_transaction_id: string | null
+          status: string
+          user_id: string | null
+          user_ticket_id: string | null
+        }
+        Insert: {
+          academy_id: string
+          adjusted_amount?: number | null
+          basis?: string | null
+          breakdown?: Json | null
+          computed_amount: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          paid_amount: number
+          preset_key: string
+          preset_source: string
+          proposed_by?: string | null
+          reason?: string | null
+          revenue_transaction_id?: string | null
+          status?: string
+          user_id?: string | null
+          user_ticket_id?: string | null
+        }
+        Update: {
+          academy_id?: string
+          adjusted_amount?: number | null
+          basis?: string | null
+          breakdown?: Json | null
+          computed_amount?: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          paid_amount?: number
+          preset_key?: string
+          preset_source?: string
+          proposed_by?: string | null
+          reason?: string | null
+          revenue_transaction_id?: string | null
+          status?: string
+          user_id?: string | null
+          user_ticket_id?: string | null
+        }
+        Relationships: []
+      }
       booking_events: {
         Row: {
           academy_id: string
