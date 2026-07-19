@@ -10,11 +10,14 @@ import { expireStudentMemberships } from '@/lib/db/memberships';
  * 매일 KST 자정에 실행되는 만료 스윕. **서로 독립적인 concern 여러 개**를 순서대로 돌린다.
  *   1) tickets      : 만료일이 지난 ACTIVE user_tickets → EXPIRED
  *   2) memberships  : end_date 가 지난 ACTIVE|SUSPENDED student_memberships → EXPIRED
+ *   3) bank_holds   : 24시간 입금 대기가 지난 BANK 주문 → EXPIRED + 잡고 있던 좌석 반납
  *
  * 불변 규칙:
  *   - 한 concern 이 실패해도 나머지는 계속 돈다. 각 concern 의 성패는 개별로 기록된다.
  *   - 멤버십이 만료돼도 번들 수강권은 회수하지 않는다(자기 만료일을 따른다).
  *     학생의 미래 예약도 자동 취소하지 않는다 → 운영자 검토 큐로 넘어간다.
+ *   - bank_holds 는 이미 CONFIRMED 된 주문을 절대 건드리지 않는다. 결제 확정과
+ *     경합하므로 DB 함수가 주문 행을 잠그고 상태를 재확인한 뒤에만 만료시킨다.
  *
  * Idempotent — 각 concern 이 상태 가드(`WHERE status=...`)를 쓴다.
  * vercel.json 등록 예시:
@@ -122,7 +125,16 @@ export async function GET(request: NextRequest) {
     return { expired: res.expired, sweep_date: res.sweep_date, ids: res.ids };
   });
 
-  const concerns = [ticketConcern, membershipConcern];
+  // --- concern 3: BANK 좌석 홀드 만료 (앞의 concern 들과 독립) ---------------
+  // 좌석을 반납해야 다른 학생이 예약할 수 있으므로 하루 한 번이 아니라
+  // 더 자주 도는 스케줄에 물려도 안전하도록 idempotent 하게 설계돼 있다.
+  const bankHoldConcern = await runConcern('bank_holds', async () => {
+    const { data, error } = await supabase.rpc('expire_pending_bank_orders');
+    if (error) throw new Error(`홀드 만료 실패: ${error.message}`);
+    return (data ?? {}) as Record<string, unknown>;
+  });
+
+  const concerns = [ticketConcern, membershipConcern, bankHoldConcern];
   const allOk = concerns.every((c) => c.ok);
 
   return NextResponse.json(
