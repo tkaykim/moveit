@@ -125,6 +125,86 @@ export function evaluateBookingWindow(
   return 'OPEN';
 }
 
+// ---------------------------------------------------------------------------
+// 저장 전 형태 검증 (T8)
+//
+// resolveBookingPolicy 는 **읽기**용이라 관대하다 — 이상한 값은 조용히 기본값으로
+// 흡수한다. 그 관대함이 쓰기 경로에까지 적용되면, 운영자가 오타를 낸 정책이
+// 아무 경고 없이 저장되고 학생 예약 시점에야 엉뚱하게 동작한다.
+// 그래서 **쓰기 경로에서만** 아래 엄격 검증을 통과해야 저장할 수 있게 한다.
+// ---------------------------------------------------------------------------
+
+const POLICY_KEYS = new Set(['open', 'close', 'cancelUntil']);
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export interface PolicyValidation {
+  ok: boolean;
+  errors: string[];
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+function checkMinutesBefore(raw: unknown, field: string, errors: string[]): void {
+  if (raw === undefined) return;
+  if (!isPlainObject(raw)) {
+    errors.push(`${field} 는 { minutesBefore } 객체여야 합니다.`);
+    return;
+  }
+  for (const k of Object.keys(raw)) {
+    if (k !== 'minutesBefore') errors.push(`${field}.${k} 는 허용되지 않는 항목입니다.`);
+  }
+  const v = raw.minutesBefore;
+  if (typeof v !== 'number' || !Number.isFinite(v) || !Number.isInteger(v) || v < 0) {
+    errors.push(`${field}.minutesBefore 는 0 이상의 정수여야 합니다.`);
+  }
+}
+
+/**
+ * classes.booking_policy / academies.booking_policy 에 저장해도 되는 형태인지.
+ * null 과 {} 는 허용한다(= 상위값을 그대로 쓴다는 뜻).
+ */
+export function validateBookingPolicyShape(raw: unknown): PolicyValidation {
+  const errors: string[] = [];
+
+  if (raw === null || raw === undefined) return { ok: true, errors };
+  if (!isPlainObject(raw)) {
+    return { ok: false, errors: ['booking_policy 는 객체이거나 null 이어야 합니다.'] };
+  }
+
+  for (const k of Object.keys(raw)) {
+    if (!POLICY_KEYS.has(k)) errors.push(`${k} 는 허용되지 않는 항목입니다.`);
+  }
+
+  if ('open' in raw) {
+    const open = raw.open;
+    if (open !== null) {
+      if (!isPlainObject(open)) {
+        errors.push('open 은 { daysBefore, time } 객체이거나 null 이어야 합니다.');
+      } else {
+        for (const k of Object.keys(open)) {
+          if (k !== 'daysBefore' && k !== 'time') {
+            errors.push(`open.${k} 는 허용되지 않는 항목입니다.`);
+          }
+        }
+        const d = open.daysBefore;
+        if (typeof d !== 'number' || !Number.isInteger(d) || d < 0) {
+          errors.push('open.daysBefore 는 0 이상의 정수여야 합니다.');
+        }
+        if (typeof open.time !== 'string' || !HHMM.test(open.time)) {
+          errors.push('open.time 은 "HH:mm" 형식이어야 합니다.');
+        }
+      }
+    }
+  }
+
+  checkMinutesBefore(raw.close, 'close', errors);
+  checkMinutesBefore(raw.cancelUntil, 'cancelUntil', errors);
+
+  return { ok: errors.length === 0, errors };
+}
+
 /** 지금 취소하면 횟수를 복구해줄 수 있는 시점인지 (서버 판정 전용) */
 export function isWithinCancelDeadline(
   scheduleStart: Date | string,

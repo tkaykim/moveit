@@ -27,7 +27,9 @@ export type EnrollmentActivityAction =
   | 'MAKEUP'                 // 보강 배정 (T7)
   | 'CLASS_CANCELED_RESTORE' // 휴강 복구 (T7)
   | 'REFUND_PROPOSED'        // 환불 제안 생성 (T7, 집행 아님)
-  | 'REFUND_CONFIRMED';      // 환불 제안 직원 확인 (T7)
+  | 'REFUND_CONFIRMED'            // 환불 제안 직원 확인 (T7)
+  | 'CLASS_READINESS_TAGGED'      // 예약 준비 태깅 1건 (T8)
+  | 'CLASS_READINESS_BULK_TAGGED';// 예약 준비 태깅 일괄 (T8)
 
 export type LogTicketEventVia =
   | 'toss_payment'
