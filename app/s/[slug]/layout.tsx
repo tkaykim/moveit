@@ -48,6 +48,7 @@ export default async function MiniAppLayout({
       <div className="mx-auto max-w-lg min-h-[100dvh] flex flex-col bg-white dark:bg-neutral-950">
         <MiniHeader
           slug={slug}
+          academyId={academy.id}
           name={academy.name_kr || academy.name_en || '학원'}
           logoUrl={academy.logo_url}
         />

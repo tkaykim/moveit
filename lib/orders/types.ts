@@ -43,6 +43,13 @@ export type OrderItemCode =
   | 'INVALID_COUNT_OPTION'
   | 'FIXED_CLASS_REQUIRED'
   | 'FIXED_CLASS_INVALID'
+  /**
+   * 비회원이 수강권을 구매하려 한 경우.
+   * 수강권은 user_tickets.user_id 로만 발급되므로 주인 없는 구매는
+   * 이행 단계에서 GUEST_FULFILLMENT_UNSUPPORTED 로 반드시 죽는다.
+   * → 이행 불가한 주문을 애초에 만들지 않도록 조립 단계에서 거절한다.
+   */
+  | 'SIGN_IN_REQUIRED'
   // 스케줄 예약
   | 'SCHEDULE_NOT_FOUND'
   | 'SCHEDULE_CANCELED'

@@ -1,4 +1,11 @@
 import { createServiceClient } from '@/lib/supabase/server';
+import {
+  resolveBookingPolicy,
+  bookingOpenAt,
+  bookingCloseAt,
+  evaluateBookingWindow,
+  type BookingWindowState,
+} from '@/lib/booking/policy';
 
 /**
  * 학원 미니앱(/s/[slug]) 공개 데이터 조회 전용.
@@ -22,10 +29,14 @@ export interface MiniAcademy {
   introduction_html: string | null;
   naver_map_url: string | null;
   kakao_channel_url: string | null;
+  /** 예약 정책 학원 기본값 — 시간표의 "언제 열리나" 표시에 필요 */
+  booking_policy: unknown;
+  /** 미니앱 스킨(문구·라벨·안내)의 저장소. 학원별 데이터로만 스킨을 바꾼다. */
+  section_config: unknown;
 }
 
 const PUBLIC_ACADEMY_FIELDS =
-  'id, slug, name_kr, name_en, description, logo_url, brand_color, preset_type, address, contact_number, instagram_handle, youtube_url, images, introduction_html, naver_map_url, kakao_channel_url';
+  'id, slug, name_kr, name_en, description, logo_url, brand_color, preset_type, address, contact_number, instagram_handle, youtube_url, images, introduction_html, naver_map_url, kakao_channel_url, booking_policy, section_config';
 
 export async function getAcademyBySlug(slugOrId: string): Promise<MiniAcademy | null> {
   const supabase = createServiceClient();
@@ -79,6 +90,140 @@ export async function getWeekSchedules(academyId: string, weekStart: Date): Prom
     .order('start_time', { ascending: true });
 
   return ((data ?? []) as unknown as MiniScheduleItem[]).filter((s) => !s.is_canceled);
+}
+
+/* ------------------------------------------------------------------ */
+/* 주간 시간표 보드 (T10)                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 한 회차가 학생 화면에서 필요로 하는 모든 것.
+ * 그룹·대상·정원·정책이 **한 번의 질의**로 함께 온다 — 회차마다 추가 요청은 결함이다.
+ */
+export interface MiniWeekItem {
+  id: string;
+  start_time: string;
+  end_time: string;
+  max_students: number | null;
+  booked_count: number;
+  is_full: boolean;
+  card_color: string | null;
+
+  class_id: string;
+  title: string;
+  genre: string | null;
+  difficulty_level: string | null;
+  instructor_name: string | null;
+
+  /** 그룹 배지 */
+  group_name: string | null;
+  /** 특별수업 — 무제한(올패스)로 덮이지 않고 **별도 결제**가 필요하다 */
+  is_special: boolean;
+  /** 대상 한정 수업인가 (RLS 를 통과해 여기 온 이상 이 사용자는 볼 자격이 있다) */
+  is_audience_limited: boolean;
+
+  booking_state: BookingWindowState;
+  /** 아직 안 열렸다면 언제 열리는지 (ISO) */
+  opens_at: string | null;
+  closes_at: string;
+  bookable: boolean;
+}
+
+interface WeekQueryRow {
+  id: string;
+  start_time: string;
+  end_time: string;
+  max_students: number | null;
+  current_students: number | null;
+  is_canceled: boolean | null;
+  card_color: string | null;
+  classes: {
+    id: string;
+    title: string;
+    genre: string | null;
+    difficulty_level: string | null;
+    instructor_name: string | null;
+    audience_membership_id: string | null;
+    booking_policy: unknown;
+    class_group_id: string | null;
+    class_groups: { id: string; name: string | null; is_special: boolean | null } | null;
+  } | null;
+}
+
+/** schedules → classes → class_groups 를 한 번에 가져오는 단일 집계 질의 */
+const WEEK_SELECT =
+  'id, start_time, end_time, max_students, current_students, is_canceled, card_color, ' +
+  'classes!inner(id, title, genre, difficulty_level, instructor_name, academy_id, is_active, ' +
+  'audience_membership_id, booking_policy, class_group_id, ' +
+  'class_groups(id, name, is_special))';
+
+type QueryClient = {
+  from: (table: string) => any;
+};
+
+/**
+ * 한 주의 수업을 **질의 한 번**으로 읽는다.
+ *
+ * ⚠ client 는 반드시 **RLS 를 지키는(사용자 세션) 클라이언트**여야 한다.
+ * 서비스롤을 넣으면 대상 한정 수업이 비회원에게도 새어나간다 —
+ * 숨김의 정본은 RLS 이고, 화면은 돌려받은 것을 그대로 그린다(클라이언트 필터링 금지).
+ */
+export async function getWeekBoard(
+  client: QueryClient,
+  params: { academyId: string; academyBookingPolicy: unknown; weekStart: Date; now?: Date }
+): Promise<MiniWeekItem[]> {
+  const weekEnd = new Date(params.weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  const now = params.now ?? new Date();
+
+  const { data, error } = await client
+    .from('schedules')
+    .select(WEEK_SELECT)
+    .eq('classes.academy_id', params.academyId)
+    .eq('classes.is_active', true)
+    .gte('start_time', params.weekStart.toISOString())
+    .lt('start_time', weekEnd.toISOString())
+    .order('start_time', { ascending: true });
+
+  if (error) throw new Error(error.message ?? String(error));
+
+  const rows = ((data ?? []) as unknown as WeekQueryRow[]).filter(
+    (r) => !r.is_canceled && r.classes
+  );
+
+  return rows.map((r) => {
+    const c = r.classes!;
+    const policy = resolveBookingPolicy(params.academyBookingPolicy, c.booking_policy);
+    const state = evaluateBookingWindow(r.start_time, policy, now);
+    const openAt = bookingOpenAt(r.start_time, policy);
+    const booked = r.current_students ?? 0;
+    const isFull = typeof r.max_students === 'number' && booked >= r.max_students;
+
+    return {
+      id: r.id,
+      start_time: r.start_time,
+      end_time: r.end_time,
+      max_students: r.max_students,
+      booked_count: booked,
+      is_full: isFull,
+      card_color: r.card_color,
+
+      class_id: c.id,
+      title: c.title,
+      genre: c.genre,
+      difficulty_level: c.difficulty_level,
+      instructor_name: c.instructor_name,
+
+      group_name: c.class_groups?.name ?? null,
+      is_special: Boolean(c.class_groups?.is_special),
+      is_audience_limited: c.audience_membership_id != null,
+
+      booking_state: state,
+      opens_at: openAt ? openAt.toISOString() : null,
+      closes_at: bookingCloseAt(r.start_time, policy).toISOString(),
+      bookable: state === 'OPEN' && !isFull,
+    };
+  });
 }
 
 export interface MiniTicket {
