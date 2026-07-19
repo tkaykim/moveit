@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getTicketById } from '@/lib/db/tickets';
-import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
+import { createFixedWeeklyBookings } from '@/lib/db/period-ticket-bookings';
 import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
 import { isPeriodTicket as checkIsPeriodTicket } from '@/lib/utils/ticket-type';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
@@ -272,22 +272,22 @@ export async function POST(request: Request) {
       }
     }
 
-    // 기간권(PERIOD)인 경우: 해당 기간 내 스케줄 자동 예약 생성
-    let autoBookingResult = { created: 0, skipped: 0, scheduleIds: [] as string[] };
-    
-    if (isPeriodTicket) {
+    // 고정 주1회 상품만 자동 예약한다. 일반 PERIOD·ALL PASS 는 0건이다.
+    let autoBookingResult = { created: 0, skipped: 0 };
+
+    {
       try {
-        autoBookingResult = await createBookingsForPeriodTicket(
-          user.id,
-          userTicket.id,
-          ticketId,
-          userTicketData.start_date!,
-          userTicketData.expiry_date!
+        const placement = await createFixedWeeklyBookings(userTicket.id);
+        autoBookingResult = {
+          created: placement.placed,
+          skipped: placement.skipped_full + placement.skipped_duplicate,
+        };
+
+        console.log(
+          `고정 주1회 자동 예약: ${placement.placed}개 생성, 정원마감 ${placement.skipped_full}개, 미사용 횟수 ${placement.unspent}`
         );
-        
-        console.log(`기간권 자동 예약 생성 완료: ${autoBookingResult.created}개 생성, ${autoBookingResult.skipped}개 스킵`);
       } catch (bookingError) {
-        console.error('기간권 자동 예약 생성 오류:', bookingError);
+        console.error('고정 주1회 자동 예약 오류:', bookingError);
         // 자동 예약 실패해도 수강권 구매는 성공으로 처리
       }
     }
@@ -295,8 +295,8 @@ export async function POST(request: Request) {
     // 수강권/쿠폰 구분 메시지
     const productType = ticket.is_coupon ? '쿠폰' : '수강권';
     
-    // 기간권인 경우 자동 예약 정보도 포함
-    const message = isPeriodTicket && autoBookingResult.created > 0
+    // 고정 주1회 자동 예약이 있었으면 안내에 포함
+    const message = autoBookingResult.created > 0
       ? `${productType} 구매가 완료되었습니다. ${autoBookingResult.created}개의 수업이 자동 예약되었습니다.`
       : `${productType} 구매가 완료되었습니다.`;
 
@@ -305,7 +305,7 @@ export async function POST(request: Request) {
     const ticketDisplayName = ticket.name || productType;
     
     let purchaseBody = `${academyName} ${ticketDisplayName}을(를) 구매하셨습니다.`;
-    if (isPeriodTicket && autoBookingResult.created > 0) {
+    if (autoBookingResult.created > 0) {
       purchaseBody += ` ${autoBookingResult.created}개 수업이 자동 예약되었습니다.`;
     } else if (!isPeriodTicket && remainingCount) {
       purchaseBody += ` 잔여 횟수: ${remainingCount}회`;

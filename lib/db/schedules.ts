@@ -1,7 +1,6 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { Schedule } from '@/lib/supabase/types';
 import { Database } from '@/types/database';
-import { createBookingsForNewSchedule } from '@/lib/db/period-ticket-bookings';
 
 export async function getSchedules(filters?: {
   class_id?: string;
@@ -81,19 +80,9 @@ export async function createSchedule(schedule: Database['public']['Tables']['sch
 
   if (error) throw error;
   
-  // 생성된 스케줄에 대해 기존 기간권 보유자 자동 예약 생성
-  if (data && data.class_id && data.start_time) {
-    try {
-      await createBookingsForNewSchedule(
-        data.id,
-        data.class_id,
-        new Date(data.start_time)
-      );
-    } catch (bookingError) {
-      console.error('기간권 보유자 자동 예약 생성 오류:', bookingError);
-      // 자동 예약 실패해도 스케줄 생성은 성공으로 처리
-    }
-  }
+  // 신규 회차 백필은 이제 DB 트리거(schedules INSERT → booking_events)와
+  // cron 프로세서(process_schedule_created_events)가 담당한다.
+  // 예전의 인앱 일괄예약은 is_general PERIOD 권으로 학원 전 수업을 잡아버려 제거됐다.
   
   return data;
 }
@@ -261,19 +250,9 @@ export async function createSingleSession(data: {
 
   if (error) throw error;
   
-  // 생성된 스케줄에 대해 기존 기간권 보유자 자동 예약 생성
-  if (result && result.class_id && result.start_time) {
-    try {
-      await createBookingsForNewSchedule(
-        result.id,
-        result.class_id,
-        new Date(result.start_time)
-      );
-    } catch (bookingError) {
-      console.error('기간권 보유자 자동 예약 생성 오류:', bookingError);
-      // 자동 예약 실패해도 스케줄 생성은 성공으로 처리
-    }
-  }
+  // 신규 회차 백필은 이제 DB 트리거(schedules INSERT → booking_events)와
+  // cron 프로세서(process_schedule_created_events)가 담당한다.
+  // 예전의 인앱 일괄예약은 is_general PERIOD 권으로 학원 전 수업을 잡아버려 제거됐다.
   
   return result;
 }

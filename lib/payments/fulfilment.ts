@@ -10,6 +10,8 @@
  *   ④ 재시도는 언제나 안전하다 — finalize 가 확정된 주문을 보면 아무것도 더 만들지 않는다.
  */
 
+import { placeFixedWeeklyBookingsForTickets } from '@/lib/booking/fixed-weekly';
+
 export type PaymentMethod = 'BANK' | 'TOSS' | 'ONSITE';
 
 type AnyClient = {
@@ -134,12 +136,24 @@ export async function finalizeOrder(
   confirmedBy?: string | null
 ): Promise<FinalizeResult> {
   try {
-    return unwrap<FinalizeResult>(
+    const result = unwrap<FinalizeResult>(
       await client.rpc('finalize_order_group', {
         p_order_group_id: orderGroupId,
         p_confirmed_by: confirmedBy ?? null,
       })
     );
+
+    // ⑤ 고정 주1회 자동배치 — **확정이 커밋된 뒤** 별도로 돈다.
+    //    이행 트랜잭션 안에 넣으면 회차 하나가 마감됐다고 주문 전체가 롤백된다.
+    //    여기서 실패해도 주문은 이미 확정이고 횟수는 학생에게 남는다.
+    //    (고정 주1회가 아닌 수강권 — ALL PASS 포함 — 은 여기서 0건이다.)
+    try {
+      await placeFixedWeeklyBookingsForTickets(client, result?.user_ticket_ids ?? []);
+    } catch (placementErr) {
+      console.error('[fulfilment] 고정 주1회 자동배치 실패 (주문 확정은 유지)', placementErr);
+    }
+
+    return result;
   } catch (e) {
     const mapped = parseFulfilmentError(e);
     try {

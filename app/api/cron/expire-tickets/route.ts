@@ -134,7 +134,19 @@ export async function GET(request: NextRequest) {
     return (data ?? {}) as Record<string, unknown>;
   });
 
-  const concerns = [ticketConcern, membershipConcern, bankHoldConcern];
+  // --- concern 4: 신규 회차 고정 주1회 백필 (앞의 concern 들과 독립) ---------
+  // schedules INSERT 트리거가 남긴 PENDING SCHEDULE_CREATED 이벤트를 소비한다.
+  // 멱등 — 같은 이벤트를 두 번 처리해도 예약은 하나다(중복 예약 가드).
+  // 자리를 못 잡으면 건너뛰고 운영자 큐(fixed_weekly_placement_issues)에 남긴다.
+  const fixedWeeklyConcern = await runConcern('fixed_weekly_backfill', async () => {
+    const { data, error } = await supabase.rpc('process_schedule_created_events', {
+      p_limit: 500,
+    });
+    if (error) throw new Error(`신규 회차 백필 실패: ${error.message}`);
+    return (data ?? {}) as Record<string, unknown>;
+  });
+
+  const concerns = [ticketConcern, membershipConcern, bankHoldConcern, fixedWeeklyConcern];
   const allOk = concerns.every((c) => c.ok);
 
   return NextResponse.json(

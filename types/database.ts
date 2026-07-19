@@ -3063,11 +3063,117 @@ export type Database = {
           },
         ]
       }
+      fixed_weekly_placement_issues: {
+        Row: {
+          academy_id: string
+          class_id: string
+          created_at: string
+          detail: string | null
+          id: string
+          occurrence_date: string | null
+          reason: string
+          resolved_at: string | null
+          schedule_id: string | null
+          shortfall: number | null
+          source: string
+          user_id: string
+          user_ticket_id: string
+        }
+        Insert: {
+          academy_id: string
+          class_id: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          occurrence_date?: string | null
+          reason: string
+          resolved_at?: string | null
+          schedule_id?: string | null
+          shortfall?: number | null
+          source: string
+          user_id: string
+          user_ticket_id: string
+        }
+        Update: {
+          academy_id?: string
+          class_id?: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          occurrence_date?: string | null
+          reason?: string
+          resolved_at?: string | null
+          schedule_id?: string | null
+          shortfall?: number | null
+          source?: string
+          user_id?: string
+          user_ticket_id?: string
+        }
+        Relationships: []
+      }
+      makeup_grants: {
+        Row: {
+          academy_id: string
+          created_at: string
+          created_by: string | null
+          from_booking_id: string | null
+          from_schedule_id: string | null
+          id: string
+          month_key: string
+          to_booking_id: string | null
+          to_schedule_id: string | null
+          user_id: string
+          user_ticket_id: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          created_by?: string | null
+          from_booking_id?: string | null
+          from_schedule_id?: string | null
+          id?: string
+          month_key: string
+          to_booking_id?: string | null
+          to_schedule_id?: string | null
+          user_id: string
+          user_ticket_id: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          created_by?: string | null
+          from_booking_id?: string | null
+          from_schedule_id?: string | null
+          id?: string
+          month_key?: string
+          to_booking_id?: string | null
+          to_schedule_id?: string | null
+          user_id?: string
+          user_ticket_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      place_fixed_weekly_bookings: {
+        Args: { p_user_ticket_id: string }
+        Returns: Json
+      }
+      process_schedule_created_events: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
+      create_makeup_booking: {
+        Args: {
+          p_actor?: string
+          p_booking_id: string
+          p_target_schedule_id: string
+        }
+        Returns: Json
+      }
       create_student_user: {
         Args: {
           p_address?: string

@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { Database } from '@/types/database';
 import { generateSessionDates, combineDateAndTime } from '@/lib/utils/schedule-generator';
-import { createBookingsForNewSchedules } from '@/lib/db/period-ticket-bookings';
 
 type RecurringSchedule = Database['public']['Tables']['recurring_schedules']['Row'];
 type RecurringScheduleInsert = Database['public']['Tables']['recurring_schedules']['Insert'];
@@ -151,25 +150,9 @@ export async function generateSessionsFromRecurringSchedule(
   
   const createdCount = data?.length || 0;
   
-  // 생성된 스케줄에 대해 기존 기간권 보유자 자동 예약 생성
-  if (data && data.length > 0) {
-    try {
-      const result = await createBookingsForNewSchedules(
-        data.map((s: any) => ({
-          id: s.id,
-          class_id: s.class_id,
-          start_time: s.start_time,
-        }))
-      );
-      
-      if (result.totalCreated > 0) {
-        console.log(`기간권 보유자 자동 예약 ${result.totalCreated}개 생성됨`);
-      }
-    } catch (bookingError) {
-      console.error('기간권 보유자 자동 예약 생성 오류:', bookingError);
-      // 자동 예약 실패해도 스케줄 생성은 성공으로 처리
-    }
-  }
+  // 신규 회차 백필은 이제 DB 트리거(schedules INSERT → booking_events)와
+  // cron 프로세서(process_schedule_created_events)가 담당한다.
+  // 예전의 인앱 일괄예약은 is_general PERIOD 권으로 학원 전 수업을 잡아버려 제거됐다.
   
   return createdCount;
 }
