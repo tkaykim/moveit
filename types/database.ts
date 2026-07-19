@@ -674,6 +674,7 @@ export type Database = {
           base_salary: number
           base_student_count: number | null
           booking_policy: Json | null
+          class_group_id: string | null
           class_type: string | null
           created_at: string | null
           current_students: number | null
@@ -708,6 +709,7 @@ export type Database = {
           base_salary?: number
           base_student_count?: number | null
           booking_policy?: Json | null
+          class_group_id?: string | null
           class_type?: string | null
           created_at?: string | null
           current_students?: number | null
@@ -742,6 +744,7 @@ export type Database = {
           base_salary?: number
           base_student_count?: number | null
           booking_policy?: Json | null
+          class_group_id?: string | null
           class_type?: string | null
           created_at?: string | null
           current_students?: number | null

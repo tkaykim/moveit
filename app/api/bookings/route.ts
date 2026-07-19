@@ -6,6 +6,7 @@ import { Database } from '@/types/database';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { sendNotification } from '@/lib/notifications';
 import { formatKSTDate, formatKSTTime } from '@/lib/utils/kst-time';
+import { loadBookingContext, preflightBooking, mapBookingError } from '@/lib/booking/engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -139,6 +140,74 @@ export async function POST(request: Request) {
         { error: '결제 완료 예약은 결제 승인 API를 통해서만 생성할 수 있습니다.' },
         { status: 400 }
       );
+    }
+
+    // === T2 예약 엔진 경로 ===
+    // class_groups 를 도입한 학원은 정책/커버리지/선택/차감/정원을 엔진이 전담한다.
+    // (preflight = UX 용 사전판정, 실제 확정은 create_booking_tx 가 락 아래에서 재검증)
+    // 아직 그룹을 설정하지 않은 학원은 아래 레거시 경로를 그대로 탄다 (커버리지 체인 ③).
+    if (scheduleId) {
+      const engineCtx = await loadBookingContext(supabase, scheduleId);
+      if (engineCtx?.academyUsesGroups) {
+        const pre = await preflightBooking(supabase, {
+          userId: user.id,
+          scheduleId,
+          designatedUserTicketId: userTicketId ?? null,
+        });
+        if (!pre.ok) {
+          const mapped = mapBookingError(pre.failure || 'UNKNOWN');
+          return NextResponse.json(
+            { error: mapped.message, code: pre.failure },
+            { status: mapped.status }
+          );
+        }
+
+        const { data: txData, error: txError } = await (supabase as any).rpc('create_booking_tx', {
+          p_schedule_id: scheduleId,
+          p_user_ticket_id: pre.selection?.selected?.id ?? null,
+          p_order_item_id: null,
+          p_user_id: null,
+        });
+
+        if (txError) {
+          const mapped = mapBookingError(txError);
+          return NextResponse.json(
+            { error: mapped.message, code: mapped.code },
+            { status: mapped.status }
+          );
+        }
+
+        const result = (Array.isArray(txData) ? txData[0] : txData) || {};
+        const { data: createdBooking } = await (supabase as any)
+          .from('bookings')
+          .select()
+          .eq('id', result.booking_id)
+          .maybeSingle();
+
+        await logTicketEvent({
+          academy_id: engineCtx.klass.academyId,
+          user_id: user.id,
+          user_ticket_id: result.user_ticket_id ?? null,
+          booking_id: result.booking_id,
+          action: 'ENROLL',
+          before: { status: null },
+          after: { status: 'CONFIRMED' },
+          via: 'booking',
+          context: {
+            schedule_id: scheduleId,
+            class_id: engineCtx.klass.id,
+            engine: 't2',
+            deducted: result.deducted === true,
+            ticket_started: result.ticket_started === true,
+          },
+          actor_user_id: user.id,
+        }).catch(() => {});
+
+        return NextResponse.json({
+          data: createdBooking ?? { id: result.booking_id },
+          message: '예약이 완료되었습니다.',
+        });
+      }
     }
 
     let academyId: string;
