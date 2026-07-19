@@ -27,6 +27,9 @@ import {
   Smartphone,
   Sparkles,
   ChevronDown,
+  BadgeCheck,
+  Wallet,
+  RotateCcw,
   type LucideIcon,
 } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/utils/supabase-client';
@@ -113,6 +116,17 @@ const MENU_GROUPS: MenuGroup[] = [
       { icon: BookOpen, label: '수업(반) 관리', seg: 'class-masters' },
       { icon: Sparkles, label: '워크샵·팝업', seg: 'classes' },
       { icon: Replace, label: '대강/취소 신청', seg: 'schedule-change-requests', hidden: true },
+    ],
+  },
+  {
+    // 원장·인포데스크가 매일 쓰는 운영 동선 (T9)
+    title: '운영',
+    items: [
+      { icon: ClipboardList, label: '수업별 예약자', seg: 'roster' },
+      { icon: Users, label: '수강생 목록', seg: 'students-overview' },
+      { icon: BadgeCheck, label: '멤버십 관리', seg: 'memberships' },
+      { icon: Wallet, label: '결제 처리', seg: 'payments' },
+      { icon: RotateCcw, label: '재처리', seg: 'reprocess' },
     ],
   },
   {
