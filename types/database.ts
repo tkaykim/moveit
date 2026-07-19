@@ -1545,6 +1545,10 @@ export type Database = {
           user_id: string
           user_ticket_id: string | null
           valid_days: number | null
+          order_group_id: string | null
+          order_item_id: string | null
+          refunded_amount: number
+          actor_user_id: string | null
         }
         Insert: {
           academy_id: string
@@ -1568,6 +1572,10 @@ export type Database = {
           user_id: string
           user_ticket_id?: string | null
           valid_days?: number | null
+          order_group_id?: string | null
+          order_item_id?: string | null
+          refunded_amount?: number
+          actor_user_id?: string | null
         }
         Update: {
           academy_id?: string
@@ -1591,6 +1599,10 @@ export type Database = {
           user_id?: string
           user_ticket_id?: string | null
           valid_days?: number | null
+          order_group_id?: string | null
+          order_item_id?: string | null
+          refunded_amount?: number
+          actor_user_id?: string | null
         }
         Relationships: [
           {
@@ -2879,6 +2891,8 @@ export type Database = {
           ticket_name_snapshot: string | null
           ticket_type_snapshot: string | null
           valid_days_snapshot: number | null
+          valid_months_snapshot: number | null
+          is_coupon_snapshot: boolean | null
         }
         Insert: {
           class_id?: string | null
@@ -2903,6 +2917,8 @@ export type Database = {
           ticket_name_snapshot?: string | null
           ticket_type_snapshot?: string | null
           valid_days_snapshot?: number | null
+          valid_months_snapshot?: number | null
+          is_coupon_snapshot?: boolean | null
         }
         Update: {
           class_id?: string | null
@@ -2927,6 +2943,8 @@ export type Database = {
           ticket_name_snapshot?: string | null
           ticket_type_snapshot?: string | null
           valid_days_snapshot?: number | null
+          valid_months_snapshot?: number | null
+          is_coupon_snapshot?: boolean | null
         }
         Relationships: [
           {
