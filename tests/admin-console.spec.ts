@@ -370,36 +370,66 @@ test.afterAll(async () => {
   await svc.from('revenue_transactions').delete().eq('academy_id', F.academy?.id ?? '');
   await svc.from('fixed_weekly_placement_issues').delete().eq('academy_id', F.academy?.id ?? '');
   await svc.from('booking_events').delete().eq('academy_id', F.academy?.id ?? '');
+  // enrollment_activity_log 는 academies/bookings/user_tickets 를 전부 참조한다.
+  // 이걸 빠뜨리면 그 뒤 삭제가 **조용히** 전부 실패하고(supabase-js delete 는 throw 하지 않는다)
+  // 테스트 학원이 DB 에 그대로 남는다. 실제로 남아 있었다.
+  await svc.from('enrollment_activity_log').delete().eq('academy_id', F.academy?.id ?? '');
 
   const { data: classes } = await svc.from('classes').select('id').eq('academy_id', F.academy?.id ?? '');
   const classIds = (classes ?? []).map((c: any) => c.id);
-  if (classIds.length) {
-    await svc.from('bookings').delete().in('class_id', classIds);
-    await svc.from('schedules').delete().in('class_id', classIds);
-  }
-
   const { data: orders } = await svc.from('order_groups').select('id').eq('academy_id', F.academy?.id ?? '');
   const orderIds = (orders ?? []).map((o: any) => o.id);
+
+  // order_items.result_booking_id → bookings 이므로 **order_items 가 bookings 보다 먼저다**.
+  // 순서를 뒤집으면 bookings 삭제가 조용히 실패하고, 그 뒤 schedules·classes·memberships 가 줄줄이 남는다.
   if (orderIds.length) {
     await svc.from('order_items').delete().in('order_group_id', orderIds);
+  }
+  if (classIds.length) {
+    await svc.from('bookings').delete().in('class_id', classIds);
+  }
+  if (orderIds.length) {
     await svc.from('order_groups').delete().in('id', orderIds);
+  }
+  if (classIds.length) {
+    await svc.from('schedules').delete().in('class_id', classIds);
   }
 
   await svc.from('student_memberships').delete().eq('academy_id', F.academy?.id ?? '');
   if (syntheticUserIds.length) {
     await svc.from('user_tickets').delete().in('user_id', syntheticUserIds);
   }
-  await svc.from('user_tickets').delete().eq('ticket_id', F.ticket?.id ?? '');
-  await svc.from('membership_discounts').delete().eq('membership_id', F.membership?.id ?? '');
-  await svc.from('memberships').delete().eq('academy_id', F.academy?.id ?? '');
+  // 이 학원의 **모든** 상품에 딸린 수강권을 지운다 (F.ticket 하나만 지우면 tickets 삭제가 FK 에 막힌다).
+  const { data: tks } = await svc.from('tickets').select('id').eq('academy_id', F.academy?.id ?? '');
+  const ticketIds = (tks ?? []).map((t: any) => t.id);
+  if (ticketIds.length) {
+    await svc.from('user_tickets').delete().in('ticket_id', ticketIds);
+    await svc.from('ticket_coverage').delete().in('ticket_id', ticketIds);
+    await svc.from('ticket_classes').delete().in('ticket_id', ticketIds);
+  }
+  // membership_discounts 는 이 학원의 **모든** 멤버십에 대해 지운다
+  // (F.membership 하나만 지우면 나머지 멤버십이 FK 에 걸려 남는다).
+  const { data: ms } = await svc.from('memberships').select('id').eq('academy_id', F.academy?.id ?? '');
+  const membershipIds = (ms ?? []).map((m: any) => m.id);
+  if (membershipIds.length) {
+    await svc.from('membership_discounts').delete().in('membership_id', membershipIds);
+  }
+  // classes.audience_membership_id → memberships 이므로 **classes 가 memberships 보다 먼저다**.
   await svc.from('classes').delete().eq('academy_id', F.academy?.id ?? '');
   await svc.from('class_groups').delete().eq('academy_id', F.academy?.id ?? '');
+  await svc.from('memberships').delete().eq('academy_id', F.academy?.id ?? '');
   await svc.from('tickets').delete().eq('academy_id', F.academy?.id ?? '');
   await svc.from('academy_user_roles').delete().eq('academy_id', F.academy?.id ?? '');
   if (syntheticUserIds.length) {
     await svc.from('users').delete().in('id', syntheticUserIds);
   }
   for (const id of academyIds) await svc.from('academies').delete().eq('id', id);
+
+  // 정리가 실패했으면 **소리내어** 알린다. 조용히 남으면 다음 실행부터 DB 가 오염된다.
+  for (const id of academyIds) {
+    const { count } = await svc.from('academies').select('id', { count: 'exact', head: true }).eq('id', id);
+    if (count) console.error(`[T9 cleanup] 테스트 학원 ${id} 이 남아 있다 — FK 역순을 다시 확인하라`);
+  }
 });
 
 /* ------------------------------------------------------------------ */
