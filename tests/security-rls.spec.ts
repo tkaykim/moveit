@@ -233,17 +233,33 @@ test.describe('T0 권한 잠금 회귀 (라이브 RLS/GRANT)', () => {
       .single();
     expect(sample?.academy_id, '참고할 수업이 없습니다').toBeTruthy();
 
-    const fakeMembershipId = '11111111-2222-3333-4444-555555555555';
+    // T1 에서 classes.audience_membership_id 에 FK 가 붙었으므로
+    // 더 이상 가짜 UUID 를 쓸 수 없다 → 임시 멤버십을 실제로 만들고 정리한다.
+    let createdMembershipId: string | null = null;
     let createdClassId: string | null = null;
 
     try {
+      const { data: membership, error: membershipError } = await svc
+        .from('memberships')
+        .insert({
+          academy_id: sample!.academy_id,
+          key: `__t0probe_${Date.now()}`,
+          name: 'E2E T0 audience lockdown probe membership',
+          visibility: 'hidden',
+          is_active: false,
+        })
+        .select('id')
+        .single();
+      expect(membershipError, `임시 멤버십 생성 실패: ${membershipError?.message}`).toBeNull();
+      createdMembershipId = membership!.id;
+
       // 이 테스트가 직접 만든 임시 수업 (정리 시 이 한 행만 삭제)
       const { data: created, error: createError } = await svc
         .from('classes')
         .insert({
           academy_id: sample!.academy_id,
           title: 'E2E T0 audience lockdown probe',
-          audience_membership_id: fakeMembershipId,
+          audience_membership_id: createdMembershipId,
         })
         .select('id')
         .single();
@@ -261,9 +277,12 @@ test.describe('T0 권한 잠금 회귀 (라이브 RLS/GRANT)', () => {
       const { data: svcView } = await svc.from('classes').select('id').eq('id', createdClassId);
       expect(svcView ?? []).toHaveLength(1);
     } finally {
-      // 이 테스트가 생성한 행만 정리
+      // 이 테스트가 생성한 행만 정리 (FK 역순)
       if (createdClassId) {
         await svc.from('classes').delete().eq('id', createdClassId);
+      }
+      if (createdMembershipId) {
+        await svc.from('memberships').delete().eq('id', createdMembershipId);
       }
     }
   });

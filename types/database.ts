@@ -146,6 +146,7 @@ export type Database = {
           bank_account_number: string | null
           bank_depositor_name: string | null
           bank_name: string | null
+          booking_policy: Json | null
           consultation_availability: Json | null
           contact_number: string | null
           created_at: string | null
@@ -181,6 +182,7 @@ export type Database = {
           bank_account_number?: string | null
           bank_depositor_name?: string | null
           bank_name?: string | null
+          booking_policy?: Json | null
           consultation_availability?: Json | null
           contact_number?: string | null
           created_at?: string | null
@@ -216,6 +218,7 @@ export type Database = {
           bank_account_number?: string | null
           bank_depositor_name?: string | null
           bank_name?: string | null
+          booking_policy?: Json | null
           consultation_availability?: Json | null
           contact_number?: string | null
           created_at?: string | null
@@ -486,8 +489,10 @@ export type Database = {
           guest_name: string | null
           guest_phone: string | null
           hall_id: string | null
+          hold_expires_at: string | null
           id: string
           is_admin_added: boolean
+          order_group_id: string | null
           payment_status: string | null
           schedule_id: string | null
           status: string | null
@@ -504,8 +509,10 @@ export type Database = {
           guest_name?: string | null
           guest_phone?: string | null
           hall_id?: string | null
+          hold_expires_at?: string | null
           id?: string
           is_admin_added?: boolean
+          order_group_id?: string | null
           payment_status?: string | null
           schedule_id?: string | null
           status?: string | null
@@ -522,8 +529,10 @@ export type Database = {
           guest_name?: string | null
           guest_phone?: string | null
           hall_id?: string | null
+          hold_expires_at?: string | null
           id?: string
           is_admin_added?: boolean
+          order_group_id?: string | null
           payment_status?: string | null
           schedule_id?: string | null
           status?: string | null
@@ -664,6 +673,7 @@ export type Database = {
           additional_salary_per_student: number | null
           base_salary: number
           base_student_count: number | null
+          booking_policy: Json | null
           class_type: string | null
           created_at: string | null
           current_students: number | null
@@ -697,6 +707,7 @@ export type Database = {
           additional_salary_per_student?: number | null
           base_salary?: number
           base_student_count?: number | null
+          booking_policy?: Json | null
           class_type?: string | null
           created_at?: string | null
           current_students?: number | null
@@ -730,6 +741,7 @@ export type Database = {
           additional_salary_per_student?: number | null
           base_salary?: number
           base_student_count?: number | null
+          booking_policy?: Json | null
           class_type?: string | null
           created_at?: string | null
           current_students?: number | null
@@ -1988,15 +2000,18 @@ export type Database = {
           description: string | null
           id: string
           is_coupon: boolean | null
+          is_fixed_weekly: boolean
           is_general: boolean
           is_on_sale: boolean | null
           is_public: boolean | null
           name: string
           price: number | null
+          start_mode: string
           ticket_category: string | null
           ticket_type: string
           total_count: number | null
           valid_days: number | null
+          valid_months: number | null
         }
         Insert: {
           academy_id?: string | null
@@ -2007,15 +2022,18 @@ export type Database = {
           description?: string | null
           id?: string
           is_coupon?: boolean | null
+          is_fixed_weekly?: boolean
           is_general?: boolean
           is_on_sale?: boolean | null
           is_public?: boolean | null
           name: string
           price?: number | null
+          start_mode?: string
           ticket_category?: string | null
           ticket_type: string
           total_count?: number | null
           valid_days?: number | null
+          valid_months?: number | null
         }
         Update: {
           academy_id?: string | null
@@ -2026,15 +2044,18 @@ export type Database = {
           description?: string | null
           id?: string
           is_coupon?: boolean | null
+          is_fixed_weekly?: boolean
           is_general?: boolean
           is_on_sale?: boolean | null
           is_public?: boolean | null
           name?: string
           price?: number | null
+          start_mode?: string
           ticket_category?: string | null
           ticket_type?: string
           total_count?: number | null
           valid_days?: number | null
+          valid_months?: number | null
         }
         Relationships: [
           {
@@ -2175,8 +2196,10 @@ export type Database = {
         Row: {
           created_at: string | null
           expiry_date: string | null
+          fixed_class_id: string | null
           id: string
           remaining_count: number | null
+          source_membership_id: string | null
           start_date: string | null
           status: string | null
           ticket_id: string
@@ -2185,8 +2208,10 @@ export type Database = {
         Insert: {
           created_at?: string | null
           expiry_date?: string | null
+          fixed_class_id?: string | null
           id?: string
           remaining_count?: number | null
+          source_membership_id?: string | null
           start_date?: string | null
           status?: string | null
           ticket_id: string
@@ -2195,8 +2220,10 @@ export type Database = {
         Update: {
           created_at?: string | null
           expiry_date?: string | null
+          fixed_class_id?: string | null
           id?: string
           remaining_count?: number | null
+          source_membership_id?: string | null
           start_date?: string | null
           status?: string | null
           ticket_id?: string
@@ -2473,6 +2500,547 @@ export type Database = {
           payload_snapshot?: Json | null
         }
         Relationships: []
+      }
+      // --- T1: 멤버십·주문 도메인 (t1_membership_orders_schema) ---
+      class_groups: {
+        Row: {
+          academy_id: string
+          created_at: string
+          display_order: number
+          id: string
+          is_special: boolean
+          key: string
+          name: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_special?: boolean
+          key: string
+          name: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_special?: boolean
+          key?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_groups_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      memberships: {
+        Row: {
+          academy_id: string
+          bundled_ticket_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          key: string
+          name: string
+          perks_text: string[] | null
+          visibility: string
+        }
+        Insert: {
+          academy_id: string
+          bundled_ticket_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          name: string
+          perks_text?: string[] | null
+          visibility?: string
+        }
+        Update: {
+          academy_id?: string
+          bundled_ticket_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          name?: string
+          perks_text?: string[] | null
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memberships_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memberships_bundled_ticket_id_fkey"
+            columns: ["bundled_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_coverage: {
+        Row: {
+          class_group_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          ticket_id: string
+        }
+        Insert: {
+          class_group_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          ticket_id: string
+        }
+        Update: {
+          class_group_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_coverage_class_group_id_fkey"
+            columns: ["class_group_id"]
+            isOneToOne: false
+            referencedRelation: "class_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_coverage_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      membership_discounts: {
+        Row: {
+          class_group_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          membership_id: string
+          percent: number
+          ticket_id: string | null
+        }
+        Insert: {
+          class_group_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          membership_id: string
+          percent: number
+          ticket_id?: string | null
+        }
+        Update: {
+          class_group_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          membership_id?: string
+          percent?: number
+          ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "membership_discounts_class_group_id_fkey"
+            columns: ["class_group_id"]
+            isOneToOne: false
+            referencedRelation: "class_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "membership_discounts_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "membership_discounts_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_memberships: {
+        Row: {
+          academy_id: string
+          bundled_user_ticket_id: string | null
+          created_at: string
+          end_date: string | null
+          granted_by: string | null
+          id: string
+          membership_id: string
+          note: string | null
+          start_date: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          academy_id: string
+          bundled_user_ticket_id?: string | null
+          created_at?: string
+          end_date?: string | null
+          granted_by?: string | null
+          id?: string
+          membership_id: string
+          note?: string | null
+          start_date: string
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          academy_id?: string
+          bundled_user_ticket_id?: string | null
+          created_at?: string
+          end_date?: string | null
+          granted_by?: string | null
+          id?: string
+          membership_id?: string
+          note?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_memberships_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_memberships_bundled_user_ticket_id_fkey"
+            columns: ["bundled_user_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "user_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_memberships_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_memberships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_groups: {
+        Row: {
+          academy_id: string
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          currency: string
+          discount_amount: number
+          expires_at: string | null
+          fulfillment_error_code: string | null
+          fulfillment_error_message: string | null
+          id: string
+          method: string
+          original_amount: number
+          orderer_email: string | null
+          orderer_name: string | null
+          orderer_phone: string | null
+          payment_approved_at: string | null
+          payment_key: string | null
+          provider_order_id: string
+          retry_count: number
+          status: string
+          total_amount: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          academy_id: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          currency?: string
+          discount_amount?: number
+          expires_at?: string | null
+          fulfillment_error_code?: string | null
+          fulfillment_error_message?: string | null
+          id?: string
+          method: string
+          original_amount: number
+          orderer_email?: string | null
+          orderer_name?: string | null
+          orderer_phone?: string | null
+          payment_approved_at?: string | null
+          payment_key?: string | null
+          provider_order_id: string
+          retry_count?: number
+          status: string
+          total_amount: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          academy_id?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          currency?: string
+          discount_amount?: number
+          expires_at?: string | null
+          fulfillment_error_code?: string | null
+          fulfillment_error_message?: string | null
+          id?: string
+          method?: string
+          original_amount?: number
+          orderer_email?: string | null
+          orderer_name?: string | null
+          orderer_phone?: string | null
+          payment_approved_at?: string | null
+          payment_key?: string | null
+          provider_order_id?: string
+          retry_count?: number
+          status?: string
+          total_amount?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_groups_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_groups_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          class_id: string | null
+          count_option_index: number | null
+          created_at: string
+          discount_amount: number
+          discount_membership_id: string | null
+          discount_percent: number | null
+          final_amount: number
+          fixed_class_id: string | null
+          grant_count_snapshot: number | null
+          id: string
+          item_type: string
+          order_group_id: string
+          original_amount: number
+          result_booking_id: string | null
+          result_user_ticket_id: string | null
+          schedule_id: string | null
+          source_purchase_item_id: string | null
+          start_mode_snapshot: string | null
+          ticket_id: string | null
+          ticket_name_snapshot: string | null
+          ticket_type_snapshot: string | null
+          valid_days_snapshot: number | null
+        }
+        Insert: {
+          class_id?: string | null
+          count_option_index?: number | null
+          created_at?: string
+          discount_amount?: number
+          discount_membership_id?: string | null
+          discount_percent?: number | null
+          final_amount: number
+          fixed_class_id?: string | null
+          grant_count_snapshot?: number | null
+          id?: string
+          item_type: string
+          order_group_id: string
+          original_amount: number
+          result_booking_id?: string | null
+          result_user_ticket_id?: string | null
+          schedule_id?: string | null
+          source_purchase_item_id?: string | null
+          start_mode_snapshot?: string | null
+          ticket_id?: string | null
+          ticket_name_snapshot?: string | null
+          ticket_type_snapshot?: string | null
+          valid_days_snapshot?: number | null
+        }
+        Update: {
+          class_id?: string | null
+          count_option_index?: number | null
+          created_at?: string
+          discount_amount?: number
+          discount_membership_id?: string | null
+          discount_percent?: number | null
+          final_amount?: number
+          fixed_class_id?: string | null
+          grant_count_snapshot?: number | null
+          id?: string
+          item_type?: string
+          order_group_id?: string
+          original_amount?: number
+          result_booking_id?: string | null
+          result_user_ticket_id?: string | null
+          schedule_id?: string | null
+          source_purchase_item_id?: string | null
+          start_mode_snapshot?: string | null
+          ticket_id?: string | null
+          ticket_name_snapshot?: string | null
+          ticket_type_snapshot?: string | null
+          valid_days_snapshot?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_group_id_fkey"
+            columns: ["order_group_id"]
+            isOneToOne: false
+            referencedRelation: "order_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_fixed_class_id_fkey"
+            columns: ["fixed_class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_discount_membership_id_fkey"
+            columns: ["discount_membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_source_purchase_item_id_fkey"
+            columns: ["source_purchase_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_result_user_ticket_id_fkey"
+            columns: ["result_user_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "user_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_result_booking_id_fkey"
+            columns: ["result_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_events: {
+        Row: {
+          academy_id: string
+          attempts: number
+          created_at: string
+          event_type: string
+          id: string
+          last_error: string | null
+          processed_at: string | null
+          schedule_id: string
+          status: string
+        }
+        Insert: {
+          academy_id: string
+          attempts?: number
+          created_at?: string
+          event_type: string
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          schedule_id: string
+          status?: string
+        }
+        Update: {
+          academy_id?: string
+          attempts?: number
+          created_at?: string
+          event_type?: string
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          schedule_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_events_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_events_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
