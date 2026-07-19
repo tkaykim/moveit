@@ -1,0 +1,405 @@
+{
+  "takenAt": "2026-07-19T18:21:54.541Z",
+  "academyId": "9ed0b17c-14d8-4d38-ab26-e4a37893f653",
+  "academySlug": "mid",
+  "isActiveBefore": false,
+  "bookingPolicyBefore": {
+    "open": {
+      "time": "17:00",
+      "daysBefore": 1
+    },
+    "close": {
+      "minutesBefore": 0
+    },
+    "cancelUntil": {
+      "minutesBefore": 0
+    }
+  },
+  "classesBefore": [
+    {
+      "id": "9faa55be-9a9a-4391-a23d-ebe72c6e793f",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "05671bae-3bc0-45fe-8c86-20cc20df3013",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "8b078b22-7ee0-489e-bb61-43a2e740b42b",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "e2ac2e52-c7fa-4cdd-aaaf-0ffffa78c6e5",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "78affb7c-cc51-46e2-a2df-4b4b541f8668",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "8b11b62d-b0ec-4b8d-9242-0e1e4ce6cad6",
+      "class_type": "cszz",
+      "class_group_id_before": "29ac8b32-b054-470a-8822-0bb5b5706239"
+    },
+    {
+      "id": "acafb0f7-1044-4b8b-9f42-f695126b95b4",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "5e5c7ac7-5b5e-4b36-b712-fbbe18dd090b",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "5ebb82e1-2f65-4dfb-beb5-dc304590e15b",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "fd9f8721-de5e-4ceb-ab74-104d699342e2",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "83b98ba2-41c4-47c1-9c86-8250a13b1b6c",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "5617df87-e897-479b-9558-ed59374aa1e4",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "626c2e9e-14db-4ef0-92ee-0de1885ba938",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "b1cd6b2f-6156-4ffe-8a59-5849ba4abec5",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "77e1b7fc-affd-45b5-885a-7080421b33cf",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "6f8776db-97b6-433f-a5e8-3f426e7a9a73",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "9e5fac86-1122-4920-b7f9-87fb9788b8f5",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "4c72c4ea-f1ec-4c64-b1ee-18ac4b847803",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "8ed43605-b0de-455a-b4e9-236eec28199d",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "77ccf3c6-0a4e-4506-b0a4-e74ffe3709f2",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "52b3978d-2849-421b-b507-7159b62e70f7",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "2023a7db-31ae-48de-a65d-17341416845f",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "89656b28-498a-48f2-bc76-596acb7a0a3a",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "7ce72600-4b70-4343-8416-156c147ce06c",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "03a44eb1-9b51-4f51-96ee-e90b15d9d74b",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "e9ca995a-e2af-42a7-a089-d6f93d6fc645",
+      "class_type": "cszz",
+      "class_group_id_before": "29ac8b32-b054-470a-8822-0bb5b5706239"
+    },
+    {
+      "id": "8e74caf2-941a-4c64-b851-5af531aa53b5",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "938cf377-02b4-4eb5-8fe1-9d7820595afe",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "16431e9e-2923-44cf-b7b7-a250861b1778",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "6ed93023-3a26-4c62-afcf-612768d56179",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "ae002023-00a2-4962-9273-239433c93a9d",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "3f8097f5-da3a-4bf7-8d26-d437c13aeef6",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "c6490128-88cf-4a8f-99c3-a37c761b32d9",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "5abf3796-72b8-4810-a654-728008c89582",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "b8618e05-5396-4f6d-ac4c-b1655e37891a",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "1881061d-5dea-4d5d-8a77-0684c0439bea",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "2ef69eb3-37f7-4b56-a455-13847eb69403",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "17ab4429-bee0-4e20-a2e0-9901ec92473e",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "e7f894b7-6814-44f5-abab-ec55f6f25762",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "fc8cd7c4-af8c-4c7e-86dd-2546ae156060",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "5cdd3615-70b8-48a3-8f42-3b71c7034dca",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "efffad18-8b57-4d7a-bcd7-3f93da3b8eb1",
+      "class_type": "cszz",
+      "class_group_id_before": "29ac8b32-b054-470a-8822-0bb5b5706239"
+    },
+    {
+      "id": "92241f85-40f0-425e-98c0-a0f0e6c77a86",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "7da2883e-fc77-4eee-aff5-bb79cc7cc573",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "b3e6edde-7976-43fe-ab65-395f48298170",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "723e1755-01c6-437b-a41d-75c0ac8cad56",
+      "class_type": "cszz",
+      "class_group_id_before": "29ac8b32-b054-470a-8822-0bb5b5706239"
+    },
+    {
+      "id": "def64726-c86c-45a8-8f9c-dda4da2d03a3",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "f3572e44-8707-45ba-8b87-bf3de7eba261",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "aef8e0c9-6ce8-4bdb-ad4c-d4425e21ccdf",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "4e12a6d8-aafa-4dd3-bb55-6c67e38132e3",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "4e5fac53-85c7-4094-850e-f734d7651616",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "50eef53b-2e34-4a8d-81f1-483f8d952f12",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "70533da6-e4d3-4976-89e1-9775f21650e0",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "03af8e01-cbfb-45bf-8025-bfb5d28cc96e",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "8927e473-4c4f-4f84-aa13-ca6b432fa458",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "c4bee678-8bb0-45fd-b42b-2663068234c1",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "8beb2d12-d414-4032-94c1-0ba0198564cd",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "2cb86565-0029-4d6d-8126-848a41bba38b",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "e63a2054-c656-458c-aa20-dff58118eebd",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "71c15005-238c-42b9-a0f8-495393210562",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "c51fd17b-1d8d-4972-b7a4-f462638e767d",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "6c1bc082-b9f0-43a5-a0b6-6f8ce73ff44b",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "2010931c-63d4-4973-b387-21844772a9f7",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "0a422c28-e934-4311-9ea3-f399cc63e208",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "8955884e-d854-48cf-be9c-5a92e13c46d3",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "4d09f7fe-84cf-4d56-b290-56039011bb37",
+      "class_type": "regular",
+      "class_group_id_before": "ab4cb3de-b41c-4a08-b8e2-e0ac562707c7"
+    },
+    {
+      "id": "f63b9f85-ba77-4b07-b1f9-1c205e25a268",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "dffe6635-7920-499c-b9e2-1cc61fffe23e",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "3afeb8b3-6c40-4176-98c4-3da79fccce22",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "cc415483-2e5b-4b1f-9697-9bcb519eba41",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "7953b5e6-3384-47d8-973b-fb5dda0ee276",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "f0d265d9-c2d4-4904-8813-85d95722a32b",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "e9b19831-9030-44a2-9218-8c57633dedc7",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "58460094-e00f-43bf-bdfe-65aeef76cb15",
+      "class_type": "popup",
+      "class_group_id_before": "f5a48904-45a4-4161-9916-bc2628e8aee1"
+    },
+    {
+      "id": "eded5b7f-0b6c-4148-b4fa-ac1942473192",
+      "class_type": "cszz",
+      "class_group_id_before": "29ac8b32-b054-470a-8822-0bb5b5706239"
+    }
+  ],
+  "countsBefore": {
+    "class_groups": 4,
+    "tickets": 7,
+    "ticket_coverage": 11,
+    "memberships": 2,
+    "membership_discounts": 2,
+    "classes_total": 77,
+    "classes_tagged": 75,
+    "classes_untagged": 2
+  }
+}
