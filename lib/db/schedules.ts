@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { Schedule } from '@/lib/supabase/types';
 import { Database } from '@/types/database';
 import { createBookingsForNewSchedule } from '@/lib/db/period-ticket-bookings';
@@ -205,9 +205,12 @@ export async function deleteSchedule(id: string) {
     .in('status', ['CONFIRMED', 'PENDING'])
     .not('user_ticket_id', 'is', null);
 
+  // T0 잠금: restore_ticket_count 는 service_role 전용이 되었다.
+  // 쿠키(anon) 클라이언트로는 호출할 수 없으므로 서비스 클라이언트로 복구한다.
+  const restoreClient = createServiceClient() as any;
   for (const b of (toRestore || [])) {
     if (b.user_ticket_id) {
-      await supabase.rpc('restore_ticket_count', { p_user_ticket_id: b.user_ticket_id, p_count: 1 }).then(() => {}, () => {});
+      await restoreClient.rpc('restore_ticket_count', { p_user_ticket_id: b.user_ticket_id, p_count: 1 }).then(() => {}, () => {});
     }
   }
 

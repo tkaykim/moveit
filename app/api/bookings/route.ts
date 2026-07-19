@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { consumeUserTicket, getAvailableUserTickets, updateUserTicket } from '@/lib/db/user-tickets';
 import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
@@ -365,7 +365,9 @@ export async function POST(request: Request) {
       // 원자적 RPC로 복구 — read-then-write 경합으로 인한 횟수 유실/과복구 방지.
       if (selectedUserTicketId) {
         try {
-          await (supabase as any)
+          // T0 잠금: restore_ticket_count 는 service_role 전용이 되었다.
+          // 이 경로의 supabase 는 쿠키(anon) 클라이언트이므로 서비스 클라이언트로 롤백한다.
+          await (createServiceClient() as any)
             .rpc('restore_ticket_count', { p_user_ticket_id: selectedUserTicketId, p_count: 1 });
         } catch (rollbackError) {
           console.error('Rollback failed:', rollbackError);

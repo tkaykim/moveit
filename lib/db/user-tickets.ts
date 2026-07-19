@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { Database } from '@/types/database';
 import { logTicketEvent } from '@/lib/db/enrollment-activity-log';
 import { isPeriodTicket as checkIsPeriodTicket } from '@/lib/utils/ticket-type';
@@ -348,7 +348,9 @@ export async function consumeUserTicket(
     throw new Error('수강권 잔여 횟수가 부족합니다.');
   }
 
-  const { data, error } = await supabase.rpc('consume_ticket_count', {
+  // T0 잠금: consume_ticket_count 는 service_role 전용이 되었다.
+  // 위에서 이미 소유·상태·유효기간·수업연결을 검증했으므로, 원자적 차감만 서비스 클라이언트로 수행한다.
+  const { data, error } = await (createServiceClient() as any).rpc('consume_ticket_count', {
     p_user_ticket_id: userTicketId,
     p_count: count,
   });
