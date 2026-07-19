@@ -55,3 +55,12 @@ ios/App/App/GoogleService-Info.plist
 
 
 
+
+# test artifacts (regenerated on every run)
+/playwright-report/
+/test-results/
+
+# agent tooling / planning workspace
+/.agents/
+/.dryforge/
+/READY-INPUT-*.md
