@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
 import { getAcademyBySlug, getPublicTickets } from '@/lib/db/miniapp';
 import { describePolicies, type RefundPolicy, type PausePolicy } from '@/lib/policy/ticket-policy';
+import { TicketAddButton } from './ticket-add-button';
 
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 const CATEGORY_LABEL: Record<string, string> = {
   regular: '수강권',
@@ -60,10 +60,10 @@ export default async function MiniTicketsPage({ params }: { params: Promise<{ sl
                         ? `${t.total_count}회`
                         : '횟수제';
                   return (
-                    <Link
+                    <div
                       key={t.id}
-                      href={`/book/ticket?ticketId=${t.id}`}
-                      className="block p-5 rounded-2xl bg-neutral-50 dark:bg-neutral-900 active:scale-[0.99] transition-transform"
+                      data-testid="ticket-card"
+                      className="block p-5 rounded-2xl bg-neutral-50 dark:bg-neutral-900"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
@@ -78,12 +78,13 @@ export default async function MiniTicketsPage({ params }: { params: Promise<{ sl
                             {(t.price ?? 0).toLocaleString('ko-KR')}
                             <span className="text-[13px] font-bold">원</span>
                           </p>
-                          <span
-                            className="inline-flex items-center gap-0.5 mt-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold text-white"
-                            style={{ backgroundColor: 'var(--primary)' }}
-                          >
-                            구매 <ChevronRight size={11} />
-                          </span>
+                          <TicketAddButton
+                            slug={slug}
+                            academyId={academy.id}
+                            ticketId={t.id}
+                            ticketName={t.name}
+                            unitLabel={unit}
+                          />
                         </div>
                       </div>
                       {policyLines.length > 0 && (
@@ -95,7 +96,7 @@ export default async function MiniTicketsPage({ params }: { params: Promise<{ sl
                           ))}
                         </ul>
                       )}
-                    </Link>
+                    </div>
                   );
                 })}
               </div>

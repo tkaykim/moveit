@@ -37,7 +37,11 @@ export async function PATCH(
     const { id } = await params;
     const supabase = await getSupabaseForAdmin(request);
     const body = await request.json();
-    const { status, updateScheduleCount = true, restoreTicket = false } = body;
+    // T2: restoreTicket 은 더 이상 신뢰하지 않는다. 복구 여부는 서버(cancel_booking_tx)가
+    // 스케줄 시작시각 · KST now · 해석된 cancelUntil · 예약 상태로 단독 판정한다.
+    // 하위 호환을 위해 body 에 오더라도 수용만 하고 무시한다.
+    const { status, updateScheduleCount = true } = body;
+    void body.restoreTicket;
 
     if (!status) {
       return NextResponse.json(
@@ -121,10 +125,26 @@ export async function PATCH(
     }
 
     // 상태 변경
-    const { error: updateError } = await (supabase as any)
-      .from('bookings')
-      .update({ status })
-      .eq('id', id);
+    // 취소는 원자적 트랜잭션(cancel_booking_tx)으로 처리한다:
+    //   상태 전이 + 복구자격 판정 + 횟수 복구가 한 트랜잭션이며, 반복 호출해도 복구는 1회뿐.
+    let cancelTx: { restored?: boolean; already_cancelled?: boolean; within_deadline?: boolean } | null = null;
+    let updateError: any = null;
+
+    if (status === 'CANCELLED') {
+      const { data: txData, error: txError } = await (supabase as any)
+        .rpc('cancel_booking_tx', { p_booking_id: id });
+      if (txError) {
+        updateError = txError;
+      } else {
+        cancelTx = (Array.isArray(txData) ? txData[0] : txData) || null;
+      }
+    } else {
+      const { error: err } = await (supabase as any)
+        .from('bookings')
+        .update({ status })
+        .eq('id', id);
+      updateError = err;
+    }
 
     if (updateError) {
       console.error('Booking update error:', updateError);
@@ -144,21 +164,18 @@ export async function PATCH(
     // 취소 시 쿠폰제(COUNT) 수강권 횟수 반환
     // 멱등성 가드: 이미 CANCELLED 였던 예약을 다시 취소해도 횟수를 중복 복원하지 않는다.
     // (운영자 더블클릭/요청 재시도로 remaining_count 가 무한 증가하던 버그 차단)
-    if (status === 'CANCELLED' && oldStatus !== 'CANCELLED' && restoreTicket && currentBooking.user_ticket_id) {
-      const { data: userTicket, error: utError } = await (supabase as any)
+    if (status === 'CANCELLED' && cancelTx?.restored === true && currentBooking.user_ticket_id) {
+      const { data: userTicket } = await (supabase as any)
         .from('user_tickets')
         .select('id, remaining_count, status, tickets(ticket_type, total_count)')
         .eq('id', currentBooking.user_ticket_id)
         .single();
 
-      if (!utError && isCountTicket(userTicket?.tickets?.ticket_type) && typeof userTicket.remaining_count === 'number') {
-        const previousStatus = userTicket.status as string;
-        // 원자적 복구(read-then-write 경합 제거): 같은 수강권의 동시 취소에도 횟수 유실/과복구 없음
-        const { data: restored } = await (supabase as any)
-          .rpc('restore_ticket_count', { p_user_ticket_id: currentBooking.user_ticket_id, p_count: 1 });
-        const restoredRow = Array.isArray(restored) ? restored[0] : restored;
-        const newRemaining = restoredRow?.remaining_count ?? (userTicket.remaining_count + 1);
-        const newStatus = restoredRow?.status ?? previousStatus;
+      if (isCountTicket(userTicket?.tickets?.ticket_type) && typeof userTicket?.remaining_count === 'number') {
+        // 복구는 이미 트랜잭션 안에서 끝났다. 여기서는 결과를 로그로만 남긴다.
+        const newRemaining = userTicket.remaining_count;
+        const newStatus = userTicket.status as string;
+        const previousStatus = newStatus === 'ACTIVE' && newRemaining === 1 ? 'USED' : newStatus;
 
         // 활동 로그: 횟수 복구 (표준 envelope: before/after 포함)
         if (academyId) {
@@ -168,7 +185,7 @@ export async function PATCH(
             user_ticket_id: currentBooking.user_ticket_id,
             booking_id: id,
             action: 'COUNT_RESTORE',
-            before: { remaining_count: userTicket.remaining_count, status: previousStatus },
+            before: { remaining_count: newRemaining - 1, status: previousStatus },
             after: { remaining_count: newRemaining, status: newStatus },
             via: 'cancel',
             reason: 'booking_cancelled',
@@ -190,7 +207,12 @@ export async function PATCH(
         before: { status: oldStatus },
         after: { status: 'CANCELLED' },
         via: 'cancel',
-        context: { ...guestPayload, restored_ticket: !!(restoreTicket && currentBooking.user_ticket_id) },
+        context: {
+          ...guestPayload,
+          restored_ticket: cancelTx?.restored === true,
+          within_cancel_deadline: cancelTx?.within_deadline === true,
+          already_cancelled: cancelTx?.already_cancelled === true,
+        },
         actor_user_id: actorId,
       }).catch(() => {});
     }

@@ -72,8 +72,11 @@ export async function deleteRecurringSessions(params: {
   if (bookingCount > 0) {
     for (const b of bookings) {
       if (b.user_ticket_id && (b.status === 'CONFIRMED' || b.status === 'PENDING')) {
+        // T0 잠금: restore_ticket_count 는 service_role 전용이 되었다.
+        // 이 코드는 브라우저(학원 스태프 세션)에서 실행되므로, 학원 소유 검사를 포함한
+        // restore_ticket_count_staff 래퍼를 사용한다.
         await (supabase as any)
-          .rpc('restore_ticket_count', { p_user_ticket_id: b.user_ticket_id, p_count: 1 })
+          .rpc('restore_ticket_count_staff', { p_user_ticket_id: b.user_ticket_id, p_count: 1 })
           .then(() => {}, () => {});
       }
     }

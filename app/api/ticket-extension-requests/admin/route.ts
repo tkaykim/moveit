@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
+import { createFixedWeeklyBookings } from '@/lib/db/period-ticket-bookings';
 import { getSchedulesForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
@@ -155,10 +155,8 @@ export async function POST(request: Request) {
             // current_students 는 sync_schedule_student_count 트리거가 자동 재계산 — 수동 차감 시 이중 차감되어 제거.
           }
         }
-        const extendStart = new Date(currentExpiry);
-        extendStart.setDate(extendStart.getDate() + 1);
-        const extendStartStr = extendStart.toISOString().slice(0, 10);
-        await createBookingsForPeriodTicket(userId, user_ticket_id, ticketId, extendStartStr, newExpiryStr);
+        // 연장 후 고정 주1회 회차 재배치 (일반 PERIOD·ALL PASS 는 0건)
+          await createFixedWeeklyBookings(user_ticket_id);
       }
     }
 

@@ -19,6 +19,8 @@
  * 모든 결과는 [0, 결제액] 범위로 clamp.
  */
 
+import type { RefundPresetKey } from './presets';
+
 export type RefundTicketKind = 'PERIOD' | 'COUNT' | 'WORKSHOP';
 
 /** 학원별 커스텀 환불 규칙 (tickets.refund_policy jsonb). 미지정/prorata = 아래 기본(학원법) 로직. */
@@ -43,6 +45,11 @@ export interface RefundCalcInput {
   finalPrice: number;                 // revenue.final_price (실결제액)
   /** 기준 시각(테스트용). 미지정 시 호출자가 new Date() 전달 */
   nowISO: string;
+  /**
+   * T7 환불 프리셋. **미지정이면 이 아래 로직은 T7 이전과 완전히 동일하게 동작한다**(하위호환 보장).
+   * 지정 시에는 프리셋 공통 규칙이 적용된다 — 사용분은 정가가 아니라 실결제액 기준으로 계산.
+   */
+  preset?: RefundPresetKey | null;
 }
 
 export interface RefundCalcResult {
@@ -65,6 +72,8 @@ export interface RefundCalcResult {
   /** 잔여 기간(일). null=무기한 */
   remainingDays?: number | null;
   expired: boolean;
+  /** 적용된 T7 프리셋. 미지정 호출(레거시 경로)에서는 undefined. */
+  presetKey?: RefundPresetKey;
 }
 
 function clampMoney(v: number, max: number): number {
@@ -86,7 +95,98 @@ function remainingPeriod(expiryDate: string | null | undefined, nowISO: string):
   return { days, label: `${expiryDate}까지 (잔여 ${days}일)` };
 }
 
+/**
+ * T7 프리셋 경로. 프리셋은 별도 엔진이 아니라 **아래 기존 로직으로의 위임**이다.
+ * 공통 규칙: 사용분 단가를 정가가 아닌 실결제액에서 뽑기 위해 originalPrice 를 finalPrice 로 맞춘다.
+ * (카드 수수료 공제 항목은 어느 경로에도 존재하지 않는다 — 소비자에게 전가 금지)
+ */
+function computeWithPreset(input: RefundCalcInput, preset: RefundPresetKey): RefundCalcResult {
+  const paidBasis: RefundCalcInput = { ...input, preset: null, originalPrice: input.finalPrice };
+
+  if (preset === 'NON_REFUNDABLE_WHERE_LAWFUL') {
+    return { ...computeRefund({ ...paidBasis, customPolicy: { mode: 'none' } }), presetKey: preset };
+  }
+  if (preset === 'CUSTOM_STEP') {
+    // 단계표가 실제로 없으면 법정 기준으로 안전하게 떨어진다.
+    const policy = input.customPolicy?.mode === 'step' && input.customPolicy.steps?.length
+      ? input.customPolicy
+      : null;
+    return { ...computeRefund({ ...paidBasis, customPolicy: policy }), presetKey: preset };
+  }
+  if (preset === 'ACADEMY_STATUTORY') {
+    // 법정 기준은 학원 자체 규칙을 무시한다.
+    return { ...computeRefund({ ...paidBasis, customPolicy: null }), presetKey: preset };
+  }
+
+  // ── SPORTS_FACILITY_CONTINUOUS ──
+  // 환불 = 결제액 − 이용분 − 위약금(총액의 10% 상한)
+  const paid = Math.max(0, Math.round(input.finalPrice || 0));
+  const type = (input.ticketTypeSnapshot || '').toUpperCase();
+  const isPeriod = type === 'PERIOD';
+  const isWorkshop = (input.ticketCategory || '').toLowerCase() === 'popup';
+  const kind: RefundTicketKind = isPeriod ? 'PERIOD' : isWorkshop ? 'WORKSHOP' : 'COUNT';
+  const rem = remainingPeriod(input.expiryDate, input.nowISO);
+  const penalty = Math.round(paid * 0.1);
+
+  let usedAmount: number;
+  let usedLabel: string;
+  let progress: number | undefined;
+  let used: number | undefined;
+  let total: number | undefined;
+
+  if (isPeriod) {
+    const now = dayStart(input.nowISO);
+    let totalDays = input.validDays && input.validDays > 0 ? input.validDays : null;
+    if (!totalDays && input.startDate && input.expiryDate) {
+      totalDays = Math.max(1, Math.round((dayStart(input.expiryDate) - dayStart(input.startDate)) / 86400000));
+    }
+    const start = input.startDate ? dayStart(input.startDate) : now;
+    const elapsedDays = Math.max(0, Math.floor((now - start) / 86400000));
+    const ratio = totalDays ? Math.max(0, Math.min(1, elapsedDays / totalDays)) : 0.5;
+    progress = ratio;
+    usedAmount = Math.round(paid * ratio);
+    usedLabel = `${elapsedDays}일 / ${totalDays ?? '?'}일 이용 (${Math.round(ratio * 100)}%)`;
+  } else {
+    total = input.quantity && input.quantity > 0 ? input.quantity : 1;
+    const remaining = input.remainingCount != null ? Math.max(0, input.remainingCount) : 0;
+    const attended = input.attendedCount != null ? Math.max(0, input.attendedCount) : Math.max(0, total - remaining);
+    used = Math.min(attended, total);
+    usedAmount = Math.round((paid / total) * used);
+    usedLabel = `${used}회 / 총 ${total}회 이용`;
+  }
+
+  const suggested = clampMoney(paid - usedAmount - penalty, paid);
+
+  return {
+    kind,
+    paidAmount: paid,
+    suggestedRefund: suggested,
+    basis:
+      `체육시설업 기준 · 결제액 − 이용분(${usedAmount.toLocaleString()}원) − 위약금(총액 10% = ${penalty.toLocaleString()}원). ` +
+      '이용분은 정가가 아닌 실결제액 기준이며, 카드 수수료는 공제하지 않습니다.',
+    breakdown: [
+      { label: '결제액', value: `${paid.toLocaleString()}원` },
+      { label: '이용 현황', value: usedLabel },
+      { label: '이용분(실결제액 기준)', value: `−${usedAmount.toLocaleString()}원` },
+      { label: '위약금(총액 10% 상한)', value: `−${penalty.toLocaleString()}원` },
+      { label: '잔여 기간', value: rem.label },
+      { label: '권장 환불액', value: `${suggested.toLocaleString()}원` },
+    ],
+    progress,
+    usedCount: used,
+    totalCount: total,
+    remainingCount: input.remainingCount != null ? Math.max(0, input.remainingCount) : undefined,
+    remainingDays: rem.days,
+    expired: (input.ticketStatus || '').toUpperCase() === 'EXPIRED',
+    presetKey: preset,
+  };
+}
+
 export function computeRefund(input: RefundCalcInput): RefundCalcResult {
+  // T7 프리셋이 명시된 경우에만 프리셋 경로로 간다.
+  // 미지정(기존 티켓 전부) → 아래 로직은 T7 이전과 한 글자도 다르게 동작하지 않는다.
+  if (input.preset) return computeWithPreset(input, input.preset);
+
   const paid = Math.max(0, Math.round(input.finalPrice || 0));
   const type = (input.ticketTypeSnapshot || '').toUpperCase();
   const isPeriod = type === 'PERIOD';

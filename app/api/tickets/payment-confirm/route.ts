@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getTicketById } from '@/lib/db/tickets';
-import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
+import { createFixedWeeklyBookings } from '@/lib/db/period-ticket-bookings';
 import { insertEnrollmentActivityLog, logTicketEvent } from '@/lib/db/enrollment-activity-log';
 import { isPeriodTicket as checkIsPeriodTicket } from '@/lib/utils/ticket-type';
 import { getAuthenticatedUser } from '@/lib/supabase/server-auth';
@@ -415,19 +415,16 @@ export async function POST(request: Request) {
         .insert({ academy_id: order.academy_id, user_id: order.user_id });
     }
 
+    // 고정 주1회 상품만 자동 예약한다. 일반 PERIOD·ALL PASS 는 0건이다.
     let autoBookingResult = { created: 0, skipped: 0 };
-    if (isPeriodTicket) {
-      try {
-        autoBookingResult = await createBookingsForPeriodTicket(
-          order.user_id,
-          userTicket.id,
-          order.ticket_id,
-          userTicketData.start_date!,
-          userTicketData.expiry_date!
-        );
-      } catch (e) {
-        console.error('Period ticket auto booking error:', e);
-      }
+    try {
+      const placement = await createFixedWeeklyBookings(userTicket.id);
+      autoBookingResult = {
+        created: placement.placed,
+        skipped: placement.skipped_full + placement.skipped_duplicate,
+      };
+    } catch (e) {
+      console.error('고정 주1회 자동 예약 오류:', e);
     }
 
     let booking = null;

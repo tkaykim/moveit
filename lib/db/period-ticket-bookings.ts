@@ -1,7 +1,8 @@
-import { createClient } from '@/lib/supabase/server';
-import { Database } from '@/types/database';
-
-type BookingInsert = Database['public']['Tables']['bookings']['Insert'];
+import { createClient, createServiceClient } from '@/lib/supabase/server';
+import {
+  placeFixedWeeklyBookings,
+  type FixedWeeklyPlacementResult,
+} from '@/lib/booking/fixed-weekly';
 
 /**
  * 기간권에 연결된 클래스의 스케줄 조회
@@ -91,242 +92,25 @@ export async function getSchedulesForPeriodTicket(
 }
 
 /**
- * 기간권 구매 시 일괄 예약 생성
- * @param userId 사용자 ID
- * @param userTicketId user_tickets.id
- * @param ticketId tickets.id
- * @param startDate 시작일 (YYYY-MM-DD)
- * @param endDate 종료일 (YYYY-MM-DD)
- * @returns 생성된 예약 수와 스킵된 예약 수
+ * 고정 주1회 수강권 자동 예약 (구 createBookingsForPeriodTicket)
+ *
+ * ⚠ 이 함수는 예전에 is_general PERIOD 수강권에 대해 **학원의 모든 regular 수업**을
+ *   자동 예약했다. ALL PASS(무제한권)가 도입되면 구매자 한 명이 30일치 전 수업에
+ *   자동 등록된다. 그래서 이제 자동 예약 대상은
+ *     tickets.is_fixed_weekly = true  AND  user_tickets.fixed_class_id IS NOT NULL
+ *   인 경우로만 좁혔다.
+ *
+ * 판정은 여기서 하지 않는다 — place_fixed_weekly_bookings() 가 물리적 정본이다.
+ * 조건을 앱에도 두면 언젠가 두 곳이 갈라진다. ALL PASS / 일반 PERIOD 가 들어오면
+ * eligible=false 로 돌아오고 예약은 **한 건도** 생성되지 않는다.
+ *
+ * 배치는 예약 오픈시각을 면제받되 정원은 준수한다. 자리를 못 잡으면 스킵하고
+ * 횟수는 학생에게 남으며, 스킵 내역은 운영자 큐에 남는다.
  */
-export async function createBookingsForPeriodTicket(
-  userId: string,
-  userTicketId: string,
-  ticketId: string,
-  startDate: string,
-  endDate: string
-): Promise<{ created: number; skipped: number; scheduleIds: string[] }> {
-  const supabase = await createClient() as any;
-
-  // 1. 해당 기간 내 스케줄 조회
-  const schedules = await getSchedulesForPeriodTicket(ticketId, startDate, endDate);
-
-  if (schedules.length === 0) {
-    return { created: 0, skipped: 0, scheduleIds: [] };
-  }
-
-  const scheduleIds = schedules.map((s: any) => s.id);
-
-  // 2. 이미 존재하는 예약 확인 (중복 방지)
-  const { data: existingBookings, error: existError } = await supabase
-    .from('bookings')
-    .select('schedule_id')
-    .eq('user_id', userId)
-    .in('schedule_id', scheduleIds);
-
-  if (existError) throw existError;
-
-  const existingScheduleIds = new Set(
-    (existingBookings || []).map((b: any) => b.schedule_id)
-  );
-
-  // 3. 새로 예약할 스케줄 필터링
-  const schedulesToBook = schedules.filter(
-    (s: any) => !existingScheduleIds.has(s.id)
-  );
-
-  if (schedulesToBook.length === 0) {
-    return { 
-      created: 0, 
-      skipped: schedules.length, 
-      scheduleIds: [] 
-    };
-  }
-
-  // 4. 예약 데이터 생성
-  const bookingsToInsert: BookingInsert[] = schedulesToBook.map((schedule: any) => ({
-    user_id: userId,
-    class_id: schedule.class_id,
-    schedule_id: schedule.id,
-    user_ticket_id: userTicketId,
-    status: 'CONFIRMED',
-    payment_status: 'PAID', // 기간권은 이미 결제 완료
-  }));
-
-  // 5. 일괄 삽입
-  const { data: insertedBookings, error: insertError } = await supabase
-    .from('bookings')
-    .insert(bookingsToInsert)
-    .select('id, schedule_id');
-
-  if (insertError) throw insertError;
-
-  // current_students 는 bookings 트리거(sync_schedule_student_count)가 자동 동기화한다. (수동 +1 제거)
-
-  return {
-    created: insertedBookings?.length || 0,
-    skipped: existingScheduleIds.size,
-    scheduleIds: (insertedBookings || []).map((b: any) => b.schedule_id),
-  };
-}
-
-/**
- * 새 스케줄에 대해 기존 기간권 보유자 예약 생성
- * 스케줄 생성 후 호출하여 해당 클래스의 기간권 보유자들에게 자동 예약 생성
- * @param scheduleId 새로 생성된 스케줄 ID
- * @param classId 클래스 ID
- * @param scheduleStartTime 스케줄 시작 시간
- * @returns 생성된 예약 수
- */
-export async function createBookingsForNewSchedule(
-  scheduleId: string,
-  classId: string,
-  scheduleStartTime: Date
-): Promise<{ created: number }> {
-  const supabase = await createClient() as any;
-
-  // KST 기준 날짜로 변환 (UTC 런타임에서 이른 아침/늦은 저녁 수업의 날짜 밀림 방지)
-  const scheduleDate = new Date(scheduleStartTime.getTime() + 9 * 60 * 60 * 1000)
-    .toISOString()
-    .split('T')[0]; // YYYY-MM-DD (KST)
-
-  // 1. 해당 클래스와 연결된 ticket_id들 조회
-  const { data: ticketClasses, error: tcError } = await supabase
-    .from('ticket_classes')
-    .select('ticket_id')
-    .eq('class_id', classId);
-
-  if (tcError) throw tcError;
-
-  // 2. 클래스의 학원 정보 조회 (is_general 수강권 처리용)
-  const { data: classData } = await supabase
-    .from('classes')
-    .select('academy_id, class_type')
-    .eq('id', classId)
-    .single();
-
-  const academyId = classData?.academy_id;
-  const classType = classData?.class_type || 'regular';
-
-  // Regular 클래스가 아니면 기간권 자동 예약 대상 아님
-  if (classType !== 'regular') {
-    return { created: 0 };
-  }
-
-  let ticketIds = (ticketClasses || []).map((tc: any) => tc.ticket_id);
-
-  // 3. is_general 수강권도 포함 (해당 학원의)
-  if (academyId) {
-    const { data: generalTickets } = await supabase
-      .from('tickets')
-      .select('id')
-      .eq('academy_id', academyId)
-      .eq('is_general', true)
-      .eq('ticket_type', 'PERIOD');
-
-    if (generalTickets && generalTickets.length > 0) {
-      const generalTicketIds = generalTickets.map((t: any) => t.id);
-      ticketIds = [...new Set([...ticketIds, ...generalTicketIds])];
-    }
-  }
-
-  if (ticketIds.length === 0) {
-    return { created: 0 };
-  }
-
-  // 4. 해당 ticket_id들의 활성 user_tickets 조회 (기간 내인 것만)
-  const { data: userTickets, error: utError } = await supabase
-    .from('user_tickets')
-    .select(`
-      id,
-      user_id,
-      ticket_id,
-      start_date,
-      expiry_date,
-      tickets!inner (
-        ticket_type
-      )
-    `)
-    .in('ticket_id', ticketIds)
-    .eq('status', 'ACTIVE')
-    .eq('tickets.ticket_type', 'PERIOD')
-    .lte('start_date', scheduleDate)
-    .gte('expiry_date', scheduleDate);
-
-  if (utError) throw utError;
-
-  if (!userTickets || userTickets.length === 0) {
-    return { created: 0 };
-  }
-
-  // 5. 각 user_ticket에 대해 예약 생성 (중복 체크)
-  const userIds = userTickets.map((ut: any) => ut.user_id);
-
-  // 이미 이 스케줄에 예약한 사용자 확인
-  const { data: existingBookings } = await supabase
-    .from('bookings')
-    .select('user_id')
-    .eq('schedule_id', scheduleId)
-    .in('user_id', userIds);
-
-  const existingUserIds = new Set(
-    (existingBookings || []).map((b: any) => b.user_id)
-  );
-
-  // 새로 예약할 user_tickets
-  const ticketsToBook = userTickets.filter(
-    (ut: any) => !existingUserIds.has(ut.user_id)
-  );
-
-  if (ticketsToBook.length === 0) {
-    return { created: 0 };
-  }
-
-  // 6. 예약 데이터 생성
-  const bookingsToInsert: BookingInsert[] = ticketsToBook.map((ut: any) => ({
-    user_id: ut.user_id,
-    class_id: classId,
-    schedule_id: scheduleId,
-    user_ticket_id: ut.id,
-    status: 'CONFIRMED',
-    payment_status: 'PAID',
-  }));
-
-  // 7. 일괄 삽입
-  const { data: insertedBookings, error: insertError } = await supabase
-    .from('bookings')
-    .insert(bookingsToInsert)
-    .select('id');
-
-  if (insertError) throw insertError;
-
-  // current_students 는 bookings 트리거(sync_schedule_student_count)가 자동 동기화한다. (수동 증가 제거)
-
-  return { created: insertedBookings?.length || 0 };
-}
-
-/**
- * 여러 스케줄에 대해 기존 기간권 보유자 예약 일괄 생성
- * @param schedules 스케줄 정보 배열
- * @returns 총 생성된 예약 수
- */
-export async function createBookingsForNewSchedules(
-  schedules: Array<{ id: string; class_id: string; start_time: string }>
-): Promise<{ totalCreated: number }> {
-  let totalCreated = 0;
-
-  for (const schedule of schedules) {
-    try {
-      const result = await createBookingsForNewSchedule(
-        schedule.id,
-        schedule.class_id,
-        new Date(schedule.start_time)
-      );
-      totalCreated += result.created;
-    } catch (error) {
-      console.error(`Error creating bookings for schedule ${schedule.id}:`, error);
-    }
-  }
-
-  return { totalCreated };
+export async function createFixedWeeklyBookings(
+  userTicketId: string
+): Promise<FixedWeeklyPlacementResult> {
+  // RPC 는 service_role 전용이다 (학생 세션으로는 실행 불가).
+  const supabase = createServiceClient() as any;
+  return placeFixedWeeklyBookings(supabase, userTicketId);
 }

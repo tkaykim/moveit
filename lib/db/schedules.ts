@@ -1,7 +1,6 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { Schedule } from '@/lib/supabase/types';
 import { Database } from '@/types/database';
-import { createBookingsForNewSchedule } from '@/lib/db/period-ticket-bookings';
 
 export async function getSchedules(filters?: {
   class_id?: string;
@@ -81,19 +80,9 @@ export async function createSchedule(schedule: Database['public']['Tables']['sch
 
   if (error) throw error;
   
-  // 생성된 스케줄에 대해 기존 기간권 보유자 자동 예약 생성
-  if (data && data.class_id && data.start_time) {
-    try {
-      await createBookingsForNewSchedule(
-        data.id,
-        data.class_id,
-        new Date(data.start_time)
-      );
-    } catch (bookingError) {
-      console.error('기간권 보유자 자동 예약 생성 오류:', bookingError);
-      // 자동 예약 실패해도 스케줄 생성은 성공으로 처리
-    }
-  }
+  // 신규 회차 백필은 이제 DB 트리거(schedules INSERT → booking_events)와
+  // cron 프로세서(process_schedule_created_events)가 담당한다.
+  // 예전의 인앱 일괄예약은 is_general PERIOD 권으로 학원 전 수업을 잡아버려 제거됐다.
   
   return data;
 }
@@ -205,9 +194,12 @@ export async function deleteSchedule(id: string) {
     .in('status', ['CONFIRMED', 'PENDING'])
     .not('user_ticket_id', 'is', null);
 
+  // T0 잠금: restore_ticket_count 는 service_role 전용이 되었다.
+  // 쿠키(anon) 클라이언트로는 호출할 수 없으므로 서비스 클라이언트로 복구한다.
+  const restoreClient = createServiceClient() as any;
   for (const b of (toRestore || [])) {
     if (b.user_ticket_id) {
-      await supabase.rpc('restore_ticket_count', { p_user_ticket_id: b.user_ticket_id, p_count: 1 }).then(() => {}, () => {});
+      await restoreClient.rpc('restore_ticket_count', { p_user_ticket_id: b.user_ticket_id, p_count: 1 }).then(() => {}, () => {});
     }
   }
 
@@ -258,19 +250,9 @@ export async function createSingleSession(data: {
 
   if (error) throw error;
   
-  // 생성된 스케줄에 대해 기존 기간권 보유자 자동 예약 생성
-  if (result && result.class_id && result.start_time) {
-    try {
-      await createBookingsForNewSchedule(
-        result.id,
-        result.class_id,
-        new Date(result.start_time)
-      );
-    } catch (bookingError) {
-      console.error('기간권 보유자 자동 예약 생성 오류:', bookingError);
-      // 자동 예약 실패해도 스케줄 생성은 성공으로 처리
-    }
-  }
+  // 신규 회차 백필은 이제 DB 트리거(schedules INSERT → booking_events)와
+  // cron 프로세서(process_schedule_created_events)가 담당한다.
+  // 예전의 인앱 일괄예약은 is_general PERIOD 권으로 학원 전 수업을 잡아버려 제거됐다.
   
   return result;
 }

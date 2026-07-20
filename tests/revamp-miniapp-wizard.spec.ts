@@ -1,13 +1,41 @@
 import { test, expect } from '@playwright/test';
+import { createClient } from '@supabase/supabase-js';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 
 /**
  * 개편 E2E — 학원 미니앱(화이트라벨) + 온보딩 위저드 + 워크샵/대기열.
  * 실행: PLAYWRIGHT_BASE_URL=http://localhost:4310 npx playwright test tests/revamp-miniapp-wizard.spec.ts
  * 전제: scripts/seed-e2e-accounts.mjs 실행됨 + e2e-workshop 학원 존재(위저드 E2E로 생성됨).
+ *
+ * ⏰ 시한폭탄 금지: 워크샵 상세는 **미래 회차가 있어야만** 렌더된다
+ *    (lib/db/miniapp.ts getUpcomingWorkshops 가 start_time >= now 로 거른다).
+ *    과거에 시드된 고정 회차에 의존하면 날짜가 지나는 순간 스펙이 깨진다.
+ *    → 이 describe 는 **자기 워크샵을 now 기준으로 만들고 끝나면 지운다**.
  */
 
 const OWNER = { email: 'e2e-moveit-owner@modoogoods.com', password: 'Test1234!e2e' };
 const SLUG = 'e2e-workshop';
+
+const env = Object.fromEntries(
+  readFileSync(path.join(process.cwd(), '.env.local'), 'utf8')
+    .split(/\r?\n/)
+    .filter((l) => l.includes('=') && !l.trim().startsWith('#'))
+    .map((l) => {
+      const i = l.indexOf('=');
+      let v = l.slice(i + 1).trim();
+      if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+        v = v.slice(1, -1);
+      }
+      return [l.slice(0, i).trim(), v];
+    })
+);
+const svc = createClient(env.NEXT_PUBLIC_SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, {
+  auth: { autoRefreshToken: false, persistSession: false },
+}) as any;
+
+const isoInHours = (h: number) => new Date(Date.now() + h * 3600_000).toISOString();
 
 test.describe('학원 미니앱 (화이트라벨)', () => {
   test('미니앱 5개 화면이 학원 브랜딩으로 렌더된다', async ({ page }) => {
@@ -48,9 +76,65 @@ test.describe('학원 미니앱 (화이트라벨)', () => {
 });
 
 test.describe('워크샵 · 대기열', () => {
+  const stamp = randomUUID().slice(0, 8);
+  const WS: Record<string, any> = {};
+
+  test.beforeAll(async () => {
+    const { data: academy, error: aErr } = await svc
+      .from('academies')
+      .select('id')
+      .eq('slug', SLUG)
+      .single();
+    if (aErr || !academy) throw new Error(`${SLUG} 학원을 찾을 수 없습니다: ${aErr?.message}`);
+    WS.academyId = academy.id;
+
+    const { data: cls, error: cErr } = await svc
+      .from('classes')
+      .insert({
+        academy_id: academy.id,
+        title: `E2E워크샵-${stamp}`,
+        class_type: 'workshop',
+        max_students: 10,
+        price: 55000,
+        is_active: true,
+      })
+      .select()
+      .single();
+    if (cErr) throw new Error(`워크샵 수업 생성 실패: ${cErr.message}`);
+    WS.classId = cls.id;
+
+    // 회차는 항상 "지금부터 +N시간" — 실행 날짜와 무관하게 미래다.
+    // 자리가 남는 회차(신청하기)와 마감된 회차(대기 신청)를 모두 둔다.
+    const rows = [
+      { class_id: cls.id, start_time: isoInHours(48), end_time: isoInHours(50), max_students: 10, current_students: 0, is_canceled: false },
+      { class_id: cls.id, start_time: isoInHours(72), end_time: isoInHours(74), max_students: 3, current_students: 3, is_canceled: false },
+    ];
+    const { data: scheds, error: sErr } = await svc.from('schedules').insert(rows).select();
+    if (sErr) throw new Error(`워크샵 회차 생성 실패: ${sErr.message}`);
+    WS.scheduleIds = (scheds ?? []).map((s: any) => s.id);
+  });
+
+  test.afterAll(async () => {
+    if (WS.scheduleIds?.length) {
+      await svc.from('schedules').delete().in('id', WS.scheduleIds);
+    }
+    if (WS.classId) {
+      await svc.from('classes').delete().eq('id', WS.classId);
+    }
+  });
+
   test('워크샵 상세에 일정과 신청/대기 버튼이 있다', async ({ page }) => {
-    await page.goto(`/s/${SLUG}/workshops`);
-    await page.locator(`a[href*="/s/${SLUG}/workshops/"]`).first().click();
+    // 목록은 서버 렌더라 locator 재시도만으로는 갱신되지 않는다 → 보일 때까지 reload 한다.
+    const card = page
+      .locator(`a[href*="/s/${SLUG}/workshops/"]`)
+      .filter({ hasText: `E2E워크샵-${stamp}` });
+
+    await expect(async () => {
+      await page.goto(`/s/${SLUG}/workshops`);
+      await expect(card).toHaveCount(1);
+    }).toPass({ timeout: 30000 });
+
+    await card.click();
     await expect(page.getByText('일정 선택')).toBeVisible();
     await expect(page.getByRole('button', { name: '신청하기' }).or(page.getByRole('button', { name: '대기 신청' })).first()).toBeVisible();
   });

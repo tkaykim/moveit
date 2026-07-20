@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createBookingsForPeriodTicket } from '@/lib/db/period-ticket-bookings';
+import { createFixedWeeklyBookings } from '@/lib/db/period-ticket-bookings';
 import { getSchedulesForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 import { getAuthenticatedUser, getAuthenticatedSupabase } from '@/lib/supabase/server-auth';
 import { assertAcademyAdmin } from '@/lib/supabase/academy-admin-auth';
@@ -153,10 +153,8 @@ export async function PATCH(
               // 수동으로 또 빼면 이중 차감되어 정원 카운트가 음수 방향으로 드리프트하므로 제거.
             }
           }
-          const extendStart = new Date(currentExpiry);
-          extendStart.setDate(extendStart.getDate() + 1);
-          const extendStartStr = extendStart.toISOString().slice(0, 10);
-          await createBookingsForPeriodTicket(userId, reqRow.user_ticket_id, ticketId, extendStartStr, newExpiryStr);
+          // 연장 후 고정 주1회 회차 재배치 (일반 PERIOD·ALL PASS 는 0건)
+          await createFixedWeeklyBookings(reqRow.user_ticket_id);
         }
 
         // 활동 로그: 연장/일시정지 승인 (만료일 before/after, 취소된 예약 수 포함)
