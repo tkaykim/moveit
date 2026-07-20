@@ -78,7 +78,7 @@ export const TICKETS = [
     is_fixed_weekly: false,
     start_mode: 'IMMEDIATE',
     coverage: ['regular', 'popup'],
-    description: '당일 1회 수강 (구매 확정일 당일만 유효)',
+    description: '당일 1회 수강 (구매 확정일 당일만 유효 · 사용 후 환불 불가 · 양도 가능)',
   },
   {
     name: '쿠폰 5장',
@@ -90,7 +90,7 @@ export const TICKETS = [
     is_fixed_weekly: false,
     start_mode: 'IMMEDIATE',
     coverage: ['regular', 'popup'],
-    description: '30일간 5회 수강',
+    description: '30일간 5회 수강 (양도 불가)',
   },
   {
     name: '쿠폰 10장',
@@ -102,7 +102,7 @@ export const TICKETS = [
     is_fixed_weekly: false,
     start_mode: 'IMMEDIATE',
     coverage: ['regular', 'popup'],
-    description: '30일간 10회 수강',
+    description: '30일간 10회 수강 (양도 불가)',
   },
   {
     name: '월등록',
