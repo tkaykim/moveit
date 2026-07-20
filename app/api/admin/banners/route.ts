@@ -8,6 +8,8 @@ import {
 } from '@/lib/db/banners';
 
 export const dynamic = 'force-dynamic';
+// 운영 화면은 절대 캐시된 DB 읽기를 보면 안 된다 (Next Data Cache 는 디스크에 남는다)
+export const fetchCache = 'force-no-store';
 
 async function requireSuperAdmin(request?: NextRequest | Request) {
   const auth = await requireSuperAdminAuth(request);

@@ -3,6 +3,8 @@ import { requireSuperAdmin } from '@/lib/supabase/admin-auth';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+// 운영 화면은 절대 캐시된 DB 읽기를 보면 안 된다 (Next Data Cache 는 디스크에 남는다)
+export const fetchCache = 'force-no-store';
 
 // GET: 학원-유저 역할 매핑 목록 조회
 export async function GET(request: Request) {

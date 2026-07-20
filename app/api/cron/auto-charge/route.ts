@@ -3,6 +3,10 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { calculateAmount } from '@/lib/billing/calculate-amount';
 import { getKSTTodayString } from '@/lib/utils/kst-time';
 
+export const dynamic = 'force-dynamic';
+// 크론은 항상 현재 DB 상태를 읽고 판단해야 한다 (Next Data Cache 는 디스크에 남는다)
+export const fetchCache = 'force-no-store';
+
 // Vercel Cron: 매일 KST 자정 (UTC 15:00) 실행
 // vercel.json: { "crons": [{ "path": "/api/cron/auto-charge", "schedule": "0 15 * * *" }] }
 export async function GET(request: NextRequest) {

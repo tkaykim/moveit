@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAcademyBySlug } from '@/lib/db/miniapp';
 
 export const dynamic = 'force-dynamic';
+// 사용자 화면은 절대 캐시된 DB 읽기를 보면 안 된다 (Next Data Cache 는 디스크에 남는다)
+export const fetchCache = 'force-no-store';
 
 /**
  * 학원별 동적 PWA manifest — "홈 화면에 추가" 시 그 학원 이름·색·아이콘의 앱이 된다.

@@ -2,6 +2,10 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { getSchedulesForPeriodTicket } from '@/lib/db/period-ticket-bookings';
 
+export const dynamic = 'force-dynamic';
+// 사용자 화면은 절대 캐시된 DB 읽기를 보면 안 된다 (Next Data Cache 는 디스크에 남는다)
+export const fetchCache = 'force-no-store';
+
 /**
  * GET /api/tickets/[id]/available-start-dates
  * 기간제 수강권의 "시작일"로 선택 가능한 날짜 목록 (연결된 수업이 있는 날만)

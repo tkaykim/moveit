@@ -11,6 +11,8 @@ import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { sendNotification, sendBulkNotification } from '@/lib/notifications/send-notification';
 import type { NotificationType } from '@/types/notifications';
 export const dynamic = 'force-dynamic';
+// 운영 화면은 절대 캐시된 DB 읽기를 보면 안 된다 (Next Data Cache 는 디스크에 남는다)
+export const fetchCache = 'force-no-store';
 
 
 /** GET: 디바이스 토큰 현황 조회 */

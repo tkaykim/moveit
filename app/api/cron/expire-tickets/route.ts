@@ -28,6 +28,10 @@ import {
  *   { "crons": [{ "path": "/api/cron/expire-tickets", "schedule": "0 15 * * *" }] }
  */
 
+export const dynamic = 'force-dynamic';
+// 크론은 항상 현재 DB 상태를 읽고 판단해야 한다 (Next Data Cache 는 디스크에 남는다)
+export const fetchCache = 'force-no-store';
+
 interface ConcernResult {
   name: string;
   ok: boolean;
