@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, QrCode, BadgeCheck, PauseCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
+import { getSafeReturnPath } from '@/lib/auth/return-to';
 import { QrModal } from '@/components/modals/qr-modal';
 
 interface MyTicket {
@@ -62,6 +64,10 @@ export function MyTicketsView({
   academyName: string;
 }) {
   const { user, loading: authLoading, signIn, signInWithGoogle } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  // 딥링크(수업 회차) 등에서 로그인 유도 시 "원래 보던 수업"으로 되돌아가기 위한 경로.
+  const nextPath = getSafeReturnPath(searchParams.get('next'));
   const [tickets, setTickets] = useState<MyTicket[]>([]);
   const [memberships, setMemberships] = useState<MyMembership[]>([]);
   const [bookings, setBookings] = useState<MyBooking[]>([]);
@@ -94,6 +100,12 @@ export function MyTicketsView({
     if (user) void load();
     else if (!authLoading) setLoading(false);
   }, [user, authLoading, load]);
+
+  // 로그인이 완료되면(이메일·OAuth 공통) return-to 로 되돌린다. 딥링크에서 온 학생을
+  // "같은 수업"으로 정확히 돌려보내는 지점이다.
+  useEffect(() => {
+    if (user && nextPath) router.replace(nextPath);
+  }, [user, nextPath, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,7 +165,7 @@ export function MyTicketsView({
           </button>
         </form>
         <button
-          onClick={() => void signInWithGoogle(window.location.pathname)}
+          onClick={() => void signInWithGoogle(nextPath ?? window.location.pathname)}
           className="w-full mt-2.5 py-3 rounded-xl text-sm font-semibold border border-neutral-200 dark:border-neutral-700"
         >
           Google로 계속하기

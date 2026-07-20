@@ -9,5 +9,5 @@ export default async function Page({
   const { academyId: slugOrId } = await params;
   const academy = await resolveAcademyId(slugOrId);
   const academyId = academy?.id ?? slugOrId;
-  return <RosterView academyId={academyId} />;
+  return <RosterView academyId={academyId} slug={academy?.slug ?? null} />;
 }

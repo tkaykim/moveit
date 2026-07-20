@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Lock, ShoppingCart, Check } from 'lucide-rea
 import type { MiniWeekItem } from '@/lib/db/miniapp';
 import type { MiniSkin } from '@/lib/miniapp/skin';
 import { addToCart, readCart } from '@/lib/miniapp/cart';
+import { CopyLinkButton } from '@/components/share/copy-link-button';
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -51,6 +52,11 @@ export function ScheduleBoard({
   items: MiniWeekItem[];
 }) {
   const [inCart, setInCart] = useState<Set<string>>(new Set());
+  const [origin, setOrigin] = useState('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') setOrigin(window.location.origin);
+  }, []);
 
   useEffect(() => {
     const sync = () => {
@@ -203,6 +209,14 @@ export function ScheduleBoard({
                                 </span>
                               )
                             )}
+                            {/* 이 수업 링크 복사 — 학원이든 학생이든 한 회차를 바로 공유 */}
+                            <CopyLinkButton
+                              url={`${origin}/s/${slug}/c/${s.id}`}
+                              testId="schedule-copy-link"
+                              iconOnly
+                              ariaLabel={`${s.title} 신청 링크 복사`}
+                              className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 flex-shrink-0"
+                            />
                           </div>
 
                           {/* 배지: 그룹 · 특별수업 · 대상한정 */}

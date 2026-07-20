@@ -226,6 +226,99 @@ export async function getWeekBoard(
   });
 }
 
+/* ------------------------------------------------------------------ */
+/* 단일 회차 딥링크 (Task L) — /s/[slug]/c/[scheduleId]                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 공유 가능한 "한 수업 회차" 링크가 필요한 모든 것.
+ * 주간 보드(MiniWeekItem)와 같은 규율을 따르되, 딥링크는 **휴강/마감된 회차도**
+ * 정직하게 보여줘야 하므로 is_canceled 를 걸러내지 않고 그대로 실어 보낸다.
+ */
+export interface MiniOccurrence extends MiniWeekItem {
+  is_canceled: boolean;
+  hall_name: string | null;
+  hall_capacity: number | null;
+}
+
+interface OccurrenceQueryRow extends WeekQueryRow {
+  hall_id: string | null;
+  halls: { name: string | null; capacity: number | null } | null;
+}
+
+const OCCURRENCE_SELECT =
+  'id, start_time, end_time, max_students, current_students, is_canceled, card_color, hall_id, ' +
+  'halls(name, capacity), ' +
+  'classes!inner(id, title, genre, difficulty_level, instructor_name, academy_id, is_active, ' +
+  'audience_membership_id, booking_policy, class_group_id, ' +
+  'class_groups(id, name, is_special))';
+
+/**
+ * 한 회차를 id 로 읽는다.
+ *
+ * ⚠ client 는 반드시 **RLS 를 지키는(사용자 세션) 클라이언트**여야 한다.
+ * 대상 한정(멤버십 전용) 회차는 자격 없는 사용자·비회원에게 RLS 가 통째로 가린다 —
+ * 그 경우 여기서도 null 이 돌아오고, 화면은 "찾을 수 없음"으로 정직하게 처리한다.
+ * (없는 회차와 못 보는 회차를 굳이 구분하지 않는 것이 정보 유출을 막는다.)
+ */
+export async function getScheduleOccurrence(
+  client: QueryClient,
+  params: { academyId: string; academyBookingPolicy: unknown; scheduleId: string; now?: Date }
+): Promise<MiniOccurrence | null> {
+  const now = params.now ?? new Date();
+
+  const { data, error } = await client
+    .from('schedules')
+    .select(OCCURRENCE_SELECT)
+    .eq('id', params.scheduleId)
+    .eq('classes.academy_id', params.academyId)
+    .eq('classes.is_active', true)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message ?? String(error));
+  const r = (data ?? null) as unknown as OccurrenceQueryRow | null;
+  if (!r || !r.classes) return null;
+
+  const c = r.classes;
+  const policy = resolveBookingPolicy(params.academyBookingPolicy, c.booking_policy);
+  const state = evaluateBookingWindow(r.start_time, policy, now);
+  const openAt = bookingOpenAt(r.start_time, policy);
+  const booked = r.current_students ?? 0;
+  const isFull = typeof r.max_students === 'number' && booked >= r.max_students;
+  const isCanceled = Boolean(r.is_canceled);
+
+  return {
+    id: r.id,
+    start_time: r.start_time,
+    end_time: r.end_time,
+    max_students: r.max_students,
+    booked_count: booked,
+    is_full: isFull,
+    card_color: r.card_color,
+
+    class_id: c.id,
+    title: c.title,
+    genre: c.genre,
+    difficulty_level: c.difficulty_level,
+    instructor_name: c.instructor_name,
+
+    group_name: c.class_groups?.name ?? null,
+    is_special: Boolean(c.class_groups?.is_special),
+    is_audience_limited: c.audience_membership_id != null,
+
+    booking_state: state,
+    opens_at: openAt ? openAt.toISOString() : null,
+    closes_at: bookingCloseAt(r.start_time, policy).toISOString(),
+    // 휴강이면 딥링크에서 담을 수 없다 — 주간 보드는 휴강을 아예 안 그리지만
+    // 딥링크는 정직하게 "휴강"을 보여주고 예약만 막는다.
+    bookable: state === 'OPEN' && !isFull && !isCanceled,
+
+    is_canceled: isCanceled,
+    hall_name: r.halls?.name ?? null,
+    hall_capacity: r.halls?.capacity ?? null,
+  };
+}
+
 export interface MiniTicket {
   id: string;
   name: string;

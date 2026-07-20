@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import { ChevronDown, ChevronRight, RefreshCw, Users } from 'lucide-react';
+import { CopyLinkButton } from '@/components/share/copy-link-button';
 import {
   ConsolePage,
   ConsoleCard,
@@ -72,12 +73,20 @@ const DEDUCTION_TONE: Record<string, 'good' | 'neutral' | 'warn' | 'info'> = {
   NONE: 'neutral',
 };
 
-export function RosterView({ academyId }: { academyId: string }) {
+export function RosterView({ academyId, slug }: { academyId: string; slug?: string | null }) {
   const [date, setDate] = useState(kstTodayString());
   const [occurrences, setOccurrences] = useState<RosterOccurrence[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  const [origin, setOrigin] = useState('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') setOrigin(window.location.origin);
+  }, []);
+
+  // 공개 딥링크의 학원 세그먼트: slug 우선, 없으면 UUID(getAcademyBySlug 가 둘 다 받는다).
+  const linkBase = slug || academyId;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -143,10 +152,11 @@ export function RosterView({ academyId }: { academyId: string }) {
                 data-testid="roster-occurrence"
                 className="w-full max-w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden"
               >
+                <div className="flex items-start">
                 <button
                   type="button"
                   onClick={() => setOpen((p) => ({ ...p, [occ.schedule_id]: !p[occ.schedule_id] }))}
-                  className="w-full flex items-start gap-2 px-3 sm:px-4 py-3 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
+                  className="min-w-0 flex-1 flex items-start gap-2 px-3 sm:px-4 py-3 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
                 >
                   {isOpen ? (
                     <ChevronDown size={16} className="mt-0.5 shrink-0 text-neutral-400" />
@@ -174,6 +184,15 @@ export function RosterView({ academyId }: { academyId: string }) {
                     </div>
                   </div>
                 </button>
+                {/* 이 회차의 공개 신청 링크 복사 — 인스타/카톡에 붙일 한 수업 한 링크 */}
+                <div className="pr-2 sm:pr-3 py-3 shrink-0">
+                  <CopyLinkButton
+                    url={`${origin}/s/${linkBase}/c/${occ.schedule_id}`}
+                    testId="roster-copy-link"
+                    ariaLabel={`${occ.class_title} 신청 링크 복사`}
+                  />
+                </div>
+                </div>
 
                 {isOpen && (
                   <div className="border-t border-neutral-100 dark:border-neutral-800 p-3 sm:p-4">
