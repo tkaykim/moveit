@@ -610,11 +610,17 @@ test('B13 보안(FINDING2): 학생이 cancel_my_booking 을 직접 호출해도 
 
 test('C1 회귀: 기존 user_tickets 의 저장 만료일 의미 불변 (start + valid_days)', async () => {
   const createdIds = created.filter((c) => c.table === 'user_tickets').map((c) => c.id);
+  // ⚠ 전체 실행(full-suite) 격리: 이 회귀는 **운영 데이터**의 만료 규칙 불변을 검증한다.
+  //   다른 스펙이 만든 테스트 수강권(expiry_date='2099-12-31' 등 레거시 공식 미준수)이
+  //   표본에 섞이면 mismatch 비율이 튀어 간헐 실패한다. 테스트 픽스처는 항상 **방금**
+  //   생성되므로, created_at 오름차순으로 가장 오래된 200건만 본다 = 순수 운영 이력.
+  //   (이 스펙 자신의 created 도 별도로 한 번 더 제외한다.)
   const { data, error } = await svc
     .from('user_tickets')
-    .select('id, start_date, expiry_date, tickets!inner(valid_days)')
+    .select('id, start_date, expiry_date, created_at, tickets!inner(valid_days)')
     .not('start_date', 'is', null)
     .not('expiry_date', 'is', null)
+    .order('created_at', { ascending: true })
     .limit(200);
   expect(error).toBeNull();
 

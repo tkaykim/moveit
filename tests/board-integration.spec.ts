@@ -115,7 +115,7 @@ async function waitForNotPending(
   scheduleId: string,
   type: string,
   request: Requester,
-  attempts = 5
+  attempts = 8
 ): Promise<string> {
   let status = 'PENDING';
   for (let i = 0; i < attempts; i++) {
@@ -123,7 +123,8 @@ async function waitForNotPending(
     status = rows[0]?.status ?? 'PENDING';
     if (status !== 'PENDING') return status;
     await runProcessor(request);
-    await new Promise((r) => setTimeout(r, 300));
+    // 전체 실행 시 전역 큐가 커져 처리·읽기 지연이 늘 수 있어 백오프를 넉넉히 준다.
+    await new Promise((r) => setTimeout(r, 400));
   }
   return status;
 }
@@ -132,7 +133,7 @@ async function waitForNotPending(
 async function waitForAcademyQueueDrained(
   academyId: string,
   request: Requester,
-  attempts = 5
+  attempts = 8
 ): Promise<number> {
   let pending = -1;
   for (let i = 0; i < attempts; i++) {
@@ -144,7 +145,8 @@ async function waitForAcademyQueueDrained(
     pending = count ?? 0;
     if (pending === 0) return 0;
     await runProcessor(request);
-    await new Promise((r) => setTimeout(r, 300));
+    // 전체 실행 시 전역 큐가 커져 처리·읽기 지연이 늘 수 있어 백오프를 넉넉히 준다.
+    await new Promise((r) => setTimeout(r, 400));
   }
   return pending;
 }
