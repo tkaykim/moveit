@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { Loader2, Trash2, AlertCircle, LogIn, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
+import { useTossPayment } from '@/lib/payments/use-toss-payment';
 import type { MiniSkin } from '@/lib/miniapp/skin';
 import {
   readCart,
@@ -26,9 +27,24 @@ import {
   toOrderItems,
   type CartEntry,
 } from '@/lib/miniapp/cart';
-import type { OrderItemVerdict, OrderMethod } from '@/lib/orders/types';
+import type { OrderItemInput, OrderItemVerdict, OrderMethod } from '@/lib/orders/types';
 
 const PENDING_KEY = (academyId: string) => `miniapp-pending-order:${academyId}`;
+/** 진행 중 주문의 장바구니 지문. 담긴 항목이 그대로일 때만 같은 주문번호를 재사용한다. */
+const PENDING_SIG_KEY = (academyId: string) => `miniapp-pending-order-sig:${academyId}`;
+
+/** 장바구니 내용의 안정적 지문 — 항목이 바뀌면 새 주문번호를 쓰기 위한 것. */
+function cartSignature(items: OrderItemInput[], method: string): string {
+  return `${method}:${JSON.stringify(items)}`;
+}
+
+/** 결제 요청 전에 만들어지는 주문번호. 유니크·멱등키. (서버 newProviderOrderId 와 동형) */
+function newProviderOrderId(): string {
+  return `MV-${Date.now().toString(36).toUpperCase()}-${Math.random()
+    .toString(36)
+    .slice(2, 10)
+    .toUpperCase()}`;
+}
 
 /** 학생에게 제안하는 결제 수단. ONSITE 는 의도적으로 없다(스태프 전용). */
 const METHODS: { value: Extract<OrderMethod, 'BANK' | 'TOSS'>; label: string; hint: string }[] = [
@@ -49,6 +65,7 @@ export function CartView({
 }) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { requestPayment: requestTossPayment } = useTossPayment();
 
   const [entries, setEntries] = useState<CartEntry[]>([]);
   const [verdicts, setVerdicts] = useState<OrderItemVerdict[]>([]);
@@ -115,22 +132,45 @@ export function CartView({
   const handleDropRejected = () =>
     setEntries(dropIndexes(academyId, rejected.map((v) => v.index)));
 
+  /**
+   * 주문번호를 **결제 전에** 만들어 저장한다. 결제 중 새로고침하거나, 취소 후 다시
+   * 눌러도 **같은 장바구니면 같은 번호**를 재사용한다 — 서버가 이 번호로 멱등하게
+   * 처리하므로 주문이 둘 생기지 않는다. 항목이 바뀌면(지문 불일치) 새 번호를 쓴다.
+   */
+  const getOrCreateProviderOrderId = (items: OrderItemInput[]): string => {
+    const sig = cartSignature(items, method);
+    try {
+      const storedId = window.localStorage.getItem(PENDING_KEY(academyId));
+      const storedSig = window.localStorage.getItem(PENDING_SIG_KEY(academyId));
+      if (storedId && storedSig === sig) return storedId;
+    } catch {
+      /* 읽기 실패는 새 번호 발급으로 이어진다 */
+    }
+    const id = newProviderOrderId();
+    try {
+      window.localStorage.setItem(PENDING_KEY(academyId), id);
+      window.localStorage.setItem(PENDING_SIG_KEY(academyId), sig);
+    } catch {
+      /* 저장 실패가 결제를 막지는 않는다 */
+    }
+    return id;
+  };
+
   const handleCheckout = async () => {
     if (!canCheckout || !totals) return;
     setSubmitting(true);
     setError(null);
 
-    // 주문번호를 **먼저** 만들어 저장한다. 결제 중 새로고침해도 이 번호로 돌아온다.
-    const providerOrderId = `MV-${Date.now().toString(36).toUpperCase()}-${Math.random()
-      .toString(36)
-      .slice(2, 10)
-      .toUpperCase()}`;
-    try {
-      window.localStorage.setItem(PENDING_KEY(academyId), providerOrderId);
-    } catch {
-      /* 저장 실패가 결제를 막지는 않는다 */
-    }
+    const items = toOrderItems(entries);
+    const providerOrderId = getOrCreateProviderOrderId(items);
 
+    // ① 주문 생성 — BANK/TOSS 공통. 금액의 권위자는 서버다.
+    let data: {
+      total_amount?: number;
+      provider_order_id?: string;
+      rejected?: OrderItemVerdict[];
+      error?: string;
+    };
     try {
       const res = await fetchWithAuth('/api/orders', {
         method: 'POST',
@@ -138,12 +178,12 @@ export function CartView({
         body: JSON.stringify({
           academyId,
           method,
-          items: toOrderItems(entries),
+          items,
           providerOrderId,
           expectedTotalAmount: totals.total,
         }),
       });
-      const data = await res.json();
+      data = await res.json();
 
       if (!res.ok) {
         // 락 아래 재검증에서 뒤집힌 항목이 있으면 최신 판정을 그대로 보여준다.
@@ -158,13 +198,47 @@ export function CartView({
         setSubmitting(false);
         return;
       }
-
-      clearCart(academyId);
-      router.push(`/s/${slug}/orders/${encodeURIComponent(providerOrderId)}`);
     } catch {
       setError('네트워크 오류로 주문을 만들지 못했습니다.');
       setSubmitting(false);
+      return;
     }
+
+    // 서버가 준 값만 신뢰한다. orderId 는 우리가 만든 provider_order_id.
+    const serverOrderId = data.provider_order_id || providerOrderId;
+    const serverAmount = Number(data.total_amount);
+
+    if (method === 'TOSS') {
+      // ② 카드결제: 실제 Toss 결제창을 연다. 성공/실패는 리다이렉트로 돌아온다.
+      const origin = window.location.origin;
+      const orderName =
+        entries.length > 1 ? `${academyName} 외 ${entries.length - 1}건` : academyName;
+      const result = await requestTossPayment({
+        orderId: serverOrderId,
+        amount: serverAmount,
+        orderName,
+        successUrl: `${origin}/s/${slug}/orders/toss-callback`,
+        failUrl: `${origin}/s/${slug}/orders/toss-fail`,
+        customerName: user?.user_metadata?.name ?? null,
+        customerEmail: user?.email ?? null,
+      });
+      // 리다이렉트되지 않고 여기로 오면 = 창을 닫았거나 SDK 오류. 주문은 PENDING 으로
+      // 남아 재시도 가능하다(같은 번호). 버튼을 되살리고 사유를 보여준다.
+      if (!result.ok) {
+        setError(result.message || '카드 결제창을 열지 못했습니다. 다시 시도해 주세요.');
+      }
+      setSubmitting(false);
+      return;
+    }
+
+    // ③ 계좌이체: 주문 생성으로 끝. 상태 화면으로 이동한다.
+    clearCart(academyId);
+    try {
+      window.localStorage.removeItem(PENDING_SIG_KEY(academyId));
+    } catch {
+      /* noop */
+    }
+    router.push(`/s/${slug}/orders/${encodeURIComponent(serverOrderId)}`);
   };
 
   const verdictFor = (i: number) => verdicts.find((v) => v.index === i);
