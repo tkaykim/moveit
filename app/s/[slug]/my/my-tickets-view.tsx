@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import { getSafeReturnPath } from '@/lib/auth/return-to';
 import { QrModal } from '@/components/modals/qr-modal';
+import { QuickJoinSheet } from '@/components/miniapp/quick-join-sheet';
 
 interface MyTicket {
   id: string;
@@ -78,6 +79,7 @@ export function MyTicketsView({
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -130,10 +132,27 @@ export function MyTicketsView({
   if (!user) {
     return (
       <div className="px-5 pt-10 max-w-sm mx-auto" data-testid="my-login">
-        <h1 className="text-lg font-bold text-center">로그인</h1>
+        <h1 className="text-lg font-bold text-center">시작하기</h1>
         <p className="text-xs text-neutral-500 text-center mt-1 mb-6">
-          내 수강권과 출석 QR을 확인하려면 로그인해 주세요
+          내 수강권과 출석 QR을 확인하려면 로그인하거나 간편가입해 주세요
         </p>
+
+        {/* 간편가입 — 비회원도 이름·전화·이메일만으로 즉시 계정 생성 */}
+        <button
+          type="button"
+          data-testid="quick-join-open"
+          onClick={() => setQuickOpen(true)}
+          className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2"
+          style={{ backgroundColor: 'var(--primary)' }}
+        >
+          이름·전화·이메일로 간편가입
+        </button>
+        <div className="flex items-center gap-3 my-4">
+          <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
+          <span className="text-[11px] text-neutral-400">이미 계정이 있어요</span>
+          <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
+        </div>
+
         <form onSubmit={handleLogin} className="space-y-2.5">
           <input
             type="email"
@@ -170,6 +189,17 @@ export function MyTicketsView({
         >
           Google로 계속하기
         </button>
+
+        {/* 간편가입 시트 — 성공 시 user 갱신 → 티켓 로드 + next 복귀가 자동 수행됨 */}
+        <QuickJoinSheet
+          open={quickOpen}
+          onClose={() => setQuickOpen(false)}
+          onSuccess={() => setQuickOpen(false)}
+          onGoLogin={(prefillEmail) => {
+            if (prefillEmail) setEmail(prefillEmail);
+            setQuickOpen(false);
+          }}
+        />
       </div>
     );
   }

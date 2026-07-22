@@ -19,6 +19,7 @@ import { Lock, CalendarClock, MapPin, User2, Check, ShoppingCart } from 'lucide-
 import { useAuth } from '@/contexts/AuthContext';
 import { addToCart, readCart } from '@/lib/miniapp/cart';
 import { CopyLinkButton } from '@/components/share/copy-link-button';
+import { QuickJoinSheet } from '@/components/miniapp/quick-join-sheet';
 import type { MiniOccurrence } from '@/lib/db/miniapp';
 import type { MiniSkin } from '@/lib/miniapp/skin';
 
@@ -68,6 +69,7 @@ export function ClassLinkView({
   const { user, loading: authLoading } = useAuth();
   const [added, setAdded] = useState(false);
   const [selfUrl, setSelfUrl] = useState('');
+  const [quickOpen, setQuickOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -294,14 +296,15 @@ export function ClassLinkView({
             불러오는 중…
           </button>
         ) : !user ? (
-          <Link
-            href={signInHref}
+          <button
+            type="button"
             data-testid="class-signin"
+            onClick={() => setQuickOpen(true)}
             className="w-full py-3.5 rounded-xl text-[14px] font-extrabold text-white flex items-center justify-center gap-2"
             style={{ backgroundColor: 'var(--primary)' }}
           >
-            로그인하고 신청하기
-          </Link>
+            <ShoppingCart size={15} /> 신청하기
+          </button>
         ) : added ? (
           <Link
             href={`/s/${slug}/cart`}
@@ -325,6 +328,21 @@ export function ClassLinkView({
       </div>
 
       <p className="text-[12px] text-neutral-400 text-center mt-4">{academyName}</p>
+
+      {/* 간편가입 — 로그아웃 상태에서 이 자리를 떠나지 않고 즉시 가입·신청 */}
+      <QuickJoinSheet
+        open={quickOpen}
+        onClose={() => setQuickOpen(false)}
+        onSuccess={() => {
+          setQuickOpen(false);
+          handleBook();
+        }}
+        onGoLogin={() => {
+          setQuickOpen(false);
+          router.push(signInHref);
+        }}
+        subtitle="이름·전화번호·이메일만 입력하면 바로 이 수업을 신청할 수 있어요."
+      />
     </div>
   );
 }

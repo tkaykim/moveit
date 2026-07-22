@@ -18,6 +18,7 @@ import { Loader2, Trash2, AlertCircle, LogIn, ShoppingCart } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchWithAuth } from '@/lib/api/auth-fetch';
 import { useTossPayment } from '@/lib/payments/use-toss-payment';
+import { QuickJoinSheet } from '@/components/miniapp/quick-join-sheet';
 import type { MiniSkin } from '@/lib/miniapp/skin';
 import {
   readCart,
@@ -76,6 +77,7 @@ export function CartView({
   const [checking, setChecking] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quickOpen, setQuickOpen] = useState(false);
 
   useEffect(() => {
     setEntries(readCart(academyId));
@@ -329,23 +331,32 @@ export function CartView({
             </p>
           )}
 
-          {/* 로그인이 필요한 경우 — 게스트는 수강권을 받을 주인이 없어 이행이 불가능하다 */}
+          {/* 로그인이 필요한 경우 — 게스트는 수강권을 받을 주인이 없어 이행이 불가능하다.
+              간편가입으로 이 자리를 떠나지 않고 계정을 만들고 결제를 이어간다. */}
           {needsSignIn && !user && (
             <div
               data-testid="signin-required"
               className="mt-4 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800"
             >
-              <p className="text-[13px] font-bold">수강권 구매는 로그인이 필요합니다</p>
+              <p className="text-[13px] font-bold">수강권 구매는 계정이 필요합니다</p>
               <p className="text-[12px] text-neutral-500 mt-1 leading-relaxed">
-                수강권은 회원 계정으로 발급됩니다. 로그인 후 다시 시도해 주세요.
+                이름·전화번호·이메일만 입력하면 바로 가입하고 결제를 이어갈 수 있어요.
               </p>
-              <Link
-                href={`/s/${slug}/my`}
-                data-testid="signin-link"
+              <button
+                type="button"
+                data-testid="quick-join-open"
+                onClick={() => setQuickOpen(true)}
                 className="mt-3 w-full py-2.5 rounded-xl text-[13px] font-bold text-white flex items-center justify-center gap-1.5"
                 style={{ backgroundColor: 'var(--primary)' }}
               >
-                <LogIn size={14} /> 로그인하기
+                <LogIn size={14} /> 간편가입하고 계속하기
+              </button>
+              <Link
+                href={`/s/${slug}/my`}
+                data-testid="signin-link"
+                className="mt-2 w-full py-2 rounded-xl text-[12px] font-semibold text-neutral-500 flex items-center justify-center"
+              >
+                이미 계정이 있어요 → 로그인
               </Link>
             </div>
           )}
@@ -439,6 +450,22 @@ export function CartView({
           </button>
         </>
       )}
+
+      {/* 간편가입 — SIGN_IN_REQUIRED 판정 시 이 자리에서 가입하고 결제를 이어간다 */}
+      <QuickJoinSheet
+        open={quickOpen}
+        onClose={() => setQuickOpen(false)}
+        onSuccess={() => {
+          setQuickOpen(false);
+          // 로그인 상태가 바뀌었으니 판정을 다시 받아 SIGN_IN_REQUIRED 를 해제한다.
+          void runPreflight(entries);
+        }}
+        onGoLogin={() => {
+          setQuickOpen(false);
+          router.push(`/s/${slug}/my`);
+        }}
+        subtitle="이름·전화번호·이메일만 입력하면 바로 가입하고 결제를 이어갈 수 있어요."
+      />
     </div>
   );
 }

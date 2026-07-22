@@ -39,6 +39,14 @@ interface AuthContextType {
   ) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   /**
+   * Q-간편가입 (2026-07-22): 간편가입(quick-signup) 서버 라우트가 발급한 일회용
+   * email OTP token_hash 로 **비밀번호 없이** 세션을 확립한다. 서버 라우트는
+   * 방금 생성된 계정에 대해서만 token_hash 를 반환하므로(기존 이메일이면
+   * status:'EXISTS' 로 토큰 없음), 이 경로로 계정 탈취가 발생할 수 없다.
+   * 컨텍스트의 supabase 인스턴스를 그대로 써서 onAuthStateChange 가 확실히 발화한다.
+   */
+  verifyEmailOtp: (tokenHash: string) => Promise<{ error: any }>;
+  /**
    * B-4 (2026-04-27): Google OAuth 로그인·가입 통합 1버튼.
    * Supabase Auth → Providers → Google이 활성화되어 있어야 동작.
    * `redirectTo`로 returnTo 경로 전달 가능 (예: 결제 진입 후 복귀).
@@ -351,6 +359,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [supabase, fetchProfile]);
 
+  // Q-간편가입 (2026-07-22): token_hash → 세션 확립 (비밀번호 없음)
+  const verifyEmailOtp = useCallback(async (tokenHash: string) => {
+    if (!supabase) {
+      return { error: { message: '클라이언트가 초기화되지 않았습니다.' } };
+    }
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        type: 'email',
+        token_hash: tokenHash,
+      });
+      if (error) return { error };
+      if (data?.user) {
+        setUser(data.user);
+        fetchProfile(data.user.id, data.user).catch(() => {});
+        // 간편가입 직후에도 비회원 시절 예약·결제 즉시 병합(서버 트리거가 이미
+        // 병합하지만, my-page-view 경유 없이 진입하는 경로 대비 이중 안전망).
+        try {
+          const { fetchWithAuth } = await import('@/lib/api/auth-fetch');
+          fetchWithAuth('/api/me/link-guest-bookings', { method: 'POST' }).catch(() => {});
+        } catch {
+          // ignore
+        }
+      }
+      return { error: null };
+    } catch (error: any) {
+      return { error };
+    }
+  }, [supabase, fetchProfile]);
+
   // B-4 (2026-04-27): Google OAuth 로그인·가입 통합.
   // Supabase Auth → Providers → Google이 활성화되어 있고 redirect URL이
   // `<origin>/auth/callback` 으로 등록되어 있어야 함.
@@ -493,6 +530,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     signUp,
     signIn,
+    verifyEmailOtp,
     signInWithGoogle,
     signOut,
     refreshProfile,
